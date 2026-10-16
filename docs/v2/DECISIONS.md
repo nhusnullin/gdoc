@@ -88,6 +88,9 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-10-04 | The token in the macOS Keychain, and releases signed on Nail's Mac (built in M17) | holds |
 | 2026-10-13 | A blank mark is refused, and a word-like mark is read as a word | holds |
 | 2026-10-14 | The body breathes: 12pt under a paragraph and under a list, 5pt around a cell | holds |
+| 2026-10-14 | A footnote is carried on every route | holds |
+| 2026-10-14 | The marks: Obsidian's six colours and one grey | holds |
+| 2026-10-15 | What the M18 review closed: a label defined twice, a heading no line scan sees, a mark inside a footnote, and the two questions the parse answers rather than the line | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -3932,3 +3935,495 @@ this entry.
 `TestTheBodySpacingIsReadOffTheParagraphNotTheStyle` and, for the in-place
 half, `TestABulletedParagraphTakesTheListGapAndTheLastTheBodys`. Each states
 its number as a literal.
+
+## 2026-10-14. A footnote is carried on every route.
+
+Part A of M18, decided by Nail on the decision page of the same day. Serves
+principle 1, two renderings of one text: a footnote the author wrote belongs in
+the document and comes home on export. Serves principle 4: a citation under the
+page costs a reader less attention than the same words in the sentence.
+
+What stood before this entry is a hole in the pairing. `build` and `publish`
+dropped every footnote and warned about it by line, and `export` wrote the
+notes back into the hub as `[^n]` in the prose with the definitions after a
+`---` line. So a document pulled out of Drive and built again published its
+notes as nothing, and a note written in the hub could not carry a citation at
+all. Three decisions of the page close it.
+
+**The syntax is the one goldmark already parses.** `[^label]` in the prose and
+`[^label]: the text` on a line of its own, and a label may be words rather than
+a number. `internal/body` has the footnote extension on today, so no fourth
+module and no new grammar.
+
+**A footnote that does not line up refuses the build and names the line**
+(decision 2.1 A). A reference with no definition, and a definition nothing
+references, are each a refusal. Both were argued as warnings and rejected: a
+warning let a published document look finished while a citation was missing
+from it. goldmark is silent in both shapes, because its parser leaves `[^x]`
+as prose when no definition follows and its transformer removes a definition
+nobody references, so the check reads the note's own source lines, beside the
+markers check `Render` already runs.
+
+**One label referenced twice is two notes carrying one text** (decision 2.2 B).
+Word and Docs hold one note per mark, so there is no second shape to render.
+`export` then writes two notes where the author wrote one, and the round-trip
+rule says so: the renumbering to first-reference order is a known difference
+with a reason, not a failure.
+
+**The measurement comes before the code** (decision 2.3 A). Task 2 of the plan
+uploads a docx carrying one Word footnote with conversion, reads it back bare
+and exports it, and writes what Drive did into MEASURED.md either way. If Drive
+drops the note, part A stops there: footnotes would exist in the file `build`
+writes and nowhere else, and whether that is worth shipping is Nail's and not
+the plan's.
+
+Taken in the design pass and not contested: notes are numbered in
+first-reference order, Word's own, whatever order the definitions were written
+in; inside a note, paragraphs with inline marks only, and a list, a table, a
+picture, a code block or a heading there is warned about by line and left out;
+a footnote mark inside a heading is refused by line, because Word copies the
+mark into the contents field; the note text is a tenth house style,
+`footnote_text`, 10pt, single-spaced, no space above or below, in the body
+face, and the reference mark is a character style set superscript; `read` keeps
+printing exactly what it prints today.
+
+**What this strains.** Two rules this tree states, each loosened on purpose.
+
+- "A file gdoc half understands never reaches a document." A footnote used to
+  reach the document half understood, as a warning and a missing line. It is
+  now refused by line when it does not line up, and carried when it does, so
+  the rule is kept in the one direction that was broken.
+- `internal/render` writes "the twelve parts and the logo", and writes thirteen
+  from Task 6. `word/footnotes.xml` is always written, with the separator and
+  the continuation separator, whether or not the note holds a footnote,
+  because a reader that meets a footnote reference with no part behind it
+  repairs the document.
+
+**What this does not do.** A suggestion or a comment inside a footnote stays
+invisible to `read` and `suggestions`, which is
+`docs/backlog/suggestions-inside-footnotes.md`. No footnote in a table cell.
+`propose` and `annotate` do not change: both already refuse a quote that
+crosses a footnote mark.
+
+**Tests.** `TestAFootnoteReferenceCarriesItsNumber`,
+`TestAFootnoteRunSurvivesMerge`,
+`TestAFootnoteBecomesAFootnoteTextParagraph`,
+`TestFootnotesAreNumberedInReferenceOrderNotDefinitionOrder`,
+`TestAReferenceWithNoDefinitionIsRefusedByLine`,
+`TestADefinitionNobodyReferencesIsRefusedByLine`,
+`TestAFootnoteMarkInsideAHeadingIsRefusedByLine`,
+`TestAFootnoteReferencedTwiceIsTwoNotesWithOneText`,
+`TestWhatTheHouseStyleCannotSetInAFootnoteIsWarnedAndLeftOut`,
+`TestTheTenStylesAreThere`,
+`TestTheFootnotesPartCarriesTheTwoSeparators`,
+`TestTheFootnotesPartIsDeclaredAndRelated`,
+`TestAFootnoteReferenceIsASuperscriptCharacterStyle`,
+`TestBuildWritesTheThirteenPartsAndTheLogo`, `TestLiveFootnoteImportProbe` and
+`TestLivePublishCarriesAFootnoteIntoDocs`. `TestAFootnoteWarnsAndIsLeftOut`
+and `TestEveryFootnoteIsNamedByItsOwnLine` are retired by this entry;
+`TestAHeadingInsideAFootnoteIsNoAnchor` and
+`TestAHeadingInsideAFootnoteSetsNoHeadingDepth` still hold.
+
+## 2026-10-14. The marks: Obsidian's six colours and one grey.
+
+Part B of M18, decided by Nail on the decision page of the same day. Serves
+principle 1, because a highlight the author wrote in Obsidian is in the Doc and
+comes home as the same syntax. Serves principle 2, the binary prints facts and
+the skills judge, because the binary counts marks and never says whether a
+document carrying them may be published.
+
+An author marks words while writing: a figure to replace, a claim to confirm, a
+question for one reviewer, prose that stays but is not the argument. gdoc had
+one of those, `==words==`, and it reached the docx as Word's named yellow
+highlight.
+
+**Highlights are written the way Obsidian 1.14 writes them and no other way.**
+`==words==` for the default yellow, and a colour emoji at the start of the
+highlight for the rest: `==🔴words==`, `==🟠words==`, `==🟡words==`,
+`==🟢words==`, `==🔵words==`, `==🟣words==`. One position, six emoji, no
+Pandoc span and no HTML for a highlight. The syntax is Obsidian's because the
+author writes the note there, and a syntax their editor renders is one they can
+see without building anything.
+
+**The names are Obsidian's too**, `yellow`, `red`, `orange`, `green`, `blue`
+and `purple`, with no name of gdoc's own. What a colour means is Nail's, said
+in his notes and his skills and never in a key. His own use, recorded on the
+decision page: yellow a word or figure to replace, green a claim to confirm,
+purple a question to one reviewer, blue text changed since the last version.
+Red and orange carry no meaning, so a note using them is not refused.
+
+**The one grey is `pencil`**, prose that stays in the document but is not the
+argument. Obsidian has no text colour, so pencil is written as Pandoc's
+bracketed span, `[words]{.pencil}`, the only span gdoc reads and the only
+attribute it reads in one. In the Doc it is text colour #9A9A9A and no italic.
+That is under the 4.5:1 contrast floor, chosen knowingly after both designers
+asked for #767676: pencil is prose a reader may skip, and a grey a reader
+cannot tell from the body is not one.
+
+**The palette.** house.yaml is the one source, keyed by the colour, and
+`gdoc help marks` prints it so a skill reads the binary rather than carrying a
+copy. The hexes are the merge of a UX designer's set and a typographer's, each
+colour as saturated as its lightness allows and the lightnesses a staircase.
+None is the template's #FFFF00, which means placeholder.
+
+| Mark | Syntax | Kind | Doc colour | Counted on the envelope |
+|---|---|---|---|---|
+| yellow | `==words==` or `==🟡words==` | highlight | #FFD500 | yes |
+| green | `==🟢words==` | highlight | #3DD67A | yes |
+| purple | `==🟣words==` | highlight | #BA92FF | yes |
+| blue | `==🔵words==` | highlight | #5DB3FF | no |
+| red | `==🔴words==` | highlight | #FF6B6B | no |
+| orange | `==🟠words==` | highlight | #FFB85C | no |
+| pencil | `[words]{.pencil}` | text colour | #9A9A9A | no |
+
+The hexes are a proposal until Task 3's measurement says what Drive keeps
+through an import and an in-place restyle. If a hex comes back changed, part B
+stops and says what came back.
+
+**Yellow, green and purple are authoring debts.** Each is counted on the
+envelope of `build` and `publish`, zero included, and the publish skill shows
+the count and asks before a document carrying any goes to Drive. The binary
+says nothing about whether to publish, which is the second principle: a count
+is a fact, and whether a draft with four unanswered questions in it may go to a
+board is the person's call. The other four are carried and not counted.
+
+**No per-person logic anywhere**, in the binary or in a skill. A colour means
+what the author's own notes say it means.
+
+**In the docx each mark is a named character style**, `Yellow`, `Green`,
+`Purple`, `Blue`, `Red`, `Orange`, `Pencil`, so Word lists them and a reader
+finds every yellow with one search. The six highlights are run shading with the
+exact hex, not one of Word's sixteen named highlights, which carry none of
+these hexes. Google Docs has no character styles, so after import a mark is
+direct formatting, and direct formatting is what `export` reads: it recognises
+a mark by its exact colour and writes Obsidian's syntax back, or the pencil
+span. A colour outside the palette stays plain words and is counted by hex.
+
+**`read` is unchanged, and that is a decision rather than an omission.** The
+words reach a reviewing session and the mark around them does not. A mark in
+the projection changes what a session quotes: a model that reads
+`==the figure==` may answer about the marks instead of the text, and a quote a
+skill sends back to `propose` would have to be stripped of syntax that is not
+in the document.
+Printing marks in `read` is a decision for a later entry.
+
+**What was dropped on the way.** Five named text colours. A per-person legend.
+The writer's desk names sticky, proof, flag and ink. `coin`. Hilo and every
+other Obsidian plugin's syntax. An HTML span for pencil. A rule that colours a
+paragraph by its first words. A mark on a whole paragraph, and a meaning for
+any colour in the binary, are later entries.
+
+**What this strains.** Two rules this tree states.
+
+- `internal/body/mark.go` says `==text==` is "the only way to say a human still
+  has to fill this in". It is now one of six colours, and that sentence becomes
+  yellow's meaning in Nail's own notes rather than the syntax's meaning in the
+  code.
+- `internal/body` warns about inline HTML and drops it, and has had no span
+  syntax at all. This entry adds one, Pandoc's, reading exactly one attribute,
+  `.pencil`. A `[` not followed by `]{` is ordinary text and `[words](url)`
+  stays a link, so the grammar takes nothing away from what already parses.
+- **An in-place restyle turns every pencil mark black**, measured on
+  2026-10-14 and accepted by Nail on 2026-10-15. Gate B's probe, written up in
+  MEASURED.md under "Drive's import of run shading and text colour", found that
+  `restyle.TabRequests` writes `foregroundColor` from `styles.normal.color`,
+  which house.yaml states as #000000, over every body run, so the grey is gone
+  and Docs reports no colour on the run at all. That is the styling allowlist
+  working as written: it can change no character, and a text colour is not a
+  character. `export` then brings those words home without the span. The six
+  highlight colours are untouched, because a highlight is a run background and
+  nothing on the allowlist writes a background. Nail chose the strain rather
+  than dropping the pencil from the seven or stopping part B: `publish` and
+  `export` are unaffected, and a document nobody restyles in place keeps its
+  pencil. `docs/backlog/restyle-keeps-pencil.md` holds the fix, restyle
+  splitting its colour request around the runs that carry the pencil hex, which
+  needs the run colours the read now keeps.
+
+A highlight carrying anything but one of the six emoji at its start, or an
+emoji anywhere else in it, is the words as written. A nested mark, an empty
+span, a span carrying another attribute, a span crossing a paragraph and a mark
+inside a heading are each refused by line. `restyle` is unchanged, and whether
+an in-place restyle leaves run shading and run colour alone is measured. The
+cover's own yellow placeholders are the prelude's, keep writing Word's named
+yellow, and are not marks.
+
+**Tests.** `TestTheSevenMarksAreStatedAsLiterals`,
+`TestAMarkWithAnUnknownKindIsRefused`,
+`TestAMarkWhoseColourIsNotHexIsRefused`, `TestTwoMarksCannotShareASyntax`,
+`TestAMarkWithNoSyntaxIsRefused`, `TestTheMarksAreTheSevenAndNoOther`,
+`TestAHighlightOpeningWithAColourEmojiCarriesItsMark`,
+`TestAnEmojiElsewhereInAHighlightIsText`,
+`TestAnEmojiOutsideAHighlightIsText`, `TestAPencilSpanIsARunCarryingItsMark`,
+`TestALinkIsStillALink`, `TestABracketNotFollowedByAttributesIsText`,
+`TestASpanWithAnotherAttributeIsRefusedByLineNamingPencil`,
+`TestANestedMarkIsRefusedByLine`, `TestAnEmptySpanIsRefusedByLine`,
+`TestAMarkInAHeadingIsRefusedByLine`,
+`TestASpanCrossingAParagraphIsRefusedByLine`,
+`TestTwoMarksSideBySideStayTwoRuns`, `TestTheDebtsAreCountedAndTheOthersAreNot`,
+`TestAMarkedRunCarriesItsStyleAndItsShading`,
+`TestTheSevenCharacterStylesAreWritten`,
+`TestTheCoverPlaceholdersAreNotMarks`,
+`TestARunKeepsItsBackgroundAndTextColour`,
+`TestExportWritesObsidiansSyntaxForEachPaletteColour`,
+`TestAColourOutsideThePaletteIsPlainWordsAndCounted`, `TestReadPrintsNoMark`,
+`TestHelpMarksPrintsTheSevenFromTheBinary`, `TestLiveMarkImportProbe` and
+`TestLivePublishCarriesTheMarksIntoDocs`. Each states every emoji and every hex
+as a literal. `TestAMarkedSpanIsItsOwnNodeKind` still holds.
+## 2026-10-15. What the M18 review closed.
+
+The holes the external review of M18 found, round after round, each one a
+silent loss rather than a wrong answer. Serves principle 2, because every one of them had the binary
+say a document was fine when it was not, or refuse a note nothing was wrong
+with. No design changes: the shapes M18 decided are the shapes, and these are
+the edges they did not cover.
+
+**A label defined twice is refused, naming both lines.** goldmark matches a
+mark against the first definition of a label and its transformer removes the
+rest, so `[^a]: one` followed by `[^a]: two` built with no message and the
+words "two" reached no page. That is the loss the unmarked-definition refusal
+already exists for, so it is the same answer.
+
+**The heading refusal is asked of the tree as well as of the line.** The line
+scan reads an ATX heading, and goldmark builds a heading from a setext line,
+from inside a block quote and from inside a list item too. A footnote mark in
+one of those reached the contents field, which is the exact failure the ATX
+refusal exists to prevent. `headingBlock` refuses it; the line scan stays for
+its earlier line number.
+
+**A code block is a fence or four spaces, and a fence shuts on its own
+character.** Both line scans skipped a fenced block by flipping a flag on any
+fence line, so a "```" block holding a "~~~" line closed early and the lines
+after it were read as prose; and neither knew an indented code block at all, so
+`    pattern [^abc] here` refused a note nothing was wrong with. The rule is
+one function now, `body/scan.go`, read by the footnote scan and the span scan.
+A bracket inside a code span is the same story on the parser's side: it stopped
+the span scan, so the author's own `]{.pencil}` was printed into the document
+while the line check, which takes code spans out, saw nothing wrong.
+
+The one scan follows goldmark on three more edges, each a line read as the
+wrong kind of thing. A fenced block shuts on a fence carrying nothing after the
+run, so the "```js" line inside a "```" block is the block's own content and
+not its end; a note showing a markdown file writes one. An indented code block
+opens after a horizontal rule and after the underline of a setext heading, the
+way it opens after a heading, because each closes the block above it. And a
+list item or a definition runs on until a line of prose at the margin: a
+continuation line sits at the item's own content indent, which the scan does
+not measure, so ending the item at a three-space line read the item's next
+paragraph, indented four, as code and refused the mark in it.
+
+**A mark inside a footnote comes home as plain words, and the file says so.**
+`build` shades a mark inside a note and counts it as a debt. The read keeps a
+footnote's text alone, so `export` has no colour to read there: the words came
+home plain, no envelope counted them, and the next build reported a debt fewer
+than the document held. The read now records the colours each note's own runs
+carried, on `docs.Document.FootnoteColours`, and `export` names the loss
+against `docs/backlog/marks-inside-footnotes.md`. Carrying the mark itself
+needs the footnote's runs, which is that backlog item and the suggestions one
+together.
+
+The hexes rather than the ids, because the question is whether the house claims
+the colour and only `export` can ask it. A link inserted in Google Docs carries
+the link blue as a direct text colour on its own run, and a footnote is where a
+citation lives, so a read that said no more than "there was a colour here"
+had `export` calling most hand-written footnotes a lost mark and the skill
+asking the person about a debt that never existed. The rule is the one
+`otherColours` already states for the body: a background is somebody marking
+words, and a text colour is design unless it is the pencil's own.
+
+**Two edges of the mark round trip.** A run in Docs may begin or end with a
+space, and a highlight's delimiter is read by flanking, so `==to fill in ==`
+came home as words with the delimiters printed in them; the space is written
+outside the delimiters now. And the one highlight an author may write bare says
+no colour, so marked words of the author's own that open with a colour emoji
+were read as naming one: the colour is written out, `==🟡 🟢 go==`, where they
+do.
+
+**A mark around whitespace alone is no mark, and the cut counts UTF-16
+units.** The export writes a mark's delimiters around the words of a group and
+the group's own whitespace outside them, and the two halves of that walk read
+whitespace differently: the guard counted a space as a word and the cut took it
+away, so a space somebody highlighted on its own, which is what an edit inside
+a highlight leaves behind, ended `gdoc export` as a panic recovered into a
+failed envelope and no files. One whitespace set now, and a group holding
+nothing else is written bare. The same cut took its index from the byte length
+of the words, a byte too far for every multi-byte rune in them, so a comment
+opening on the word after the space came home behind the delimiter: it is
+counted from the run's own end now.
+
+The whitespace is goldmark's own flanking set, `unicode.IsSpace`, and not the
+four characters a file is written with. Docs keeps a soft line break, the
+Shift+Enter one, inside the run as U+000B, so a highlight ending in one was
+written `==words\v==`, whose closing delimiter is not right-flanking: the mark
+came home as two pairs of equals signs in the words. A leading or trailing
+non-breaking space did the same, and the cut counts UTF-16 units off the text
+it took rather than bytes, because that space is one unit in two bytes.
+
+**The spec said no mark in a table cell, and the code has always carried one.**
+A cell's runs go through the same inline walk every paragraph's do, so
+`==words==` in one is shaded and counted; what a cell cannot hold is a footnote,
+which needs a footnotes part the cell's paragraph does not name. The spec line
+joined the two and was wrong about the mark on the day it was written.
+`TestAMarkInATableCellIsCarried` is the pin, and the line now says what the
+binary does. This is the entry that change is written in, because a change to
+`SPEC.md` is an entry here first.
+
+**One line was edited inside the 2026-10-14 footnotes entry, and this says
+why.** An entry here is never edited after the day it is written, and the
+exception at the 2026-09-16 entry above is recorded the same way. The entry "A
+footnote is carried on every route" named
+`TestAListInsideAFootnoteWarnsAndIsLeftOut` in its list of tests, which was
+never a test function: it was the plan's own words for the rule, and the test
+that pins it is `TestWhatTheHouseStyleCannotSetInAFootnoteIsWarnedAndLeftOut`.
+The list now names that one. The edit changes no decision: a name that pins
+nothing is worse than no name, because a reader checking the entry finds
+nothing and cannot tell which of the two is wrong.
+
+**A colon after a mark says nothing about it.** The line scan skipped every
+`[^label]` with a colon after it, on the theory that a colon is always a
+definition opening. A definition opens at the start of a line and nowhere else,
+and goldmark reads `the source[^1]: it is good` in the middle of a sentence as a
+mark like any other. So the rule got both answers wrong at once: a reference
+ending a clause was never counted and its own definition was refused as
+unmarked, and an undefined mark of the same shape was published as the words the
+author typed, which is the silence every footnote refusal exists for. The one
+`[^label]` the scan leaves alone is the definition's own opener, known by where
+it sits on the line.
+
+**A code block is measured from the content indent of the block it sits in.**
+The paragraph above in this entry says the scan does not measure a list item's
+content indent. It measures it now, and this says why: measured from the margin,
+neither kind of code block inside a nested list item was seen at all, because a
+fence sits at four spaces there and the indented-code rule was switched off
+while a list was open. A code sample in a nested bullet was read as prose, so
+`[^ref]` in it refused a note nothing was wrong with and a shell line holding
+`]{.pencil}` refused a span nobody opened. The footnote definition is the same
+shape from the other side: its content sits at four, so the fence of a code
+block inside a note was never seen either. `base` is that indent, four inside a
+definition and the marker's width inside an item; a fence opens within three
+spaces of it and an indented block four beyond it.
+
+**A footnote mark and a mark inside a picture's alt text are refused.** The alt
+text becomes the picture's caption, and the caption is built with no palette and
+no numbers at all, which is what `markTable`'s zero value and the nil note map
+are for: neither reaches a run that could carry a colour. So both were dropped
+there in silence. The footnote was worse than silent: the mark was numbered by
+the pre-walk, so the note was written under the page with nothing on any page
+pointing at it and the envelope counted a footnote the document does not have,
+which is a false fact and not a loss. Both are refused by line now, for the
+reason the heading and the table cell are. The alt text sits on a line of prose,
+so neither can be read off the line scan and both are asked of the tree.
+
+**A mark whose words cannot carry its syntax comes home as the words alone.**
+`export` writes a mark as the syntax an author types and the next build reads
+that syntax back, and three shapes of words it cannot be read around: a bracket
+the document holds, because a span's words end at the first bracket a reader
+meets; a link, because that is written with the same bracket, so a pencilled
+link came home as `[[words](url)]{.pencil}`; and a highlight's own delimiter
+inside the words, which closes the mark early, or one half of it against either
+end, which lengthens it and leaves a stray equals sign in the document. The
+first two wrote a file into the hub that `build` refuses by line, blaming the
+file rather than the export, with nothing the author could type to fix it.
+
+A backslash is not the answer, and that is measured: `internal/body` hands
+goldmark's text through as it stands and never unescapes a punctuation mark, so
+an escape written into the file reaches the document as a backslash. That is a
+hole of its own, older than M18 and documented in
+`docs/backlog/build-never-unescapes-a-backslash.md`, because fixing it changes
+what every note carrying a backslash publishes. Until then the words are written
+as they stand, the mark is left off and the loss is named, which is what a
+placeholder does for a picture: a colour nobody can see in the file is better
+than a file that will not build.
+
+**A house palette has to give `==` to a highlight.** `validateMarks` checked the
+seven names, the kinds, the hexes and the openers, and never that some mark
+claims the bare delimiter. `internal/body` resolves it to a mark by name, so a
+file passed to `--house` with `==` taken off yellow resolved to no name: every
+`==highlight==` in the note reached the document with no colour on it, no
+character style, and no count on the envelope. Two refusals now, one for nobody
+claiming it and one for a mark that is not a highlight claiming it.
+
+**Tests.** `TestALabelDefinedTwiceIsRefusedNamingBothLines`,
+`TestAFootnoteMarkInAHeadingTheLineScanCannotSeeIsRefused`,
+`TestAFootnoteInsideAnIndentedCodeBlockIsNotAFootnote`,
+`TestACodeBlockShutsOnItsOwnFenceAndNotAnother`,
+`TestASpanInsideACodeBlockIsNotASpan`,
+`TestASpanWhoseWordsHoldACodeSpanWithABracketIsStillASpan`,
+`TestAMarkInsideAFootnoteIsNamedAsALoss`,
+`TestAFootnoteWithNoColourIsNotWarnedAboutAMark`,
+`TestAFootnoteWhoseOnlyColourIsALinksIsNotWarnedAboutAMark`,
+`TestAMarkedRunOfOnlyWhitespaceComesHomeAsItStands`,
+`TestAMarkedSpaceBetweenPlainWordsComesHomeAsItStands`,
+`TestATailCutCountsTheIndexInUTF16Units`,
+`TestAMarkedRunsOwnSpacesAreWrittenOutsideTheDelimiters`,
+`TestAYellowMarkWhoseWordsOpenWithAnEmojiIsWrittenWithItsColour`,
+`TestOnlyTheFirstEmojiOfAHighlightIsItsColour`,
+`TestThePreludesOwnYellowIsNotCounted`,
+`TestAMarkInAListItemsOwnLaterParagraphIsStillProse`,
+`TestAPencilMarkInsideAFootnoteIsNamedAsALoss` and
+`TestAMarksOwnSoftBreakAndNonBreakingSpaceAreWrittenOutsideTheDelimiters`.
+`TestWhatTheHouseStyleCannotSetInAFootnoteIsWarnedAndLeftOut` now names each
+left-out block by its own line rather than by the line its definition opens on.
+
+The second round of the review adds
+`TestAFootnoteMarkFollowedByAColonIsStillAMark`,
+`TestACodeBlockInsideABlockThatIndentsItsContentIsStillCode`,
+`TestAFootnoteMarkInsideAPicturesAltTextIsRefusedByLine`,
+`TestAMarkInAPicturesAltTextIsRefusedByLine`,
+`TestAMarkWhoseWordsCannotCarryItsSyntaxComesHomeAsWordsAndIsNamed`,
+`TestAPaletteWhereNoMarkClaimsTheBareHighlightIsRefused` and
+`TestTheBareHighlightBelongsToAHighlight`.
+
+The third round closes the two questions a line scan was still answering for
+the parse, and one mark the export asked about its own syntax alone.
+
+**Which labels are defined is the parse's answer.** The line scan sees a
+definition at the margin and goldmark reads one wherever a block may start, so
+the two disagreed in both directions. A definition inside a block quote or
+inside a list item is lifted into the document's own list of notes and renders:
+`> [^a]: the note` was refused with a sentence saying the file does not define
+a note it does define, and nothing the author could type fixed it. A definition
+inside a block of HTML defines nothing, because the block is one leaf and
+nothing in it is markdown: that file built with `ok` and published `[^a]` into
+the document as words, which is the exact failure the refusal exists to
+prevent. `definedFootnotes` walks the parse for the labels it resolved, which is
+also goldmark's own answer about which definitions survive, and the scan keeps
+the three questions a line answers: a definition nothing marks, a label defined
+twice, and a mark in a heading.
+
+**The lines of a block of HTML are left out of both scans**, the way a code
+block's are. Nothing inside one reaches the document, so a definition there
+answers for nothing and a span there is never formed, and both scans refused a
+file over syntax no reader would ever see. The lines come off the parse rather
+than off a second reading of the source: CommonMark opens a block of HTML on
+seven conditions and shuts it on as many, and a scan that guessed at them would
+be a third reading to keep in step with goldmark.
+
+**The pencil attribute is counted against the spans the parse formed.** gdoc's
+span parser claims a bracket, and three of goldmark's parsers claim one first: a
+bracket after `!` is a picture's, a bracket holding a caret is a footnote
+mark's, and a bracket followed by a target or a reference is a link's. The line
+check read the shape and called each of them a span, so `![a]{.pencil}`,
+`[^a]{.pencil}`, `[words](url){.pencil}` and `[words][ref]{.pencil}` all built
+with `ok` and put `{.pencil}` into the document as words. The count of the
+attribute on a line may not exceed the spans the parse formed on it, which
+makes that a sixth refusal by line, and `{.pencil}` written in prose with no
+span at all is refused with the rest. A code span is how an author writes the
+syntax itself, which is the answer the other span refusals already give.
+
+**A mark is checked against every mark in the palette, not its own syntax
+alone.** `cannotCarry` asked whether the words hold the delimiter of the mark
+being written, so a pencil over words holding `==b==` came home as
+`[a ==b== c]{.pencil}`, which the next build refuses as a mark inside a mark,
+and a highlight over words holding `]{.pencil}` came home as a span the line
+does not open. Both broke the one guarantee the function exists for, which is
+that the file builds again. A span's closer counts on its own, because the
+build refuses one whatever sits in front of it; a delimiter pair takes both
+halves, because one `==` in a sentence is a sentence.
+
+**Tests.** `TestADefinitionGoldmarkLiftsOutOfABlockQuoteOrAListItemIsNotRefused`,
+`TestAMarkWhoseDefinitionSitsInABlockOfHTMLIsRefused`,
+`TestADefinitionInsideABlockOfHTMLRefusesNothing`,
+`TestAPencilAttributeThatOpensNoSpanIsRefusedByLine`,
+`TestAPencilAttributeInsideABlockOfHTMLRefusesNothing`,
+`TestASpanTheParseFormsIsNotRefused` and
+`TestAMarkWhoseWordsHoldAnotherMarksSyntaxComesHomeAsWords`.

@@ -38,83 +38,121 @@ func wantHost(t *testing.T, hexHash string) [32]byte {
 // A .gitignore file, read as patterns relative to the directory holding it.
 type ignoreFile struct {
 	dir      string // absolute
-	patterns []string
+	patterns []pattern
+}
+
+// pattern is one .gitignore line, read once rather than at every path: the
+// text as written for the failure message, whether it names a path back into
+// the scan, whether it names a directory, and the body the match is made on.
+type pattern struct {
+	text     string
+	negated  bool
+	dirOnly  bool
+	body     string
+	anchored bool // the body holds a /, so it is a path rather than a name
 }
 
 // readIgnore reads one .gitignore and refuses every pattern it cannot read.
 // Refusing rather than skipping is the point: a pattern this helper quietly
 // misunderstood would widen what the scan never looks at, and nobody would
 // find out from a passing test.
-func readIgnore(path string) ([]string, error) {
+func readIgnore(path string) ([]pattern, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	var patterns []string
+	var patterns []pattern
 	for n, line := range strings.Split(string(b), "\n") {
-		p := strings.TrimSpace(line)
-		if p == "" || strings.HasPrefix(p, "#") {
+		text := strings.TrimSpace(line)
+		if text == "" || strings.HasPrefix(text, "#") {
 			continue
 		}
-		if err := checkPattern(p); err != nil {
-			return nil, fmt.Errorf("%s:%d: %q: %w", path, n+1, p, err)
+		p, err := readPattern(text)
+		if err != nil {
+			return nil, fmt.Errorf("%s:%d: %q: %w", path, n+1, text, err)
 		}
 		patterns = append(patterns, p)
 	}
 	return patterns, nil
 }
 
-// checkPattern says whether the four rules below cover a pattern.
-func checkPattern(p string) error {
-	if strings.HasPrefix(p, "!") {
-		return errors.New("a negated pattern is not one this scan reads")
+// readPattern reads one line into the shape ignores matches on, and refuses
+// the shapes the four rules below do not cover. A negation is read by taking
+// the ! off and reading what is left, so a negation of a shape the scan cannot
+// read is refused like the shape itself.
+func readPattern(text string) (pattern, error) {
+	p := pattern{text: text}
+	body := text
+	if strings.HasPrefix(body, "!") {
+		p.negated = true
+		body = body[1:]
 	}
-	if strings.Contains(p, "**") {
-		return errors.New("a ** pattern is not one this scan reads")
+	if strings.Contains(body, "**") {
+		return p, errors.New("a ** pattern is not one this scan reads")
 	}
-	body := strings.TrimSuffix(p, "/")
+	if strings.HasSuffix(body, "/") {
+		p.dirOnly = true
+		body = strings.TrimSuffix(body, "/")
+	}
+	if body == "" {
+		return p, errors.New("a pattern with nothing in it")
+	}
+	p.body = body
+	p.anchored = strings.Contains(body, "/")
 	probe := body
-	if i := strings.LastIndex(body, "/"); i >= 0 && !strings.Contains(body, "*") {
-		probe = body[i+1:]
+	if !p.anchored {
+		probe = filepath.Base(body)
 	}
 	if _, err := filepath.Match(probe, "x"); err != nil {
-		return fmt.Errorf("a pattern filepath.Match refuses: %w", err)
+		return p, fmt.Errorf("a pattern filepath.Match refuses: %w", err)
 	}
-	return nil
+	return p, nil
 }
 
-// ignores says whether one of a .gitignore's patterns names rel, a path
-// relative to that file's directory, which is a directory when isDir.
+// ignores says whether a .gitignore's patterns leave rel out of the scan, rel
+// being a path relative to that file's directory which is a directory when
+// isDir.
 //
 // Four rules, and they are the four git shapes this tree actually uses: a
-// pattern ending in / names a directory; a pattern holding a * is matched
-// against the base name; a pattern holding a / elsewhere is a path relative to
-// the .gitignore's own directory; anything else names a file or directory at
-// any depth.
-func ignores(patterns []string, rel string, isDir bool) bool {
+// pattern ending in / names a directory; a pattern holding a / is a path
+// relative to the .gitignore's own directory, with a * in it matching inside
+// one segment; a pattern holding a * and no / is matched against the base
+// name; anything else names a file or directory at any depth.
+//
+// The last pattern that matches decides, which is git's own rule, and it is
+// what makes a ! line mean anything: everything under a directory is ignored
+// and one file in it is named back in. Every pattern is tried rather than the
+// first match winning.
+func ignores(patterns []pattern, rel string, isDir bool) bool {
 	base := filepath.Base(rel)
+	out := false
 	for _, p := range patterns {
-		dirOnly := strings.HasSuffix(p, "/")
-		if dirOnly && !isDir {
+		if p.dirOnly && !isDir {
 			continue
 		}
-		body := strings.TrimSuffix(p, "/")
-		switch {
-		case strings.Contains(body, "*"):
-			if ok, _ := filepath.Match(body, base); ok {
-				return true
-			}
-		case strings.Contains(body, "/"):
-			if rel == body || strings.HasPrefix(rel, body+"/") {
-				return true
-			}
-		default:
-			if base == body {
-				return true
-			}
+		if !p.matches(rel, base) {
+			continue
 		}
+		out = !p.negated
 	}
-	return false
+	return out
+}
+
+// matches is the one path rule, by pattern shape. A path pattern matches the
+// path itself, and a directory it names carries everything under it.
+func (p pattern) matches(rel, base string) bool {
+	switch {
+	case p.anchored:
+		if ok, _ := filepath.Match(p.body, rel); ok {
+			return true
+		}
+		return rel == p.body || strings.HasPrefix(rel, p.body+"/")
+	case strings.Contains(p.body, "*"):
+		ok, _ := filepath.Match(p.body, base)
+		return ok
+	default:
+		return base == p.body
+	}
 }
 
 // scanForHost walks root and returns path:line for every line holding a host
@@ -284,10 +322,57 @@ func TestTheDomainScanSkipsWhatGitIgnores(t *testing.T) {
 	}
 }
 
+// A negation names a file back into the scan, and what a path pattern holding
+// a star names stays out of it.
+//
+// Both halves are the root .gitignore's own shape since M18: the live
+// recordings are somebody's real document, so everything under
+// internal/live/testdata is ignored and the two probe fixtures are named back
+// in one at a time. A scan that read the negation as an ordinary pattern would
+// ignore the fixtures and read the recordings, which is the one direction this
+// file exists to prevent.
+func TestTheDomainScanReadsBackWhatANegationNames(t *testing.T) {
+	root := t.TempDir()
+	write(t, filepath.Join(root, ".gitignore"), "recordings/*\n!recordings/fixture.md\n")
+
+	planted := "person@example.net\n"
+	write(t, filepath.Join(root, "recordings", "somebodys-document.json"), planted)
+	write(t, filepath.Join(root, "recordings", "deep", "also-theirs.json"), planted)
+	write(t, filepath.Join(root, "recordings", "fixture.md"), planted)
+
+	found, err := scanForHost(root, wantHost(t, "3daab7cff97925bbd07d11df5dc3b0e37e2d965520175ada0ec62ce72cda5ed2"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(found, " ") != "recordings/fixture.md:1" {
+		t.Errorf("found = %v, want [recordings/fixture.md:1]", found)
+	}
+}
+
+// The last pattern that matches decides, which is git's rule and not a
+// convenience: a negation above the pattern that excludes a file leaves that
+// file excluded.
+func TestTheLastPatternThatMatchesDecides(t *testing.T) {
+	root := t.TempDir()
+	write(t, filepath.Join(root, ".gitignore"), "!recordings/fixture.md\nrecordings/*\n")
+	write(t, filepath.Join(root, "recordings", "fixture.md"), "person@example.net\n")
+
+	found, err := scanForHost(root, wantHost(t, "3daab7cff97925bbd07d11df5dc3b0e37e2d965520175ada0ec62ce72cda5ed2"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(found) != 0 {
+		t.Fatalf("the negation above the pattern re-included the file: %v", found)
+	}
+}
+
 // A pattern the helper cannot read fails by name. A new .gitignore line that
 // this scan would misunderstand must not quietly widen what it never looks at.
+//
+// A negation is read now, so what has to fail is a negation whose own body is
+// a shape the scan cannot read.
 func TestTheDomainScanRefusesAPatternItCannotRead(t *testing.T) {
-	for _, pattern := range []string{"!keep", "a/**/b", "*.py[cod"} {
+	for _, pattern := range []string{"a/**/b", "!a/**/b", "*.py[cod", "!*.py[cod"} {
 		root := t.TempDir()
 		write(t, filepath.Join(root, ".gitignore"), pattern+"\n")
 		_, err := scanForHost(root, wantHost(t, "3daab7cff97925bbd07d11df5dc3b0e37e2d965520175ada0ec62ce72cda5ed2"))

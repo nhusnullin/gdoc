@@ -15,7 +15,8 @@ func firstBlockRuns(t *testing.T, source string) []Run {
 	if block == nil {
 		t.Fatal("no block parsed")
 	}
-	return inlineRuns(block, bytes)
+	_, notes := footnoteNumbers(root)
+	return inlineRuns(block, bytes, notes, newMarkTable(config(t)))
 }
 
 func joined(runs []Run) string {
@@ -49,8 +50,8 @@ func TestMarksAreCarriedOntoTheRunsTheyCover(t *testing.T) {
 	if got := runCarrying(t, runs, "code"); !got.Mono {
 		t.Errorf("code run = %#v", got)
 	}
-	if got := runCarrying(t, runs, "marked"); got.Highlight != "yellow" {
-		t.Errorf("marked run = %#v, want a yellow highlight", got)
+	if got := runCarrying(t, runs, "marked"); got.Mark != "yellow" {
+		t.Errorf("marked run = %#v, want a yellow mark", got)
 	}
 }
 
@@ -149,7 +150,7 @@ func TestTaskListsCarryTheirBallotCharacter(t *testing.T) {
 
 	var texts []string
 	for item := list.FirstChild(); item != nil; item = item.NextSibling() {
-		texts = append(texts, joined(inlineRuns(item, source)))
+		texts = append(texts, joined(inlineRuns(item, source, nil, markTable{})))
 	}
 
 	if len(texts) != 2 {

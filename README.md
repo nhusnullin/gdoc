@@ -155,7 +155,7 @@ and an example; without `--json`, a help in a terminal draws a screen instead.
 | `build` | build a note as a house-style docx on this machine, with no network |
 | `publish` | build a note as a house-style document and upload it into one folder |
 | `update` | replace this gdoc with the newest release, or say what one would take |
-| `help`, `completion` | print every command, or write the shell completion script |
+| `help`, `completion` | print every command, or the seven authoring marks with `help marks`; write the shell completion script |
 
 Every request goes through a guard inside the binary, which carries a request
 only for a document gdoc was handed or created. A skill of yours cannot reach

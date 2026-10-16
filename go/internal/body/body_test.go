@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -52,6 +53,28 @@ func serialise(t *testing.T, blocks []*etree.Element) string {
 	var buf bytes.Buffer
 	if _, err := doc.WriteTo(&buf); err != nil {
 		t.Fatalf("serialise: %v", err)
+	}
+	return buf.String()
+}
+
+// serialiseNotes serialises the notes under the page the way word/footnotes.xml
+// holds them, so a golden reads as the part a person would open: one
+// w:footnote per mark, carrying the number internal/body gave it.
+func serialiseNotes(t *testing.T, notes []Footnote) string {
+	t.Helper()
+	doc := etree.NewDocument()
+	root := doc.CreateElement("w:footnotes")
+	for _, note := range notes {
+		el := root.CreateElement("w:footnote")
+		el.CreateAttr("w:id", strconv.Itoa(note.ID))
+		for _, block := range note.Blocks {
+			el.AddChild(block.Copy())
+		}
+	}
+	doc.Indent(2)
+	var buf bytes.Buffer
+	if _, err := doc.WriteTo(&buf); err != nil {
+		t.Fatalf("serialise the notes: %v", err)
 	}
 	return buf.String()
 }
@@ -136,10 +159,12 @@ func TestTheSixDocumentsRenderToTheirGoldens(t *testing.T) {
 			got := serialise(t, out.Blocks)
 			golden := filepath.Join("testdata/golden",
 				strings.TrimSuffix(filepath.Base(name), ".md")+".xml")
+			notes := strings.TrimSuffix(golden, ".xml") + ".footnotes.xml"
 			if *update {
 				if err := os.WriteFile(golden, []byte(got), 0o644); err != nil {
 					t.Fatalf("write %s: %v", golden, err)
 				}
+				compareNotes(t, notes, out.Footnotes)
 				return
 			}
 			want, err := os.ReadFile(golden)
@@ -150,7 +175,41 @@ func TestTheSixDocumentsRenderToTheirGoldens(t *testing.T) {
 				t.Errorf("%s does not match %s. Run go test -update and read the diff",
 					name, golden)
 			}
+			compareNotes(t, notes, out.Footnotes)
 		})
+	}
+}
+
+// compareNotes is the notes under the page against their own golden, where the
+// note has one. A note with no footnote has no file, so a footnote added to a
+// fixture with no golden written for it fails rather than passing in silence.
+func compareNotes(t *testing.T, golden string, notes []Footnote) {
+	t.Helper()
+	if len(notes) == 0 {
+		if *update {
+			if err := os.Remove(golden); err != nil && !os.IsNotExist(err) {
+				t.Fatalf("remove %s: %v", golden, err)
+			}
+			return
+		}
+		if _, err := os.Stat(golden); err == nil {
+			t.Errorf("%s is there and the note renders no footnote", golden)
+		}
+		return
+	}
+	got := serialiseNotes(t, notes)
+	if *update {
+		if err := os.WriteFile(golden, []byte(got), 0o644); err != nil {
+			t.Fatalf("write %s: %v", golden, err)
+		}
+		return
+	}
+	want, err := os.ReadFile(golden)
+	if err != nil {
+		t.Fatalf("read %s: %v (run go test -update to write it)", golden, err)
+	}
+	if got != string(want) {
+		t.Errorf("the notes do not match %s. Run go test -update and read the diff", golden)
 	}
 }
 
@@ -303,12 +362,14 @@ func TestANumberedListNamesTheNumberedList(t *testing.T) {
 }
 
 // TestMarkIsAYellowHighlight is the ==mark== syntax the house markdown uses to
-// say a human still has to fill something in.
+// say a human still has to fill something in. The colour is the palette's own
+// hex as run shading, not one of Word's sixteen named highlights, and
+// TestAMarkedRunCarriesItsStyleAndItsShading holds the other six beside it.
 func TestMarkIsAYellowHighlight(t *testing.T) {
 	out := walk(t, "A sentence with ==a gap== in it.\n")
 	got := serialise(t, out.Blocks)
-	if !strings.Contains(got, `<w:highlight w:val="yellow"/>`) {
-		t.Errorf("the marked span carries no yellow highlight:\n%s", got)
+	if !strings.Contains(got, `<w:shd w:val="clear" w:color="auto" w:fill="ffd500"/>`) {
+		t.Errorf("the marked span carries no yellow shading:\n%s", got)
 	}
 	if !strings.Contains(got, ">a gap<") {
 		t.Errorf("the marked words are missing:\n%s", got)
@@ -333,10 +394,10 @@ func TestALinkIsAHyperlinkWithARelationship(t *testing.T) {
 	if link.Target != "https://example.com/p?a=1&b=2" {
 		t.Errorf("the relationship points at %q", link.Target)
 	}
-	if link.RelID != "rId8" {
-		t.Errorf("the link took %s, and the shell's own seven end at rId7", link.RelID)
+	if link.RelID != "rId9" {
+		t.Errorf("the link took %s, and the shell's own eight end at rId8", link.RelID)
 	}
-	if !strings.Contains(got, `r:id="rId8"`) {
+	if !strings.Contains(got, `r:id="rId9"`) {
 		t.Errorf("the hyperlink names no relationship:\n%s", got)
 	}
 }
@@ -782,6 +843,36 @@ func TestATablesPropertiesAreInSchemaOrder(t *testing.T) {
 	}
 }
 
+// TestARunsPropertiesAreInSchemaOrder is TestAQuotesPropertiesAreInSchemaOrder
+// for a run. CT_RPr is a sequence like w:pPr and w:tblPr: w:rStyle opens it,
+// and w:shd and w:vertAlign come after the underline, which the comment in
+// build.go used to call the last property there is. One run carrying every
+// property the writer can write states the whole sequence as a literal list.
+func TestARunsPropertiesAreInSchemaOrder(t *testing.T) {
+	size := 11.0
+	p := etree.NewElement("w:p")
+	textRun(p, "words", runOpts{
+		Style: "Yellow", SizePt: &size, Bold: true, Italic: true,
+		Strike: true, Underline: true, Color: "#9A9A9A", Font: "Consolas",
+		Fill: "#FFD500", VertAlign: "superscript",
+	})
+	rPr := p.FindElement("w:r/w:rPr")
+	if rPr == nil {
+		t.Fatal("the run carries no w:rPr")
+	}
+	var got []string
+	for _, e := range rPr.ChildElements() {
+		got = append(got, e.FullTag())
+	}
+	want := []string{
+		"w:rStyle", "w:rFonts", "w:b", "w:bCs", "w:i", "w:iCs", "w:strike",
+		"w:color", "w:sz", "w:szCs", "w:u", "w:shd", "w:vertAlign",
+	}
+	if strings.Join(got, " ") != strings.Join(want, " ") {
+		t.Errorf("the run's properties run %v, want %v", got, want)
+	}
+}
+
 // TestAHeadingCarriesTheHouseStyleAndItsColour reads the house literals off a
 // rendered heading.
 func TestAHeadingCarriesTheHouseStyleAndItsColour(t *testing.T) {
@@ -976,52 +1067,6 @@ func TestAnItemThatSpendsNoMarkerSaysSo(t *testing.T) {
 				t.Errorf("the warning is %q, want it to open with %q", got, prefix)
 			}
 		})
-	}
-}
-
-// A footnote warns naming the author's own line and reaches no paragraph.
-//
-// The path is not hypothetical: v2's own `read` writes a document's footnotes
-// as "[^1]" in the prose and "[^1]: the text" after a rule, so a note pulled
-// out of a Google Doc and built back into one carried the markers as published
-// prose. The extension is what turns that into a warning.
-func TestAFootnoteWarnsAndIsLeftOut(t *testing.T) {
-	out := walk(t, "A claim.[^1]\n\nMore words.\n\n[^1]: The supporting detail.\n")
-
-	if len(out.Warnings) != 1 {
-		t.Fatalf("the result carries %d warnings, want 1: %v", len(out.Warnings), out.Warnings)
-	}
-	if !strings.Contains(out.Warnings[0], "line 5") {
-		t.Errorf("the warning does not name line 5, where the note is: %s", out.Warnings[0])
-	}
-	if !strings.Contains(out.Warnings[0], "footnote") {
-		t.Errorf("the warning does not say what was left out: %s", out.Warnings[0])
-	}
-	got := serialise(t, out.Blocks)
-	for _, unwanted := range []string{"supporting detail", "[^1]"} {
-		if strings.Contains(got, unwanted) {
-			t.Errorf("%q reached the document:\n%s", unwanted, got)
-		}
-	}
-	if out.Counts.Paragraphs != 2 {
-		t.Errorf("counted %d paragraphs, want the two the author wrote", out.Counts.Paragraphs)
-	}
-}
-
-// Every footnote is named, and by its own line rather than the list's: goldmark
-// collects the definitions into one list at the end of the document, so the
-// list's own position says nothing about where the author wrote them.
-func TestEveryFootnoteIsNamedByItsOwnLine(t *testing.T) {
-	out := walk(t, "A claim.[^a] Another.[^b]\n\n[^a]: The first detail.\n\n[^b]: The second.\n")
-
-	if len(out.Warnings) != 2 {
-		t.Fatalf("the result carries %d warnings, want 2: %v", len(out.Warnings), out.Warnings)
-	}
-	lines := strings.Join(out.Warnings, "\n")
-	for _, want := range []string{"line 3", "line 5"} {
-		if !strings.Contains(lines, want) {
-			t.Errorf("no warning names %s:\n%s", want, lines)
-		}
 	}
 }
 

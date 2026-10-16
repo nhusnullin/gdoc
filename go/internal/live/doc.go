@@ -179,6 +179,43 @@
 //     above names a variable of its own: GDOC_LIVE_TEST, GDOC_LIVE_WRITE and
 //     GDOC_LIVE_FOLDER_ID with its default are the whole of what they read, and
 //     every document they touch is one they made.
+//   - TestLiveFootnoteImportProbe, M18's, and the gate Part A of that
+//     milestone rests on. It uploads testdata/footnote-probe.docx, the built
+//     04-minimal.md with one Word footnote added by hand, and prints three
+//     answers: whether the converted body holds a footnoteReference, whether
+//     the document holds a footnotes map with the note's words, and whether
+//     the docx export brings word/footnotes.xml back. One document, trashed.
+//     Like the other probes it fails on a read or an export that failed and
+//     on nothing else. Measured 2026-10-14, all three yes, MEASURED.md
+//     "Drive's import of a Word footnote".
+//   - TestLiveMarkImportProbe, M18's, and the gate Part B of that milestone
+//     rests on. It uploads testdata/mark-probe.docx, the built 04-minimal.md
+//     with eight runs added by hand, one per mark colour plus Word's named
+//     yellow as the control, and prints the background and the foreground
+//     Docs reports for each: once on the imported document, and once after
+//     one in-place restyle over it. One document, trashed. Like the other
+//     probes it fails on an upload, a read or a restyle that failed and on
+//     nothing else. Measured 2026-10-14: the six highlight hexes come back
+//     hex for hex and survive the restyle, the named yellow arrives as
+//     #FFFF00, and the pencil's #9A9A9A survives the import and is cleared by
+//     the restyle, which writes the house body colour over every run.
+//     MEASURED.md "Drive's import of run shading and text colour".
+//   - TestLivePublishCarriesAFootnoteIntoDocs, M18's acceptance for Part A and
+//     the first half of acceptance 6. It publishes the kitchen sink note
+//     through the production render and the production upload, reads the
+//     document back bare, and asserts the two references in the body, the two
+//     notes in the footnotes map with the words of both, and word/footnotes.xml
+//     in the docx export carrying them. One document, trashed. Where the probe
+//     above asks whether Drive keeps a Word footnote at all, from a fixture
+//     edited by hand, this one asks whether gdoc's own route carries one, so it
+//     asserts rather than reports.
+//   - TestLivePublishCarriesTheMarksIntoDocs, M18's acceptance for Part B and
+//     the second half of acceptance 6. The same note through the same route,
+//     read back bare through the probe's own helper, with each of the seven
+//     marked runs asserted against the colour the specification states as a
+//     literal: six backgrounds and the pencil's foreground. It makes a document
+//     of its own rather than sharing the one above, because a document two tests
+//     hold is a document neither owns.
 //
 // Copied, and the original never written to:
 //
@@ -231,7 +268,7 @@
 // asserted them would be deciding what it was sent to find out. What it reports
 // is written into MEASURED.md by hand.
 //
-// # Two tests here ask for no network at all
+// # Seven tests here ask for no network at all
 //
 // TestTheLiveFixturesRenderWithNoNetwork runs in `make test`, with neither
 // variable set. Two of the live tests render a note before they reach Drive,
@@ -244,4 +281,28 @@
 // measurement, in export_measure_test.go: it compares what Drive sends back
 // against the pictures on this disk, so a picture that moved out of
 // internal/body/testdata/docs is found by the suite instead.
+//
+// TestTheFootnoteProbeFixtureIsADocx is the third, in footnoteprobe_test.go.
+// The probe uploads a file on this disk rather than rendering one, so a
+// fixture that lost its footnotes part, its relationship or its content type
+// row would otherwise measure nothing and report that Drive dropped the note.
+//
+// TestTheMarkProbeFixtureIsADocx is the fourth, in markprobe_test.go, and it
+// is there for the same reason: a fixture that lost a run, or carries one
+// whose run properties are out of schema order, would measure nothing and
+// report that Drive dropped the colour.
+//
+// TestTheFootnoteRuleNumbersTheNotesTheWayTheDocumentWill and
+// TestARoundTripOverAFootnoteLeavesNothingUnnamed are the fifth and the sixth,
+// in footnote_roundtrip_test.go. The round trip's footnotes rule renumbers the
+// note's own labels, which is a reading of a note rather than a question for
+// Drive, so it is pinned over the two notes that hold the shapes before any
+// live run spends a document on it.
+//
+// TestTheRoundTripNoteCarriesAFootnoteAndEveryMark is the seventh, in
+// roundtrip_test.go. The round trip measures a footnote and a mark only if one
+// of the six notes it publishes still holds them, so the kitchen sink's seven
+// mark openers and its footnote are pinned as the literals an author types: a
+// note edited back to the shapes of M17 would otherwise leave the live run
+// green and the question unasked.
 package live

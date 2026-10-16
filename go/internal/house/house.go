@@ -1,9 +1,9 @@
 // Package house holds the Altery house style as a file, parsed.
 //
-// house.yaml is the style: page geometry, the nine named styles, the cover,
+// house.yaml is the style: page geometry, the ten named styles, the cover,
 // the header and footer with the positioned logo, the three front-matter
 // tables cell by cell, the legend, the live contents field, heading numbering
-// and the logo itself as base64. TestTheNineStylesAreThere,
+// and the logo itself as base64. TestTheTenStylesAreThere,
 // TestFrontMatterIsFourteenBlocksInOrder, TestTheThreeTablesAreThereWithTheirColumns,
 // TestTOCIsALiveFieldOverThreeHeadingLevels and TestTheLogoDecodesAsAPNGOfTheStatedSize
 // are the pins over what the file has to carry.
@@ -59,6 +59,25 @@
 // the key. TestAPageBreakCarryingAnotherKeyIsRefusedNamingIt and
 // TestACountedPageBreakIsRefused are the pins.
 //
+// # The marks are the one palette, and Validate refuses the rest
+//
+// marks: holds the seven authoring marks of 2026-10-14, keyed as Obsidian
+// names its six highlight colours plus pencil, each stating every opener an
+// author may write, whether it is a highlight or a text colour, the hex it
+// reaches the document as, and whether it is counted on the envelope. Nothing
+// else holds a mark's emoji or a mark's hex: body reads the openers off this
+// file, render writes the shading and the character style from it, and export
+// matches the Docs answer against the same hexes, so one colour has one place
+// it is written down. TestTheSevenMarksAreStatedAsLiterals and
+// TestTheMarksAreTheSevenAndNoOther are the pins over what the file carries.
+//
+// The door is validateMarks: an eighth mark and a missing one, a kind that is
+// neither highlight nor text, a colour that is not six hex digits after a
+// hash, a mark with no opener and two marks claiming the same opener are each
+// refused naming what was written. TestAMarkWithAnUnknownKindIsRefused,
+// TestAMarkWhoseColourIsNotHexIsRefused, TestAMarkWithNoSyntaxIsRefused and
+// TestTwoMarksCannotShareASyntax are the pins.
+//
 // # A house-style test states its value as a literal
 //
 // if got != 595.28, never if got != cfg.Page.WidthPt. A test that reads the
@@ -85,15 +104,61 @@ import (
 //go:embed house.yaml
 var embedded []byte
 
-// styleNames is the nine styles a house config must define. A tenth is refused
-// and a missing one is refused, both by name: render reads these by name, so a
-// config that carries something else is a config it would build silently
-// wrong.
+// styleNames is the ten styles a house config must define. An eleventh is
+// refused and a missing one is refused, both by name: render reads these by
+// name, so a config that carries something else is a config it would build
+// silently wrong.
+//
+// footnote_text is the tenth, added with the footnotes of 2026-10-14. It is
+// the only one of the ten that is not a Docs named style: a restyle cannot
+// set it, and nothing in internal/drift reads it, which is why that package's
+// styleIDs stays at nine.
 var styleNames = []string{
 	"normal",
 	"heading_1", "heading_2", "heading_3", "heading_4", "heading_5", "heading_6",
-	"title", "subtitle",
+	"title", "subtitle", "footnote_text",
 }
+
+// markNames is the seven authoring marks, Obsidian's six highlight colours
+// and the one grey. body parses them, render writes a character style for
+// each, export reads each back by its colour and the three debts are counted
+// on the envelope, all of it by name, so an eighth nobody reads and a seventh
+// that is gone are each a document built silently wrong.
+var markNames = []string{
+	"yellow", "green", "purple", "blue", "red", "orange", "pencil",
+}
+
+// MarkNames is the seven marks in the order they are written down: the order
+// render writes their character styles in and help prints them in. A copy,
+// because a caller holding the slice itself could reorder the palette for
+// every other caller.
+func MarkNames() []string { return append([]string(nil), markNames...) }
+
+// markKindHighlight is one of the two kinds a mark may be, and the one that
+// reaches the docx as shading. The other, text, is the run's own colour.
+const markKindHighlight = "highlight"
+
+// markKinds is how a mark reaches the docx: a highlight is run shading with
+// the exact hex, and text is the run's own colour.
+var markKinds = map[string]bool{markKindHighlight: true, "text": true}
+
+// Mark is one authoring mark. Syntax is every opener an author may write for
+// it: one colour emoji for five of the highlights, both '==' and 🟡 for the
+// yellow a plain highlight is, and '.pencil' for the one span gdoc reads.
+// Debt says the mark is counted on the build and publish envelopes, which is
+// a fact the skills judge rather than a refusal.
+type Mark struct {
+	Syntax []string `yaml:"syntax"`
+	Kind   string   `yaml:"kind"`
+	Color  string   `yaml:"color"`
+	Debt   bool     `yaml:"debt"`
+}
+
+// IsHighlight says which way the mark's colour is written: a highlight is run
+// shading with the exact hex, and the one other kind is the run's own text
+// colour. Asked here rather than in render and body, so neither of those two
+// writes the name of a kind out and the two cannot read one differently.
+func (m Mark) IsHighlight() bool { return m.Kind == markKindHighlight }
 
 // blockKinds is what a front_matter entry may name.
 var blockKinds = map[string]bool{
@@ -106,6 +171,7 @@ type Config struct {
 	Meta             Meta              `yaml:"meta"`
 	Page             Page              `yaml:"page"`
 	Palette          map[string]string `yaml:"palette"`
+	Marks            map[string]Mark   `yaml:"marks"`
 	Fonts            Fonts             `yaml:"fonts"`
 	Defaults         Defaults          `yaml:"defaults"`
 	Styles           map[string]Style  `yaml:"styles"`
@@ -511,10 +577,11 @@ func (c *Config) LogoBytes() ([]byte, error) {
 	return raw, nil
 }
 
-// Validate says what YAML cannot: the nine styles are there and nothing else
+// Validate says what YAML cannot: the ten styles are there and nothing else
 // is, every front_matter block names a kind that exists and a ref that is
-// there, every highlight is one of OOXML's names rather than a colour, and the
-// logo really is a PNG of the size the file states. Each of those is something
+// there, every highlight is one of OOXML's names rather than a colour, the
+// seven marks are there with a kind, a hex colour and an opener of their own,
+// and the logo really is a PNG of the size the file states. Each of those is something
 // render reads by name, so a config that fails one here is a document it would
 // build silently wrong.
 //
@@ -531,7 +598,95 @@ func (c *Config) Validate() error {
 	if err := c.validateHighlights(); err != nil {
 		return err
 	}
+	if err := c.validateMarks(); err != nil {
+		return err
+	}
 	return c.validateLogo()
+}
+
+// validateMarks requires exactly the seven marks, each with a kind the writer
+// knows, a colour it can write and at least one opener an author can type, no
+// two of them claiming the same opener, and one highlight claiming the bare
+// "==" an author writes when they mean nothing by the colour.
+//
+// The bare delimiter is required because internal/body resolves it to a mark by
+// name: a palette where no mark claims it resolves to no name at all, and every
+// ==highlight== in the note then reached the document with no colour on it and
+// nothing said so. A house file is a file somebody edits, which is why this is
+// a refusal and not a comment.
+//
+// The walk is ordered for the reason validateHighlights is ordered: a draft
+// with two bad marks in it is refused naming the same one on every run, so
+// somebody fixing them one at a time is not sent somewhere else each time.
+func (c *Config) validateMarks() error {
+	want := make(map[string]bool, len(markNames))
+	for _, name := range markNames {
+		want[name] = true
+		if _, ok := c.Marks[name]; !ok {
+			return fmt.Errorf("marks: %s is missing", name)
+		}
+	}
+	var extra []string
+	for name := range c.Marks {
+		if !want[name] {
+			extra = append(extra, name)
+		}
+	}
+	if len(extra) > 0 {
+		sort.Strings(extra)
+		return fmt.Errorf("marks: %s is not a house mark", strings.Join(extra, ", "))
+	}
+	owner := make(map[string]string, len(markNames))
+	for _, name := range markNames {
+		mark := c.Marks[name]
+		if !markKinds[mark.Kind] {
+			return fmt.Errorf("marks.%s: %q is not a mark kind", name, mark.Kind)
+		}
+		if !isHexColor(mark.Color) {
+			return fmt.Errorf("marks.%s: %q is not a hex colour", name, mark.Color)
+		}
+		if len(mark.Syntax) == 0 {
+			return fmt.Errorf("marks.%s: no syntax, so nothing an author writes is this mark", name)
+		}
+		for _, syntax := range mark.Syntax {
+			if syntax == "" {
+				return fmt.Errorf("marks.%s: an empty syntax is not something an author writes", name)
+			}
+			if first, taken := owner[syntax]; taken {
+				return fmt.Errorf("marks.%s: %q is already mark %s", name, syntax, first)
+			}
+			owner[syntax] = name
+		}
+	}
+	if name := owner[plainHighlight]; name == "" {
+		return fmt.Errorf("marks: no mark claims %q, which is the highlight an author writes when they mean nothing by the colour, so every one of them would reach the document with no colour", plainHighlight)
+	} else if !c.Marks[name].IsHighlight() {
+		return fmt.Errorf("marks.%s: %q is a highlight an author writes, and this mark is %q rather than a highlight", name, plainHighlight, c.Marks[name].Kind)
+	}
+	return nil
+}
+
+// plainHighlight is the syntax a bare ==highlight== is written with. It is
+// stated in internal/body and in internal/export as well, each for its own
+// reason. TestAPaletteWhereNoMarkClaimsTheBareHighlightIsRefused and
+// TestTheBareHighlightBelongsToAHighlight are the pins over the two refusals it
+// is here for.
+const plainHighlight = "=="
+
+// isHexColor is '#' and six hex digits, which is what w:shd w:fill and w:color
+// take and what the Docs answer is matched against.
+func isHexColor(value string) bool {
+	if len(value) != 7 || value[0] != '#' {
+		return false
+	}
+	for _, r := range value[1:] {
+		switch {
+		case r >= '0' && r <= '9', r >= 'a' && r <= 'f', r >= 'A' && r <= 'F':
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 // highlightNames is OOXML's ST_HighlightColor, which is the whole of what
@@ -648,7 +803,7 @@ func checkTableHighlights(name string, table Table) error {
 	return nil
 }
 
-// validateStyles requires exactly the nine names, no more and no fewer.
+// validateStyles requires exactly the ten names, no more and no fewer.
 func (c *Config) validateStyles() error {
 	want := make(map[string]bool, len(styleNames))
 	for _, name := range styleNames {

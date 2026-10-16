@@ -3,7 +3,8 @@
 // the paragraph, heading, list item and caption builders, inline.go turns a
 // paragraph's children into runs, table.go writes a pipe table, image.go embeds
 // a picture, numbering.go builds a heading's number, mark.go is the
-// ==highlight== extension, and doc.go holds the package comment.
+// ==highlight== extension, footnote.go is the notes under the page, and
+// doc.go holds the package comment.
 
 package body
 
@@ -20,6 +21,7 @@ import (
 	east "github.com/yuin/goldmark/extension/ast"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/text"
+	"github.com/yuin/goldmark/util"
 
 	"gdoc/internal/house"
 	"gdoc/internal/markers"
@@ -39,6 +41,11 @@ type Counts struct {
 	Lists      int `json:"lists"`
 	Tables     int `json:"tables"`
 	Images     int `json:"images"`
+	Footnotes  int `json:"footnotes"`
+	// Marks is how many of each debt mark the note holds, by name, zero
+	// included. Only the marks the house style calls a debt are in here, for
+	// the reason countMarks gives.
+	Marks map[string]int `json:"marks"`
 }
 
 // Result is one walk: the blocks, the relationships they name, what could not
@@ -57,6 +64,12 @@ type Result struct {
 	Counts   Counts
 	Sources  []string
 
+	// Footnotes is one entry per footnote mark in the body, in the order the
+	// marks appear, which is the order Word numbers them in. A label marked
+	// twice is two entries carrying the same words, because Word and Docs
+	// hold one note per mark.
+	Footnotes []Footnote
+
 	// NumberedLists is how many w:num entries word/numbering.xml needs for the
 	// numbered lists in these blocks. It is plumbing for render.Build rather
 	// than a fact for a reader, which is why it is not on Counts and not in the
@@ -70,12 +83,21 @@ type renderer struct {
 	base     string
 	source   []byte
 	numberer *headingNumberer
+	marks    markTable
 
-	blocks   []*etree.Element
-	media    []Media
-	warnings []string
-	counts   Counts
-	sources  []string
+	blocks    []*etree.Element
+	media     []Media
+	warnings  []string
+	counts    Counts
+	sources   []string
+	footnotes []Footnote
+
+	// footnoteOrder is every footnote mark in the prose, in reading order, and
+	// footnoteNumber the number each one takes. Both are read before the
+	// blocks are walked, because a mark cannot count the marks before it and
+	// goldmark's own index is the definition's rather than the mark's.
+	footnoteOrder  []*east.FootnoteLink
+	footnoteNumber map[ast.Node]int
 
 	// pendingMark is the list marker the item being walked has not spent yet.
 	// It is the renderer's rather than a field on listCtx because the block
@@ -148,16 +170,48 @@ func Render(cfg *house.Config, markdown []byte, base string, numbering bool) (Re
 	if m, line := markers.Lines(string(source)); line > 0 {
 		return Result{}, fmt.Errorf("line %d carries %s, one of gdoc's own markers; the note was exported out of a document and its suggestions and comments have not been resolved, so publishing it would put the marker into the document as words", line, m)
 	}
-	root := parse().Parser().Parse(text.NewReader(source))
+	// The parse carries a context of Render's own, because readDefinitions
+	// leaves its snapshot of the footnote definitions there and footnote.go
+	// holds why the parse is the only place one of them can be seen.
+	pc := parser.NewContext()
+	root := parse().Parser().Parse(text.NewReader(source), parser.WithContext(pc))
+	// The footnotes and the spans are refused before a block is built, both
+	// mostly off the source lines: a mark naming no note and an attribute
+	// closing no span are facts about a line, and goldmark is silent in each
+	// of them. Each asks the parse the one question a line cannot answer,
+	// which is whether goldmark read the same thing there; footnote.go and
+	// mark.go hold which question that is.
+	if err := checkFootnotes(source, root, definitionsRead(pc)); err != nil {
+		return Result{}, err
+	}
+	if err := checkSpans(source, root); err != nil {
+		return Result{}, err
+	}
+	order, numbers := footnoteNumbers(root)
 
 	r := &renderer{
-		cfg: cfg, base: base, source: source,
+		cfg: cfg, base: base, source: source, marks: newMarkTable(cfg),
 		anchors: headingAnchors(root, source), linked: linkedAnchors(root),
 		deadAnchors: map[string]bool{}, curLine: 1,
 		relID: render.FirstMediaRelID, linkIDs: map[string]string{},
-		firstHeading: true,
+		firstHeading:   true,
+		footnoteOrder:  order,
+		footnoteNumber: numbers,
 	}
 	r.numberer = newHeadingNumberer(numbering, separator, shallowestHeadingLevel(root, source))
+	// A mark inside a mark and a mark inside a heading are the two refusals
+	// the tree answers rather than the source lines, so they are asked once
+	// the parse is in hand and before any block is built.
+	if err := r.checkMarks(root); err != nil {
+		return Result{}, err
+	}
+	// A footnote mark inside a picture's alt text is the tree's answer too: the
+	// alt text sits on a line of prose, so the line scan reads the mark as the
+	// document's own words and the walk that builds the caption drops it.
+	if err := r.checkFootnotesInPictures(root); err != nil {
+		return Result{}, err
+	}
+	r.counts.Marks = countMarks(root, source, r.marks)
 
 	if err := r.walk(root, 0, listCtx{}); err != nil {
 		return Result{}, err
@@ -166,7 +220,8 @@ func Render(cfg *house.Config, markdown []byte, base string, numbering bool) (Re
 		return Result{}, r.err
 	}
 	return Result{Blocks: r.blocks, Media: r.media, Warnings: r.warnings,
-		Counts: r.counts, Sources: r.sources, NumberedLists: r.numberedLists}, nil
+		Counts: r.counts, Sources: r.sources, Footnotes: r.footnotes,
+		NumberedLists: r.numberedLists}, nil
 }
 
 // parse is goldmark, configured to the extension set the previous generator
@@ -204,7 +259,14 @@ func parse() goldmark.Markdown {
 			// prose.
 			extension.Footnote,
 		),
-		goldmark.WithParserOptions(parser.WithAutoHeadingID()),
+		goldmark.WithParserOptions(
+			parser.WithAutoHeadingID(),
+			// The snapshot of the footnote definitions, taken before the
+			// extension's own transformer removes the ones it drops.
+			parser.WithASTTransformers(
+				util.Prioritized(readDefinitions{}, definitionsPriority),
+			),
+		),
 	)
 }
 
@@ -293,11 +355,15 @@ func (r *renderer) line(node ast.Node) int {
 
 // lineAt turns a source offset into the 1-based line holding it. An offset
 // nothing carried is line 1, which is the only answer left.
-func (r *renderer) lineAt(offset int) int {
-	if offset < 0 || offset > len(r.source) {
+func (r *renderer) lineAt(offset int) int { return lineOf(r.source, offset) }
+
+// lineOf is the same answer without a renderer, because the two refusals the
+// parse answers are asked before one is built.
+func lineOf(source []byte, offset int) int {
+	if offset < 0 || offset > len(source) {
 		return 1
 	}
-	return 1 + bytes.Count(r.source[:offset], []byte("\n"))
+	return 1 + bytes.Count(source[:offset], []byte("\n"))
 }
 
 // itemLine is the line a list item's own warning names. A ListItem carries no
@@ -332,19 +398,32 @@ func (r *renderer) itemLine(item ast.Node) int {
 // descendant that carries one. A fence is read the way the code block's own
 // warning reads it, one line above the block's first line of code, because
 // that is the line the author sees.
+//
+// Only a block is asked for its lines. goldmark panics when an inline node is,
+// which is why markLine exists, and the walk down to a block's words goes
+// through its inlines: a block that carries no lines of its own is read
+// through the first text inside it instead.
 func (r *renderer) descendantLine(node ast.Node) (int, bool) {
-	if lines := node.Lines(); lines != nil && lines.Len() > 0 {
-		line := r.lineAt(lines.At(0).Start)
-		if _, fenced := node.(*ast.FencedCodeBlock); fenced && line > 1 {
-			line--
+	return descendantLineOf(r.source, node)
+}
+
+// descendantLineOf is the same answer without a renderer, for the snapshot
+// readDefinitions takes during the parse, which is before one is built.
+func descendantLineOf(source []byte, node ast.Node) (int, bool) {
+	if node.Type() != ast.TypeInline {
+		if lines := node.Lines(); lines != nil && lines.Len() > 0 {
+			line := lineOf(source, lines.At(0).Start)
+			if _, fenced := node.(*ast.FencedCodeBlock); fenced && line > 1 {
+				line--
+			}
+			return line, true
 		}
-		return line, true
 	}
 	if text, ok := node.(*ast.Text); ok {
-		return r.lineAt(text.Segment.Start), true
+		return lineOf(source, text.Segment.Start), true
 	}
 	for child := node.FirstChild(); child != nil; child = child.NextSibling() {
-		if line, ok := r.descendantLine(child); ok {
+		if line, ok := descendantLineOf(source, child); ok {
 			return line, true
 		}
 	}
@@ -418,8 +497,8 @@ func bookmarkName(id string) string {
 // headingAnchors is every goldmark heading id that will carry a bookmark, read
 // before the blocks are walked so that a link to a heading further down the
 // note resolves. A figure-only heading is left out: it emits no paragraph, so
-// there is nothing for a jump to land on. So is anything inside a footnote
-// definition, which the block walk drops whole.
+// there is nothing for a jump to land on. So is a heading inside a footnote
+// definition, which the footnote walk warns about and leaves out.
 func headingAnchors(root ast.Node, source []byte) map[string]bool {
 	ids := map[string]bool{}
 	_ = ast.Walk(root, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
@@ -449,7 +528,8 @@ func headingAnchors(root ast.Node, source []byte) map[string]bool {
 // linkedAnchors is every heading id a "#" link in the note names, read before
 // the blocks are walked so a heading above the link that names it still gets
 // its bookmark. A link inside a footnote definition is left out, because the
-// block walk drops the footnote and the link with it.
+// footnotes part names no relationship: the footnote walk prints such a link
+// as its words and says so on the envelope.
 func linkedAnchors(root ast.Node) map[string]bool {
 	ids := map[string]bool{}
 	_ = ast.Walk(root, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
@@ -476,7 +556,7 @@ func linkedAnchors(root ast.Node) map[string]bool {
 // emits no heading paragraph for it at all.
 func isFigureOnly(heading ast.Node, source []byte) bool {
 	return len(collectImages(heading, source)) > 0 &&
-		strings.TrimSpace(plainText(inlineRuns(heading, source))) == ""
+		strings.TrimSpace(plainText(inlineRuns(heading, source, nil, markTable{}))) == ""
 }
 
 // shallowestHeadingLevel finds the smallest heading level anywhere in the
@@ -488,10 +568,10 @@ func shallowestHeadingLevel(root ast.Node, source []byte) int {
 		if !entering {
 			return ast.WalkContinue, nil
 		}
-		// A footnote definition is dropped whole by the block walk, so a
-		// heading written inside one is not a heading of this document and
-		// does not set the depth. Otherwise a stray "# " in a footnote
-		// numbers every real heading "0.1-".
+		// A heading inside a footnote definition is warned about and left
+		// out, so it is not a heading of this document and does not set the
+		// depth. Otherwise a stray "# " in a footnote numbers every real
+		// heading "0.1-".
 		if _, dropped := node.(*east.FootnoteList); dropped {
 			return ast.WalkSkipChildren, nil
 		}
@@ -707,19 +787,7 @@ func (r *renderer) block(node ast.Node, level int, list listCtx) error {
 		return nil
 
 	case *east.FootnoteList:
-		// goldmark collects every footnote definition into one list at the
-		// end of the document, whatever order the author wrote them in, so
-		// each one is named by its own line rather than by the list's.
-		for note := typed.FirstChild(); note != nil; note = note.NextSibling() {
-			line := 1
-			if at, ok := r.descendantLine(note); ok {
-				line = at
-			}
-			r.warn("line %d: a footnote is not rendered in the house style and was left out",
-				line)
-		}
-		r.afterTable = false
-		return nil
+		return r.footnoteList(typed)
 
 	default:
 		// A container this walker does not name is walked through rather than
@@ -759,9 +827,21 @@ func (r *renderer) headingBookmark(heading *ast.Heading) string {
 func (r *renderer) headingBlock(heading *ast.Heading) error {
 	r.curLine = r.line(heading)
 	images := collectImages(heading, r.source)
-	runs := inlineRuns(heading, r.source)
+	runs := inlineRuns(heading, r.source, r.footnoteNumber, r.marks)
 	plain := plainText(runs)
 	r.warnRawHTML(heading, r.line(heading))
+	// A footnote mark in a heading is refused here as well as off the source
+	// lines, because an ATX heading is the only heading a line scan sees:
+	// goldmark builds one from a setext line, from inside a block quote and
+	// from inside a list item too, and each of those reached the contents
+	// field with a note number in it. A mark needs no second check, because
+	// checkMarks reads the tree already.
+	for _, run := range runs {
+		if run.Footnote > 0 {
+			r.fail("line %d: a footnote mark inside a heading is refused, because Word copies a heading into the contents field, so the note would be marked from the contents list as well as from the page", r.line(heading))
+			break
+		}
+	}
 
 	if isFigureOnly(heading, r.source) {
 		// Nothing but a picture. It is a figure, not a heading, so it takes no
@@ -810,7 +890,7 @@ func (r *renderer) headingBlock(heading *ast.Heading) error {
 // paragraphBlock is one paragraph, or one list item when it sits inside a list.
 func (r *renderer) paragraphBlock(node ast.Node, level int, list listCtx) error {
 	images := collectImages(node, r.source)
-	runs := inlineRuns(node, r.source)
+	runs := inlineRuns(node, r.source, r.footnoteNumber, r.marks)
 	line := r.line(node)
 	r.curLine = line
 	r.warnRawHTML(node, line)
@@ -879,7 +959,7 @@ func (r *renderer) quoteBlock(quote *ast.Blockquote, level int, list listCtx) er
 		r.curLine = line
 		r.warnRawHTML(paragraph, line)
 		r.warnImages(collectImages(paragraph, r.source), line, "a block quote")
-		r.emit(r.quote(inlineRuns(paragraph, r.source), r.quoteDepth))
+		r.emit(r.quote(inlineRuns(paragraph, r.source, r.footnoteNumber, r.marks), r.quoteDepth))
 		r.counts.Paragraphs++
 	}
 	r.afterTable = false
@@ -965,7 +1045,18 @@ func (r *renderer) tableRows(table *east.Table) [][][]Run {
 			line := r.line(cell)
 			r.warnRawHTML(cell, line)
 			r.warnImages(collectImages(cell, r.source), line, "a table cell")
-			cells = append(cells, inlineRuns(cell, r.source))
+			runs := inlineRuns(cell, r.source, r.footnoteNumber, r.marks)
+			// A footnote mark in a cell is refused rather than warned about:
+			// the spec carries none, and a cell's paragraph has no footnotes
+			// part to write into, so the note would be numbered in the body
+			// and written nowhere.
+			for _, run := range runs {
+				if run.Footnote > 0 {
+					r.fail("line %d: a footnote mark inside a table cell is refused, because the house style carries no note from a cell", line)
+					break
+				}
+			}
+			cells = append(cells, runs)
 		}
 		rows = append(rows, cells)
 	}

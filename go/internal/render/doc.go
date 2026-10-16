@@ -1,12 +1,12 @@
-// Package render writes the docx itself: the twelve parts and the logo, the
+// Package render writes the docx itself: the thirteen parts and the logo, the
 // cover, the tables, the header and footer, the contents field.
 //
 // Build takes the house style, the note's cover fields, the body elements the
-// markdown walker produced and the pictures it read, and hands back a Package
-// of named parts a caller zips. Nothing here reads the Word master, and nothing
-// here reaches the network. TestBuildWritesTheTwelvePartsAndTheLogo,
-// TestEveryXMLPartParses and TestTheZipListsContentTypesFirst are the pins over
-// what a build produces.
+// markdown walker produced, the pictures it read and the footnotes it
+// numbered, and hands back a Package of named parts a caller zips. Nothing
+// here reads the Word master, and nothing here reaches the network.
+// TestBuildWritesTheThirteenPartsAndTheLogo, TestEveryXMLPartParses and
+// TestTheZipListsContentTypesFirst are the pins over what a build produces.
 //
 // This comment holds why the package refuses what it refuses. What it reports
 // is in the code beside it.
@@ -35,8 +35,65 @@
 // states the sequence it writes as a literal list of tags:
 // TestTheFrontMatterTablesPropertiesAreInSchemaOrder and
 // TestSettingsChildrenAreInSchemaOrder are the pins here, beside
-// internal/body's TestAQuotesPropertiesAreInSchemaOrder and
-// TestATablesPropertiesAreInSchemaOrder for the parts that package writes.
+// internal/body's TestAQuotesPropertiesAreInSchemaOrder,
+// TestATablesPropertiesAreInSchemaOrder and
+// TestARunsPropertiesAreInSchemaOrder for the parts that package writes.
+//
+// # word/footnotes.xml is always written
+//
+// The thirteenth part. It carries Word's two reserved notes, the rule above
+// the notes at w:id -1 and the rule above a note continued onto the next page
+// at 0, then one w:footnote per entry in Build's footnotes argument, which is
+// body.Result.Footnotes: one per mark in the prose, numbered from 1 in the
+// order a reader meets one.
+//
+// The part is in the package whether or not the document has a footnote,
+// because the content type and the relationship are the shell's own and a
+// relationship pointing at nothing is a document Word offers to repair. The
+// two separators are written for the same reason. The relationship is rId8,
+// so FirstMediaRelID moved from 8 to 9 and a body picture starts there.
+// TestTheFootnotesPartCarriesTheTwoSeparators,
+// TestEachNoteIsAFootnoteAtItsOwnNumber,
+// TestTheFootnotesPartIsDeclaredAndRelated and
+// TestAnImageIdThatCollidesWithTheFootnotesIsRefused are the pins.
+//
+// Footnote is this package's type and internal/body aliases it, the way Media
+// already works, so the numbers that package hands out are the numbers this
+// part is written from and the two cannot drift.
+//
+// The notes are set in FootnoteText, the tenth house style, 10pt and
+// single-spaced with no space above or below, and the mark in the prose names
+// FootnoteReference, the one character style this part of the milestone adds.
+// Both ids and both names are Word's own, so a person opening the document
+// finds the styles where they expect them.
+// TestTheFootnoteTextStyleIsTheHousesTenth and
+// TestAFootnoteReferenceIsASuperscriptCharacterStyle are the pins here, and
+// internal/house's TestTheTenStylesAreThere and
+// TestFootnoteTextIsTenPointSingleSpacedAndTight over the style file.
+// internal/drift reads nine named styles and not this one: Docs has no
+// footnote_text to compare against, so neither gate measures it.
+//
+// # A character style is how a run says what it is
+//
+// charStyleElement writes one w:type="character" style: an id, a name and the
+// run properties it carries. Both parts of the footnotes-and-marks milestone
+// use it. A footnote reference is the FootnoteReference style, superscript,
+// and each mark is a style of its own carrying the colour the house file
+// states, so Word lists them and a reader finds every yellow with one search.
+// The run names the style and states the same colour itself, because Google
+// Docs has no character styles and keeps only what the run says: after import
+// a mark is direct formatting, and that is what export reads back.
+// TestACharacterStyleIsWrittenWithItsRunProperties is the pin over the writer,
+// TestTheSevenCharacterStylesAreWritten over the seven the palette gives,
+// TestTheMarkStyleIDIsTheHouseKeyRaised over the one id both packages name a
+// style by, and internal/body's TestARunMayNameItsCharacterStyle and
+// TestAMarkedRunCarriesItsStyleAndItsShading over the w:rStyle that names it.
+//
+// The cover's own yellow placeholders are not marks. They are the template's,
+// they mean "a person fills this in" rather than any of the seven, and they
+// keep Word's named yellow and name no character style, so nothing counting
+// or exporting marks reads a cover as one:
+// TestTheCoverPlaceholdersAreNotMarks is the pin.
 //
 // # Every list level states w:start
 //
@@ -147,10 +204,10 @@
 //
 // # A relationship id is a document's plumbing, so a collision is refused
 //
-// The shell owns rId1 to rId7: the styles, the numbering, the settings, two
-// headers and two footers. A body picture starts at FirstMediaRelID, and one
-// that takes a shell id would give a caller a document whose picture is the
-// styles part. Two pictures sharing one id is the same failure one step along,
+// The shell owns rId1 to rId8: the styles, the numbering, the settings, two
+// headers, two footers and the footnotes. A body picture starts at
+// FirstMediaRelID, and one that takes a shell id would give a caller a
+// document whose picture is the styles part. Two pictures sharing one id is the same failure one step along,
 // and a relationship that is both a link and a file is a caller that built one
 // of the two wrongly. Each is refused before a part is written.
 // TestAnImageIdThatCollidesWithTheShellIsRefused,

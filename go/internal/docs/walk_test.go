@@ -252,6 +252,50 @@ func TestObjectRunsCarryTheirKindsAndTheFootnoteText(t *testing.T) {
 	}
 }
 
+// TestAFootnoteCarryingAColourIsNamedOnTheRead. A footnote's text is all this
+// read keeps, so a mark the author wrote inside one has no colour left for any
+// route after this to find. The hexes its runs carried are the one record that
+// there was one, and export warns where they say somebody marked words, which
+// is any background at all or a text colour the house claims, rather than
+// letting the words come home plainer than they went.
+// docs/backlog/marks-inside-footnotes.md holds the hole itself.
+//
+// #FFD500 is the yellow mark and #1155CC is the link blue Docs writes on a
+// link's own run, each stated as a literal: the read hands over the hex and
+// judges neither.
+func TestAFootnoteCarryingAColourIsNamedOnTheRead(t *testing.T) {
+	d := fixture(t, "objects.json")
+	if len(d.FootnoteColours) != 0 {
+		t.Errorf("FootnoteColours = %v, want nothing: this document's note carries no colour", d.FootnoteColours)
+	}
+
+	marked := fixture(t, "coloured-footnote.json")
+	if len(marked.FootnoteColours) != 1 {
+		t.Fatalf("FootnoteColours = %v, want kix.fn1 alone", marked.FootnoteColours)
+	}
+	c := marked.FootnoteColours["kix.fn1"]
+	if len(c.Backgrounds) != 1 || c.Backgrounds[0] != "#FFD500" {
+		t.Errorf("the note's backgrounds = %v, want #FFD500 alone", c.Backgrounds)
+	}
+	if len(c.Colours) != 0 {
+		t.Errorf("the note's text colours = %v, want nothing", c.Colours)
+	}
+	if got := marked.Footnotes["kix.fn1"]; got != "to fill in" {
+		t.Errorf("the note's text = %q, want the words with no colour in them", got)
+	}
+
+	// A link's own run carries the link blue as a direct text colour, which is
+	// a fact this read states and nothing it judges.
+	linked := fixture(t, "linked-footnote.json")
+	lc := linked.FootnoteColours["kix.fn1"]
+	if len(lc.Colours) != 1 || lc.Colours[0] != "#1155CC" {
+		t.Errorf("the linked note's text colours = %v, want #1155CC alone", lc.Colours)
+	}
+	if len(lc.Backgrounds) != 0 {
+		t.Errorf("the linked note's backgrounds = %v, want nothing", lc.Backgrounds)
+	}
+}
+
 func TestCommentRangesPlaceOneAndListTheOther(t *testing.T) {
 	d := fixture(t, "single-tab.json")
 	got, ok := d.CommentRanges["AAAA1111"]
@@ -683,5 +727,32 @@ func TestAnUnnamedMemberThatIsNotAnObjectStillDecodes(t *testing.T) {
 	}
 	if len(r.InsertionIDs) != 0 || len(r.DeletionIDs) != 0 {
 		t.Errorf("ids = %v/%v, want none", r.InsertionIDs, r.DeletionIDs)
+	}
+}
+
+// A run's two colours are the fact a mark is read back from: a highlight is the
+// run's background and the pencil is the run's own text colour. The hexes here
+// are literals rather than house.yaml's palette read back, because a test that
+// reads the file it checks follows the file wherever somebody moves it.
+//
+// A channel the answer leaves out is zero, which is the API's own way of
+// writing a colour with no red in it, and marks.json omits one for that reason.
+func TestARunKeepsItsBackgroundAndTextColour(t *testing.T) {
+	p := paragraphs(fixture(t, "marks.json").Tabs[0].Body)[0]
+
+	if got := linked(t, p, "figure"); got.Background != "#FFD500" || got.Colour != "" {
+		t.Errorf("the yellow run = %q/%q, want #FFD500 and no text colour", got.Background, got.Colour)
+	}
+	if got := linked(t, p, "a claim"); got.Background != "#3DD67A" {
+		t.Errorf("the green run's background = %q, want #3DD67A", got.Background)
+	}
+	if got := linked(t, p, "pencilled"); got.Colour != "#9A9A9A" || got.Background != "" {
+		t.Errorf("the pencil run = %q/%q, want #9A9A9A as the text colour and no background", got.Background, got.Colour)
+	}
+	// A run the answer states no colour on carries neither, so a reader asking
+	// whether these words are marked gets no for an answer rather than black
+	// on white it has to know means nothing.
+	if got := linked(t, p, "The "); got.Background != "" || got.Colour != "" {
+		t.Errorf("an unmarked run = %q/%q, want neither", got.Background, got.Colour)
 	}
 }

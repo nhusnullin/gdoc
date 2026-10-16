@@ -6,6 +6,7 @@ package view
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -107,16 +108,86 @@ func detailLabel(r docs.Run) string {
 // placeholder and its warning where they were. Skip drops a block of a tab's
 // body before it is projected, which is how a caller removes a span it
 // recognised. ChipTargets adds the address a chip points at behind its label.
+// Marks writes a run's colour back as the syntax an author typed for it, and
+// an empty list writes none.
 //
-// All three are the export's, and none of them is the read's: read prints what
-// the document holds and nothing that is not in it, and a file in the hub
-// carries a picture that has a file beside it and a chip's target a later
-// session has to resolve. TestProjectSkipsAndNamesPictures and
-// TestAChipCarriesItsTargetWhenAskedFor are the pins.
+// Rebuilt says this text becomes a file in the hub that gdoc builds again, so
+// the projection names every stretch of the document's own words that the next
+// build reads as syntax of gdoc's rather than as the words the document shows.
+//
+// All five are the export's, and none of them is the read's: read prints what
+// the document holds and nothing that is not in it, and says nothing about a
+// build that is not happening, while a file in the hub carries a picture that
+// has a file beside it, a chip's target a later session has to resolve, and the
+// mark the words were written with.
+// TestProjectSkipsAndNamesPictures, TestAChipCarriesItsTargetWhenAskedFor,
+// TestReadPrintsNoMark and TestReadNamesNothingTheNextBuildWouldRead are the
+// pins.
 type Options struct {
 	Picture     func(objectID string) string
 	Skip        func(docs.Block) bool
 	ChipTargets bool
+	Marks       []Mark
+	Rebuilt     bool
+}
+
+// Mark is one colour a caller can name, and what goes around the words that
+// carry it. A mark states one of the two colours: a highlight is the run's
+// background, and a mark written as a text colour is the run's own Colour. One
+// stating neither matches no run.
+//
+// The syntax is the caller's, because this package knows a colour and the
+// house style knows what an author types for it. internal/export builds the
+// list out of house.yaml, the one place the palette is stated.
+type Mark struct {
+	Background string
+	Colour     string
+	Open, Shut string
+	// Ambiguous are the openers the marked words themselves must not begin
+	// with, because a reader of this file would take one of them for the
+	// mark's own opener and drop it from the words. Explicit is what opens the
+	// mark where they do: it says the colour outright, so whatever the words
+	// begin with is the author's. Only a mark whose Open leaves the colour
+	// unsaid carries either, which is the one highlight an author may write
+	// bare.
+	Ambiguous []string
+	Explicit  string
+}
+
+// opener is what this group of marked words opens with: Open, or Explicit
+// where the words would read as carrying the opener themselves.
+func (m Mark) opener(rs []docs.Run) string {
+	if m.Explicit == "" {
+		return m.Open
+	}
+	for _, r := range rs {
+		if r.Text == "" {
+			continue
+		}
+		for _, a := range m.Ambiguous {
+			if strings.HasPrefix(r.Text, a) {
+				return m.Explicit
+			}
+		}
+		break
+	}
+	return m.Open
+}
+
+// matches says whether this run carries this mark. The comparison is on the
+// hex the read wrote, case folded: a mark is one exact colour, which is the
+// rule the specification states, and a document styled by hand carries
+// whatever Google rounded to.
+func (m Mark) matches(r docs.Run) bool {
+	if r.Kind != docs.KindText {
+		// A chip or a picture prints a placeholder of gdoc's own, and a mark
+		// around it would say gdoc's words were the author's.
+		return false
+	}
+	if m.Background != "" {
+		return strings.EqualFold(m.Background, r.Background)
+	}
+	return m.Colour != "" && strings.EqualFold(m.Colour, r.Colour)
 }
 
 // Text projects the document into the one string the AI reads, and returns the
@@ -281,8 +352,15 @@ type emitter struct {
 	// inLink says the words being written are a link's. One bracket is markup
 	// there and nowhere else, because the words end at the first one a reader
 	// meets.
-	inLink   bool
-	warnings []string
+	inLink bool
+	// inHeading says the paragraph being written becomes a heading line in the
+	// file, which is a line the next build carries no mark and no footnote
+	// mark on. The question is the paragraph's rather than the words', so it
+	// cannot be asked of the runs cannotCarry reads. A paragraph inside a
+	// table cell is never one: a cell is flattened onto one line and takes no
+	// "#" prefix, whatever style the paragraph carries.
+	inHeading bool
+	warnings  []string
 }
 
 func (e *emitter) chunk(s string) {
@@ -590,7 +668,12 @@ func (e *emitter) blocks(bs []docs.Block) {
 }
 
 func (e *emitter) paragraph(p *docs.Paragraph) {
+	// The style is read before the runs are written, because what the next
+	// build reads a mark on this line as depends on the "#" prefix below. A
+	// paragraph is never written inside another, so one flag is enough.
+	e.inHeading = headingLevel(p.Style) > 0
 	text := e.capture(func() { e.runs(p.Runs) })
+	e.inHeading = false
 	// The prefix is taken even when the text is empty, so an item of a numbered
 	// list that holds no text still counts: the numbers then say what the
 	// document shows rather than closing the gap over an item nobody typed into.
@@ -1036,6 +1119,7 @@ func (e *emitter) cell(c docs.Cell) string {
 // the formatting changes and two markers around one suggested phrase would read
 // as two suggestions.
 func (e *emitter) runs(rs []docs.Run) {
+	e.ownSyntax(rs)
 	for i := 0; i < len(rs); {
 		j := i + 1
 		for j < len(rs) && sameSpan(rs[i], rs[j]) {
@@ -1044,6 +1128,126 @@ func (e *emitter) runs(rs []docs.Run) {
 		e.span(rs[i:j])
 		i = j
 	}
+}
+
+// footnoteMark is the shape internal/body reads as a footnote mark.
+//
+// The projection writes a real note's reference as "[^n]", so the document's
+// own words holding that shape are read by the next build as a mark of gdoc's.
+// A label the file does not define refuses the file by line, blaming the file
+// rather than the export; a label it does define grows a second reference to a
+// note the document never had, and the words the author typed go with it.
+//
+// A backslash is not the answer, for the reason cannotCarry gives: internal/body
+// hands goldmark's text through as it stands and never unescapes a punctuation
+// mark, and body's own line scan reads the mark through the backslash anyway.
+// docs/backlog/build-never-unescapes-a-backslash.md is where that stands. Until
+// then the words go home as the document holds them and the loss is named,
+// which is what a mark that cannot carry its syntax already does.
+var footnoteMark = regexp.MustCompile(`\[\^[^\]\n]+\]`)
+
+// ownSyntax names every stretch of the document's own words that the next
+// build would read as syntax of gdoc's.
+//
+// Consecutive text runs are joined before the search, because Docs splits a run
+// wherever the formatting changes, so "[^" and "1]" can be two runs of one
+// sentence. A run that is not text stops the join: gdoc writes its own markup
+// there, and a bracket of gdoc's is not the author's.
+//
+// Nothing is said where the text is not going to be built. Options.Rebuilt
+// holds why.
+func (e *emitter) ownSyntax(rs []docs.Run) {
+	if !e.opts.Rebuilt {
+		return
+	}
+	for i := 0; i < len(rs); {
+		if rs[i].Kind != docs.KindText {
+			i++
+			continue
+		}
+		var b strings.Builder
+		at, j := rs[i].StartIndex, i
+		for ; j < len(rs) && rs[j].Kind == docs.KindText; j++ {
+			b.WriteString(rs[j].Text)
+		}
+		text := b.String()
+		for _, f := range e.gdocShapes(text) {
+			e.warnings = append(e.warnings, fmt.Sprintf(
+				"the words at index %d hold %s, which the next build reads as %s rather than as the words this document shows",
+				at+units(text[:f.at]), f.what, f.noun))
+		}
+		i = j
+	}
+}
+
+// shape is one stretch of the document's own words the next build reads as
+// syntax of gdoc's: where it starts in the text, what it says, and what a
+// warning calls it.
+type shape struct {
+	at         int
+	what, noun string
+}
+
+// gdocShapes is every such stretch of this text, in the order it is read.
+//
+// Two shapes, both of them markup gdoc writes into the file itself. The first
+// is a real note's reference, "[^n]", and footnoteMark holds what the next
+// build makes of one. The second is the attribute a mark's span closes with,
+// "{.pencil}", which comes off the palette rather than being a constant here,
+// because the house style is the one place the syntax is stated. The attribute
+// is searched for on its own, without the bracket in front of it, because all
+// three shapes it appears in are losses: internal/body refuses an attribute
+// that closes no span it reads and refuses a closer no line opened, and a
+// whole span written in the document's own words publishes a grey phrase the
+// document never carried with the brackets dropped out of the text.
+//
+// Neither shape can be escaped out of the way: internal/body hands goldmark's
+// text through as it stands and never unescapes a punctuation mark, so a
+// backslash written here reaches the document as a backslash. The words go
+// home as the document holds them and the loss is named, which is what a mark
+// that cannot carry its syntax already does.
+func (e *emitter) gdocShapes(text string) []shape {
+	var out []shape
+	for _, m := range footnoteMark.FindAllStringIndex(text, -1) {
+		out = append(out, shape{at: m[0], what: text[m[0]:m[1]], noun: "a footnote mark of gdoc's"})
+	}
+	for _, a := range e.spanAttributes() {
+		for from := 0; ; {
+			i := strings.Index(text[from:], a)
+			if i < 0 {
+				break
+			}
+			out = append(out, shape{at: from + i, what: a, noun: "the attribute gdoc closes a mark's span with"})
+			from += i + len(a)
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].at < out[j].at })
+	return out
+}
+
+// spanAttributes is the attribute each span in the palette closes with, once
+// each. A mark written as a delimiter pair has none, and two marks sharing one
+// attribute would otherwise name the same words twice.
+func (e *emitter) spanAttributes() []string {
+	var out []string
+	for i := range e.opts.Marks {
+		shut := e.opts.Marks[i].Shut
+		brace := strings.Index(shut, "{")
+		if brace < 0 || !strings.Contains(shut, "]") {
+			continue
+		}
+		a := shut[brace:]
+		seen := false
+		for _, had := range out {
+			if had == a {
+				seen = true
+			}
+		}
+		if !seen {
+			out = append(out, a)
+		}
+	}
+	return out
 }
 
 func sameSpan(a, b docs.Run) bool {
@@ -1088,11 +1292,395 @@ func (e *emitter) wrap(open, shut string, ids []string, f func()) {
 	e.write(shut + "[s:" + strings.Join(ids, ",") + "]")
 }
 
-// body writes runs with their comment markers and their placeholders, tracking
+// body writes runs with the marks the caller named around them, and the runs
+// that carry no mark as they stand.
+//
+// Adjacent runs carrying one mark are one mark: Docs splits a run wherever the
+// formatting changes, so a highlight over a phrase holding bold arrives as
+// several runs sharing one background, and a pair of delimiters around each of
+// them would say the author marked the words three times.
+//
+// A group with no words of its own is written bare: the paragraph's own
+// newline, which the chunks carry, and the whitespace an edit can leave marked
+// on its own. An empty "====" would be a mark over nothing, and "== ==" does
+// not read as a mark at all.
+func (e *emitter) body(rs []docs.Run) {
+	if len(e.opts.Marks) == 0 {
+		e.links(rs)
+		return
+	}
+	for i := 0; i < len(rs); {
+		m := e.markFor(rs[i])
+		j := i + 1
+		for j < len(rs) && e.markFor(rs[j]) == m {
+			j++
+		}
+		if m == nil || !hasWords(rs[i:j]) {
+			e.links(rs[i:j])
+			i = j
+			continue
+		}
+		head, words, tail := edges(rs[i:j])
+		e.links(head)
+		// The markers that open where the mark opens are drained before the
+		// delimiter, for the reason linked drains before its bracket: a
+		// comment anchored at the same character would otherwise end up
+		// behind markup gdoc wrote.
+		e.drain(words[0].StartIndex, false)
+		why := e.cannotMarkHere()
+		if why == "" {
+			why = e.cannotCarry(m, words)
+		}
+		if why == "" {
+			why = e.cannotOpenHere(m, words)
+		}
+		if why != "" {
+			e.warnings = append(e.warnings, fmt.Sprintf(
+				"the mark on the words at index %d is printed as the words alone: %s", words[0].StartIndex, why))
+			e.links(words)
+			e.links(tail)
+			i = j
+			continue
+		}
+		e.write(m.opener(words))
+		e.links(words)
+		e.write(m.Shut)
+		e.links(tail)
+		i = j
+	}
+}
+
+// cannotMarkHere is why no mark can be written on this paragraph at all, or
+// nothing where one can.
+//
+// A heading is the one paragraph that carries none. internal/body refuses a
+// mark inside a heading by line, because Word copies a heading into the
+// contents field and the mark would be in the contents list as well as on the
+// page, so a highlighted heading written home as "## Scope ==to fill in==" is
+// a file the next build refuses, blaming the file rather than the export. The
+// words go home alone and the loss is named, which is what cannotCarry does
+// for words that cannot carry the syntax.
+//
+// It is asked before cannotCarry, because this is the reason a reader needs:
+// the words are fine and the line they are on is not.
+// internal/export's TestAMarkInsideAHeadingComesHomeAsItsWords and
+// TestAMarkOutsideAHeadingIsNotNamedAsAHeadingLoss are the pins.
+func (e *emitter) cannotMarkHere() string {
+	if !e.inHeading {
+		return ""
+	}
+	return "these words are a heading's, and the next build refuses a mark inside a heading, because Word copies a heading into the contents field and the mark would be in the contents list as well as on the page"
+}
+
+// cannotOpenHere is why this mark's opener cannot be written where the text
+// stands, or nothing where it can be.
+//
+// A delimiter pair is read by its run of characters, so an opener written right
+// against the closer of the mark before it is one run of four: the next build
+// reads one pair out of it and leaves the other two characters in the words. A
+// highlight on "ab" and another on "cd" with nothing between them came home as
+// "==ab====cd==", which publishes as one colour over "ab====cd" or as one
+// colour and the other's syntax printed as words, and nothing said so.
+//
+// cannotCarry reads the group's own words, and this is the one thing outside
+// them that changes what the delimiter reads as. The character before the
+// opener has to be one gdoc wrote: a character of the document's own separates
+// the two runs, whatever it is, and a held character is the document's. The
+// second mark is the one that loses its syntax, because the first is already
+// written, and the loss is named the way every other one is.
+// TestAMarkRightAgainstAnotherMarkIsPrintedAsItsWords is the pin.
+func (e *emitter) cannotOpenHere(m *Mark, words []docs.Run) string {
+	first := edgeRune(m.opener(words), true)
+	if first == 0 || e.held != 0 || !e.prevGdoc || e.prev != first {
+		return ""
+	}
+	return "the mark before these words closes right against this one's delimiter, and the two would read as one run of characters"
+}
+
+// cannotCarry is why this mark cannot be written around these words, or nothing
+// where it can be. The words are then written as they stand and the loss is
+// named, which is what a placeholder does for a picture.
+//
+// A mark comes home as the syntax an author types, and the next build reads
+// that syntax back. Two shapes of words it cannot be read around:
+//
+//   - A span's words end at the first bracket a reader meets, so a bracket the
+//     document holds closes the span early, and so do the brackets gdoc writes
+//     for a run that is not text: a footnote mark is "[^3]". internal/body
+//     refuses the line rather than guessing, so the file would not build at
+//     all. A link is the same bracket from the other side: "[[words](url)]"
+//     opens nothing either side can read. Words opening with a caret are the
+//     same bracket once more: the span's own "[" in front of them is how a
+//     footnote mark is written, and goldmark's footnote parser runs ahead of
+//     the span parser, so "[^1]{.pencil}" is a mark of gdoc's to the next
+//     build. A label the file does not define refuses it by line; a label it
+//     does define grows a second reference to a note the document never had,
+//     and the words and the colour go with it.
+//   - A delimiter pair is read by its run of characters, so the pair itself
+//     inside the words closes the mark early, and one of its characters against
+//     either delimiter lengthens that run and comes home as a stray character
+//     in the document.
+//
+// Every mark in the palette is asked, not this one alone. A mark the words hold
+// is another mark's syntax inside this one, which the next build refuses as a
+// mark inside a mark, and a span's closer inside a highlight's words is one it
+// refuses as a span the line does not open. internal/export's
+// TestAMarkWhoseWordsHoldAnotherMarksSyntaxComesHomeAsWords is the pin.
+//
+// A backslash is not the answer. internal/body hands goldmark's text through as
+// it stands and never unescapes a punctuation mark, so a backslash written into
+// the file reaches the document as a backslash. A colour nobody can see in the
+// file is better than a file that will not build, and better than a backslash
+// nobody typed in the document. internal/export's
+// TestAMarkWhoseWordsCannotCarryItsSyntaxComesHomeAsWordsAndIsNamed is the pin.
+func (e *emitter) cannotCarry(m *Mark, rs []docs.Run) string {
+	words, allText := writtenWords(rs)
+	if strings.Contains(m.Open, "[") || strings.Contains(m.Shut, "]") {
+		if !allText {
+			return "a span marks words, and gdoc writes this content as markup of its own, which carries the bracket that would close the span"
+		}
+		if strings.ContainsAny(words, "[]") {
+			return "the words hold a bracket, and a span's words end at the first bracket a reader meets"
+		}
+		if strings.HasPrefix(words, "^") {
+			return "the words open with a caret, and a bracket in front of one is how a footnote mark is written"
+		}
+		for _, r := range rs {
+			if l := textLink(r); l != nil && e.target(l) != "" {
+				return "the words point somewhere, and a link is written with the bracket that would close the span"
+			}
+		}
+		return e.holdsAnotherMark(m, words)
+	}
+	if strings.Contains(words, m.Shut) || strings.Contains(words, m.Open) {
+		return "the words hold the delimiter the mark is written with, which would close it early"
+	}
+	if edgeRune(m.Open, false) != 0 && strings.HasPrefix(words, string(edgeRune(m.Open, false))) {
+		return "the words open with the character the mark's own delimiter is made of, which would lengthen it"
+	}
+	if edgeRune(m.Shut, true) != 0 && strings.HasSuffix(words, string(edgeRune(m.Shut, true))) {
+		return "the words end with the character the mark's own delimiter is made of, which would lengthen it"
+	}
+	return e.holdsAnotherMark(m, words)
+}
+
+// holdsAnotherMark is why these words hold the syntax of a mark that is not
+// this one, or nothing where they hold none.
+//
+// A span's closer is enough on its own: the next build refuses a closer the
+// line does not open, whatever sits in front of it. A delimiter pair takes
+// both halves, because one "==" in a sentence is a sentence and the build
+// reads a mark only where a pair closes. Either way the mark around these
+// words would nest inside this one, and two colours on one stretch of words is
+// what the house style has no answer for.
+func (e *emitter) holdsAnotherMark(m *Mark, words string) string {
+	for i := range e.opts.Marks {
+		other := &e.opts.Marks[i]
+		// A mark that shuts with nothing is written around nothing, and
+		// counting the empty string in the words would refuse every one of
+		// them.
+		if other.Shut == "" || (other.Open == m.Open && other.Shut == m.Shut) {
+			continue
+		}
+		if strings.Contains(other.Shut, "]") {
+			if strings.Contains(words, other.Shut) {
+				return "the words hold the closer of another mark, which the next build reads as a span this line does not open"
+			}
+			continue
+		}
+		if strings.Count(words, other.Shut) > 1 {
+			return "the words hold the delimiter another mark is written with, twice, which the next build reads as a mark inside this one"
+		}
+	}
+	return ""
+}
+
+// writtenWords is the document's own text in these runs, and whether every one
+// of them is text: a run that is not writes gdoc's markup instead, which is
+// what the caller is asking about.
+func writtenWords(rs []docs.Run) (words string, allText bool) {
+	var b strings.Builder
+	allText = true
+	for _, r := range rs {
+		if r.Kind != docs.KindText {
+			allText = false
+			continue
+		}
+		b.WriteString(r.Text)
+	}
+	return b.String(), allText
+}
+
+// edgeRune is the first or the last rune of a delimiter, or 0 where there is
+// none.
+func edgeRune(s string, first bool) rune {
+	rs := []rune(s)
+	if len(rs) == 0 {
+		return 0
+	}
+	if first {
+		return rs[0]
+	}
+	return rs[len(rs)-1]
+}
+
+// markFor is the mark this run carries, as the one element of the caller's
+// list it is, so two runs carrying one mark compare equal by pointer.
+func (e *emitter) markFor(r docs.Run) *Mark {
+	for i := range e.opts.Marks {
+		if e.opts.Marks[i].matches(r) {
+			return &e.opts.Marks[i]
+		}
+	}
+	return nil
+}
+
+// markEdge says this rune is whitespace that cannot sit inside a mark's
+// delimiters. It is the set goldmark's own flanking test reads, which is
+// unicode.IsSpace: a space and a tab, the newline and the carriage return,
+// Docs' soft line break at U+000B, the form feed, and the non-breaking space.
+// A narrower set left a mark that ended in a soft break written as
+// "==words\v==", whose closing delimiter is not right-flanking, so the
+// highlight came home as two pairs of equals signs in the words.
+// TestAMarksOwnSoftBreakAndNonBreakingSpaceAreWrittenOutsideTheDelimiters is
+// the pin.
+func markEdge(r rune) bool { return unicode.IsSpace(r) }
+
+// edges is the group's whitespace at either end, split off the words between
+// them, so a mark is written around the words alone.
+//
+// A highlight's delimiter is read by flanking: "==" with a space after it does
+// not open a highlight and "==" with a space before it does not close one. A
+// run in Docs can begin or end with a space, which is what an edit leaves
+// behind, and written as "==words ==" the delimiters would come home as words
+// and the mark would be gone. The space is the document's either way, so it is
+// written outside the delimiters rather than dropped.
+//
+// A run that points somewhere is left whole: splitting it would write its
+// target twice, once around the space and once around the words.
+func edges(rs []docs.Run) (head, words, tail []docs.Run) {
+	words = rs
+	if first, rest, ok := cutEdge(words, true); ok {
+		head, words = first, rest
+	}
+	if last, rest, ok := cutEdge(words, false); ok {
+		tail, words = last, rest
+	}
+	return head, words, tail
+}
+
+// cutEdge takes the whitespace off one end of the group: the runs that hold
+// nothing else, and then the whitespace of the run that holds words too.
+//
+// The group is copied, because the runs it is a window on belong to the
+// paragraph. The walk stops at the first run that holds a word, which the
+// group has by hasWords over this same whitespace set, so it never empties.
+func cutEdge(rs []docs.Run, front bool) (cut, rest []docs.Run, ok bool) {
+	rest = append([]docs.Run{}, rs...)
+	for {
+		at := 0
+		if !front {
+			at = len(rest) - 1
+		}
+		r := rest[at]
+		if r.Link != nil {
+			// Splitting it would write its target twice, once around the
+			// space and once around the words.
+			break
+		}
+		if strings.TrimFunc(r.Text, markEdge) == "" {
+			cut, rest, ok = append(cut, r), append(rest[:at], rest[at+1:]...), true
+			continue
+		}
+		n := edgeWidth(r.Text, front)
+		if n == 0 {
+			break
+		}
+		space, words := splitRun(r, n, front)
+		rest[at] = words
+		cut, ok = append(cut, space), true
+		break
+	}
+	if !front {
+		// The run nearest the words was taken first, so the tail reads
+		// backwards.
+		for i, j := 0, len(cut)-1; i < j; i, j = i+1, j-1 {
+			cut[i], cut[j] = cut[j], cut[i]
+		}
+	}
+	return cut, rest, ok
+}
+
+// edgeWidth is how many bytes of whitespace the text carries at the end
+// cutEdge is working on. Bytes rather than characters, because it is where
+// splitRun cuts the string; a Docs index is counted there, off the text the
+// cut gave.
+func edgeWidth(text string, front bool) int {
+	if front {
+		return len(text) - len(strings.TrimLeftFunc(text, markEdge))
+	}
+	return len(text) - len(strings.TrimRightFunc(text, markEdge))
+}
+
+// splitRun is the run's whitespace at one end and the rest of it, each
+// carrying the index its own text begins at. n is bytes, which is where the
+// string is cut, and the boundary is the UTF-16 units of the piece cut off,
+// counted from the end it was taken from: a Docs index counts units, and a
+// non-breaking space is one unit in two bytes.
+//
+// It is counted from that end rather than from the other one, because the
+// words between the two ends are not ASCII. The tail's boundary was once
+// StartIndex plus the byte length of the words, which is a byte too far for
+// every multi-byte rune in them: a comment opening on the word after the space
+// was then drained before the space and came home behind the delimiter.
+// TestATailCutCountsTheIndexInUTF16Units is the pin.
+func splitRun(r docs.Run, n int, front bool) (space, words docs.Run) {
+	space, words = r, r
+	if front {
+		space.Text, words.Text = r.Text[:n], r.Text[n:]
+		space.EndIndex = r.StartIndex + units(space.Text)
+		words.StartIndex = space.EndIndex
+		return space, words
+	}
+	at := len(r.Text) - n
+	words.Text, space.Text = r.Text[:at], r.Text[at:]
+	space.StartIndex = r.EndIndex - units(space.Text)
+	words.EndIndex = space.StartIndex
+	return space, words
+}
+
+// hasWords says whether these runs hold a character a mark can sit around.
+//
+// The set trimmed here is markEdge, the same set cutEdge takes off either end,
+// and the two cannot differ. A group counted as holding words and then emptied
+// by the cut left the cut nothing to index: a space an author highlighted on
+// its own answered yes to "\n" alone and no to " \t\r\n", and the export of a
+// document anybody could write panicked.
+// TestAMarkedRunOfOnlyWhitespaceComesHomeAsItStands is the pin.
+func hasWords(rs []docs.Run) bool {
+	for _, r := range rs {
+		if strings.TrimFunc(r.Text, markEdge) != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// units is the text's length in UTF-16 units, which is what a Docs index
+// counts.
+func units(s string) int {
+	n := 0
+	for _, r := range s {
+		n += utf16Len(r)
+	}
+	return n
+}
+
+// links writes runs with their comment markers and their placeholders, tracking
 // the character index as it goes. Runs that point at the same target are one
 // link: Docs splits a run wherever the formatting changes, and two forms around
 // one linked phrase would read as two links.
-func (e *emitter) body(rs []docs.Run) {
+func (e *emitter) links(rs []docs.Run) {
 	for i := 0; i < len(rs); {
 		l := textLink(rs[i])
 		if l == nil {
@@ -1117,7 +1705,19 @@ func (e *emitter) one(r docs.Run) {
 		e.writeText(r.Text, r.StartIndex)
 	case docs.KindFootnoteRef:
 		e.drain(r.StartIndex, false)
-		e.write("[^" + e.footnote(r) + "]")
+		number := e.footnote(r)
+		// The reference is written where the document holds it, heading or
+		// not: the note's own words go under the body, and the next build
+		// refuses a definition nothing marks as well. So the file is one that
+		// build refuses either way, and the one thing this projection can do
+		// is say which words have to move. internal/export's
+		// TestAFootnoteMarkInsideAHeadingIsNamedAsALoss is the pin.
+		if e.inHeading && e.opts.Rebuilt {
+			e.warnings = append(e.warnings, fmt.Sprintf(
+				"the footnote mark [^%s] at index %d is a heading's, and the next build refuses a footnote mark inside a heading, because Word copies a heading into the contents field and the note would be marked from the contents list as well as from the page",
+				number, r.StartIndex))
+		}
+		e.write("[^" + number + "]")
 		e.drain(r.EndIndex, true)
 	default:
 		e.drain(r.StartIndex, false)
@@ -1253,6 +1853,16 @@ func (e *emitter) footnote(r docs.Run) string {
 
 // appendFootnotes puts the footnote texts under the body, after a rule, in the
 // order they were referenced.
+//
+// A note's own words are the document's own words, and they are written into
+// the file the same way the prose is, so they are asked the same question:
+// ownSyntax walks the prose runs and never reaches here, and a note holding
+// "[^9]" went home in a file the next build refuses by line, blaming the file
+// rather than the export. The warning names the note rather than an index,
+// because a second copy of the document's text occupies no index of its own,
+// which is what writeText's -1 says.
+// internal/export's
+// TestAFootnoteWhoseOwnWordsWouldReadAsAFootnoteMarkIsNamedAsALoss is the pin.
 func (e *emitter) appendFootnotes(d *docs.Document) {
 	if len(e.order) == 0 {
 		return
@@ -1263,6 +1873,13 @@ func (e *emitter) appendFootnotes(d *docs.Document) {
 		// line, so they become spaces. Dropping them instead glued the last word
 		// of one paragraph to the first word of the next.
 		text := strings.ReplaceAll(d.Footnotes[n.id], "\n", " ")
+		if e.opts.Rebuilt {
+			for _, f := range e.gdocShapes(text) {
+				e.warnings = append(e.warnings, fmt.Sprintf(
+					"the footnote [^%s] holds %s in its own words, which the next build reads as %s rather than as the words this document shows",
+					n.number, f.what, f.noun))
+			}
+		}
 		e.chunk("[^" + n.number + "]: " + e.capture(func() { e.writeText(text, -1) }))
 	}
 }

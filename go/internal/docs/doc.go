@@ -143,6 +143,22 @@
 // TestARunCarriesItsLinkTarget and TestALinkInItsNestedFormIsTheSameFact are
 // the pins.
 //
+// # A run's two colours are facts, and nothing here says what they mean
+//
+// A text run's textStyle carries backgroundColor and foregroundColor, and
+// Run.Background and Run.Colour hold them as "#RRGGBB", empty where the answer
+// states none. Each channel of the answer is a fraction of one and a channel
+// it leaves out is zero, so the hex is rounded back the way the mark probe
+// measured it: #FFD500 goes out as 0.835294 and comes home as #FFD500.
+//
+// They are read because a house mark lands in a document as direct formatting:
+// Google Docs has no character styles, so the only record that words were
+// highlighted green is the green. What the colour means is export's question,
+// not this package's, which is why neither field says "mark" and a colour no
+// mark claims is still carried. TestARunKeepsItsBackgroundAndTextColour is the
+// pin, over testdata/marks.json, whose hexes the live probe in
+// internal/live/markprobe_test.go measured.
+//
 // # A bullet names its list, and the tab's lists name the glyph
 //
 // Bullet carried the nesting level alone, which is all a reader printing "- "
@@ -269,6 +285,20 @@
 // warns. A chip inside a footnote is in no tab's blocks and is counted nowhere
 // for the same reason. That hole is written down rather than guessed at, in
 // docs/backlog/suggestions-inside-footnotes.md.
+//
+// A mark inside a footnote is the same flattening, and that one does not go
+// unsaid: the colour is gone from the text, so FootnoteColours holds, for each
+// note whose runs carried one, the backgrounds and the text colours they
+// carried. The hexes are the fact and nothing here is a judgement: which of
+// them says somebody marked words is export's question, and a link in Google
+// Docs carries the link blue on its own run, so a read that answered only
+// "there was a colour" would have export call most hand-written citations a lost
+// mark. TestAFootnoteCarryingAColourIsNamedOnTheRead is the pin, with
+// TestAMarkInsideAFootnoteIsNamedAsALoss,
+// TestAPencilMarkInsideAFootnoteIsNamedAsALoss and
+// TestAFootnoteWhoseOnlyColourIsALinksIsNotWarnedAboutAMark over the warning,
+// and docs/backlog/marks-inside-footnotes.md holds why the runs are not
+// carried.
 //
 // A body over the read's ceiling is an error naming the ceiling, never a short
 // read. The bound is gapi.MaxJSONBody, because a body without one is a memory

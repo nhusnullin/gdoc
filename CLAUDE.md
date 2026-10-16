@@ -52,7 +52,7 @@ Two rules about the documents themselves:
 | `go/internal/plaintext/` | what gdoc may write into a comment thread: the mark, and no markdown |
 | `go/internal/frontmatter/` | the `gdoc:` block in a note's YAML front matter, and nothing else in the file |
 | `go/internal/house/` | the Altery house style as a parsed file, embedded in the binary |
-| `go/internal/render/` | the docx itself: the twelve parts and the logo, the cover, the tables, the header and footer, the contents field |
+| `go/internal/render/` | the docx itself: the thirteen parts and the logo, the cover, the tables, the header and footer, the contents field |
 | `go/internal/body/` | the note's markdown walked with goldmark into the house style's own paragraphs |
 | `go/internal/cover/` | the words that reach the cover and the running head |
 | `go/internal/drift/` | the one list of measured values, read out of a docx and out of a Docs answer |

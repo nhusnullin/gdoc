@@ -211,10 +211,45 @@ Show the candidate and wait for your word on it. Then write it into the note's
 front matter yourself, as `title`, and run again. Nothing else in the note
 changes.
 
+**Learn the seven authoring marks, once in the session:**
+
+```bash
+$GDOC help marks --json
+```
+
+A mark is a highlight an author wrote in the note, `==words==` and the six
+colour emoji, or the one grey span `[words]{.pencil}`. The object names each
+mark, what an author writes for it, the colour it reaches the document as, and
+its fate: `counted` or `carried`. Read the fate out of that object. This skill
+names no colour of its own, for the reason it names no flag: house.yaml is the
+only thing that knows the palette today.
+
+A counted mark is an authoring debt. It is a place the author left for somebody
+to come back to, and the binary says how many there are and nothing else. What
+each colour means in a note is the author's, not gdoc's.
+
 ## Step 2: Publish
 
-Run `$GDOC help publish --json`, then build the call from what it printed: the note,
-and the folder you named in this request.
+**Build once first, and read the marks off it.** Run `build` to a scratch path
+under the session's scratchpad. It renders the same bytes `publish` would
+upload, on this machine, with no network, so a note that is refused is refused
+before anything exists in Drive.
+
+Read `body.marks` off that object. It is a count per colour, zero included.
+
+- **Every count zero.** Say nothing about marks and carry on.
+- **Any count above zero.** Show the person the count for each colour above
+  zero, by name. Then ask, in one line, whether to publish the document with
+  those marks still in it, and wait. The document carries them as highlights a
+  reader sees. The binary says nothing about whether to publish, and neither
+  does this skill: it is the author's call, and the author is who the count is
+  for.
+
+Read `body.footnotes` at the same time and say the number if it is above zero,
+so the person knows the notes made it into the build.
+
+Then run `$GDOC help publish --json`, and build the call from what it printed:
+the note, and the folder you named in this request.
 
 The folder is the one door this run has. gdoc is handed the folder and learns
 the new document's id from the create it carried itself. So the folder must be
@@ -292,6 +327,10 @@ judges them. The session never claims them itself.
 - Never invent a title, a date, an owner or a classification to make a build
   pass. A missing value is a question for you.
 - Never run git.
+- Never publish a note carrying a counted mark without asking first. The count
+  is on `body.marks` of the build, and the answer is the author's.
+- Never say what a colour means. The palette's names are colours, and what a
+  colour stands for is written in the author's own notes.
 - Never trust a status code. Read `verified` and `checks`.
 - Never say a publish failed because `verified` is false. Say which route did
   not hold.

@@ -371,9 +371,39 @@ type rawSuggested struct {
 type rawTextRun struct {
 	Content   string `json:"content"`
 	TextStyle struct {
-		Link *rawLink `json:"link"`
+		Link            *rawLink   `json:"link"`
+		BackgroundColor *rawColour `json:"backgroundColor"`
+		ForegroundColor *rawColour `json:"foregroundColor"`
 	} `json:"textStyle"`
 	rawSuggested
+}
+
+// rawColour is the API's OptionalColor: a colour, or the field stated with no
+// colour in it, which is how Docs says there is none.
+type rawColour struct {
+	Color *struct {
+		RGB struct {
+			Red   float64 `json:"red"`
+			Green float64 `json:"green"`
+			Blue  float64 `json:"blue"`
+		} `json:"rgbColor"`
+	} `json:"color"`
+}
+
+// hex is the colour as "#RRGGBB", or nothing where the answer states none.
+//
+// Each channel is a fraction of one, and a channel the answer leaves out is
+// zero, which is the API's own way of writing a colour with none of that
+// channel in it. The rounding is the one the probe measured the palette
+// through: #FFD500 goes out as 0.835294 and has to come back as #FFD500, or a
+// mark export recognises on the way out is words on the way home.
+func (c *rawColour) hex() string {
+	if c == nil || c.Color == nil {
+		return ""
+	}
+	channel := func(f float64) int { return int(f*255 + 0.5) }
+	rgb := c.Color.RGB
+	return fmt.Sprintf("#%02X%02X%02X", channel(rgb.Red), channel(rgb.Green), channel(rgb.Blue))
 }
 
 // rawLink is where a run points. The reference documents heading and bookmark
@@ -545,6 +575,8 @@ func run(e rawParaElement, objs map[string]rawInlineObject) Run {
 		r.Kind = KindText
 		r.Text = e.TextRun.Content
 		r.Link = e.TextRun.TextStyle.Link.link()
+		r.Background = e.TextRun.TextStyle.BackgroundColor.hex()
+		r.Colour = e.TextRun.TextStyle.ForegroundColor.hex()
 		r.InsertionIDs, r.DeletionIDs = e.TextRun.ids()
 	case e.InlineObjectElement != nil:
 		r.Kind = objectKind(objs[e.InlineObjectElement.InlineObjectID].InlineObjectProperties.EmbeddedObject)

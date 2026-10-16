@@ -92,11 +92,12 @@ var shellRels = []struct{ id, kind, target string }{
 	{"rId5", "header", "header2.xml"},
 	{"rId6", "footer", "footer1.xml"},
 	{"rId7", "footer", "footer2.xml"},
+	{"rId8", "footnotes", "footnotes.xml"},
 }
 
 // FirstMediaRelID is the first relationship id a body image may take. The
-// seven below it are the shell's own.
-const FirstMediaRelID = 8
+// eight below it are the shell's own.
+const FirstMediaRelID = 9
 
 // Build renders one document: the house style, the note's fields as
 // internal/cover read them, the body the markdown walker produced, the images
@@ -105,9 +106,11 @@ const FirstMediaRelID = 8
 // cannot disagree. Nothing here reaches the network, and nothing reads the
 // Word master.
 //
-// numberedLists is body.Result.NumberedLists. Every one of them gets its own
-// w:num in word/numbering.xml, which is what makes each start at 1.
-func Build(cfg *house.Config, f cover.Fields, body []*etree.Element, media []Media, numberedLists int) (*Package, error) {
+// footnotes is body.Result.Footnotes, one entry per mark in the prose and in
+// the order Word numbers them. numberedLists is body.Result.NumberedLists.
+// Every one of them gets its own w:num in word/numbering.xml, which is what
+// makes each start at 1.
+func Build(cfg *house.Config, f cover.Fields, body []*etree.Element, media []Media, footnotes []Footnote, numberedLists int) (*Package, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("render: no house style")
 	}
@@ -134,6 +137,7 @@ func Build(cfg *house.Config, f cover.Fields, body []*etree.Element, media []Med
 		{"word/header2.xml", b.headerPart(cfg.Header.First, true, "word/header2.xml")},
 		{"word/footer1.xml", b.footerPart(cfg.Footer.Default, "word/footer1.xml")},
 		{"word/footer2.xml", b.footerPart(cfg.Footer.First, "word/footer2.xml")},
+		{"word/footnotes.xml", b.footnotesPart(footnotes)},
 		{"word/media/logo.png", logo},
 	}}
 	for _, m := range media {
@@ -269,6 +273,7 @@ func (b *builder) contentTypes(media []Media) []byte {
 		{"/word/header2.xml", wml + "header+xml"},
 		{"/word/footer1.xml", wml + "footer+xml"},
 		{"/word/footer2.xml", wml + "footer+xml"},
+		{"/word/footnotes.xml", wml + "footnotes+xml"},
 	} {
 		sub(root, "Override", "PartName", o[0], "ContentType", o[1])
 	}
@@ -296,7 +301,7 @@ func (b *builder) rootRels() []byte {
 	return b.serialise(doc, "_rels/.rels")
 }
 
-// documentRels is the shell's seven parts, then one relationship per image.
+// documentRels is the shell's eight parts, then one relationship per image.
 func (b *builder) documentRels(media []Media) []byte {
 	doc, root := relsRoot()
 	for _, rel := range shellRels {

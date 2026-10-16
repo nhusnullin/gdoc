@@ -25,6 +25,50 @@ palette:
   rule_grey: '#A0A0A0'
   highlight_yellow: '#FFFF00'
   placeholder_red: '#FF0000'
+marks:
+  yellow:
+    syntax:
+    - '=='
+    - 🟡
+    kind: highlight
+    color: '#FFD500'
+    debt: true
+  green:
+    syntax:
+    - 🟢
+    kind: highlight
+    color: '#3DD67A'
+    debt: true
+  purple:
+    syntax:
+    - 🟣
+    kind: highlight
+    color: '#BA92FF'
+    debt: true
+  blue:
+    syntax:
+    - 🔵
+    kind: highlight
+    color: '#5DB3FF'
+    debt: false
+  red:
+    syntax:
+    - 🔴
+    kind: highlight
+    color: '#FF6B6B'
+    debt: false
+  orange:
+    syntax:
+    - 🟠
+    kind: highlight
+    color: '#FFB85C'
+    debt: false
+  pencil:
+    syntax:
+    - .pencil
+    kind: text
+    color: '#9A9A9A'
+    debt: false
 fonts:
   body: Calibri
   title: Arial
@@ -108,6 +152,12 @@ styles:
     line_spacing: 1.15
     keep_with_next: true
     keep_lines_together: true
+  footnote_text:
+    size_pt: 10
+    font: Calibri
+    space_before_pt: 0
+    space_after_pt: 0
+    line_spacing: 1.0
 body:
   size_pt: 12
   align: justify

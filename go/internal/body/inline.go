@@ -27,25 +27,42 @@ func decodeEntities(source []byte) string {
 
 // Run is one stretch of text and the marks on it.
 type Run struct {
-	Text      string
-	Bold      bool
-	Italic    bool
-	Strike    bool
-	Mono      bool
-	Highlight string
+	Text   string
+	Bold   bool
+	Italic bool
+	Strike bool
+	Mono   bool
+	// Mark is the house mark this run carries, by name, or empty for a run
+	// carrying none. A highlight is yellow unless a colour emoji opened it,
+	// and a span is the pencil: internal/body/mark.go reads the names off the
+	// house style, and internal/render writes one character style per name.
+	Mark string
 	// Link is the destination when this run sits inside a hyperlink, empty
 	// otherwise. The destination becomes a package relationship, so the reader
 	// can follow it.
 	Link string
+	// Footnote is the number the note this run marks takes, 1-based and
+	// counted in reading order, or 0 for a run that marks none. Such a run
+	// carries no text: the number on the page is Word's to print from
+	// word/footnotes.xml, and the run is only where the mark sits.
+	Footnote int
 }
 
 type marks struct {
-	bold      bool
-	italic    bool
-	strike    bool
-	mono      bool
-	highlight string
-	link      string
+	bold   bool
+	italic bool
+	strike bool
+	mono   bool
+	mark   string
+	link   string
+}
+
+// inlineCtx is what the whole of one inline walk needs beside the node and
+// the source: the number each footnote mark takes, and the palette a mark is
+// named from.
+type inlineCtx struct {
+	notes map[ast.Node]int
+	marks markTable
 }
 
 // ImageRef is a picture found in an inline tree, kept with its alt text.
@@ -57,40 +74,47 @@ type ImageRef struct {
 // inlineRuns flattens an inline subtree. Images are skipped: a caller that
 // wants them asks collectImages for them, so nothing depends on where in the
 // tree they were found.
-func inlineRuns(node ast.Node, source []byte) []Run {
+//
+// notes is the number each footnote mark in the note takes, which footnoteNumbers
+// read off the whole tree before the blocks were walked: the number is the
+// mark's position in reading order, and no node knows its own. table is the
+// house palette, which is what names the mark a highlight or a span carries. A
+// caller with no footnotes to place, or one asking what a heading reads as,
+// passes nil and the zero table: neither reaches a run that carries a colour.
+func inlineRuns(node ast.Node, source []byte, notes map[ast.Node]int, table markTable) []Run {
 	var out []Run
-	appendInline(&out, node, source, marks{})
+	appendInline(&out, node, source, marks{}, inlineCtx{notes: notes, marks: table})
 	return merge(out)
 }
 
-func appendInline(out *[]Run, node ast.Node, source []byte, m marks) {
+func appendInline(out *[]Run, node ast.Node, source []byte, m marks, ctx inlineCtx) {
 	for child := node.FirstChild(); child != nil; child = child.NextSibling() {
 		switch typed := child.(type) {
 		case *ast.Text:
 			*out = append(*out, Run{Text: decodeEntities(typed.Segment.Value(source)),
 				Bold: m.bold, Italic: m.italic, Strike: m.strike, Mono: m.mono,
-				Highlight: m.highlight, Link: m.link})
+				Mark: m.mark, Link: m.link})
 			// A soft break is a space, a hard break is a line of its own.
 			if typed.SoftLineBreak() {
 				*out = append(*out, Run{Text: " ", Bold: m.bold, Italic: m.italic,
-					Strike: m.strike, Mono: m.mono, Highlight: m.highlight, Link: m.link})
+					Strike: m.strike, Mono: m.mono, Mark: m.mark, Link: m.link})
 			}
 			if typed.HardLineBreak() {
 				*out = append(*out, Run{Text: "\n", Bold: m.bold, Italic: m.italic,
-					Strike: m.strike, Mono: m.mono, Highlight: m.highlight, Link: m.link})
+					Strike: m.strike, Mono: m.mono, Mark: m.mark, Link: m.link})
 			}
 		case *ast.String:
 			// What the typographer substitutes in: curly quotes, dashes, an
 			// ellipsis. Held as bytes on the node rather than in the source.
 			*out = append(*out, Run{Text: string(typed.Value), Bold: m.bold,
 				Italic: m.italic, Strike: m.strike, Mono: m.mono,
-				Highlight: m.highlight, Link: m.link})
+				Mark: m.mark, Link: m.link})
 		case *ast.CodeSpan:
 			next := m
 			next.mono = true
 			*out = append(*out, Run{Text: nodeText(typed, source), Bold: next.bold,
 				Italic: next.italic, Strike: next.strike, Mono: true,
-				Highlight: next.highlight, Link: next.link})
+				Mark: next.mark, Link: next.link})
 		case *ast.Emphasis:
 			next := m
 			if typed.Level >= 2 {
@@ -98,15 +122,30 @@ func appendInline(out *[]Run, node ast.Node, source []byte, m marks) {
 			} else {
 				next.italic = true
 			}
-			appendInline(out, typed, source, next)
+			appendInline(out, typed, source, next, ctx)
 		case *Highlight:
+			// The colour emoji that opened the highlight is the instruction
+			// and not the words, so it is taken off the first run the
+			// highlight produced rather than off the node: the tree is read
+			// more than once, and a walk that edited it would hand the next
+			// one different words.
+			name, opener := ctx.marks.highlight(typed, source)
 			next := m
-			next.highlight = "yellow"
-			appendInline(out, typed, source, next)
+			next.mark = name
+			inner := make([]Run, 0, 4)
+			appendInline(&inner, typed, source, next, ctx)
+			if opener != "" && len(inner) > 0 {
+				inner[0].Text = withoutOpener(inner[0].Text, opener)
+			}
+			*out = append(*out, inner...)
+		case *Span:
+			next := m
+			next.mark = ctx.marks.span(typed)
+			appendInline(out, typed, source, next, ctx)
 		case *east.Strikethrough:
 			next := m
 			next.strike = true
-			appendInline(out, typed, source, next)
+			appendInline(out, typed, source, next, ctx)
 		case *east.TaskCheckBox:
 			// The reference renderer takes these from pandoc, which writes the
 			// ballot characters into the text rather than marking the item.
@@ -115,14 +154,14 @@ func appendInline(out *[]Run, node ast.Node, source []byte, m marks) {
 				glyph = "\u2612 "
 			}
 			*out = append(*out, Run{Text: glyph, Bold: m.bold, Italic: m.italic,
-				Strike: m.strike, Mono: m.mono, Highlight: m.highlight, Link: m.link})
+				Strike: m.strike, Mono: m.mono, Mark: m.mark, Link: m.link})
 		case *ast.Link:
 			next := m
 			next.link = ""
 			if dest := string(typed.Destination); !isHubPath(dest) {
 				next.link = dest
 			}
-			appendInline(out, typed, source, next)
+			appendInline(out, typed, source, next, ctx)
 		case *ast.AutoLink:
 			label := string(typed.URL(source))
 			// goldmark puts the mailto: scheme on an email autolink in its
@@ -137,11 +176,22 @@ func appendInline(out *[]Run, node ast.Node, source []byte, m marks) {
 				target = "mailto:" + target
 			}
 			*out = append(*out, Run{Text: label, Bold: m.bold, Italic: m.italic,
-				Strike: m.strike, Mono: m.mono, Highlight: m.highlight, Link: target})
-		case *east.FootnoteLink, *east.FootnoteBacklink:
-			// The reference to a footnote the walker does not render. The
-			// warning is on the footnote itself, where the author's own line
-			// is, so the marker leaves no half of a footnote behind here.
+				Strike: m.strike, Mono: m.mono, Mark: m.mark, Link: target})
+		case *east.FootnoteLink:
+			// The mark in the prose. It is a run of its own carrying the
+			// number and no text, because the number on the page is Word's to
+			// print. A mark the pre-walk gave no number is one inside a
+			// definition, which takes no note of its own: footnoteRuns names
+			// it and nothing is written here.
+			if number := ctx.notes[typed]; number > 0 {
+				*out = append(*out, Run{Footnote: number, Bold: m.bold,
+					Italic: m.italic, Strike: m.strike, Mono: m.mono,
+					Mark: m.mark, Link: m.link})
+			}
+			continue
+		case *east.FootnoteBacklink:
+			// goldmark's own jump back up to the mark, which is for HTML and
+			// says nothing in a document.
 			continue
 		case *ast.Image:
 			// Handled by collectImages. Its alt text is not rendered here,
@@ -151,7 +201,7 @@ func appendInline(out *[]Run, node ast.Node, source []byte, m marks) {
 		case *ast.RawHTML, *ast.HTMLBlock:
 			continue
 		default:
-			appendInline(out, child, source, m)
+			appendInline(out, child, source, m, ctx)
 		}
 	}
 }
@@ -170,17 +220,23 @@ func nodeText(node ast.Node, source []byte) string {
 // merge joins adjacent runs that carry the same marks. goldmark splits text at
 // every syntactic boundary, and one w:r per word would bloat the document
 // without changing a pixel.
+//
+// A footnote mark joins nothing and is never dropped: it is a run with no text
+// at all, and the number is what it says.
 func merge(runs []Run) []Run {
 	out := runs[:0:0]
 	for _, run := range runs {
-		if run.Text == "" {
+		// A footnote mark is the one run with no text that is still a run:
+		// what it says is the number, and the empty-text guard would drop it.
+		if run.Text == "" && run.Footnote == 0 {
 			continue
 		}
-		if len(out) > 0 {
+		if len(out) > 0 && run.Footnote == 0 {
 			last := &out[len(out)-1]
-			if last.Bold == run.Bold && last.Italic == run.Italic &&
+			if last.Footnote == 0 &&
+				last.Bold == run.Bold && last.Italic == run.Italic &&
 				last.Strike == run.Strike && last.Mono == run.Mono &&
-				last.Highlight == run.Highlight && last.Link == run.Link {
+				last.Mark == run.Mark && last.Link == run.Link {
 				last.Text += run.Text
 				continue
 			}
@@ -206,7 +262,7 @@ func collectImages(node ast.Node, source []byte) []ImageRef {
 			if image, ok := child.(*ast.Image); ok {
 				found = append(found, ImageRef{
 					Target: string(image.Destination),
-					Alt:    inlineRuns(image, source),
+					Alt:    inlineRuns(image, source, nil, markTable{}),
 				})
 				continue
 			}

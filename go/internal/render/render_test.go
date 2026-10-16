@@ -43,7 +43,7 @@ func config(t *testing.T) *house.Config {
 
 func build(t *testing.T) *Package {
 	t.Helper()
-	pkg, err := Build(config(t), fields(), nil, nil, 0)
+	pkg, err := Build(config(t), fields(), nil, nil, nil, 0)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -70,7 +70,7 @@ func parse(t *testing.T, data []byte) *etree.Document {
 	return doc
 }
 
-func TestBuildWritesTheTwelvePartsAndTheLogo(t *testing.T) {
+func TestBuildWritesTheThirteenPartsAndTheLogo(t *testing.T) {
 	pkg := build(t)
 
 	want := []string{
@@ -86,6 +86,7 @@ func TestBuildWritesTheTwelvePartsAndTheLogo(t *testing.T) {
 		"word/header2.xml",
 		"word/footer1.xml",
 		"word/footer2.xml",
+		"word/footnotes.xml",
 		"word/media/logo.png",
 	}
 	got := pkg.Names()
@@ -134,8 +135,8 @@ func TestTheZipListsContentTypesFirst(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the written file is not a zip: %v", err)
 	}
-	if len(r.File) != 13 {
-		t.Fatalf("the zip holds %d entries, want 13", len(r.File))
+	if len(r.File) != 14 {
+		t.Fatalf("the zip holds %d entries, want 14", len(r.File))
 	}
 	if r.File[0].Name != "[Content_Types].xml" {
 		t.Errorf("the first entry is %q, want [Content_Types].xml", r.File[0].Name)
@@ -201,7 +202,7 @@ func TestSectionPropertiesAreA4InTwipsWithTheFourReferences(t *testing.T) {
 func TestATitleCarryingXMLCharactersIsEscaped(t *testing.T) {
 	f := fields()
 	f.Title = "R&D <policy>"
-	pkg, err := Build(config(t), f, nil, nil, 0)
+	pkg, err := Build(config(t), f, nil, nil, nil, 0)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -227,7 +228,7 @@ func TestATitleCarryingXMLCharactersIsEscaped(t *testing.T) {
 func TestTheBodyElementsSitBetweenTheFrontMatterAndTheSectionProperties(t *testing.T) {
 	p := etree.NewElement("w:p")
 	p.CreateElement("w:r").CreateElement("w:t").SetText("the body")
-	pkg, err := Build(config(t), fields(), []*etree.Element{p}, nil, 0)
+	pkg, err := Build(config(t), fields(), []*etree.Element{p}, nil, nil, 0)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -244,8 +245,8 @@ func TestTheBodyElementsSitBetweenTheFrontMatterAndTheSectionProperties(t *testi
 }
 
 func TestAnImageIsWrittenWithItsRelationshipAndItsContentType(t *testing.T) {
-	media := []Media{{RelID: "rId8", Name: "image1.jpeg", Data: []byte("not really a jpeg")}}
-	pkg, err := Build(config(t), fields(), nil, media, 0)
+	media := []Media{{RelID: "rId9", Name: "image1.jpeg", Data: []byte("not really a jpeg")}}
+	pkg, err := Build(config(t), fields(), nil, media, nil, 0)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -255,7 +256,7 @@ func TestAnImageIsWrittenWithItsRelationshipAndItsContentType(t *testing.T) {
 	rels := parse(t, part(t, pkg, "word/_rels/document.xml.rels"))
 	found := false
 	for _, e := range rels.FindElements("//Relationship") {
-		if e.SelectAttrValue("Id", "") == "rId8" {
+		if e.SelectAttrValue("Id", "") == "rId9" {
 			found = true
 			if got := e.SelectAttrValue("Target", ""); got != "media/image1.jpeg" {
 				t.Errorf("the image relationship targets %q, want media/image1.jpeg", got)
@@ -263,7 +264,7 @@ func TestAnImageIsWrittenWithItsRelationshipAndItsContentType(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Error("word/_rels/document.xml.rels names no rId8")
+		t.Error("word/_rels/document.xml.rels names no rId9")
 	}
 	types := parse(t, part(t, pkg, "[Content_Types].xml"))
 	seen := false
@@ -280,8 +281,8 @@ func TestAnImageIsWrittenWithItsRelationshipAndItsContentType(t *testing.T) {
 // A link's relationship is external and carries no part, so nothing lands
 // under word/media/ and [Content_Types].xml gains no extension.
 func TestALinkIsAnExternalRelationshipWithNoPart(t *testing.T) {
-	media := []Media{{RelID: "rId8", Target: "https://example.com/p?a=1&b=2"}}
-	pkg, err := Build(config(t), fields(), nil, media, 0)
+	media := []Media{{RelID: "rId9", Target: "https://example.com/p?a=1&b=2"}}
+	pkg, err := Build(config(t), fields(), nil, media, nil, 0)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -293,7 +294,7 @@ func TestALinkIsAnExternalRelationshipWithNoPart(t *testing.T) {
 	rels := parse(t, part(t, pkg, "word/_rels/document.xml.rels"))
 	found := false
 	for _, e := range rels.FindElements("//Relationship") {
-		if e.SelectAttrValue("Id", "") != "rId8" {
+		if e.SelectAttrValue("Id", "") != "rId9" {
 			continue
 		}
 		found = true
@@ -308,27 +309,27 @@ func TestALinkIsAnExternalRelationshipWithNoPart(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Error("word/_rels/document.xml.rels names no rId8")
+		t.Error("word/_rels/document.xml.rels names no rId9")
 	}
 }
 
 // A relationship that is both a link and a file is refused: one of the two
 // would be written and the other silently lost.
 func TestARelationshipThatIsBothALinkAndAFileIsRefused(t *testing.T) {
-	media := []Media{{RelID: "rId8", Name: "image1.png", Data: []byte("x"),
+	media := []Media{{RelID: "rId9", Name: "image1.png", Data: []byte("x"),
 		Target: "https://example.com/"}}
-	_, err := Build(config(t), fields(), nil, media, 0)
+	_, err := Build(config(t), fields(), nil, media, nil, 0)
 	if err == nil {
 		t.Fatal("Build accepted a relationship that is a link and a file at once")
 	}
-	if !strings.Contains(err.Error(), "rId8") {
-		t.Errorf("the error does not name rId8: %v", err)
+	if !strings.Contains(err.Error(), "rId9") {
+		t.Errorf("the error does not name rId9: %v", err)
 	}
 }
 
 func TestAnImageIdThatCollidesWithTheShellIsRefused(t *testing.T) {
 	media := []Media{{RelID: "rId4", Name: "image1.png", Data: []byte("x")}}
-	_, err := Build(config(t), fields(), nil, media, 0)
+	_, err := Build(config(t), fields(), nil, media, nil, 0)
 	if err == nil {
 		t.Fatal("Build accepted an image relationship id the shell already uses")
 	}
@@ -339,15 +340,15 @@ func TestAnImageIdThatCollidesWithTheShellIsRefused(t *testing.T) {
 
 func TestTwoImagesSharingOneIdAreRefused(t *testing.T) {
 	media := []Media{
-		{RelID: "rId8", Name: "image1.png", Data: []byte("x")},
-		{RelID: "rId8", Name: "image2.png", Data: []byte("y")},
+		{RelID: "rId9", Name: "image1.png", Data: []byte("x")},
+		{RelID: "rId9", Name: "image2.png", Data: []byte("y")},
 	}
-	_, err := Build(config(t), fields(), nil, media, 0)
+	_, err := Build(config(t), fields(), nil, media, nil, 0)
 	if err == nil {
 		t.Fatal("Build accepted two images with one relationship id")
 	}
-	if !strings.Contains(err.Error(), "rId8") {
-		t.Errorf("the error does not name rId8: %v", err)
+	if !strings.Contains(err.Error(), "rId9") {
+		t.Errorf("the error does not name rId9: %v", err)
 	}
 }
 
@@ -387,6 +388,7 @@ func TestTheGoldenPartsAreWhatTheHouseStyleRendersTo(t *testing.T) {
 		"word/styles.xml", "word/numbering.xml", "word/settings.xml",
 		"word/header1.xml", "word/header2.xml",
 		"word/footer1.xml", "word/footer2.xml",
+		"word/footnotes.xml",
 	} {
 		file := strings.ReplaceAll(strings.TrimPrefix(name, "word/"), "/", "_")
 		golden(t, file, part(t, pkg, name))

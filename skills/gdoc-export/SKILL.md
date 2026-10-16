@@ -166,9 +166,10 @@ this order:
   still refuses such a document, so say that the new notes can be published as
   new documents and cannot yet propose back into their tab.
 - **Every warning, each one in full.** A warning is something the file could not
-  carry: a floating picture as a placeholder comment, a footnote flattened, a
-  Drawing with no PNG, a picture count that did not match, a prelude the run did
-  not recognise. Read them out. A prelude warning means nothing was stripped and
+  carry: a floating picture as a placeholder comment, a suggestion or a comment
+  inside a footnote, a Drawing with no PNG, a picture count that did not match,
+  a mark whose words could not carry the syntax it is written with, a prelude
+  the run did not recognise. Read them out. A prelude warning means nothing was stripped and
   the cover is still in the file, which is yours to take out. A second warning
   then names the headings that open with digits and a `-`. It says nothing about
   whose they are, and neither do you: the same warning reaches a published
@@ -246,8 +247,10 @@ house-style document from it, and that new document carries none of this one's
 comment threads.
 
 If part of the export could not be read, say so and do not report clean. A
-warning naming a picture, a prelude or a footnote means the file is not the whole
-document, and the person merging it later has to know which part.
+warning naming a picture or a prelude means the file is not the whole document,
+and the person merging it later has to know which part. A footnote warning is
+narrower: the notes themselves are in the file, and what is missing is a
+suggestion's id or a comment's mark inside one.
 
 ## Never
 

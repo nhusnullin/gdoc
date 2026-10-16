@@ -19,7 +19,16 @@ dist/
 bin/
 
 # the live test's recordings hold a real document's content; the shape lives in go/internal/docs/testdata/anchors.json
-go/internal/live/testdata/
+# It is the contents rather than the directory, so a fixture that is nobody's
+# document can be named back in below. A directory git has excluded cannot have
+# a file re-included out of it.
+go/internal/live/testdata/*
+
+# The exceptions: M18's two import probes upload these, and each is the built
+# 04-minimal.md with one thing added by hand, a Word footnote and eight runs
+# carrying the mark colours. No real document is in either.
+!go/internal/live/testdata/footnote-probe.docx
+!go/internal/live/testdata/mark-probe.docx
 
 # A `go build` run from inside go/cmd/gdoc leaves the binary beside the source.
 # `bin/` above does not cover that path, and one got committed once.

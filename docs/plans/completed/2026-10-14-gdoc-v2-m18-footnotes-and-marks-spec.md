@@ -119,13 +119,29 @@ written down. Task 14 of the plan holds the steps.
 - `propose` and `annotate` do not change. Both already refuse a quote that
   crosses a footnote mark, and a quote matches words with or without a mark
   around them.
-- No footnote and no mark in a table cell.
+- No footnote in a table cell. A mark in one is carried: a cell's paragraph
+  walks its inlines the way every other paragraph does, and the kitchen sink's
+  own table holds a `==to fill in==` cell (corrected 2026-10-15, Task 9).
 - No mark on a whole paragraph, no mark in `read`'s projection, no meaning
   for any colour in the binary.
 
 ## Acceptance
 
 Each is a test or a checkable run.
+
+Verified 2026-10-15 at the end of the run, on `565d708` plus this commit.
+Both gates passed, so no item is marked as a stopped part.
+
+| Item | Held by | Result |
+|---|---|---|
+| 1 | `TestFootnotesAreNumberedInReferenceOrderNotDefinitionOrder`, `TestTheFootnotesPartCarriesTheTwoSeparators`, `TestAFootnoteReferenceIsASuperscriptCharacterStyle` | pass |
+| 2 | `TestAReferenceWithNoDefinitionIsRefusedByLine`, `TestADefinitionNobodyReferencesIsRefusedByLine`, `TestAFootnoteMarkInsideAHeadingIsRefusedByLine`, `TestARefusedNoteWritesNothing` | pass |
+| 3 | `TestTheSevenCharacterStylesAreWritten`, `TestAMarkedRunCarriesItsStyleAndItsShading`, `TestAHighlightOpeningWithAColourEmojiCarriesItsMark` (a plain highlight and a 🟡 one are the same yellow run) | pass |
+| 4 | `TestANestedMarkIsRefusedByLine`, `TestAnEmptySpanIsRefusedByLine`, `TestAMarkInAHeadingIsRefusedByLine`, `TestASpanCrossingAParagraphIsRefusedByLine`, `TestARefusedNoteWritesNothing` | pass |
+| 5 | `TestBuildAndPublishCarryTheDebtCounts`, `TestTheDebtsAreCountedAndTheOthersAreNot`, `TestHelpMarksPrintsTheSevenFromTheBinary` | pass |
+| 6 | the two live tests, run in Task 13 on 2026-10-15; MEASURED.md "Footnotes and the marks, published by gdoc" | pass |
+| 7 | `TestLiveExportRoundTrip/01-kitchen-sink.md`, run in Task 13 | partial: every footnote and mark line is named and the `footnotes` entry is the renumbering rule, but the run stays red on eight lines from two constructs older than M18, a blockquote wrapped over three lines and a numbered list starting at seven. A backlog item, not this milestone's |
+| 8 | `TestTheSixDocumentsRenderToTheirGoldens`, `TestTheOfflineGate` at 171 rows, `make test` with the race flag, `make vet`, `make dist` | pass |
 
 1. `gdoc build` on a note with two footnotes, the second defined before the
    first, writes a docx whose `word/footnotes.xml` carries the two

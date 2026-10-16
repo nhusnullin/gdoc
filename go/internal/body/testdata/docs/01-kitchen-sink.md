@@ -41,6 +41,18 @@ A second paragraph, so the spacing between paragraphs is measurable. It carries
 span that a human still has to fill in==, and a [link to the handbook](https://example.com/handbook)
 sitting inside the sentence rather than on a line of its own.
 
+The seven marks, one of each: ==a figure to replace==, ==🟢 a claim to
+confirm==, ==🟣 a question for one reviewer==, ==🔵 a line changed since
+the last version==, ==🔴 a warning==, ==🟠 an aside==, and
+[a line that stays in the document but is not the argument]{.pencil}.
+
+Two of the claims above are cited under the page rather than argued in the
+sentence,[^master] which is where a citation costs a reader least.[^cost]
+
+[^cost]: Principle 4, every word costs a reader's attention.
+
+[^master]: The master document the drift gate measures this build against.
+
 Punctuation matters too: "double quotes", 'single quotes', an em dash --- like
 this, an en dash -- like that, and an ellipsis... all of which a smart-quotes
 pass rewrites.

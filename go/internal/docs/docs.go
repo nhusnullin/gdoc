@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"sort"
 )
 
 // The run kinds. A run is a piece of a paragraph, and the kind says what the
@@ -60,6 +61,15 @@ type Document struct {
 	CommentRanges map[string]Range  `json:"comment_ranges,omitempty"`
 	Unplaced      []string          `json:"unplaced,omitempty"`
 	Footnotes     map[string]string `json:"footnotes,omitempty"`
+	// FootnoteColours is, for each footnote whose own runs carry a colour, the
+	// hexes they carry. A footnote's text is flattened into Footnotes, so the
+	// colour is not in it and no route can read a mark back out of one: these
+	// are the facts that say what the words came home without, and export
+	// warns where they say somebody marked words, which is any background at
+	// all or a text colour the house claims.
+	// docs/backlog/marks-inside-footnotes.md holds why the runs themselves are
+	// not carried yet.
+	FootnoteColours map[string]NoteColours `json:"footnote_colors,omitempty"`
 }
 
 // Tab is one tab's content. A document gdoc makes has exactly one.
@@ -172,6 +182,11 @@ type Cell struct {
 // Run is one piece of a paragraph. The suggestion ids are the whole reason the
 // read asks for SUGGESTIONS_INLINE: they are what says this text is pending
 // rather than written. A run may carry both, and that is a replacement.
+//
+// Background and Colour are the run's own two colours as "#RRGGBB", empty
+// where the answer states none. They are facts about the text and nothing
+// here says what they mean: export reads a house mark out of them, and a
+// colour no mark claims is a colour somebody chose.
 type Run struct {
 	Kind         string   `json:"kind"`
 	Text         string   `json:"text,omitempty"`
@@ -180,6 +195,8 @@ type Run struct {
 	InsertionIDs []string `json:"insertion_ids,omitempty"`
 	DeletionIDs  []string `json:"deletion_ids,omitempty"`
 	FootnoteID   string   `json:"footnote_id,omitempty"`
+	Background   string   `json:"background,omitempty"`
+	Colour       string   `json:"color,omitempty"`
 	Link         *Link    `json:"link,omitempty"`
 	Detail       *Detail  `json:"detail,omitempty"`
 }
@@ -497,8 +514,80 @@ func (d *Document) appendTab(t rawTab) {
 // addFootnotes records each footnote's text under its id. The text is what the
 // footnote says, with the trailing newline of its last paragraph dropped,
 // because the reader prints it as a line of its own.
+//
+// The colours of a footnote whose runs carry one are kept on FootnoteColours.
+// The text is all that is kept of the words, so the colour is gone from this
+// read and every route after it: these hexes are the one record that there was
+// one.
 func (d *Document) addFootnotes(fns map[string]rawFootnote, b body) {
 	for id, fn := range fns {
-		d.Footnotes[id] = plainText(blocks(fn.Content, b))
+		inside := blocks(fn.Content, b)
+		d.Footnotes[id] = plainText(inside)
+		if c := noteColours(inside); !c.empty() {
+			if d.FootnoteColours == nil {
+				d.FootnoteColours = map[string]NoteColours{}
+			}
+			d.FootnoteColours[id] = c
+		}
 	}
+}
+
+// NoteColours is the colours one footnote's own runs carry, each hex once and
+// sorted, the backgrounds apart from the text colours. The two are apart
+// because a mark is one or the other: a highlight is a background and the
+// pencil is a text colour, and one list would let a text colour match a
+// highlight's hex.
+//
+// It judges nothing. Whether the house claims a colour is export's question,
+// and the hex is what export needs to answer it.
+// TestAFootnoteCarryingAColourIsNamedOnTheRead is the pin.
+type NoteColours struct {
+	Backgrounds []string `json:"backgrounds,omitempty"`
+	Colours     []string `json:"colors,omitempty"`
+}
+
+func (c NoteColours) empty() bool {
+	return len(c.Backgrounds) == 0 && len(c.Colours) == 0
+}
+
+// noteColours collects the colours of these blocks' text runs.
+func noteColours(bs []Block) NoteColours {
+	backgrounds, colours := map[string]bool{}, map[string]bool{}
+	collect(bs, backgrounds, colours)
+	return NoteColours{Backgrounds: sorted(backgrounds), Colours: sorted(colours)}
+}
+
+func collect(bs []Block, backgrounds, colours map[string]bool) {
+	for _, b := range bs {
+		switch {
+		case b.TOC != nil:
+			collect(b.TOC.Blocks, backgrounds, colours)
+		case b.Paragraph != nil:
+			for _, r := range b.Paragraph.Runs {
+				if r.Kind != KindText {
+					continue
+				}
+				if r.Background != "" {
+					backgrounds[r.Background] = true
+				}
+				if r.Colour != "" {
+					colours[r.Colour] = true
+				}
+			}
+		}
+	}
+}
+
+// sorted is the set as a sorted list, so one document reads the same way
+// twice: Docs keys the footnotes in a map and a map is walked in no order.
+func sorted(set map[string]bool) []string {
+	if len(set) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(set))
+	for hex := range set {
+		out = append(out, hex)
+	}
+	sort.Strings(out)
+	return out
 }

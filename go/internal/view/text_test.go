@@ -751,3 +751,105 @@ func TestANewlineInALabelBecomesASpace(t *testing.T) {
 		t.Errorf("text = %q, want the newline written as a space", text)
 	}
 }
+
+// A Docs index counts UTF-16 units, so the boundary splitRun writes is counted
+// from the end the whitespace was cut off. Counting the tail from the run's
+// start with the byte length of the words put the boundary one byte too far
+// for every multi-byte rune in them, and the index a comment marker is drained
+// against is that boundary.
+func TestATailCutCountsTheIndexInUTF16Units(t *testing.T) {
+	// "café " is five runes and six bytes, starting at index 1, so the space
+	// is at index 5 and the run ends at 6.
+	r := docs.Run{Kind: docs.KindText, Text: "café ", StartIndex: 1, EndIndex: 6}
+
+	space, words := splitRun(r, 1, false)
+
+	if space.StartIndex != 5 {
+		t.Errorf("the space starts at %d, want 5", space.StartIndex)
+	}
+	if words.EndIndex != 5 {
+		t.Errorf("the words end at %d, want 5", words.EndIndex)
+	}
+	if words.Text != "café" || space.Text != " " {
+		t.Errorf("the cut gave %q and %q, want %q and %q", words.Text, space.Text, "café", " ")
+	}
+}
+
+// The front cut is the same question from the other end, where the whitespace
+// is ASCII and the arithmetic is the count either way.
+func TestAFrontCutCountsTheIndexInUTF16Units(t *testing.T) {
+	r := docs.Run{Kind: docs.KindText, Text: " café", StartIndex: 1, EndIndex: 6}
+
+	space, words := splitRun(r, 1, true)
+
+	if space.EndIndex != 2 || words.StartIndex != 2 {
+		t.Errorf("the cut gave %d and %d, want 2 and 2", space.EndIndex, words.StartIndex)
+	}
+}
+
+// TestAMarkRightAgainstAnotherMarkIsPrintedAsItsWords: a delimiter pair is read
+// by its run of characters, so two highlights with no character between them
+// come home as "==ab====cd==", whose middle is one run of four equals signs.
+// The next build reads that as one pair and a stray pair in the words: with the
+// plain mark first it loses the second colour and publishes "==🟢 cd==" as
+// words, and with the emoji first it publishes "ab====cd" as one green stretch.
+// The group's own words are not where that shows, which is why cannotCarry
+// alone cannot see it.
+//
+// The second mark is the one printed as its words, because the first has
+// already been written, and the loss is named the way every other mark that
+// cannot carry its syntax is.
+func TestAMarkRightAgainstAnotherMarkIsPrintedAsItsWords(t *testing.T) {
+	// The two hexes are the house's plain yellow and its green, as literals.
+	marks := []Mark{
+		{Background: "#FFD500", Open: "==", Shut: "=="},
+		{Background: "#34A853", Open: "==🟢 ", Shut: "=="},
+	}
+	// "ab" in the first colour and "cd" in the second, with nothing between
+	// them, then " ok".
+	for _, c := range []struct {
+		first, second string
+		want          string
+	}{
+		{first: `"red":1,"green":0.8352941,"blue":0`, second: `"red":0.20392157,"green":0.65882355,"blue":0.3254902`, want: "==ab==cd ok"},
+		{first: `"red":0.20392157,"green":0.65882355,"blue":0.3254902`, second: `"red":1,"green":0.8352941,"blue":0`, want: "==🟢 ab==cd ok"},
+	} {
+		raw := `{"documentId":"D","body":{"content":[
+			{"startIndex":1,"endIndex":10,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+			 "elements":[
+			  {"startIndex":1,"endIndex":3,"textRun":{"content":"ab","textStyle":{"backgroundColor":{"color":{"rgbColor":{` + c.first + `}}}}}},
+			  {"startIndex":3,"endIndex":5,"textRun":{"content":"cd","textStyle":{"backgroundColor":{"color":{"rgbColor":{` + c.second + `}}}}}},
+			  {"startIndex":5,"endIndex":10,"textRun":{"content":" ok\n"}}]}}]}}`
+
+		text, warnings := Project(parse(t, raw), Options{Marks: marks})
+
+		if !strings.Contains(text, c.want) {
+			t.Errorf("text = %q, want %q", text, c.want)
+		}
+		if len(warnings) != 1 {
+			t.Errorf("text = %q: warnings = %v, want the one naming the mark printed as its words", text, warnings)
+		}
+	}
+}
+
+// TestReadNamesNothingTheNextBuildWouldRead. The read's text is never built:
+// it reaches a reviewing session, which quotes it. A sentence about what a
+// build would make of the document's own words is the export's, because the
+// export is the one route that writes a file gdoc builds again, and the
+// specification says nothing in this projection changes for the read.
+func TestReadNamesNothingTheNextBuildWouldRead(t *testing.T) {
+	raw := `{"documentId":"D","body":{"content":[
+		{"startIndex":1,"endIndex":40,"paragraph":{"paragraphStyle":{"namedStyleType":"NORMAL_TEXT"},
+		 "elements":[{"startIndex":1,"endIndex":40,"textRun":{"content":"see [^9] and {.pencil} here\n"}}]}}]}}`
+
+	text, warnings := Text(parse(t, raw))
+
+	if !strings.Contains(text, "see [^9] and {.pencil} here") {
+		t.Errorf("the read prints %q, want the document's own words", text)
+	}
+	for _, w := range warnings {
+		if strings.Contains(w, "next build") {
+			t.Errorf("the read names what a build would read: %q", w)
+		}
+	}
+}

@@ -68,7 +68,7 @@
                   <pic:cNvPicPr/>
                 </pic:nvPicPr>
                 <pic:blipFill>
-                  <a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId8"/>
+                  <a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId9"/>
                   <a:stretch>
                     <a:fillRect/>
                   </a:stretch>
@@ -165,7 +165,7 @@
                   <pic:cNvPicPr/>
                 </pic:nvPicPr>
                 <pic:blipFill>
-                  <a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId9"/>
+                  <a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId10"/>
                   <a:stretch>
                     <a:fillRect/>
                   </a:stretch>
@@ -256,7 +256,7 @@
                   <pic:cNvPicPr/>
                 </pic:nvPicPr>
                 <pic:blipFill>
-                  <a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId10"/>
+                  <a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId11"/>
                   <a:stretch>
                     <a:fillRect/>
                   </a:stretch>
@@ -321,7 +321,7 @@
                   <pic:cNvPicPr/>
                 </pic:nvPicPr>
                 <pic:blipFill>
-                  <a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId11"/>
+                  <a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId12"/>
                   <a:stretch>
                     <a:fillRect/>
                   </a:stretch>
@@ -435,7 +435,7 @@
                   <pic:cNvPicPr/>
                 </pic:nvPicPr>
                 <pic:blipFill>
-                  <a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId12"/>
+                  <a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId13"/>
                   <a:stretch>
                     <a:fillRect/>
                   </a:stretch>
@@ -510,7 +510,7 @@
       </w:rPr>
       <w:t xml:space="preserve">The </w:t>
     </w:r>
-    <w:hyperlink r:id="rId13">
+    <w:hyperlink r:id="rId14">
       <w:r>
         <w:rPr>
           <w:color w:val="1155cc"/>
@@ -528,7 +528,7 @@
       </w:rPr>
       <w:t xml:space="preserve"> and the </w:t>
     </w:r>
-    <w:hyperlink r:id="rId14">
+    <w:hyperlink r:id="rId15">
       <w:r>
         <w:rPr>
           <w:color w:val="1155cc"/>
@@ -546,7 +546,7 @@
       </w:rPr>
       <w:t xml:space="preserve"> are both linked from this sentence. A bare URL, </w:t>
     </w:r>
-    <w:hyperlink r:id="rId15">
+    <w:hyperlink r:id="rId16">
       <w:r>
         <w:rPr>
           <w:color w:val="1155cc"/>
@@ -596,7 +596,7 @@
       </w:rPr>
       <w:t xml:space="preserve"> marks, like </w:t>
     </w:r>
-    <w:hyperlink r:id="rId16">
+    <w:hyperlink r:id="rId17">
       <w:r>
         <w:rPr>
           <w:b w:val="1"/>
@@ -870,7 +870,7 @@
               <w:szCs w:val="24"/>
             </w:rPr>
           </w:pPr>
-          <w:hyperlink r:id="rId17">
+          <w:hyperlink r:id="rId18">
             <w:r>
               <w:rPr>
                 <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>
@@ -977,7 +977,7 @@
               <w:szCs w:val="24"/>
             </w:rPr>
           </w:pPr>
-          <w:hyperlink r:id="rId18">
+          <w:hyperlink r:id="rId19">
             <w:r>
               <w:rPr>
                 <w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri" w:eastAsia="Calibri"/>

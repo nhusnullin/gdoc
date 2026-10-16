@@ -154,11 +154,68 @@
 // when it makes the file a note.
 //
 // A footnote is written as read writes it, "[^1]" with the notes under a rule
-// at the end, and three warnings ride with it: publish refuses a note holding
-// one, a suggestion inside a footnote arrives as plain text
-// (docs/backlog/suggestions-inside-footnotes.md), and a comment anchored inside
-// one carries no marker (docs/backlog/comment-anchors-in-headers-and-footnotes.md).
-// TestAFootnoteIsWrittenAndWarned is the pin.
+// at the end, and two warnings ride with it: a suggestion inside a footnote
+// arrives as plain text (docs/backlog/suggestions-inside-footnotes.md), and a
+// comment anchored inside one carries no marker
+// (docs/backlog/comment-anchors-in-headers-and-footnotes.md). A note in the
+// prose publishes as it stands: internal/body carries a footnote into the docx
+// and Drive imports it, so the note this file becomes puts its notes back
+// under the page. What it does not put back is the author's own label: a note
+// written twice over is two notes here, numbered, and a round trip renumbers
+// rather than relabels. TestAFootnoteIsWrittenAndWarned is the pin.
+//
+// Docs allows a footnote where the house style carries none, and this
+// projection writes one wherever it stands: a footnote in a heading or in a
+// table cell comes out as "# Title[^1]" or "| x[^2] |", and internal/body
+// refuses each by line, as it refuses a mark in a heading. So a file out of a
+// document gdoc did not write is publishable once those have moved into the
+// prose, which is the session's to do. Moving them here would be editing
+// somebody's document on the way out.
+//
+// A mark inside a footnote is the one mark that does not come home. The read
+// keeps a footnote's text alone, so there is no colour left to read by the
+// time this runs: the words are written plain, no envelope counts them, and
+// the warning names it against docs/backlog/marks-inside-footnotes.md wherever
+// the colours the read collected for one of the tab's notes say the author
+// marked words in it. That question is markedNotes, and it is the question
+// otherColours already answers for the body: a background is somebody marking
+// words, and a text colour is design unless the house claims it. A link
+// inserted in Google Docs carries the link blue on its own run, so counting
+// every text colour would call most hand-written citations a lost mark.
+// TestAMarkInsideAFootnoteIsNamedAsALoss is the pin, with
+// TestAPencilMarkInsideAFootnoteIsNamedAsALoss over the text colour,
+// TestAFootnoteWithNoColourIsNotWarnedAboutAMark and
+// TestAFootnoteWhoseOnlyColourIsALinksIsNotWarnedAboutAMark over the other
+// halves.
+//
+// A mark comes home as the syntax it left as. The six house highlights are a
+// run's background in the document and Obsidian's "==", with the mark's colour
+// emoji and the one space internal/body takes off again; the pencil is a run's
+// text colour and Pandoc's "[words]{.pencil}". Palette states the pairing out
+// of house.yaml, which is the one place the colours live, and
+// TestExportWritesObsidiansSyntaxForEachPaletteColour and
+// TestAMarkSplitOverSeveralRunsComesHomeWhole are the pins.
+//
+// The mark an author may write bare is written bare, because an emoji in the
+// file would be an instruction nobody typed. The one exception is marked words
+// that themselves begin with a colour emoji: the next build reads the first
+// rune of a highlight as its colour, so there the colour is written out and
+// Palette hands the projection both openers.
+// TestAYellowMarkWhoseWordsOpenWithAnEmojiIsWrittenWithItsColour is the pin,
+// and TestAMarkedRunsOwnSpacesAreWrittenOutsideTheDelimiters is the other edge
+// of the same round trip, which internal/view holds.
+//
+// A colour no mark claims is the words as they stand, because gdoc has no
+// syntax that means it, and it is counted by hex on the envelope under
+// marks.other so the session knows how much of the document came home as
+// prose. Backgrounds alone are counted: a background is somebody marking
+// words, and a text colour is how a document is designed. The cover's own
+// yellow placeholders are not counted either, because they are the prelude and
+// leave the file, and the live probe measured them as #FFFF00 against the
+// yellow mark's #FFD500, two colours this projection can tell apart.
+// TestAColourOutsideThePaletteIsPlainWordsAndCounted is the pin, and
+// TestThePreludesOwnYellowIsNotCounted is the cover's own placeholders left
+// out of the count.
 //
 // # The pictures are paired by order, and by nothing else
 //

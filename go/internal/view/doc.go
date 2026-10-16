@@ -184,6 +184,49 @@
 // TestASecondReferenceToOneFootnotePrintsTheSameNumber and
 // TestAFootnoteWithTwoParagraphsIsNotGluedTogether are the pins.
 //
+// # Words that would read as syntax of gdoc's are named as a loss
+//
+// A real note's reference is written [^n], so the document's own words holding
+// that shape are read by the next build as a mark of gdoc's: a label the file
+// does not define refuses the file by line, and a label it does define grows a
+// second reference to a note the document never had. The escaping cannot carry
+// it, because internal/body never unescapes a punctuation mark and reads the
+// mark through a backslash anyway, so the words go home as the document holds
+// them and the warning says what the next build will make of them.
+// internal/export's TestWordsThatWouldReadAsAFootnoteMarkAreNamedAsALoss and
+// TestProseWithNoFootnoteMarkIsNotWarnedAboutOne are the pins, and
+// docs/backlog/build-never-unescapes-a-backslash.md is the escaping.
+//
+// The attribute a mark's span closes with, {.pencil}, is the second shape and
+// is asked for the same reason. It comes off the palette rather than being a
+// constant here, and it is searched for on its own, without the bracket in
+// front of it, because every shape it appears in is a loss: internal/body
+// refuses an attribute that closes no span it reads and refuses a closer no
+// line opened, and a whole span written in the document's own words publishes
+// a grey phrase the document never carried with the brackets dropped out of
+// the text. internal/export's TestWordsThatWouldReadAsAMarksSpanAreNamedAsALoss
+// and TestProseWithNoSpanSyntaxIsNotWarnedAboutOne are the pins. A pair of ==
+// in the document's own words is not asked, because whether a pair opens a
+// highlight is goldmark's flanking rule rather than a shape:
+// docs/backlog/export-never-names-a-highlight-in-the-documents-own-words.md.
+//
+// A note's own words are asked as well. They are written under the body as
+// "[^n]: words", by the one route that writes a second copy of the document's
+// text, and the prose walk never reaches them: a note holding [^9] went home
+// in a file the next build refuses by line. The warning names the note rather
+// than an index, because that copy occupies no index of its own.
+// internal/export's
+// TestAFootnoteWhoseOwnWordsWouldReadAsAFootnoteMarkIsNamedAsALoss is the pin.
+//
+// None of these sentences is the read's. Options.Rebuilt is the gate and holds
+// why: the read's text is never built, so a sentence about what a build would
+// make of it is noise in a reviewing session.
+// TestReadNamesNothingTheNextBuildWouldRead is the pin.
+//
+// The same bracket from the span's side is in cannotCarry: words opening with a
+// caret cannot carry a pencil, because the span's own [ in front of them is how
+// a footnote mark is written and goldmark's footnote parser runs first.
+//
 // # A comment range that names no position is a warning, not a marker
 //
 // The gating is docs.Places, the one rule the comments command reports a range
@@ -385,11 +428,111 @@
 // projected, which is how internal/export removes a house prelude it
 // recognised; a picture written as the file that now sits beside the note; and
 // a chip's target behind its label, because the session merging that file into
-// a note has no second read to go back to. So Options carries Skip, Picture and
-// ChipTargets, Text is Project with none of them set, and there is one emitter
-// rather than two escapings of one document.
+// a note has no second read to go back to. So Options carries Skip, Picture,
+// ChipTargets, Marks and Rebuilt, Text is Project with none of them set, and
+// there is one emitter rather than two escapings of one document. Rebuilt is the fifth,
+// and it is the gate over every sentence about what the next build reads,
+// because the export is the one route whose text becomes a file gdoc builds
+// again.
 // TestProjectSkipsAndNamesPictures is the pin, with the zero options asked of
-// every golden, and TestAChipCarriesItsTargetWhenAskedFor is the chip half.
+// every golden, TestAChipCarriesItsTargetWhenAskedFor is the chip half, and
+// TestReadNamesNothingTheNextBuildWouldRead is Rebuilt's.
+//
+// Marks is the fourth, and it is what a run's colour is written back as.
+// Google Docs has no character styles, so a house mark lands in a document as
+// a run's background or as its own text colour, and a caller that knows the
+// palette hands this projection the colour and the syntax to put around the
+// words. Adjacent runs carrying one mark are one mark, because Docs splits a
+// run wherever the formatting changes and a highlight over a phrase holding
+// bold is three runs sharing one background.
+//
+// The delimiters go around the words and not around the group's own
+// whitespace. A highlight is read by flanking in the file it becomes, so "=="
+// with a space before it closes nothing and "==" with a space after it opens
+// nothing: a run that begins or ends with a space, which is what an edit in
+// Docs leaves behind, would come home with the delimiters printed in it. The
+// space is the document's either way, so it is written outside them. A run
+// that points somewhere is left whole, because splitting it would write its
+// target twice. The whitespace is the set goldmark's own flanking test reads,
+// unicode.IsSpace, which is wider than the four characters a file is written
+// with: Docs keeps a soft line break inside the run as U+000B, and a mark
+// ending in one wrote a closing delimiter that closed nothing.
+// internal/export's TestAMarkedRunsOwnSpacesAreWrittenOutsideTheDelimiters and
+// TestAMarksOwnSoftBreakAndNonBreakingSpaceAreWrittenOutsideTheDelimiters are
+// the pins.
+//
+// A group holding no words of its own is written bare, whitespace and all: the
+// guard and the cut read one whitespace set, and "== ==" would not read as a
+// mark anyway. internal/export's
+// TestAMarkedRunOfOnlyWhitespaceComesHomeAsItStands is the pin. The cut counts
+// the index it writes from the end it took the whitespace off, because a Docs
+// index counts UTF-16 units and the words between the two ends are not ASCII:
+// TestATailCutCountsTheIndexInUTF16Units.
+//
+// A mark whose words cannot carry its syntax is written as the words alone,
+// with the loss named, which is what a placeholder does for a picture. The
+// next build reads the syntax back, and three shapes of words it cannot read
+// it around: a bracket the document holds, because a span's words end at the
+// first bracket a reader meets; a link, because that is written with the same
+// bracket; and a highlight's own delimiter inside the words, which closes the
+// mark early, or one half of it against either end, which lengthens it.
+// Written anyway, the first two put a file into the hub that `build` refuses by
+// line, blaming the file rather than the export. A backslash is no answer:
+// internal/body hands goldmark's text through as it stands and never unescapes
+// a punctuation mark, so one written here reaches the document as a backslash.
+// internal/export's
+// TestAMarkWhoseWordsCannotCarryItsSyntaxComesHomeAsWordsAndIsNamed is the pin.
+//
+// Where the line is is asked before what the words hold, in cannotMarkHere.
+// internal/body refuses a mark inside a heading by line, because Word copies a
+// heading into the contents field and the mark would be in the contents list
+// as well as on the page, so a highlighted heading written home as
+// "## Scope ==to fill in==" is a file the next build refuses, blaming the file
+// rather than the export. The words go home alone and the loss is named. A
+// paragraph inside a table cell is not a heading whatever its style: a cell is
+// flattened onto one line and takes no "#" prefix. internal/export's
+// TestAMarkInsideAHeadingComesHomeAsItsWords and
+// TestAMarkOutsideAHeadingIsNotNamedAsAHeadingLoss are the pins.
+//
+// A footnote reference in a heading is named and still written. The note's own
+// words go under the body, and internal/body refuses a definition nothing
+// marks as well, so the file is one that build refuses either way and the one
+// thing this projection can do is say which words have to move.
+// internal/export's TestAFootnoteMarkInsideAHeadingIsNamedAsALoss is the pin.
+//
+// Where the opener stands is asked as well as what the words hold, in
+// cannotOpenHere. A delimiter pair is read by its run of characters, so a mark
+// written right against the closer of the mark before it is one run of four:
+// two highlights on neighbouring words with nothing between them came home as
+// "==ab====cd==", which publishes as one colour over "ab====cd" or as one
+// colour and the other's syntax printed as words, and nothing said so. The
+// character before the opener has to be one gdoc wrote; a character of the
+// document's own, a held one included, separates the two runs.
+// TestAMarkRightAgainstAnotherMarkIsPrintedAsItsWords is the pin.
+//
+// Every mark in the palette is asked, not the one being written alone. A pencil
+// whose words hold a pair of "==" came home as "[a ==b== c]{.pencil}", which
+// the next build refuses as a mark inside a mark, and a highlight whose words
+// hold "]{.pencil}" came home as a span that line does not open. A span's
+// closer is enough on its own, because the build refuses one whatever sits in
+// front of it, and a delimiter pair takes both halves, because one "==" in a
+// sentence is a sentence. internal/export's
+// TestAMarkWhoseWordsHoldAnotherMarksSyntaxComesHomeAsWords is the pin.
+//
+// A mark may carry a second opener for the case where its own would be read
+// off the words. The one highlight an author writes bare says no colour, so
+// marked words that themselves begin with a colour emoji would be read as
+// naming one: Ambiguous is what the words must not begin with and Explicit is
+// what opens the mark where they do. The strings are the caller's, because the
+// palette is, and internal/export's
+// TestAYellowMarkWhoseWordsOpenWithAnEmojiIsWrittenWithItsColour is the pin.
+//
+// The read passes none, and that is a decision rather than an omission: the
+// words of a marked phrase reach a reviewing session and the mark around them
+// does not, because a session quotes what it reads and a quote carrying == is
+// not text the document holds. Printing marks in the read is a later entry's
+// decision. internal/export's TestReadPrintsNoMark is the pin, beside
+// TestExportWritesObsidiansSyntaxForEachPaletteColour.
 //
 // A named picture raises no warning, because nothing was lost: the bytes are on
 // disk. A floating one keeps its placeholder and its warning either way, since

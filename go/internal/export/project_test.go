@@ -38,7 +38,7 @@ func fixture(t *testing.T, name string) *docs.Document {
 // the gdoc: block included.
 func file(t *testing.T, name string, pics PictureNames) (string, []Piece, []string) {
 	t.Helper()
-	files, pieces, warnings := Project(fixture(t, name), pics)
+	files, pieces, _, warnings := Project(fixture(t, name), pics, nil)
 	if len(files) != 1 {
 		t.Fatalf("%s gave %d files, want 1", name, len(files))
 	}
@@ -152,7 +152,7 @@ func TestARestyledPreludeIsStrippedOverItsNamedRange(t *testing.T) {
 // added inside the cover breaks the layout the strip reads, so the whole
 // document stays in the file and the warning names what stood there.
 func TestAnEditedPreludeStaysAndWarns(t *testing.T) {
-	files, pieces, warnings := Project(fixture(t, "edited-prelude.json"), nil)
+	files, pieces, _, warnings := Project(fixture(t, "edited-prelude.json"), nil, nil)
 
 	if len(pieces) != 0 {
 		t.Errorf("a prelude nothing recognised stripped %v", kinds(pieces))
@@ -208,7 +208,7 @@ func TestAnEditedPreludeStaysAndWarns(t *testing.T) {
 // rules apart. TestTheAnchorViewWritesIsTheIDBodyCollects is the other half,
 // which asks goldmark itself rather than a literal.
 func TestAHeadingLinkRoundTripsToItsSlug(t *testing.T) {
-	files, _, _ := Project(fixture(t, "headings.json"), nil)
+	files, _, _, _ := Project(fixture(t, "headings.json"), nil, nil)
 
 	for _, want := range []string{
 		"[Risk & Control <ampersands>](#risk--control-ampersands)",
@@ -243,7 +243,7 @@ func TestRepointDoesNotChainRewrites(t *testing.T) {
 // TestAHeadingLosesItsHouseNumberAndKeepsItsLinks is the number publish wrote
 // into the heading itself, taken back out with the links that pointed at it.
 func TestAHeadingLosesItsHouseNumberAndKeepsItsLinks(t *testing.T) {
-	files, pieces, _ := Project(fixture(t, "publish-prelude.json"), nil)
+	files, pieces, _, _ := Project(fixture(t, "publish-prelude.json"), nil, nil)
 	body := files[0].Body
 
 	for _, gone := range []string{"# 1-Scope", "## 1.1-Out of scope", "# 2-Who decides"} {
@@ -283,7 +283,7 @@ func TestTheHeadingNumberIsTheHouseSeparator(t *testing.T) {
 // TestAChipExportsLabelAndTarget is the chip in the file: the label the
 // document shows, and where it points, which the read leaves to --structure.
 func TestAChipExportsLabelAndTarget(t *testing.T) {
-	files, _, _ := Project(fixture(t, "elements.json"), nil)
+	files, _, _, _ := Project(fixture(t, "elements.json"), nil, nil)
 	body := files[0].Body
 
 	for _, want := range []string{
@@ -296,17 +296,18 @@ func TestAChipExportsLabelAndTarget(t *testing.T) {
 	}
 }
 
-// TestAFootnoteIsWrittenAndWarned is the footnote carried and the three things
-// it costs named, because publish refuses a note that holds one.
+// TestAFootnoteIsWrittenAndWarned is the footnote carried and the two things
+// it still costs named. The third warning went when publish stopped refusing a
+// note holding a footnote: a note built from this file carries the footnote
+// into the document it publishes, so nothing has to be resolved first.
 func TestAFootnoteIsWrittenAndWarned(t *testing.T) {
-	files, _, warnings := Project(fixture(t, "objects.json"), nil)
+	files, _, _, warnings := Project(fixture(t, "objects.json"), nil, nil)
 	body := files[0].Body
 
 	if !strings.Contains(body, "[^1]") || !strings.Contains(body, "[^1]: Measured on 2026-09-06.") {
 		t.Errorf("the footnote is not in the file:\n%s", body)
 	}
 	for _, want := range []string{
-		"publish refuses a note that holds a footnote",
 		"docs/backlog/suggestions-inside-footnotes.md",
 		"docs/backlog/comment-anchors-in-headers-and-footnotes.md",
 	} {
@@ -320,13 +321,99 @@ func TestAFootnoteIsWrittenAndWarned(t *testing.T) {
 			t.Errorf("no warning names %q: %v", want, warnings)
 		}
 	}
+	for _, gone := range []string{"publish refuses", "footnote reference(s)"} {
+		for _, w := range warnings {
+			if strings.Contains(w, gone) {
+				t.Errorf("a warning still says %q, and publish carries a footnote now: %q", gone, w)
+			}
+		}
+	}
+}
+
+// TestAMarkInsideAFootnoteIsNamedAsALoss. The read keeps a footnote's text
+// alone, so a mark the author wrote inside one has no colour left to read by
+// the time the projection runs: the words come home plain, no envelope counts
+// them, and the next build would report a debt fewer than the document holds.
+// The read records which notes carried a colour, and that is the sentence.
+func TestAMarkInsideAFootnoteIsNamedAsALoss(t *testing.T) {
+	d := fixture(t, "coloured-footnote.json")
+	if len(d.FootnoteColours) != 1 {
+		t.Fatalf("the read names %v as the coloured notes, want kix.fn1 alone", d.FootnoteColours)
+	}
+	files, _, other, warnings := Project(d, nil, palette(t))
+
+	if !strings.Contains(files[0].Body, "[^1]: to fill in") {
+		t.Errorf("the note is not in the file:\n%s", files[0].Body)
+	}
+	if strings.Contains(files[0].Body, "==to fill in==") {
+		t.Errorf("the mark came home after all, so this warning is the wrong fact:\n%s", files[0].Body)
+	}
+	if len(other) != 0 {
+		t.Errorf("other = %v, want nothing: the colour is inside a footnote", other)
+	}
+	found := false
+	for _, w := range warnings {
+		if strings.Contains(w, "docs/backlog/marks-inside-footnotes.md") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("no warning names the mark lost inside the footnote: %v", warnings)
+	}
+}
+
+// TestAPencilMarkInsideAFootnoteIsNamedAsALoss is the text-colour half of the
+// same question, and it is the reason the read hands over the hexes rather
+// than a yes or a no. The pencil is a run's text colour and nothing else, so a
+// note carrying it carries no background at all: a rule that counted
+// backgrounds alone would let that mark come home as plain words with nothing
+// said.
+//
+// #9A9A9A is the pencil's hex, stated as a literal, and the fixture carries it
+// as the colour Docs returns, 0.6039216 on each channel.
+func TestAPencilMarkInsideAFootnoteIsNamedAsALoss(t *testing.T) {
+	d := fixture(t, "pencil-footnote.json")
+	c, ok := d.FootnoteColours["kix.fn1"]
+	if !ok || len(c.Backgrounds) != 0 {
+		t.Fatalf("the read names %v, want kix.fn1 with no background: the pencil is a text colour", d.FootnoteColours)
+	}
+	if len(c.Colours) != 1 || !strings.EqualFold(c.Colours[0], "#9A9A9A") {
+		t.Fatalf("the note's text colours are %v, want the pencil's #9A9A9A alone", c.Colours)
+	}
+
+	_, _, other, warnings := Project(d, nil, palette(t))
+
+	if len(other) != 0 {
+		t.Errorf("other = %v, want nothing: the colour is inside a footnote", other)
+	}
+	found := false
+	for _, w := range warnings {
+		if strings.Contains(w, "docs/backlog/marks-inside-footnotes.md") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("no warning names the pencil mark lost inside the footnote: %v", warnings)
+	}
+}
+
+// TestAFootnoteWithNoColourIsNotWarnedAboutAMark is the other half: the
+// sentence is a fact about this document and not a line every footnote carries.
+func TestAFootnoteWithNoColourIsNotWarnedAboutAMark(t *testing.T) {
+	_, _, _, warnings := Project(fixture(t, "objects.json"), nil, palette(t))
+
+	for _, w := range warnings {
+		if strings.Contains(w, "marks-inside-footnotes") {
+			t.Errorf("a note carrying no colour was warned about: %q", w)
+		}
+	}
 }
 
 // TestTwoTabsGiveTwoProjections is one file per tab, each naming the tab it
 // came from, and neither holding the other's text or the tab line the read
 // prints.
 func TestTwoTabsGiveTwoProjections(t *testing.T) {
-	files, _, _ := Project(fixture(t, "two-tabs.json"), nil)
+	files, _, _, _ := Project(fixture(t, "two-tabs.json"), nil, nil)
 
 	if len(files) != 2 {
 		t.Fatalf("two tabs gave %d files", len(files))
@@ -356,7 +443,7 @@ func TestAPictureIsWrittenWhereItStands(t *testing.T) {
 		}
 		return "![](assets/note-1.png)"
 	}
-	files, _, warnings := Project(fixture(t, "objects.json"), names)
+	files, _, _, warnings := Project(fixture(t, "objects.json"), names, nil)
 	body := files[0].Body
 
 	if !strings.Contains(body, "![](assets/note-1.png)") {
@@ -390,7 +477,7 @@ func TestAPlainDocumentKeepsAHeadingThatOpensWithANumber(t *testing.T) {
 		para("HEADING_2", "1-on-1 meetings"),
 		para("NORMAL_TEXT", "Prose."),
 	}}}}
-	files, pieces, _ := Project(d, nil)
+	files, pieces, _, _ := Project(d, nil, nil)
 	for _, want := range []string{"# 2024-2025 Budget", "## 1-on-1 meetings"} {
 		if !strings.Contains(files[0].Body, want) {
 			t.Errorf("%q lost its own words:\n%s", want, files[0].Body)
@@ -428,7 +515,7 @@ func TestARestyledDocumentKeepsAHeadingThatOpensWithANumber(t *testing.T) {
 			at("NORMAL_TEXT", "Prose.", 120),
 		},
 	}}}
-	files, pieces, _ := Project(d, nil)
+	files, pieces, _, _ := Project(d, nil, nil)
 	if strings.Contains(files[0].Body, "Altery Group") {
 		t.Errorf("the marked prelude is still in the file:\n%s", files[0].Body)
 	}
@@ -458,7 +545,7 @@ func TestATabWithNoLevelOneHeadingIsNotAPrelude(t *testing.T) {
 		para("HEADING_2", "Scope"),
 		table, table, table,
 	}}}}
-	files, pieces, warnings := Project(d, nil)
+	files, pieces, _, warnings := Project(d, nil, nil)
 	if !strings.Contains(files[0].Body, "Somebody's own front page") {
 		t.Errorf("the front page is gone from a document nothing recognised:\n%s", files[0].Body)
 	}
@@ -492,7 +579,7 @@ func TestAPlainDocumentWithAContentsListIsNotToldItsNumbersAreTheHouses(t *testi
 		para("HEADING_1", "2024-2025 Budget"),
 		para("HEADING_2", "1-on-1 meetings"),
 	}}}}
-	files, pieces, warnings := Project(d, nil)
+	files, pieces, _, warnings := Project(d, nil, nil)
 
 	for _, want := range []string{"# 2024-2025 Budget", "## 1-on-1 meetings"} {
 		if !strings.Contains(files[0].Body, want) {
@@ -535,7 +622,7 @@ func TestARefusedMarkerStripsNothing(t *testing.T) {
 			para("HEADING_1", "1-Scope"),
 		},
 	}}}
-	files, pieces, warnings := Project(d, nil)
+	files, pieces, _, warnings := Project(d, nil, nil)
 
 	if !strings.Contains(files[0].Body, "Altery Group") {
 		t.Errorf("a prelude whose marker was refused was stripped by the layout:\n%s", files[0].Body)
@@ -572,7 +659,7 @@ func TestACommentInTheStrippedPreludeIsNotMarkedInTheBody(t *testing.T) {
 		"CoverComment": {Tab: "t.0", Start: 15, End: 34},
 	}
 
-	files, _, warnings := Project(d, nil)
+	files, _, _, warnings := Project(d, nil, nil)
 	if len(files) != 1 {
 		t.Fatalf("got %d files, want 1", len(files))
 	}
@@ -603,7 +690,7 @@ func TestACommentNamingAMissingTabIsNamed(t *testing.T) {
 		"Ghost": {Tab: "t.9", Start: 300, End: 310},
 	}
 
-	_, _, warnings := Project(d, nil)
+	_, _, _, warnings := Project(d, nil, nil)
 	named := false
 	for _, w := range warnings {
 		if strings.Contains(w, "Ghost") && strings.Contains(w, "t.9") {
@@ -645,5 +732,218 @@ func TestABodyOpeningWithTheDelimiterKeepsItsFirstParagraph(t *testing.T) {
 				t.Errorf("the block read back is %+v, want the one entry for the document:\n%s", got, out)
 			}
 		})
+	}
+}
+
+// TestAFootnoteWhoseOnlyColourIsALinksIsNotWarnedAboutAMark. A link inserted
+// in Google Docs carries the link blue as a direct text colour on its run, and
+// a footnote is where a citation lives, so most footnotes in a document gdoc
+// did not write carry one. A text colour is how a document is designed unless
+// it is the one the house claims, which is the rule otherColours already
+// states: a note coloured only by its own link lost no mark, and asking the
+// person whether to mark those words again asks about a debt that never
+// existed.
+func TestAFootnoteWhoseOnlyColourIsALinksIsNotWarnedAboutAMark(t *testing.T) {
+	d := fixture(t, "linked-footnote.json")
+
+	_, _, _, warnings := Project(d, nil, palette(t))
+
+	for _, w := range warnings {
+		if strings.Contains(w, "docs/backlog/marks-inside-footnotes.md") {
+			t.Errorf("the link's own blue was named as a mark that came home plain: %q", w)
+		}
+	}
+}
+
+// TestWordsThatWouldReadAsAFootnoteMarkAreNamedAsALoss. The projection writes a
+// real note's reference as "[^n]", so the document's own words holding that
+// shape are read by the next build as a mark of gdoc's. A label the file does
+// not define refuses the file by line, blaming the file rather than the export;
+// a label it does define grows a second reference to a note the document never
+// had, and the author's own words go with it. Neither is something a session
+// can see, so the loss is named.
+func TestWordsThatWouldReadAsAFootnoteMarkAreNamedAsALoss(t *testing.T) {
+	// The words are the document's own: no footnote run, so nothing gdoc wrote
+	// is in this paragraph at all.
+	_, _, _, warnings := Project(oneMarked(docs.Run{Text: "see [^1] and [^note] here"}), nil, palette(t))
+
+	for _, want := range []string{"[^1]", "[^note]"} {
+		found := false
+		for _, w := range warnings {
+			if strings.Contains(w, want) && strings.Contains(w, "footnote mark") {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("no warning names %s as a footnote mark the next build would read: %v", want, warnings)
+		}
+	}
+}
+
+// The other half: a document whose prose holds no such shape is not warned
+// about one, so the sentence is a fact about this document rather than a line
+// every export carries.
+func TestProseWithNoFootnoteMarkIsNotWarnedAboutOne(t *testing.T) {
+	_, _, _, warnings := Project(oneMarked(docs.Run{Text: "see [the note] and ^1 here"}), nil, palette(t))
+
+	for _, w := range warnings {
+		if strings.Contains(w, "footnote mark") {
+			t.Errorf("a warning names a footnote mark in words that hold none: %q", w)
+		}
+	}
+}
+
+// headed is a document of one heading paragraph holding the runs passed, so a
+// test can put a mark or a footnote reference in a heading and read back what
+// the file holds. The runs carry their own indexes, which is what the warnings
+// name.
+func headed(rs ...docs.Run) *docs.Document {
+	at := 1
+	for i := range rs {
+		if rs[i].Kind == "" {
+			rs[i].Kind = docs.KindText
+		}
+		rs[i].StartIndex = at
+		at += len([]rune(rs[i].Text))
+		if rs[i].Kind != docs.KindText {
+			at = rs[i].StartIndex + 1
+		}
+		rs[i].EndIndex = at
+	}
+	rs = append(rs, docs.Run{Kind: docs.KindText, Text: "\n", StartIndex: at, EndIndex: at + 1})
+	return &docs.Document{
+		ID: "1head", Title: "One heading",
+		Tabs: []docs.Tab{{ID: "t.0", Body: []docs.Block{{Paragraph: &docs.Paragraph{
+			Style: "HEADING_2", Runs: rs,
+		}}}}},
+	}
+}
+
+// TestAMarkInsideAHeadingComesHomeAsItsWords. internal/body refuses a mark
+// inside a heading by line, because Word copies a heading into the contents
+// field and the mark would be in the contents list as well as on the page. So
+// a highlighted heading written home as "## Scope ==to fill in==" is a file
+// the next build refuses, blaming the file rather than the export: the words
+// go home alone and the loss is named, which is what every other mark that
+// cannot be written does.
+func TestAMarkInsideAHeadingComesHomeAsItsWords(t *testing.T) {
+	files, _, _, warnings := Project(headed(
+		docs.Run{Text: "Scope "},
+		docs.Run{Text: "to fill in", Background: "#FFD500"},
+	), nil, palette(t))
+
+	if len(files) != 1 {
+		t.Fatalf("the document gave %d files, want 1", len(files))
+	}
+	if body := files[0].Body; !strings.Contains(body, "## Scope to fill in") || strings.Contains(body, "==") {
+		t.Errorf("the heading came home as\n%q\nwant the words alone", body)
+	}
+	named := false
+	for _, w := range warnings {
+		if strings.Contains(w, "heading") && strings.Contains(w, "contents") {
+			named = true
+		}
+	}
+	if !named {
+		t.Errorf("no warning names the mark a heading cannot carry: %v", warnings)
+	}
+}
+
+// The other half: a mark in a paragraph that is not a heading still comes home
+// as its syntax, so the rule is about the heading and not about every mark.
+func TestAMarkOutsideAHeadingIsNotNamedAsAHeadingLoss(t *testing.T) {
+	files, _, _, warnings := Project(oneMarked(docs.Run{Text: "to fill in", Background: "#FFD500"}), nil, palette(t))
+
+	if body := files[0].Body; !strings.Contains(body, "==to fill in==") {
+		t.Errorf("the mark came home as\n%q\nwant its syntax", body)
+	}
+	for _, w := range warnings {
+		if strings.Contains(w, "heading") {
+			t.Errorf("a warning names a heading in a document that has none: %q", w)
+		}
+	}
+}
+
+// TestAFootnoteMarkInsideAHeadingIsNamedAsALoss. The reference is written where
+// the document holds it, because the note's own words are written under the
+// body and a definition nothing marks is refused as well. So the file the
+// export writes is one the next build refuses either way, and the one thing
+// this package can do is say which words have to move.
+func TestAFootnoteMarkInsideAHeadingIsNamedAsALoss(t *testing.T) {
+	d := headed(docs.Run{Text: "Scope "}, docs.Run{Kind: docs.KindFootnoteRef, FootnoteID: "f1", Text: "1"})
+	d.Footnotes = map[string]string{"f1": "The note's words."}
+
+	_, _, _, warnings := Project(d, nil, palette(t))
+
+	named := false
+	for _, w := range warnings {
+		if strings.Contains(w, "footnote mark") && strings.Contains(w, "heading") {
+			named = true
+		}
+	}
+	if !named {
+		t.Errorf("no warning names the footnote mark inside the heading: %v", warnings)
+	}
+}
+
+// TestAFootnoteWhoseOwnWordsWouldReadAsAFootnoteMarkIsNamedAsALoss. A note's
+// text is written under the body as "[^n]: words", and those words are the
+// document's own: one of them holding "[^9]" is read by the next build as a
+// mark of gdoc's, which refuses the file by line and blames the file rather
+// than the export. The scan over the prose did not reach them, so the one
+// route that writes a note's words said nothing.
+func TestAFootnoteWhoseOwnWordsWouldReadAsAFootnoteMarkIsNamedAsALoss(t *testing.T) {
+	d := oneMarked(docs.Run{Text: "words "})
+	d.Tabs[0].Body[0].Paragraph.Runs = append(d.Tabs[0].Body[0].Paragraph.Runs,
+		docs.Run{Kind: docs.KindFootnoteRef, FootnoteID: "f1", Text: "1", StartIndex: 8, EndIndex: 9})
+	d.Footnotes = map[string]string{"f1": "see [^9] in the note"}
+
+	_, _, _, warnings := Project(d, nil, palette(t))
+
+	named := false
+	for _, w := range warnings {
+		if strings.Contains(w, "[^9]") && strings.Contains(w, "footnote mark") {
+			named = true
+		}
+	}
+	if !named {
+		t.Errorf("no warning names the shape inside the note's own words: %v", warnings)
+	}
+}
+
+// TestWordsThatWouldReadAsAMarksSpanAreNamedAsALoss. The pencil comes home as
+// Pandoc's span, so the attribute it closes with is syntax of gdoc's in the
+// file: the document's own words holding it are read by the next build as that
+// syntax and not as the words the document shows. Two of the three shapes
+// refuse the file by line and the third publishes a grey phrase the document
+// never carried, with the brackets and the attribute dropped from the words.
+func TestWordsThatWouldReadAsAMarksSpanAreNamedAsALoss(t *testing.T) {
+	for _, prose := range []string{
+		"the {.pencil} attribute",
+		"ends with ]{.pencil} here",
+		"write [x]{.pencil} to mark",
+	} {
+		_, _, _, warnings := Project(oneMarked(docs.Run{Text: prose}), nil, palette(t))
+
+		named := false
+		for _, w := range warnings {
+			if strings.Contains(w, "{.pencil}") {
+				named = true
+			}
+		}
+		if !named {
+			t.Errorf("%q: no warning names the span syntax the next build would read: %v", prose, warnings)
+		}
+	}
+}
+
+// The other half: prose holding no such shape is not warned about one.
+func TestProseWithNoSpanSyntaxIsNotWarnedAboutOne(t *testing.T) {
+	_, _, _, warnings := Project(oneMarked(docs.Run{Text: "a pencil note about .pencil here"}), nil, palette(t))
+
+	for _, w := range warnings {
+		if strings.Contains(w, "{.pencil}") {
+			t.Errorf("a warning names span syntax in words that hold none: %q", w)
+		}
 	}
 }

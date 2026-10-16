@@ -12,6 +12,8 @@ import (
 	"strings"
 
 	"github.com/beevik/etree"
+
+	"gdoc/internal/render"
 )
 
 const (
@@ -72,6 +74,15 @@ func sub(parent *etree.Element, tag string, attrs ...string) *etree.Element {
 
 // runOpts is the formatting of one run. The zero value declares nothing, so
 // the style's own values win.
+//
+// Style is the character style the run names, which is how a footnote
+// reference and a mark reach Word's own style list: internal/render writes the
+// style, and the run names it. Fill is the shading a highlight mark carries,
+// VertAlign the superscript a footnote reference carries, and both are stated
+// on the style as well, because Google Docs has no character styles and keeps
+// only what the run itself says. There is no named highlight here: a mark is
+// the exact hex, and the cover's own yellow placeholders are internal/render's
+// and written by its own run writer.
 type runOpts struct {
 	SizePt    *float64
 	Bold      bool
@@ -81,22 +92,28 @@ type runOpts struct {
 	Mono      bool
 	Color     string
 	Font      string
-	Highlight string
+	Style     string
+	Fill      string
+	VertAlign string
 }
 
 func (o runOpts) empty() bool {
 	return o.SizePt == nil && !o.Bold && !o.Italic && !o.Strike && !o.Underline &&
-		!o.Mono && o.Color == "" && o.Font == "" && o.Highlight == ""
+		!o.Mono && o.Color == "" && o.Font == "" && o.Style == "" &&
+		o.Fill == "" && o.VertAlign == ""
 }
 
 // runProps builds a w:rPr, or nil when the run states nothing. The order is
-// the schema's: fonts, weight, slope, strike, colour, size, highlight, then
-// underline.
+// the schema's: the character style, fonts, weight, slope, strike, colour,
+// size, underline, shading, then vertical alignment.
 func runProps(o runOpts) *etree.Element {
 	if o.empty() {
 		return nil
 	}
 	rPr := etree.NewElement("w:rPr")
+	if o.Style != "" {
+		sub(rPr, "w:rStyle", "w:val", o.Style)
+	}
 	font := o.Font
 	if o.Mono {
 		font = monoFont
@@ -125,13 +142,22 @@ func runProps(o runOpts) *etree.Element {
 		sub(rPr, "w:sz", "w:val", halfPoints(*o.SizePt))
 		sub(rPr, "w:szCs", "w:val", halfPoints(*o.SizePt))
 	}
-	if o.Highlight != "" {
-		sub(rPr, "w:highlight", "w:val", o.Highlight)
-	}
-	// Underline is last because that is where the schema puts it: the run
-	// properties are a sequence, and Word reads one out of order as a repair.
+	// Underline is the last of the properties this writer had before the
+	// marks: the run properties are a sequence, and Word reads one out of
+	// order as a repair. The schema puts shading and vertical alignment after
+	// it, in that order, which is why those two are written last.
 	if o.Underline {
 		sub(rPr, "w:u", "w:val", "single")
+	}
+	if o.Fill != "" {
+		// w:val clear and w:color auto are the pattern and its foreground: a
+		// solid fill of the one colour, which is what a highlight is. A
+		// w:shd carrying the fill alone defaults its pattern to nil, and a
+		// nil pattern draws no shading.
+		sub(rPr, "w:shd", "w:val", "clear", "w:color", "auto", "w:fill", hexColor(o.Fill))
+	}
+	if o.VertAlign != "" {
+		sub(rPr, "w:vertAlign", "w:val", o.VertAlign)
 	}
 	return rPr
 }
@@ -234,6 +260,38 @@ func (r *renderer) para(o paraOpts) *etree.Element {
 	return p
 }
 
+// marked is one run's formatting with a mark on it, or the same formatting
+// back when the run carries none.
+//
+// A mark reaches Word twice over: the run names the character style
+// internal/render writes, so Word lists the marks and a reader finds every
+// yellow with one search, and the run states the colour itself, because
+// Google Docs has no character styles and keeps only what the run says. A
+// highlight is shading with the exact hex rather than one of Word's sixteen
+// named highlights, none of which carries these hexes, and the pencil is the
+// run's own colour.
+//
+// A mark the house style does not state is refused by name rather than
+// dropped, the way an alignment it does not have is: a colour silently left
+// off is a document nobody would think to check.
+func (r *renderer) marked(o runOpts, name string) runOpts {
+	if name == "" {
+		return o
+	}
+	mark, ok := r.cfg.Marks[name]
+	if !ok {
+		r.fail("mark %q is not one the house style states", name)
+		return o
+	}
+	o.Style = render.MarkStyleID(name)
+	if mark.IsHighlight() {
+		o.Fill = mark.Color
+		return o
+	}
+	o.Color = mark.Color
+	return o
+}
+
 // align maps a house alignment onto Word's. One the house does not have is
 // refused by name rather than dropped: a paragraph silently left aligned is a
 // document nobody would think to check.
@@ -262,6 +320,20 @@ func (r *renderer) align(a string) string {
 // jump that lands nowhere is worse than no jump.
 func (r *renderer) addRuns(parent *etree.Element, runs []Run, base runOpts) {
 	for _, run := range runs {
+		// A footnote mark is a run with no text, so it is written before the
+		// guard that drops one: what it says is the number, and Word prints
+		// that from word/footnotes.xml.
+		if run.Footnote > 0 {
+			o := base
+			o.Style = footnoteRefStyle
+			o.VertAlign = vertAlignSuperscript
+			mark := sub(parent, "w:r")
+			if rPr := runProps(o); rPr != nil {
+				mark.AddChild(rPr)
+			}
+			sub(mark, "w:footnoteReference", "w:id", strconv.Itoa(run.Footnote))
+			continue
+		}
 		if run.Text == "" {
 			continue
 		}
@@ -270,9 +342,7 @@ func (r *renderer) addRuns(parent *etree.Element, runs []Run, base runOpts) {
 		o.Italic = o.Italic || run.Italic
 		o.Strike = run.Strike
 		o.Mono = run.Mono
-		if run.Highlight != "" {
-			o.Highlight = run.Highlight
-		}
+		o = r.marked(o, run.Mark)
 		if run.Link == "" {
 			textRun(parent, run.Text, o)
 			continue
@@ -404,6 +474,31 @@ func (r *renderer) listItem(runs []Run, numID string, level int, ordered bool) *
 		Mark:      &mark,
 	})
 	r.addRuns(p, runs, r.bodyRun())
+	return p
+}
+
+// footnoteParagraph is one paragraph of a note under the page: the house's
+// footnote_text style, which internal/render writes, and nothing stated over
+// it, because the style is where the size and the spacing of a note live.
+//
+// first says whether this is the note's opening paragraph, which carries
+// Word's own reference mark, w:footnoteRef, in the same character style the
+// mark in the prose names. Only the first: a second one in the same note
+// prints the number twice.
+func (r *renderer) footnoteParagraph(runs []Run, first bool) *etree.Element {
+	p := r.para(paraOpts{Style: footnoteTextStyle})
+	if first {
+		mark := sub(p, "w:r")
+		if rPr := runProps(runOpts{Style: footnoteRefStyle, VertAlign: vertAlignSuperscript}); rPr != nil {
+			mark.AddChild(rPr)
+		}
+		sub(mark, "w:footnoteRef")
+		// The space between the number and the note's first word. Word's own
+		// template writes it as a run of its own, and a note whose text opens
+		// hard against its number reads as one word.
+		textRun(p, " ", runOpts{})
+	}
+	r.addRuns(p, runs, runOpts{})
 	return p
 }
 

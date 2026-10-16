@@ -48,11 +48,14 @@ type helpSettings struct {
 // helpCommand is one entry of the table as JSON. Words and Flags are always
 // there, empty rather than absent, because a skill telling "takes none" from
 // "said nothing" is the whole reason to print the help at all.
+// Notes is the lines that belong to no flag, absent for a command with none,
+// for the reason the table's own field says.
 type helpCommand struct {
 	Name    string     `json:"name"`
 	Words   []string   `json:"words"`
 	Flags   []helpFlag `json:"flags"`
 	Summary string     `json:"summary"`
+	Notes   []string   `json:"notes,omitempty"`
 	Example string     `json:"example"`
 }
 
@@ -68,9 +71,10 @@ type helpFlag struct {
 	Summary string `json:"summary"`
 }
 
-// cmdHelp answers with every command, or with the ones whose name opens with
-// the words it was given. Words that match nothing are refused the way an
-// unknown command is, because that is what they are.
+// cmdHelp answers with every command, with the ones whose name opens with the
+// words it was given, or with the one topic that names no command. Words that
+// match nothing are refused the way an unknown command is, because that is
+// what they are.
 //
 // It takes the context because this is the one command that reaches GitHub
 // without being told to: once a day, for at most two seconds, to say whether
@@ -93,6 +97,14 @@ type helpFlag struct {
 //
 // TestHelpPrintsTheNoticeLineAndABlankLine.
 func cmdHelp(ctx context.Context, words []string, json bool, errOut io.Writer, set settings.InEffect) emit.Result {
+	// The one word help answers that names no command, and it is answered
+	// before the table is walked: helpMatches would find nothing for it and
+	// the question would be refused the way a typo is. It asks GitHub
+	// nothing, because the daily check belongs to the help of the tool and
+	// this is a page about the house style.
+	if len(words) == 1 && words[0] == markTopic {
+		return cmdHelpMarks(json, errOut)
+	}
 	matched := helpMatches(words)
 	if len(matched) == 0 {
 		return unknownCommand(words)
@@ -148,6 +160,7 @@ func helpEntries(matched []command) []helpCommand {
 			Words:   append([]string{}, c.words...),
 			Flags:   flags,
 			Summary: c.summary,
+			Notes:   append([]string{}, c.notes...),
 			Example: c.example,
 		})
 	}
@@ -240,6 +253,12 @@ func helpOne(c command) string {
 		b.WriteString(" " + part)
 	}
 	fmt.Fprintf(&b, "\n  %s\n", c.summary)
+	// The lines that belong to no flag, under the sentence that says what the
+	// command does and above the flags, because they are about the note the
+	// command reads rather than about the call.
+	for _, note := range c.notes {
+		fmt.Fprintf(&b, "\n  %s\n", note)
+	}
 	if len(c.flags) > 0 {
 		b.WriteString("\n")
 		width := 0

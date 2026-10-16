@@ -19,12 +19,83 @@
 // not define, and a reader that meets a dangling w:pStyle discards the whole
 // w:pPr around it: every bullet and every number then silently disappears. The
 // extension set is the one the previous generator asked pandoc for, pipe
-// tables, ==mark==, strikeout and task lists, plus the smart punctuation
-// pandoc's markdown format enables by default. parse in body.go is where that
-// set is stated, with the typographer writing characters rather than HTML
-// entities, because a "&ldquo;" in a w:t is both wrong and a different width.
-// TestSmartQuotesAreTheCharacters and TestSmartPunctuationIsCharactersNotEntities
-// are the pins.
+// tables, ==mark==, strikeout and task lists, plus footnotes and the smart
+// punctuation pandoc's markdown format enables by default. parse in body.go is
+// where that set is stated, with the typographer writing characters rather than
+// HTML entities, because a "&ldquo;" in a w:t is both wrong and a different
+// width. TestSmartQuotesAreTheCharacters and
+// TestSmartPunctuationIsCharactersNotEntities are the pins.
+//
+// ==mark== is mark.go, written here rather than pulled in, and it carries seven
+// marks rather than one highlight (DECISIONS.md, 2026-10-14). ==words== is
+// yellow, a colour emoji at the start of the highlight picks one of the other
+// five, and [words]{.pencil} is the one Pandoc span this package reads, text
+// colour rather than shading. house.yaml states the seven with their syntax,
+// kind and Doc colour, so no emoji and no hex is a constant here; the one
+// string written out is the attribute ".pencil", because the parsers are built
+// before any house file is read, and TestThePencilSyntaxIsTheHouseStyles pins
+// it to the pencil mark's own syntax. What is carried is the mark on the run;
+// what is refused by line is a nested mark, an empty span, a highlight whose
+// only content is the colour emoji that opened it, which marks no words the way
+// an empty span marks none and counted a colour on an envelope the document does
+// not carry, a span carrying any
+// other attribute, a span that does not open and close on one line, a mark
+// inside a heading, for the reason a footnote mark in a heading is refused, and
+// a mark inside a picture's alt text, which becomes the caption: the caption is
+// built with no palette at all, so the mark was dropped there and the colour
+// emoji that opened it reached the document as words. An
+// emoji anywhere but the start of a highlight, and a bracket not followed by
+// ]{, are the author's own words. A bracket inside a code span is neither: the
+// parser steps over a code span the way the line scan does, so the two agree
+// on what opens a span.
+//
+// The words question is asked of a line that lost no code. The line scan reads
+// a line with its code spans taken out, so a span whose whole content is one,
+// "[`code`]{.pencil}", read as "[]{.pencil}" and was refused for marking no
+// words, naming a span nowhere in the file and refusing a note the parser was
+// about to render grey. An empty span on a line that held code is still
+// refused, because the parse forms no span for a bracket with nothing in it
+// and the attribute then closes none.
+//
+// The attribute is counted against the spans the parse formed, because a
+// bracket this package's parser never gets to claim still reads as a span by
+// line: a bracket after "!" is a picture's, a bracket holding a caret is a
+// footnote mark's, and a bracket followed by a target or a reference is a
+// link's. In each of those "{.pencil}" closed nothing and was published as
+// words with the build saying ok, which is the failure the line check exists
+// to prevent.
+// TestAHighlightOpeningWithAColourEmojiCarriesItsMark,
+// TestAnEmojiElsewhereInAHighlightIsText, TestAPencilSpanIsARunCarryingItsMark,
+// TestALinkIsStillALink, TestABracketNotFollowedByAttributesIsText,
+// TestASpanWithAnotherAttributeIsRefusedByLineNamingPencil,
+// TestANestedMarkIsRefusedByLine, TestAnEmptySpanIsRefusedByLine,
+// TestAHighlightOfOnlyItsColourEmojiIsRefusedByLine,
+// TestAHighlightWithWordsAfterItsColourIsNotRefused,
+// TestASpanCrossingAParagraphIsRefusedByLine,
+// TestASpanWhoseWordsHoldACodeSpanWithABracketIsStillASpan,
+// TestASpanInsideACodeBlockIsNotASpan,
+// TestAPencilAttributeThatOpensNoSpanIsRefusedByLine,
+// TestAPencilAttributeInsideABlockOfHTMLRefusesNothing,
+// TestASpanTheParseFormsIsNotRefused,
+// TestASpanWhoseWordsAreOnlyACodeSpanIsStillASpan,
+// TestAnEmptySpanBesideACodeSpanIsStillRefused and
+// TestAMarkInAHeadingIsRefusedByLine and
+// TestAMarkInAPicturesAltTextIsRefusedByLine are the pins, with
+// TestTwoMarksSideBySideStayTwoRuns over merge and
+// TestTheDebtsAreCountedAndTheOthersAreNot over the three counted on the
+// envelope.
+//
+// A mark reaches Word twice over. The run names the character style
+// internal/render writes, so Word lists the marks and a reader finds every
+// yellow with one search, and the run states the colour itself, shading with
+// the exact hex for a highlight and the run's own colour for the pencil.
+// Twice over because Google Docs has no character styles and keeps only what
+// the run says: after import a mark is direct formatting, and direct
+// formatting is all export can read back. None of the six is one of Word's
+// sixteen named highlights, which carry none of these hexes.
+// TestAMarkedRunCarriesItsStyleAndItsShading is the pin, with
+// internal/render's TestTheSevenCharacterStylesAreWritten over the styles and
+// TestTheCoverPlaceholdersAreNotMarks over the one yellow that is not a mark.
 //
 // Every size, colour, indent and alignment comes from house.Config. What is a
 // constant in this package is a value the house file does not state, and each
@@ -33,11 +104,16 @@
 // every w:t. TestAnAmpersandIsEscapedOnce is the pin.
 //
 // A properties element is a sequence, and Word reads one out of order as a
-// document to repair. This package writes two of them, a quote's w:pPr and a
-// table's w:tblPr, and each writer states the sequence it writes as a literal
-// list of tags: TestAQuotesPropertiesAreInSchemaOrder and
-// TestATablesPropertiesAreInSchemaOrder are the pins, beside internal/render's
-// own two for the parts that package writes.
+// document to repair. This package writes three of them, a quote's w:pPr, a
+// table's w:tblPr and a run's w:rPr, where the character style opens the
+// sequence and the shading and the vertical alignment close it. Each writer
+// states the sequence it writes as a literal list of tags:
+// TestAQuotesPropertiesAreInSchemaOrder,
+// TestATablesPropertiesAreInSchemaOrder and
+// TestARunsPropertiesAreInSchemaOrder are the pins, beside internal/render's
+// own two for the parts that package writes. A run names the character style
+// internal/render writes, which is how a footnote reference and a mark reach
+// Word's own style list: TestARunMayNameItsCharacterStyle is the pin.
 //
 // # One list item takes at most one marker, whatever it holds
 //
@@ -92,17 +168,21 @@
 // # What the walker will not render is a warning naming the line, never a
 // silent drop
 //
-// Fenced and indented code blocks, blocks of HTML, inline HTML, footnotes, and
-// the list marker an item holding none of those can carry. Code blocks stay out
-// of the house style, which is Nail's decision, and a note carrying one has to
-// say so on the envelope. A picture inside a list item, a block quote or a
-// table cell is the same answer: the house style puts a figure on a centred
-// line of its own, which it cannot be there. All three used to collect the
-// picture and throw it away, so a bullet naming one published with no picture,
-// no warning and an image count of nought, and inline HTML in a cell or a quote
-// was dropped the same way. TestACodeBlockWarnsAndIsLeftOut,
+// Fenced and indented code blocks, blocks of HTML, inline HTML, and the list
+// marker an item holding none of those can carry. Code blocks stay out of the
+// house style, which is Nail's decision, and a note carrying one has to say so
+// on the envelope. A picture inside a list item, a block quote or a table cell
+// is the same answer: the house style puts a figure on a centred line of its
+// own, which it cannot be there. All three used to collect the picture and
+// throw it away, so a bullet naming one published with no picture, no warning
+// and an image count of nought, and inline HTML in a cell or a quote was
+// dropped the same way. TestACodeBlockWarnsAndIsLeftOut,
 // TestInlineHTMLWarnsAndIsLeftOut, TestInlineHTMLInATableCellOrAQuoteWarnsToo
 // and TestAPictureTheHouseStyleCannotPlaceIsNamed are the pins.
+//
+// A footnote is no longer one of them: it is set in the document, and what the
+// house style cannot set inside one is the warning instead. The section below
+// on footnotes holds the rules and its pins.
 //
 // A heading that names nothing but a picture is not one of those: it emits no
 // heading at all, takes no number and no contents entry, because it is a
@@ -133,23 +213,166 @@
 // is the pin, over a picture the walk embedded and a picture it only warned
 // about.
 //
-// # The footnote extension is on so that a footnote can be refused
+// # A footnote is set in the document, and one that does not line up is refused
 //
-// With it off, "[^1]" and "[^1]: the text" are ordinary markdown text, so they
-// published as prose with nothing on the envelope. That is not a hypothetical
-// note: internal/view writes a document's footnotes in exactly that shape, a
-// marker in the prose and the definitions after a "---" line, so a note pulled
-// out of a Doc and built back into one carried the markers into the published
-// document. goldmark collects every definition into one list at the end of the
-// file whatever order they were written in, so each footnote is named by its
-// own line rather than the list's. TestAFootnoteWarnsAndIsLeftOut and
-// TestEveryFootnoteIsNamedByItsOwnLine are the pins.
+// "[^1]" in the prose and "[^1]: the text" on a line of its own, which is what
+// the footnote extension parses and what internal/view already prints: a marker
+// in the prose and the definitions after a "---" line. A reference becomes a
+// run carrying its number and internal/render writes the notes into
+// word/footnotes.xml, numbered in the order a reader meets the mark, which is
+// Word's own order whatever order the definitions were written in. Nothing is
+// dropped and nothing is warned about for a note that lines up (DECISIONS.md,
+// 2026-10-14). TestAFootnoteReferenceCarriesItsNumber,
+// TestAFootnoteBecomesAFootnoteTextParagraph and
+// TestFootnotesAreNumberedInReferenceOrderNotDefinitionOrder are the pins, with
+// TestAFootnoteRunSurvivesMerge over the run, whose text is empty and which
+// merge must keep, and TestTheBodyCarriesAFootnoteReferenceRun over the
+// w:footnoteReference the paragraph gets.
 //
-// The definition is dropped whole, children and all, so the two walks that run
-// before the blocks skip that subtree as well: a heading written inside a
-// footnote is not a heading of this document, it carries no bookmark, and it
-// does not set the depth every other heading numbers from.
-// TestAHeadingInsideAFootnoteIsNoAnchor and
+// The number is the mark's position in that order and never
+// east.FootnoteLink.Index, which is the definition's: goldmark gives both
+// marks of a label written twice the same Index, and each mark is its own
+// note. So the number cannot be read off a node and is counted in one pre-walk
+// before the blocks, the way the heading anchors are.
+//
+// One label referenced twice is two notes carrying one text, because Word and
+// Docs hold one note per mark and there is no second shape to write.
+// TestAFootnoteReferencedTwiceIsTwoNotesWithOneText is the pin.
+//
+// A reference with no definition, a definition nothing references, a label
+// defined twice, and a footnote mark inside a heading are each refused by line.
+// The first three are read off the source lines, beside the markers check,
+// because goldmark is silent in all three shapes: its parser leaves "[^x]" as
+// prose when no definition follows, its transformer removes a definition nobody
+// references, and it keeps the first definition of a label and removes the
+// rest, so the tree says nothing happened. A warning was argued and rejected:
+// it let a published document look finished with a citation missing from it.
+// The heading case is Word's, which copies the mark into the contents field.
+// TestAReferenceWithNoDefinitionIsRefusedByLine,
+// TestADefinitionNobodyReferencesIsRefusedByLine,
+// TestALabelDefinedTwiceIsRefusedNamingBothLines and
+// TestAFootnoteMarkInsideAHeadingIsRefusedByLine are the pins.
+//
+// Which labels are defined is the parse's answer and not the scan's, in
+// definedFootnotes. goldmark reads a definition wherever a block may start, and
+// a line scan sees one at the margin only: a definition inside a block quote or
+// inside a list item is lifted into the document's notes and renders, while one
+// inside a block of HTML defines nothing. The first was refused with a sentence
+// saying the file does not define a note it does define, and the second built
+// with "[^a]" published into the document as words.
+// TestADefinitionGoldmarkLiftsOutOfABlockQuoteOrAListItemIsNotRefused,
+// TestAMarkWhoseDefinitionSitsInABlockOfHTMLIsRefused and
+// TestADefinitionInsideABlockOfHTMLRefusesNothing are the pins.
+//
+// The duplicate refusal is asked of the parse as well, for the same reason:
+// the scan names the opener's own line for a definition at the margin, and a
+// label defined again inside a block quote or a list item is the half it
+// cannot see. readDefinitions snapshots every definition goldmark read before
+// the extension's transformer removes the ones it drops, which is the only
+// place a dropped one can be seen, and both halves state one sentence.
+// Written in silence, those words reached no page and nothing said so.
+// TestALabelDefinedAgainWhereTheLineScanCannotSeeItIsRefused is the pin.
+//
+// The heading refusal is asked of the tree as well, in headingBlock, because
+// the line scan sees an ATX heading and goldmark builds a heading from a setext
+// line, from inside a block quote and from inside a list item too.
+// TestAFootnoteMarkInAHeadingTheLineScanCannotSeeIsRefused is the pin.
+//
+// The scan skips a code block, an inline code span and a block of HTML,
+// because nothing inside any of them is markdown: goldmark reads no mark in a
+// span, a code block and a block of HTML are each left out of the document
+// whole, and a note explaining a regular expression writes "[^abc]" in one.
+// Read as a mark, that refused a note nothing was wrong with. The lines of a
+// block of HTML come off the parse rather than off a second reading of the
+// source, because CommonMark opens one on seven different conditions and shuts
+// it on as many.
+// A code block is a fence or four spaces, a fenced block shuts only on its own
+// character in a run at least as long as its opener and carrying nothing else,
+// and the whole rule lives in scan.go because the footnote scan and the span
+// scan read the same lines. An indented block opens wherever a new block may:
+// after a blank line, at the start of the file, and after a line that closed a
+// block of its own, which is a heading, a horizontal rule, the underline of a
+// setext heading or a fence that shut. The one thing it cannot do is interrupt
+// a paragraph, and a scan that asked only for the blank line refused the line
+// after a heading and the line after a closed fence.
+//
+// Both are measured from the content indent of the block they sit in and not
+// from the margin: a footnote definition carries its lines at four and a list
+// item at its marker's width, so a fence inside one is indented four or more
+// and four spaces inside one is that block's own prose. Measured from the
+// margin, a code sample in a nested list item was read as prose and the mark
+// in it refused a note nothing was wrong with, and the fence of a code block
+// inside a definition was never seen at all. A list item and a definition each
+// run on through their blank and indented lines and end at the first line of
+// prose at the margin, which is goldmark's own rule for continuing one.
+// TestAFootnoteInsideACodeBlockIsNotAFootnote,
+// TestAFootnoteInsideAnIndentedCodeBlockIsNotAFootnote,
+// TestACodeBlockShutsOnItsOwnFenceAndNotAnother,
+// TestACodeBlockInsideABlockThatIndentsItsContentIsStillCode and
+// TestAMarkInAListItemsOwnLaterParagraphIsStillProse are the pins.
+//
+// A line opening with a backtick code span opens no fence: CommonMark forbids
+// a backtick in the info string of a backtick fence, so "```x``` is a span" is
+// prose and goldmark reads a span there. Read as an opener, every line after
+// it was left out of both checks, so a mark naming no note reached the
+// document as words, and a real fenced block under such a line was read as
+// prose instead.
+// TestABacktickSpanIsNotACodeFence is the pin.
+//
+// A footnote mark inside a table cell is refused as well. The spec carries
+// none, and a cell's paragraph has no footnotes part to write into, so the note
+// would be numbered in the body and written nowhere.
+// TestAFootnoteReferenceInATableCellIsRefusedByLine is the pin.
+//
+// A footnote mark inside a picture's alt text is refused for the same reason,
+// and that one is asked of the tree: the alt text sits on a line of prose, so
+// the line scan reads the mark as the document's own words and the definition
+// it names answers for, while the walk that builds the caption drops it. The
+// note was written under the page with nothing pointing at it, and the envelope
+// counted a footnote the document does not have.
+// TestAFootnoteMarkInsideAPicturesAltTextIsRefusedByLine is the pin.
+//
+// Inside a footnote, paragraphs with inline marks only. A list, a table, a
+// picture, a code block or a heading there is warned about by line and left
+// out, the way a picture the house style cannot place is: a note under the page
+// is a sentence, and the house style has no geometry for a table in one. The
+// line is the block's own, so a note written over several lines sends the
+// author to the line they have to change. A picture is an inline and takes the
+// line of the paragraph it sits in, and the definition's own line is the answer
+// only for a block carrying no source position anywhere under it, which a
+// horizontal rule is.
+// TestWhatTheHouseStyleCannotSetInAFootnoteIsWarnedAndLeftOut is the pin, and
+// it asks each of them, a picture in the note's second paragraph and a
+// horizontal rule among them.
+//
+// A link inside a footnote is its words. A link is a relationship in
+// word/_rels/document.xml.rels, and the footnotes part names no relationships
+// at all, so the words stay and the link goes, named by line like the rest. A
+// relationships part of its own is a later entry, for citations that need a
+// live address. TestALinkInsideAFootnoteIsWarnedAndPrintedAsItsWords is the
+// pin.
+//
+// A footnote mark inside a definition is the same answer: Word has one level of
+// note and no second, and the numbers are the prose's reading order, so a mark
+// there takes no number and is named rather than dropped in silence.
+// TestAFootnoteInsideAFootnoteIsWarnedAndLeftOut is the pin. Because such a
+// mark makes no note, it does not answer for a definition either: a definition
+// marked only from inside another one is refused the way an unmarked one is.
+// TestADefinitionMarkedOnlyFromInsideAnotherIsRefusedByLine is the pin.
+//
+// Which lines are a definition's own is the line scan's question, and a list
+// item indented inside one is among them: the item is a block, so the scan
+// used to end the definition where the item opened and read every line after
+// it as the document's own prose. A mark in such a line then answered for a
+// note nothing in the document marks, and that note's words reached no page
+// with the build saying ok. goldmark lifts the item into the note, which is
+// the reading the scan now follows.
+// TestAMarkInAListInsideADefinitionDoesNotAnswerForThatNote is the pin.
+//
+// Because a heading inside a footnote is left out, the two walks that run
+// before the blocks skip it as well: it is not a heading of this document, it
+// carries no bookmark, and it does not set the depth every other heading
+// numbers from. TestAHeadingInsideAFootnoteIsNoAnchor and
 // TestAHeadingInsideAFootnoteSetsNoHeadingDepth are the pins.
 //
 // # A marker of gdoc's own is refused by line, before the note is parsed
@@ -167,9 +390,9 @@
 // TestBuildRefusesAMarkerByLine and TestBuildLeavesAnEscapedMarkerAlone are the
 // pins.
 //
-// It is a refusal rather than the warning a footnote gets. A footnote leaves
-// one line out of the document; a marker puts words into it that the author
-// never wrote and that nothing downstream would name.
+// It is a refusal rather than the warning a code block gets. A code block
+// leaves one block out of the document; a marker puts words into it that the
+// author never wrote and that nothing downstream would name.
 //
 // # An email autolink carries the mailto: scheme, and the label does not
 //
@@ -234,10 +457,10 @@
 // link to a heading further down resolves, and the pre-walk collects only the
 // headings that will carry a bookmark: a figure-only heading emits no
 // paragraph, so a link naming it is as dead as a link naming nothing, and so
-// does a heading inside a footnote definition, which the block walk drops
-// whole. A pre-walk that counted either would write a live w:anchor naming a
-// bookmark nothing wrote, which is the one failure this is here to prevent,
-// and it would do it silently.
+// does a heading inside a footnote definition, which the footnote walk warns
+// about and leaves out. A pre-walk that counted either would write a live
+// w:anchor naming a bookmark nothing wrote, which is the one failure this is
+// here to prevent, and it would do it silently.
 // TestAnAnchorLinkIsAJumpAndNotARelationship,
 // TestAnAnchorToNoHeadingWarnsAndPrintsPlainText,
 // TestAFigureOnlyHeadingCarriesNoBookmark and

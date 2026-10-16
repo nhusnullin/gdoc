@@ -247,7 +247,16 @@
                                   "endIndex": 130,
                                   "textRun": {
                                     "content": "The Board\n",
-                                    "textStyle": {}
+                                    "textStyle": {
+                                      "backgroundColor": {
+                                        "color": {
+                                          "rgbColor": {
+                                            "red": 1.0,
+                                            "green": 1.0
+                                          }
+                                        }
+                                      }
+                                    }
                                   }
                                 }
                               ]

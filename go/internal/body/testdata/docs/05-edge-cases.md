@@ -26,7 +26,13 @@ and the Icelandic þ all appear here: ıßłþ.
 
 The first section called Overview. There is a second one further down carrying
 exactly the same heading text, which is what makes the page-number lookup
-interesting: matched by text alone, both would resolve to whichever comes first.
+interesting: matched by text alone, both would resolve to whichever comes
+first.[^lookup] One label may be marked twice,[^twice] and the same label again
+here[^twice] takes a number of its own.
+
+[^lookup]: A label that is a word rather than a number.
+
+[^twice]: One definition, and two notes under the page.
 
 ### A table with an empty cell and a very long token
 
@@ -42,6 +48,16 @@ interesting: matched by text alone, both would resolve to whichever comes first.
 - [x] A checked item.
 - [ ] A third item, long enough to wrap so the hanging indent is exercised the
       same way an ordinary bullet is.
+
+### The marks, where they are awkward
+
+A colour emoji carries the colour at the start of a highlight and nowhere else,
+so ==a 🔴 gap== is yellow and keeps the circle in its words, and the light
+turned 🔴 and we stopped. An [aside] in brackets is not a span, because
+Pandoc's grammar wants the attribute straight after the bracket. A mark carries
+the formatting inside it: ==🔵 a change with **weight** and `code`==, and
+[a pencilled **note**]{.pencil}==a gap== side by side are two runs rather than
+one.
 
 ### Strikethrough and nesting
 

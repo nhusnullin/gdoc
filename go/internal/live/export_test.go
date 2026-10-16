@@ -38,6 +38,7 @@ import (
 	"gdoc/internal/frontmatter"
 	"gdoc/internal/gapi"
 	"gdoc/internal/guard"
+	"gdoc/internal/house"
 	"gdoc/internal/propose"
 	"gdoc/internal/publish"
 	"gdoc/internal/withdraw"
@@ -441,8 +442,18 @@ func exportDocument(t *testing.T, ctx context.Context, s *gapi.Session, id, out 
 	if err != nil {
 		t.Fatalf("the export of %s could not be planned: %v", id, err)
 	}
-	files, pieces, w := export.Project(d, layout.PictureNames())
+	// The palette is passed, so a mark comes home as the syntax it left as.
+	// The round trip rests on it: a note publishes ==🟢 a claim== and the file
+	// has to say the same words the same way.
+	cfg, err := house.Load()
+	if err != nil {
+		t.Fatalf("house.Load: %v", err)
+	}
+	files, pieces, other, w := export.Project(d, layout.PictureNames(), export.Palette(cfg))
 	notes = append(notes, w...)
+	for hex, n := range other {
+		t.Logf("export: %d span(s) carry %s, which no house mark claims", n, hex)
+	}
 
 	written, err := export.Write(layout, files)
 	if err != nil {

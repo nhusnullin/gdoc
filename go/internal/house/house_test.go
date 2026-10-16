@@ -74,19 +74,58 @@ func TestHeading1IsTheHouseHeading(t *testing.T) {
 	}
 }
 
-func TestTheNineStylesAreThere(t *testing.T) {
+func TestTheTenStylesAreThere(t *testing.T) {
 	cfg := load(t)
 	want := []string{
 		"normal", "heading_1", "heading_2", "heading_3", "heading_4",
-		"heading_5", "heading_6", "title", "subtitle",
+		"heading_5", "heading_6", "title", "subtitle", "footnote_text",
 	}
-	if len(cfg.Styles) != 9 {
-		t.Errorf("styles has %d entries, want 9", len(cfg.Styles))
+	if len(cfg.Styles) != 10 {
+		t.Errorf("styles has %d entries, want 10", len(cfg.Styles))
 	}
 	for _, name := range want {
 		if _, ok := cfg.Style(name); !ok {
 			t.Errorf("styles.%s is missing", name)
 		}
+	}
+}
+
+// TestFootnoteTextIsTenPointSingleSpacedAndTight. The tenth style, added with
+// the footnotes. A note under the page is smaller than the prose it hangs off,
+// sits in the body face, and carries no space above or below, because the
+// notes are a block of lines rather than a run of paragraphs.
+func TestFootnoteTextIsTenPointSingleSpacedAndTight(t *testing.T) {
+	cfg := load(t)
+	s, ok := cfg.Style("footnote_text")
+	if !ok {
+		t.Fatal("styles.footnote_text is missing")
+	}
+	if s.SizePt == nil || *s.SizePt != 10 {
+		t.Errorf("footnote_text.size_pt = %v, want 10", s.SizePt)
+	}
+	if s.LineSpacing == nil || *s.LineSpacing != 1.0 {
+		t.Errorf("footnote_text.line_spacing = %v, want 1.0", s.LineSpacing)
+	}
+	if s.SpaceBeforePt == nil || *s.SpaceBeforePt != 0 {
+		t.Errorf("footnote_text.space_before_pt = %v, want 0", s.SpaceBeforePt)
+	}
+	if s.SpaceAfterPt == nil || *s.SpaceAfterPt != 0 {
+		t.Errorf("footnote_text.space_after_pt = %v, want 0", s.SpaceAfterPt)
+	}
+	if s.Font != "Calibri" {
+		t.Errorf("footnote_text.font = %q, want Calibri", s.Font)
+	}
+	// Subtitle, the style above this one in the file, keeps with the next
+	// paragraph and keeps its own lines together. A note under the page does
+	// neither: Word places the notes, and keepNext on one of them is a rule
+	// about a page this style has no say over. Asked because the first draft
+	// of this entry landed between subtitle's values and those two keys, and
+	// both styles came out wrong with nothing else to name it.
+	if s.KeepWithNext {
+		t.Error("footnote_text.keep_with_next is true, want false")
+	}
+	if s.KeepLinesTogether {
+		t.Error("footnote_text.keep_lines_together is true, want false")
 	}
 }
 
@@ -360,6 +399,24 @@ func TestAMissingStyleIsRefusedNamingIt(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "heading_6") {
 		t.Errorf("error %q does not name heading_6", err)
+	}
+}
+
+// TestAConfigMissingFootnoteTextIsRefusedNamingIt. The tenth style is
+// required like the other nine: render reads it by name to set the notes
+// under the page, so a config without it is a document it would build with
+// the notes in the prose size.
+func TestAConfigMissingFootnoteTextIsRefusedNamingIt(t *testing.T) {
+	src := bytes.Replace(embedded, []byte("  footnote_text:\n"), []byte("  footnote_prose:\n"), 1)
+	if bytes.Equal(src, embedded) {
+		t.Fatal("footnote_text was not found to replace")
+	}
+	_, err := LoadFile(write(t, src))
+	if err == nil {
+		t.Fatal("a config missing footnote_text was accepted")
+	}
+	if !strings.Contains(err.Error(), "footnote_text") {
+		t.Errorf("error %q does not name footnote_text", err)
 	}
 }
 

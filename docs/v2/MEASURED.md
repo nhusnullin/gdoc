@@ -459,6 +459,148 @@ it. A1 and C were run once each, not three times, at Nail's choice. What
 followed is in DECISIONS.md, 2026-10-03, "A change the person approved is not a
 payload that landed".
 
+## Drive's import of a Word footnote
+
+Measured 2026-10-14 by `TestLiveFootnoteImportProbe`
+(`go/internal/live/footnoteprobe_test.go`), one document uploaded into the test
+folder from `go/internal/live/testdata/footnote-probe.docx` and trashed on the
+way out. The document was `1YJdGXV988kwqP_DnXU6K1voENWz4TpVgm4RuLGgEDb8`.
+
+The fixture is the built `04-minimal.md` with `word/footnotes.xml` added by
+hand: the separator, the continuation separator and one note numbered 1, the
+reference run at the end of the first body paragraph that carries prose, plus
+the relationship row and the content type row. The note's words are
+`The probe footnote: carried into Drive by hand on 14 October 2026.`
+
+This is M18's gate for Part A. Recheck before anything else rests on a
+footnote reaching a document, and when Google's release notes touch footnotes.
+
+| Question | Answer |
+|---|---|
+| Does the body of the converted document hold a `footnoteReference`? | yes, one |
+| Does the document hold a `footnotes` map with the note's text? | yes, one entry, keyed `kix.fn1`, carrying the note's words |
+| Does the docx export bring `word/footnotes.xml` back? | yes, with the note's words in it |
+
+So the footnote survives all three translations: the docx into Drive's import,
+Drive's import into the Docs API answer, and the document back out as a docx.
+Part A of M18 goes ahead. The export came back as sixteen parts, two more than
+went up, because Drive adds `word/fontTable.xml` and `word/theme/theme1.xml`
+and renames the logo to `word/media/image1.png`.
+
+What was not asked: whether a footnote can be written into a document through
+the Docs API, whether a suggestion can be made inside one, and whether a
+comment can be anchored to one. The first is BLOCKED-BY-API's question, and the
+second is `docs/backlog/`'s.
+
+## Drive's import of run shading and text colour
+
+Measured 2026-10-14 by `TestLiveMarkImportProbe`
+(`go/internal/live/markprobe_test.go`), one document uploaded into the test
+folder from `go/internal/live/testdata/mark-probe.docx` and trashed on the way
+out. The document was `139xi2N5QoSwTmSkkkzLM1M1Fgb7IK7u3JDITv7YCAy0`. The probe
+was run twice that day, on two documents, and both gave the same sixteen
+answers.
+
+The fixture is the built `04-minimal.md` with eight runs added by hand at the
+end of the first body paragraph that carries prose: `w:shd w:val="clear"
+w:color="auto" w:fill="<hex>"` for each of the six highlight hexes M18's
+specification proposes, `w:color w:val="9A9A9A"` for the pencil, and
+`w:highlight w:val="yellow"` for the control, which is what the cover's
+placeholders already carry.
+
+Each run was read twice, bare through `documents.get` with no query: once on
+the imported document, and once after one in-place restyle over the whole
+document, `restyle.TabRequests` then `restyle.Apply` at `LevelInPlace`, which
+is the run a person's `gdoc restyle` makes.
+
+This is M18's gate for Part B. Recheck before anything else rests on a mark's
+colour reaching a document.
+
+| Run | Sent | After the import | After one in-place restyle |
+|---|---|---|---|
+| RED | shading #FF6B6B | background #FF6B6B | background #FF6B6B |
+| ORANGE | shading #FFB85C | background #FFB85C | background #FFB85C |
+| YELLOW | shading #FFD500 | background #FFD500 | background #FFD500 |
+| GREEN | shading #3DD67A | background #3DD67A | background #3DD67A |
+| BLUE | shading #5DB3FF | background #5DB3FF | background #5DB3FF |
+| PURPLE | shading #BA92FF | background #BA92FF | background #BA92FF |
+| PENCIL | text colour #9A9A9A | foreground #9A9A9A | no foreground colour at all |
+| WORDYELLOW | Word's named yellow | background #FFFF00 | background #FFFF00 |
+
+So six of the seven marks come home exactly as they went out, and stay through
+a restyle: Drive turns `w:shd w:fill` into a run's `backgroundColor` hex for
+hex, and nothing on the styling allowlist touches a background.
+
+Two answers need reading carefully.
+
+Word's named yellow arrives as `backgroundColor` #FFFF00, which is a different
+hex from the mark yellow #FFD500. So a placeholder and a yellow mark are two
+colours in the Docs answer and `export` can tell them apart, which is what
+decision "The cover placeholders are not marks" rests on.
+
+The pencil's grey survives the import and does not survive a restyle. The
+restyle writes `foregroundColor` from `styles.normal.color`, which house.yaml
+states as #000000, over every body run; Docs then reports no colour on the run
+at all, because the run matches the named style it inherits from. That is the
+styling allowlist working as written: it can change no character, and a text
+colour is not a character. It means a pencil mark in a document somebody later
+restyles in place becomes ordinary black prose, and `export` reads it back as
+plain words.
+
+Whether that stops Part B, drops the pencil from the seven, or is a strain
+written down and accepted was Nail's decision, not this probe's. He chose the
+strain on 2026-10-15: Part B goes ahead with all seven marks, the DECISIONS.md
+entry on the marks records that an in-place restyle flattens pencil to black,
+and `docs/backlog/restyle-keeps-pencil.md` holds the fix for a later entry,
+restyle splitting its colour request around the runs that carry the pencil
+grey. Until then a person who restyles a document that holds pencil gets black
+prose where the grey was, and `export` brings the words home without the span.
+
+What was not asked: whether the docx export brings `w:shd` back. Nothing in
+M18 reads a mark out of an export, because `export` reads the Docs answer, so
+the plan's sixteen answers are the eight runs read twice and no export row.
+
+## Footnotes and the marks, published by gdoc
+
+Measured 2026-10-15 by `TestLivePublishCarriesAFootnoteIntoDocs`
+(`go/internal/live/footnote_test.go`) and
+`TestLivePublishCarriesTheMarksIntoDocs` (`go/internal/live/marks_test.go`),
+one document each, both built from
+`go/internal/body/testdata/docs/01-kitchen-sink.md` and both trashed on the way
+out. The documents were `1s9wU0a8VpfKdpr-DrVB1oRCVigBJfAKWn1xM6RqZEaI` and
+`1wnr5NEI0tyWpY5uKY7RZmolKW9MsOH47OdW4r5ufvc4`.
+
+The two probes above uploaded a fixture a person had edited by hand. These two
+are gdoc's own route end to end: `body.Render`, `render.Build`, `publish.Run`,
+`documents.get` with no query, and `docx.Export`. They assert rather than
+report, so a row here is what passed and not only what was seen: a change in
+Google's import fails the suite instead of being read out of a log.
+
+| Question | Answer |
+|---|---|
+| Does the body hold one `footnoteReference` per mark the note wrote? | yes, two for two |
+| Does the document hold one footnote per definition, carrying the words of both? | yes, two, the note's own words including the typographer's apostrophe |
+| Does the docx export bring `word/footnotes.xml` back with both notes in it? | yes, in a package of 19 parts |
+| Is each of the six highlight marks the palette's own hex on the run that carries its words? | yes, as `backgroundColor`: #FFD500, #3DD67A, #BA92FF, #5DB3FF, #FF6B6B, #FFB85C |
+| Is the pencil the palette's grey? | yes, #9A9A9A as `foregroundColor` |
+| Does Drive keep a marked span as a run of its own? | yes. Each of the seven came back as a run carrying exactly the marked words, out of 166 runs of text |
+
+Two things the run says beside the rows. The note's other two yellow marks, the
+span in the second paragraph and the one inside a table cell, came back #FFD500
+as well, so a mark in a cell survives the import like a mark in prose. And the
+colour emoji is not in the document: the green run reads `a claim to confirm`,
+which is the emoji spent on choosing the colour rather than carried into the
+words.
+
+The round trip over the same note, `TestLiveExportRoundTrip/01-kitchen-sink.md`,
+was run the same day. Every footnote line and every mark line is named: the
+`footnotes` entry covered four lines and `inline markup` four, and nothing of
+either is unnamed. The run itself is still red, on eight lines from two
+constructs older than this milestone, a blockquote wrapped over three lines and
+a numbered list starting at seven.
+`docs/backlog/round-trip-fails-on-a-wrapped-quote-and-a-list-starting-at-seven.md`
+holds both with the decision each needs.
+
 ## Not measured yet
 
 One of the M14 measurements stayed open on 2026-10-03: whether Google emails an

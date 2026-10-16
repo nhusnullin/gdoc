@@ -1,0 +1,86 @@
+{
+  "documentId": "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789link",
+  "title": "A link inside a footnote",
+  "revisionId": "ALm37BXfnlink",
+  "tabs": [
+    {
+      "tabProperties": { "tabId": "t.0", "title": "", "index": 0 },
+      "documentTab": {
+        "body": {
+          "content": [
+            { "startIndex": 0, "endIndex": 1, "sectionBreak": { "sectionStyle": {} } },
+            {
+              "startIndex": 1,
+              "endIndex": 11,
+              "paragraph": {
+                "paragraphStyle": { "namedStyleType": "NORMAL_TEXT" },
+                "elements": [
+                  {
+                    "startIndex": 1,
+                    "endIndex": 9,
+                    "textRun": { "content": "A claim.", "textStyle": {} }
+                  },
+                  {
+                    "startIndex": 9,
+                    "endIndex": 10,
+                    "footnoteReference": {
+                      "footnoteId": "kix.fn1",
+                      "footnoteNumber": "1",
+                      "textStyle": {}
+                    }
+                  },
+                  {
+                    "startIndex": 10,
+                    "endIndex": 11,
+                    "textRun": { "content": "\n", "textStyle": {} }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "footnotes": {
+          "kix.fn1": {
+            "footnoteId": "kix.fn1",
+            "content": [
+              { "startIndex": 0, "endIndex": 1, "sectionBreak": { "sectionStyle": {} } },
+              {
+                "startIndex": 1,
+                "endIndex": 25,
+                "paragraph": {
+                  "paragraphStyle": { "namedStyleType": "NORMAL_TEXT" },
+                  "elements": [
+                    {
+                      "startIndex": 1,
+                      "endIndex": 10,
+                      "textRun": { "content": "Measured ", "textStyle": {} }
+                    },
+                    {
+                      "startIndex": 10,
+                      "endIndex": 24,
+                      "textRun": {
+                        "content": "on example.com",
+                        "textStyle": {
+                          "underline": true,
+                          "foregroundColor": {
+                            "color": { "rgbColor": { "red": 0.06666667, "green": 0.33333334, "blue": 0.8 } }
+                          },
+                          "link": { "url": "https://example.com" }
+                        }
+                      }
+                    },
+                    {
+                      "startIndex": 24,
+                      "endIndex": 25,
+                      "textRun": { "content": ".\n", "textStyle": {} }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}
