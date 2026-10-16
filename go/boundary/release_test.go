@@ -332,3 +332,21 @@ func releaseREADME(t *testing.T) string {
 	}
 	return string(b)
 }
+
+// TestTheReleaseInstallerLeavesThePresenceAlone holds the app out of the one
+// script that runs on a machine nobody here has seen.
+//
+// install.sh installs a binary and, when asked, five skills. The app is
+// `gdoc update`'s: it is installed under ~/Applications, where the person's own
+// Finder can see it, and it is rolled back by the same command when its own
+// check fails. An installer that also wrote it would be a second route to one
+// folder, with no rollback and no version comparison, and it would run before
+// the person has ever turned the presence on.
+func TestTheReleaseInstallerLeavesThePresenceAlone(t *testing.T) {
+	script := releaseInstaller(t)
+	for _, forbidden := range []string{"GdocPresence", "presence"} {
+		if strings.Contains(script, forbidden) {
+			t.Errorf("release/install.sh says %q; the app is installed, refreshed and rolled back by `gdoc update` and by nothing else", forbidden)
+		}
+	}
+}

@@ -255,3 +255,40 @@ func TestTheSwiftFixtureIsTheGoFixture(t *testing.T) {
 			swiftFixture, goFixture, got, want)
 	}
 }
+
+// bundleInZip is where the app travels inside a darwin release zip and where
+// the updater looks for it; bundleInBin is where a build on this machine
+// writes it. Both are literals, and so are the three files below.
+const (
+	bundleInZip = "presence/GdocPresence.app"
+	bundleInBin = "bin/GdocPresence.app"
+)
+
+// TestTheBundleNameIsOneWordInThreePlaces holds one name across the three
+// files that each build it from their own end.
+//
+// The release workflow puts the bundle at a path inside the zip; the updater
+// opens that path out of a zip it verified; the Makefile writes the same
+// bundle on this machine, which is what a person compares against what a
+// release installed. A rename in one of the three is an update that downloads
+// a release, verifies it, and then says it holds no app, and the only machine
+// that would say so is a colleague's.
+func TestTheBundleNameIsOneWordInThreePlaces(t *testing.T) {
+	for _, place := range []struct {
+		file string
+		want string
+	}{
+		{filepath.Join(".github", "workflows", "release.yml"), bundleInZip},
+		{filepath.Join("go", "cmd", "gdoc", "update.go"), bundleInZip},
+		{"Makefile", bundleInBin},
+	} {
+		b, err := os.ReadFile(filepath.Join(repoRoot, place.file))
+		if err != nil {
+			t.Errorf("%s names the bundle and it is not there: %v", filepath.ToSlash(place.file), err)
+			continue
+		}
+		if !strings.Contains(string(b), place.want) {
+			t.Errorf("%s names no %s; the release, the updater and this machine's build are one path each", filepath.ToSlash(place.file), place.want)
+		}
+	}
+}

@@ -405,7 +405,7 @@ every box in it is ticked and its commit is on the branch.
 - Modify: `.github/workflows/release.yml`, `.github/workflows/go.yml`
 - Modify: `go/boundary/workflows_test.go`, `go/boundary/release_test.go`, `go/boundary/presence_test.go`
 
-- [ ] `releaseSteps` judges the job that runs `gh release create` instead of
+- [x] `releaseSteps` judges the job that runs `gh release create` instead of
       failing on two jobs; `TestTheReleaseWaitsForThePresenceBuild` (the
       publishing job needs `presence`; the presence job never runs `gh
       release` and has `contents: read`), `TestTheZipCarriesThePresenceForDarwinOnly`
@@ -421,7 +421,7 @@ every box in it is ticked and its commit is on the branch.
       `TestTheReleaseInstallerLeavesThePresenceAlone`,
       `TestTheCIBuildsThePresenceOnEveryPush` (the job is in `go.yml`,
       because `release.yml` runs on tags only)
-- [ ] `release.yml` gains job `presence` on the macOS image whose Xcode is
+- [x] `release.yml` gains job `presence` on the macOS image whose Xcode is
       26 (the label checked against GitHub's runner list at run time and
       recorded in the task log, with `sudo xcode-select -s` to that Xcode so
       `swift format` is the version lint was written against): check out the
@@ -431,8 +431,8 @@ every box in it is ticked and its commit is on the branch.
       `actions/upload-artifact`; job `release` gains `needs: presence`, a
       download and unzip, the `darwin-*)` copy into `$stage/presence/`, and
       the listing step before publish
-- [ ] `go.yml` gains the same `presence` job without the upload
-- [ ] `make test`; `TestTheReleaseWalksThePlatformsFileRatherThanASecondList`
+- [x] `go.yml` gains the same `presence` job without the upload
+- [x] `make test`; `TestTheReleaseWalksThePlatformsFileRatherThanASecondList`
       and the nightly tests unchanged
 
 ### Task 10: the words: CLAUDE.md, the guide, SPEC.md's two sentences
