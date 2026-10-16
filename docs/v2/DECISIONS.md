@@ -4493,13 +4493,22 @@ drops above, and both envelopes print it as `page_breaks`. It is the breaks
 the document got, not the lines the note held. The binary counts and judges
 nothing; the publish skill says the number when it is above zero and goes on.
 
-**`read` is unchanged.** A page break still prints `[page break]` where it
-stands, a horizontal rule `[rule]`, and the footnote separator stays `---`.
-`export` writes `---` for a page break that is a paragraph of its own, as a
-line of its own between blank lines, and leaves out the break on the first
-body heading because `build` puts that one back. A break inside a sentence
-keeps its `[page break]` marker and its warning, because no line of markdown
-says a page turns mid-sentence.
+**`read` prints `[page break]` where the page turns, which it printed nothing
+for since M13.** This sentence read "`read` is unchanged" until the Task 4
+measurement, below, found that neither kind of break is a `pageBreak` element:
+Drive's docx import states both as `pageBreakBefore` on the paragraph's own
+style, which `internal/docs` did not decode. So the read decodes it, and a
+paragraph the page breaks before prints `[page break]` on a line of its own in
+front of it, through the same placeholder and with the same warning a native
+break gets. A horizontal rule still prints `[rule]`, and the footnote
+separator stays `---`.
+
+`export` writes `---` for a page break that stands on its own, the flag's line
+or a native element that is a paragraph's only content, as a line of its own
+between blank lines, and leaves out the break on the first body heading
+because `build` puts that one back. A break inside a sentence keeps its
+`[page break]` marker and its warning, because no line of markdown says a page
+turns mid-sentence.
 
 **What is not built here.** No syntax for a horizontal rule in a note. No
 `insertPageBreak` in `propose`, in `annotate` or in `restyle`'s body pass, so
@@ -4512,11 +4521,19 @@ the specification said the walker warns there. No house value, because the
 break is the author's rather than the template's. No column break.
 
 **What is measured.** The docx route needs no gate. What was not known is the
-shape `read` gives the two kinds of break, so the milestone publishes a note
-holding both and records in MEASURED.md what `read` printed, with the document
-id. The export rule assumes a body break comes back as a paragraph holding one
-`pageBreak` element and no text. If it came back as anything else the export
-task stops and Nail decides the rule.
+shape `read` gives the two kinds of break, so the milestone published a note
+holding both and recorded in MEASURED.md what `read` printed, with the document
+id. The export rule assumed a body break comes back as a paragraph holding one
+`pageBreak` element and no text, and the gate said that if it came back as
+anything else the export task stops and Nail decides the rule.
+
+**It came back as anything else, and the gate did not hold.** Document
+`1MmipMWaS96OmV3ONxFioNFmaKhBYHWb7w3jrrF90hic`, 2026-10-16: no `pageBreak`
+element anywhere, and four paragraphs carrying `pageBreakBefore`. MEASURED.md
+wrote down three ways out and Claude took the first of them, under Nail's
+standing "do it for me" of the same day and in his absence, and said so: the
+read decodes the flag. The other two, a docx run break and shipping without
+the export half, are in MEASURED.md for Nail to reverse to.
 
 **Tests.** `internal/body`'s `TestAThematicBreakIsAPageBreakParagraph`,
 `TestEveryThematicBreakSpellingIsTheSameBreak`,
@@ -4529,6 +4546,12 @@ task stops and Nail decides the rule.
 `TestThreeHyphensInACellAreNotABreak`;
 `cmd/gdoc`'s `TestBuildAndPublishCarryThePageBreakCount`, the build and the
 publish twin in one table;
+`internal/docs`'s `TestAParagraphKeepsWhetherThePageBreaksBeforeIt` and
+`TestTheStructurePrintCarriesThePageBreakFlag`; `internal/view`'s
+`TestABreakBeforeAParagraphPrintsAsAPageBreakLine`,
+`TestTheHousesFirstHeadingBreakPrintsBeforeTheHeading`,
+`TestANativePageBreakElementStillPrintsWhereItStands` and
+`TestACallerThatNamesALineForABreakGetsItAndNoWarning`;
 `internal/export`'s `TestAPageBreakOfItsOwnExportsAsThreeHyphens`,
 `TestTheFirstHeadingsBreakIsLeftOut`,
 `TestAPageBreakInsideASentenceKeepsItsMarker` and

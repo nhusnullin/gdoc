@@ -226,9 +226,12 @@
 //     of the two paragraphs the note wrote. One document, trashed. Like the
 //     probes it fails on a publish or a read that failed and on nothing else.
 //     Measured 2026-10-16: neither kind is a pageBreak element, both are
-//     pageBreakBefore on the paragraph's style, and read prints nothing where
-//     the page turns. MEASURED.md "How read prints the two kinds of page
-//     break", and the gate did not hold. It names no variable of its own:
+//     pageBreakBefore on the paragraph's style, and read printed nothing where
+//     the page turned. MEASURED.md "How read prints the two kinds of page
+//     break", and the gate did not hold. Task 5 of the milestone decoded the
+//     flag instead, so the same run now prints [page break] for both kinds and
+//     the run after that is the pin on the read as well as the measurement. It
+//     names no variable of its own:
 //     GDOC_LIVE_TEST, GDOC_LIVE_WRITE and GDOC_LIVE_FOLDER_ID with its default
 //     are the whole of what it reads.
 //

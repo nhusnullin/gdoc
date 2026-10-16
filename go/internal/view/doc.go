@@ -34,8 +34,10 @@
 //	[person: Name] [date: Sep 9,     a smart chip, with the label the document
 //	2026] [link: Title]              shows
 //	[auto text: PAGE_NUMBER]         the four remaining members that hold no
-//	[page break] [column break]      text of their own
-//	[rule]
+//	[column break] [rule]            text of their own
+//	[page break]                     where the page turns, as the document's
+//	                                 own element or as the style of the
+//	                                 paragraph it breaks before
 //	[unknown: member]                a paragraph element gdoc has never seen,
 //	                                 named by its member
 //	[^1]                             a footnote reference, with its text under
@@ -174,6 +176,28 @@
 //     is not escaped: it is escaped inside a link's words, where the words end
 //     at the first one, and a label ends at the bracket mark writes behind it,
 //     which is the last rune the window above already covers.
+//
+// # A page break prints where the page turns, in either shape
+//
+// Docs states a page break two ways, and until M19 this package printed only
+// one of them. A native break, inserted by hand, is an element and a run, and
+// it printed as [page break] where it stood. A break that reached the document
+// through a docx import is pageBreakBefore on the paragraph's own style, which
+// internal/docs did not decode, so every break in a document gdoc published
+// printed as nothing at all: the live measurement of 2026-10-16 found all four
+// breaks of such a document in that shape and no element in any of them
+// (MEASURED.md). So a paragraph carrying the flag prints [page break] on a
+// line of its own in front of it, through the same placeholder and with the
+// same warning, and the two shapes read alike downstream.
+// TestABreakBeforeAParagraphPrintsAsAPageBreakLine,
+// TestTheHousesFirstHeadingBreakPrintsBeforeTheHeading and
+// TestANativePageBreakElementStillPrintsWhereItStands are the pins.
+//
+// Options.PageBreak is the door export comes through. A break standing on its
+// own is a line somebody can write in a note, so the caller says what that
+// line is, the placeholder and its warning go with it, and a break inside a
+// sentence keeps both: no line of markdown says a page turns mid-sentence.
+// TestACallerThatNamesALineForABreakGetsItAndNoWarning is the pin.
 //
 // # A horizontal rule prints [rule] and not ---
 //
@@ -433,8 +457,10 @@
 // recognised; a picture written as the file that now sits beside the note; and
 // a chip's target behind its label, because the session merging that file into
 // a note has no second read to go back to. So Options carries Skip, Picture,
-// ChipTargets, Marks and Rebuilt, Text is Project with none of them set, and
-// there is one emitter rather than two escapings of one document. Rebuilt is the fifth,
+// ChipTargets, Marks, PageBreak and Rebuilt, Text is Project with none of them
+// set, and there is one emitter rather than two escapings of one document.
+// PageBreak is the fifth and the section on the page break above is its own.
+// Rebuilt is the sixth,
 // and it is the gate over every sentence about what the next build reads,
 // because the export is the one route whose text becomes a file gdoc builds
 // again.

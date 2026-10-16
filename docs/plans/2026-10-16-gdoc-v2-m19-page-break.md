@@ -215,20 +215,20 @@ with it: `read` is no longer unchanged.
 - Create: `go/internal/export/pagebreak_test.go`,
   `go/internal/view/pagebreak_test.go`
 
-- [ ] `docs.Paragraph` gains `PageBreakBefore bool`
+- [x] `docs.Paragraph` gains `PageBreakBefore bool`
       (`json:"page_break_before,omitempty"`), decoded from
       `paragraphStyle.pageBreakBefore`. `TestAParagraphKeepsWhetherThePageBreaksBeforeIt`
       reads a fixture in the measured shape: an empty `NORMAL_TEXT` paragraph
       carrying the flag, and a `HEADING_1` carrying it. The structure print
       carries the field where it carries the style.
-- [ ] `view`: a paragraph carrying the flag prints `[page break]` on a line of
+- [x] `view`: a paragraph carrying the flag prints `[page break]` on a line of
       its own before it, through the same placeholder and with the same
       warning the native `pageBreak` element gets, so the two shapes read
       alike downstream. `TestABreakBeforeAParagraphPrintsAsAPageBreakLine`,
       `TestTheHousesFirstHeadingBreakPrintsBeforeTheHeading`, and
       `TestANativePageBreakElementStillPrintsWhereItStands`. `view/doc.go`
       says why the read now prints a line it printed nothing for.
-- [ ] `export`: a `[page break]` line standing on its own, from the flag or
+- [x] `export`: a `[page break]` line standing on its own, from the flag or
       from a native element that is a paragraph's only content, is written as
       `---` on a line of its own between blank lines, with no warning for it.
       The one standing directly before the first body heading after the
@@ -240,21 +240,76 @@ with it: `read` is no longer unchanged.
       `TestAHorizontalRuleStillExportsAsItsMarker`. The line is written through
       the same place a picture line is, so a break in a table cell is handled
       the way a picture there is.
-- [ ] `roundtrip_test.go`: the `rules` entry becomes `page breaks the note
+- [x] `roundtrip_test.go`: the `rules` entry becomes `page breaks the note
       wrote`, pairing `---`/`***` with `[page break]`; the `page breaks` entry
       becomes the house's own, the first heading's and column breaks, with
       its reason rewritten to what Task 4 measured. `markers.md:25` moves
       `[page break]` out of the no-text row into a line saying a break of its
       own comes home as `---`, and one inside a sentence stays a marker.
-- [ ] The documents: MEASURED.md's "three ways out" names the one taken and
+- [x] The documents: MEASURED.md's "three ways out" names the one taken and
       by whom; the DECISIONS.md entry of Task 1 and the spec's `view` and
       `export` rows say `read` prints `[page break]` where a published
       document breaks the page, which it printed nothing for since M13.
-- [ ] Live: `TestLivePageBreakShape` rerun, now printing `[page break]` for
+- [x] Live: `TestLivePageBreakShape` rerun, now printing `[page break]` for
       both kinds, and its MEASURED.md table gains a column for what `read`
       prints since this task. `TestLiveRoundTrip` on the kitchen sink passes
       with the new pairing. Document ids in the log.
-- [ ] `git commit -m "feat(docs,view,export): a page break is read where the page turns, and comes home as ---"`
+- [x] `git commit -m "feat(docs,view,export): a page break is read where the page turns, and comes home as ---"`
+
+**Task 5 outcome, 2026-10-16.** The read decodes `paragraphStyle.pageBreakBefore`
+onto `docs.Paragraph`, `view` prints `[page break]` on a line of its own before
+such a paragraph, and `export` passes `view.Options.PageBreak` so the same
+break comes home as `---`. The option is Picture's rule for a break: the caller
+names the line, the placeholder and its warning go with it, and a break inside
+a sentence keeps both. A break carrying a suggestion id is never written as a
+line, because the markers that say a suggestion is pending go around the span
+and the line would land inside them.
+
+One bullet above was written before the measurement settled and is not what the
+code does. The `roundtrip_test.go` bullet asked for the note's `---`/`***`
+paired with `[page break]`; since `export` writes `---`, both sides now spell
+the break the same way and nothing needs excusing. The entry is
+`page breaks the note wrote`, and all it carries is the reading that makes
+`***` and `___` the same line as `---`. The old `page breaks` entry became
+`the house's own breaks`, which is the first heading's, the prelude's and a
+column break.
+
+The fixture for all three packages is `go/internal/docs/testdata/page-breaks.json`,
+written in the measured shape: a `HEADING_1` carrying the flag, an empty
+`NORMAL_TEXT` paragraph carrying it, a native break inside a sentence, a native
+break that is a paragraph's only content, and a horizontal rule.
+
+**The live rerun, 2026-10-16.** `TestLivePageBreakShape` on
+`1-GaZ0aqihDhoGn7cFqjZIPkNqH4pADp59QlqbOCOqc4`, trashed: still no `page_break`
+run anywhere and still four `pageBreakBefore` paragraphs, and `read` now prints
+`[page break]` for both kinds, once before `# 1-Where the page turns` and once
+between the two body paragraphs. The MEASURED.md table carries that as its
+fourth column.
+
+`TestLiveExportRoundTrip` on the six notes:
+`10sOVi7QytsRtMVNqL0bgUuSFQRqGSSrjoSFwEO4aLAY` (kitchen sink),
+`1UK6myj7eQ1O2ZY9S7dmK890Ot29ZA_x78ouvKNVuSn0` (pictures),
+`1LmYcykDdet-OsKIPXvv2PSDKWXJ9u2Jp3PAvPrYY4Sw` (policy),
+`1rbTQn-wf7S4jy4kXui2uI_ZrgiPphHeFQWnh0h5KXT8` (minimal),
+`1iC29VegQ781X85glrxESjUFINY5CGszYEOipqvKDTSw` (edge cases),
+`15Frtb5oIa1XHEduA9GochJAW0KC2suBEVET2yWulpzo` (long). Policy, minimal and long
+pass. The kitchen sink's unnamed lines are the same eight as on 2026-10-15, the
+wrapped block quote and the list starting at seven of
+`docs/backlog/round-trip-fails-on-a-wrapped-quote-and-a-list-starting-at-seven.md`.
+Pictures and edge cases are red on constructs of their own, a reference-style
+image with a base64 definition, task boxes against the house's ☐, and an
+ampersand heading: all three notes have carried them since `744534f`, and the
+first run of this milestone hid them behind a `head -40`.
+
+**Not one unnamed line on any of the six is a `---` or a `[page break]`.** The
+note's break and the export's `---` match each other directly, and the
+footnote separator the file adds is still the `footnotes` entry's. So the
+pairing holds and nothing was loosened to make it.
+
+`make test` and `make vet` are green with the live variables unset. With them
+set, `make test` is red on the three round trips above and on
+`TestLiveRestyleKeepsAnchorsAndSuggestions`, which asks for
+`GDOC_LIVE_ANCHOR_DOC_ID` and is unset in this session. Neither is this task's.
 
 ### Task 6: the help, the guide and the skills
 

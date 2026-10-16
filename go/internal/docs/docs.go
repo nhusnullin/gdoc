@@ -136,7 +136,20 @@ type Paragraph struct {
 	// HeadingID is the id a link to this heading names. It is empty on an
 	// ordinary paragraph, and on a heading nothing links to.
 	HeadingID string `json:"heading_id,omitempty"`
-	Runs      []Run  `json:"runs"`
+	// PageBreakBefore is the document saying the page turns before this
+	// paragraph. It is a field of the paragraph's own style rather than an
+	// element in it, and it is the only way a break that reached a document
+	// through a docx import states itself: the live measurement of 2026-10-16
+	// found neither the body's own `---` nor the house's break on the first
+	// heading as a pageBreak element (MEASURED.md, "How read prints the two
+	// kinds of page break"), so every break in a document publish made was
+	// invisible to the read while this field was not decoded.
+	//
+	// A native pageBreak element, the one a person inserts by hand, is still a
+	// run of the paragraph and is still read as one. Both reach the projection,
+	// which prints the same placeholder for either.
+	PageBreakBefore bool  `json:"page_break_before,omitempty"`
+	Runs            []Run `json:"runs"`
 	// Positioned are the floating objects anchored to this paragraph, in the
 	// order the answer named them. The objects themselves are in Tab.Positioned.
 	Positioned []string `json:"positioned,omitempty"`

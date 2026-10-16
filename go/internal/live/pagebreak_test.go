@@ -13,6 +13,15 @@
 // that failed when Google answered differently would be deciding the thing it
 // was sent to find out. It fails on a publish or a read that failed, and on
 // nothing else. What it printed is written into docs/v2/MEASURED.md by hand.
+//
+// The answer, 2026-10-16: neither kind is a pageBreak element. Both are
+// pageBreakBefore on the paragraph's own style, which internal/docs did not
+// decode, so read printed nothing where either page turned. Task 5 of the
+// milestone decodes the flag, so this run now prints a [page break] line for
+// both kinds and export writes `---` for the body's. It still asserts nothing
+// about the answer: the shape is Google's, the recheck line in MEASURED.md
+// says when to ask again, and the offline tests of internal/docs,
+// internal/view and internal/export are the pins on what gdoc does with it.
 
 package live
 

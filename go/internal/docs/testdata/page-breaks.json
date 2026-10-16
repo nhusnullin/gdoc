@@ -1,0 +1,199 @@
+{
+ "documentId": "PAGEBREAKS",
+ "title": "Where the page turns",
+ "body": {
+  "content": [
+   {
+    "startIndex": 1,
+    "endIndex": 22,
+    "paragraph": {
+     "paragraphStyle": {
+      "namedStyleType": "HEADING_1",
+      "headingId": "h.first",
+      "pageBreakBefore": true
+     },
+     "elements": [
+      {
+       "startIndex": 1,
+       "endIndex": 22,
+       "textRun": {
+        "content": "Where the page turns\n",
+        "textStyle": {}
+       }
+      }
+     ]
+    }
+   },
+   {
+    "startIndex": 22,
+    "endIndex": 68,
+    "paragraph": {
+     "paragraphStyle": {
+      "namedStyleType": "NORMAL_TEXT"
+     },
+     "elements": [
+      {
+       "startIndex": 22,
+       "endIndex": 68,
+       "textRun": {
+        "content": "This paragraph is the last thing on its page.\n",
+        "textStyle": {}
+       }
+      }
+     ]
+    }
+   },
+   {
+    "startIndex": 68,
+    "endIndex": 69,
+    "paragraph": {
+     "paragraphStyle": {
+      "namedStyleType": "NORMAL_TEXT",
+      "pageBreakBefore": true
+     },
+     "elements": [
+      {
+       "startIndex": 68,
+       "endIndex": 69,
+       "textRun": {
+        "content": "\n",
+        "textStyle": {}
+       }
+      }
+     ]
+    }
+   },
+   {
+    "startIndex": 69,
+    "endIndex": 106,
+    "paragraph": {
+     "paragraphStyle": {
+      "namedStyleType": "NORMAL_TEXT"
+     },
+     "elements": [
+      {
+       "startIndex": 69,
+       "endIndex": 106,
+       "textRun": {
+        "content": "A reader turns a page to reach this.\n",
+        "textStyle": {}
+       }
+      }
+     ]
+    }
+   },
+   {
+    "startIndex": 106,
+    "endIndex": 135,
+    "paragraph": {
+     "paragraphStyle": {
+      "namedStyleType": "NORMAL_TEXT"
+     },
+     "elements": [
+      {
+       "startIndex": 106,
+       "endIndex": 123,
+       "textRun": {
+        "content": "Before the break.",
+        "textStyle": {}
+       }
+      },
+      {
+       "startIndex": 123,
+       "endIndex": 124,
+       "pageBreak": {
+        "suggestedInsertionIds": [],
+        "suggestedDeletionIds": [],
+        "textStyle": {}
+       }
+      },
+      {
+       "startIndex": 124,
+       "endIndex": 135,
+       "textRun": {
+        "content": " After it.\n",
+        "textStyle": {}
+       }
+      }
+     ]
+    }
+   },
+   {
+    "startIndex": 135,
+    "endIndex": 137,
+    "paragraph": {
+     "paragraphStyle": {
+      "namedStyleType": "NORMAL_TEXT"
+     },
+     "elements": [
+      {
+       "startIndex": 135,
+       "endIndex": 136,
+       "pageBreak": {
+        "suggestedInsertionIds": [],
+        "suggestedDeletionIds": [],
+        "textStyle": {}
+       }
+      },
+      {
+       "startIndex": 136,
+       "endIndex": 137,
+       "textRun": {
+        "content": "\n",
+        "textStyle": {}
+       }
+      }
+     ]
+    }
+   },
+   {
+    "startIndex": 137,
+    "endIndex": 139,
+    "paragraph": {
+     "paragraphStyle": {
+      "namedStyleType": "NORMAL_TEXT"
+     },
+     "elements": [
+      {
+       "startIndex": 137,
+       "endIndex": 138,
+       "horizontalRule": {
+        "suggestedInsertionIds": [],
+        "suggestedDeletionIds": [],
+        "textStyle": {}
+       }
+      },
+      {
+       "startIndex": 138,
+       "endIndex": 139,
+       "textRun": {
+        "content": "\n",
+        "textStyle": {}
+       }
+      }
+     ]
+    }
+   },
+   {
+    "startIndex": 139,
+    "endIndex": 148,
+    "paragraph": {
+     "paragraphStyle": {
+      "namedStyleType": "NORMAL_TEXT"
+     },
+     "elements": [
+      {
+       "startIndex": 139,
+       "endIndex": 148,
+       "textRun": {
+        "content": "The end.\n",
+        "textStyle": {}
+       }
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "revisionId": "r.1"
+}

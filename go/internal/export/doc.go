@@ -153,6 +153,27 @@
 // gdoc: block and nothing else. The author's own keys are the session's to add
 // when it makes the file a note.
 //
+// A page break standing on its own is written as `---`, which is the line
+// internal/body reads as that same break since M19, so the two sides spell one
+// fact the same way. It is the one marker of this projection that is not a
+// marker to resolve. internal/view decides which breaks are that shape, the
+// flag Drive's import writes and a native element that is a paragraph's only
+// content, and a break inside a sentence keeps its [page break] marker and its
+// warning because no line of markdown says a page turns mid-sentence.
+//
+// The one break left out is the first body heading's. The house breaks the
+// page there and Drive rides that break inside the heading paragraph, so the
+// strip leaves its line at the top of the file and the next build puts it back
+// from first_heading_page_break: a line written here would be a second break
+// the note never asked for. dropFirstHeadingBreak is the drop, and it takes
+// nothing anywhere else.
+// TestAPageBreakOfItsOwnExportsAsThreeHyphens,
+// TestTheFirstHeadingsBreakIsLeftOut,
+// TestAPageBreakInsideASentenceKeepsItsMarker and
+// TestAHorizontalRuleStillExportsAsItsMarker are the pins; the rule is the
+// last of them, because a document's own horizontal rule has no spelling in a
+// note at all and comes home as [rule] for somebody to resolve.
+//
 // A footnote is written as read writes it, "[^1]" with the notes under a rule
 // at the end, and two warnings ride with it: a suggestion inside a footnote
 // arrives as plain text (docs/backlog/suggestions-inside-footnotes.md), and a

@@ -495,7 +495,11 @@ definition after a `---` line, and that file publishes again: `build` sets
 footnotes rather than refusing them (2026-10-14, DECISIONS.md). A label
 referenced twice in the hub comes back as two notes, because a document holds
 one note per mark. A mark the author wrote comes back as the syntax it left
-as. The front matter of a file `export` creates holds
+as. A page break that stands on its own comes back as `---` on a line of its
+own, which is the line the next build reads as that same break; the one on the
+first body heading is left out, because `build` puts it back, and a break
+inside a sentence keeps its `[page break]` marker and its warning.
+The front matter of a file `export` creates holds
 the `gdoc:` block and nothing else: a skill adds `title` when it makes the file
 a note.
 
@@ -574,7 +578,11 @@ document got rather than the lines the note held, and both envelopes print it
 as `page_breaks`. The horizontal rule goes with its three constants and the
 `rule_grey` palette key, because no other route into a document draws a line;
 a document that holds a rule of its own still reads as `[rule]` and exports as
-that marker. Decided 2026-10-16, DECISIONS.md.
+that marker. `read` prints `[page break]` where a published document breaks
+the page, which it printed nothing for from M13 to v2.12.0, and `export`
+writes `---` back for a break standing on its own: the two halves of one line.
+Decided 2026-10-16, DECISIONS.md, with the measurement that changed the read
+half in MEASURED.md.
 
 **The front matter's page breaks are blocks in that file**, `- block:
 page_break`, one after the cover and one after the classification table, beside

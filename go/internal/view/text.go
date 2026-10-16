@@ -111,11 +111,20 @@ func detailLabel(r docs.Run) string {
 // Marks writes a run's colour back as the syntax an author typed for it, and
 // an empty list writes none.
 //
+// PageBreak is what a page break standing on its own is written as: the line
+// before a paragraph the document breaks the page before, and a native
+// pageBreak element that is a paragraph's only content. It is Picture's rule
+// for a break: a non-empty answer replaces the placeholder and the warning
+// goes with it, because the caller carried the fact rather than losing it, and
+// an empty one leaves both where they were. A break inside a sentence is never
+// written this way, because no line of markdown says a page turns
+// mid-sentence.
+//
 // Rebuilt says this text becomes a file in the hub that gdoc builds again, so
 // the projection names every stretch of the document's own words that the next
 // build reads as syntax of gdoc's rather than as the words the document shows.
 //
-// All five are the export's, and none of them is the read's: read prints what
+// All six are the export's, and none of them is the read's: read prints what
 // the document holds and nothing that is not in it, and says nothing about a
 // build that is not happening, while a file in the hub carries a picture that
 // has a file beside it, a chip's target a later session has to resolve, and the
@@ -128,6 +137,7 @@ type Options struct {
 	Skip        func(docs.Block) bool
 	ChipTargets bool
 	Marks       []Mark
+	PageBreak   string
 	Rebuilt     bool
 }
 
@@ -360,7 +370,13 @@ type emitter struct {
 	// table cell is never one: a cell is flattened onto one line and takes no
 	// "#" prefix, whatever style the paragraph carries.
 	inHeading bool
-	warnings  []string
+	// breakAlone says the runs being written are one page break and the
+	// newline its paragraph ends with, which is the only shape a caller can
+	// write a line of markdown for. It is the runs' question rather than the
+	// paragraph's, because a table cell hands its paragraph's runs over
+	// directly, and runs sets it for either way in.
+	breakAlone bool
+	warnings   []string
 }
 
 func (e *emitter) chunk(s string) {
@@ -668,6 +684,14 @@ func (e *emitter) blocks(bs []docs.Block) {
 }
 
 func (e *emitter) paragraph(p *docs.Paragraph) {
+	// The page turns before this paragraph, which the document says on the
+	// paragraph's own style rather than as an element in it. That is the only
+	// shape a break has in a document gdoc published, so the line goes in
+	// front of the paragraph rather than nowhere: internal/docs's
+	// PageBreakBefore holds what was measured.
+	if p.PageBreakBefore {
+		e.chunk(e.breakLine(p.StartIndex))
+	}
 	// The style is read before the runs are written, because what the next
 	// build reads a mark on this line as depends on the "#" prefix below. A
 	// paragraph is never written inside another, so one flag is enough.
@@ -690,6 +714,24 @@ func (e *emitter) paragraph(p *docs.Paragraph) {
 		e.chunk(prefix + text)
 	}
 	e.floating(p)
+}
+
+// breakLine is what a page break standing on its own prints as: the line the
+// caller named, or the same placeholder a native break gets with the same
+// warning, so the two shapes read alike downstream.
+//
+// The warning is raised only where the placeholder is, for the reason a
+// picture with a file beside the note raises none: the caller carried the fact
+// into a line of its own, and nothing was lost to name.
+func (e *emitter) breakLine(index int) string {
+	if e.opts.PageBreak != "" {
+		return e.opts.PageBreak
+	}
+	p := placeholders[docs.KindPageBreak]
+	m := "[" + p.label + "]"
+	e.warnings = append(e.warnings,
+		fmt.Sprintf("%s at index %d is printed as %s: %s", p.noun, index, m, p.why))
+	return m
 }
 
 // prefix is what a paragraph's style puts in front of its text. A heading wins
@@ -1114,11 +1156,37 @@ func (e *emitter) cell(c docs.Cell) string {
 	return strings.Join(parts, " ")
 }
 
+// standaloneBreak says whether these runs are one native page break and
+// nothing else: the break, and the newline the paragraph ends with. That is a
+// break on a line of its own rather than inside a sentence, which is the only
+// shape PageBreak is written for.
+//
+// A break carrying a suggestion id is not one. The markers that say a
+// suggestion is pending are written around the span, and the caller's line
+// would go inside them: "{----}" is neither the suggestion nor the break.
+func standaloneBreak(rs []docs.Run) bool {
+	found := false
+	for _, r := range rs {
+		switch {
+		case r.Kind == docs.KindPageBreak:
+			if found || len(r.InsertionIDs) > 0 || len(r.DeletionIDs) > 0 {
+				return false
+			}
+			found = true
+		case r.Kind == docs.KindText && strings.TrimSpace(r.Text) == "":
+		default:
+			return false
+		}
+	}
+	return found
+}
+
 // runs groups the runs of a paragraph into spans. Adjacent runs carrying the
 // same suggestion ids are one span, because Docs splits a suggestion wherever
 // the formatting changes and two markers around one suggested phrase would read
 // as two suggestions.
 func (e *emitter) runs(rs []docs.Run) {
+	e.breakAlone = standaloneBreak(rs)
 	e.ownSyntax(rs)
 	for i := 0; i < len(rs); {
 		j := i + 1
@@ -1728,6 +1796,14 @@ func (e *emitter) one(r docs.Run) {
 			// where publish puts one, and a picture in the middle of a sentence
 			// stays in the middle of that sentence.
 			e.write(md)
+			e.drain(r.EndIndex, true)
+			return
+		}
+		if r.Kind == docs.KindPageBreak && e.breakAlone && e.opts.PageBreak != "" {
+			// A break of its own, and the caller said what line it is. Like a
+			// picture with a file beside the note, the fact is carried rather
+			// than lost, so there is nothing to warn about.
+			e.write(e.opts.PageBreak)
 			e.drain(r.EndIndex, true)
 			return
 		}
