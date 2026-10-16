@@ -10,6 +10,8 @@ package body
 import (
 	"strings"
 	"testing"
+
+	"github.com/beevik/etree"
 )
 
 // TestAnHTMLCommentIsAPencilRun is the shape an author writes from this
@@ -85,6 +87,17 @@ func TestAnEmptyCommentIsLeftOut(t *testing.T) {
 		if out := walk(t, source); len(out.Warnings) != 0 {
 			t.Errorf("%s warned %q, and a comment holding no words loses nothing", empty, out.Warnings)
 		}
+
+		// The same on a line of its own: no paragraph of its own, no warning.
+		alone := walk(t, empty+"\n\nA paragraph.\n")
+		if len(alone.Blocks) != 1 {
+			t.Errorf("%s on a line of its own built %d blocks, want the paragraph alone:\n%s",
+				empty, len(alone.Blocks), serialise(t, alone.Blocks))
+		}
+		if len(alone.Warnings) != 0 {
+			t.Errorf("%s on a line of its own warned %q, and a comment holding no words loses nothing",
+				empty, alone.Warnings)
+		}
 	}
 }
 
@@ -117,4 +130,77 @@ func warned(warnings []string, words string) bool {
 		}
 	}
 	return false
+}
+
+// TestACommentOnLinesOfItsOwnIsGreyParagraphs. An aside written on lines of
+// its own stands alone in the document, grey. The lines of one stretch are
+// joined by a single space, the way a paragraph's own wrapped lines are, and a
+// blank line inside the comment opens a second aside: a comment long enough to
+// hold one reads as two.
+func TestACommentOnLinesOfItsOwnIsGreyParagraphs(t *testing.T) {
+	out := walk(t, "<!-- one\ntwo\nthree\n\nfour\nfive -->\n")
+
+	if len(out.Blocks) != 2 {
+		t.Fatalf("the comment built %d blocks, want two paragraphs:\n%s",
+			len(out.Blocks), serialise(t, out.Blocks))
+	}
+	for i, want := range []string{"one two three", "four five"} {
+		runs := findAll(out.Blocks[i], "w:r")
+		if len(runs) != 1 {
+			t.Errorf("paragraph %d holds %d runs, want the one grey run:\n%s",
+				i+1, len(runs), serialise(t, out.Blocks))
+			continue
+		}
+		if got := runWords(runs[0]); got != want {
+			t.Errorf("paragraph %d reads %q, want %q", i+1, got, want)
+		}
+		rPr := runs[0].SelectElement("w:rPr")
+		if rPr == nil {
+			t.Errorf("paragraph %d carries no w:rPr, want the pencil", i+1)
+			continue
+		}
+		if got := value(rPr, "w:rStyle"); got != "Pencil" {
+			t.Errorf("paragraph %d names style %q, want Pencil", i+1, got)
+		}
+	}
+	if got := out.Counts.Paragraphs; got != 2 {
+		t.Errorf("the comment counted %d paragraphs, want 2", got)
+	}
+	if len(out.Warnings) != 0 {
+		t.Errorf("the comment warned %q, and nothing was left out", out.Warnings)
+	}
+	if got := serialise(t, out.Blocks); strings.Contains(got, "<!--") || strings.Contains(got, "-->") {
+		t.Errorf("the delimiters reached the document:\n%s", got)
+	}
+}
+
+// TestACommentOnOneLineOfItsOwnIsOneGreyParagraph is the shape a note is most
+// likely to hold: one aside between two paragraphs of prose.
+func TestACommentOnOneLineOfItsOwnIsOneGreyParagraph(t *testing.T) {
+	out := walk(t, "Before.\n\n<!-- an aside -->\n\nAfter.\n")
+
+	if len(out.Blocks) != 3 {
+		t.Fatalf("the note built %d blocks, want three paragraphs:\n%s",
+			len(out.Blocks), serialise(t, out.Blocks))
+	}
+	run := runElement(t, out.Blocks, "an aside")
+	rPr := run.SelectElement("w:rPr")
+	if rPr == nil {
+		t.Fatal("the aside carries no w:rPr, want the pencil")
+	}
+	if got := value(rPr, "w:rStyle"); got != "Pencil" {
+		t.Errorf("the aside names style %q, want Pencil", got)
+	}
+	if len(out.Warnings) != 0 {
+		t.Errorf("the aside warned %q, and nothing was left out", out.Warnings)
+	}
+}
+
+// runWords is the words one run carries.
+func runWords(run *etree.Element) string {
+	words := ""
+	for _, e := range run.FindElements("w:t") {
+		words += e.Text()
+	}
+	return words
 }

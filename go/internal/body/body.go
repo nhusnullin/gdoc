@@ -827,6 +827,15 @@ func (r *renderer) block(node ast.Node, level int, list listCtx) error {
 		return nil
 
 	case *ast.HTMLBlock:
+		// A comment standing on lines of its own is the author's aside
+		// standing alone, so it reaches the document as grey paragraphs
+		// rather than being left out. Every other block of HTML keeps the
+		// rule it has always had: named by line, left out whole.
+		if paragraphs, comment := blockComment(typed, r.source); comment {
+			r.curLine = r.line(node)
+			r.greyParagraphs(paragraphs, level, list)
+			return nil
+		}
 		r.warn("line %d: a block of HTML is not rendered in the house style and was left out",
 			r.line(node))
 		r.afterTable = false
@@ -1037,6 +1046,13 @@ func (r *renderer) paragraphBlock(node ast.Node, level int, list listCtx) error 
 		return nil
 	}
 
+	r.emitRuns(runs, level, list)
+	return nil
+}
+
+// emitRuns writes one paragraph of runs where the walk stands: a body
+// paragraph at the top level, and a paragraph of the item inside a list.
+func (r *renderer) emitRuns(runs []Run, level int, list listCtx) {
 	if level == 0 {
 		r.emit(r.paragraph(runs))
 		r.counts.Paragraphs++
@@ -1056,7 +1072,23 @@ func (r *renderer) paragraphBlock(node ast.Node, level int, list listCtx) error 
 		r.counts.Paragraphs++
 	}
 	r.afterTable = false
-	return nil
+}
+
+// greyParagraphs writes a comment that stands on lines of its own, one grey
+// paragraph per stretch of lines. It goes where the walk stands, so an aside
+// inside a bullet is that bullet's and an aside inside a quote is indented
+// with it. A list wins over a quote, the way a paragraph inside both does.
+func (r *renderer) greyParagraphs(paragraphs []string, level int, list listCtx) {
+	for _, words := range paragraphs {
+		runs := []Run{{Text: words, Mark: r.marks.comment(commentOpener)}}
+		if level == 0 && r.quoteDepth > 0 {
+			r.emit(r.quote(runs, r.quoteDepth))
+			r.counts.Paragraphs++
+			continue
+		}
+		r.emitRuns(runs, level, list)
+	}
+	r.afterTable = false
 }
 
 // quoteBlock indents what the quote holds, one step per level of quoting.

@@ -94,7 +94,7 @@ cd go && GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1 go test ./internal/live -run 'RoundT
 ## Progress Tracking
 
 - [x] Task 1: an HTML comment inside a sentence is a pencil run, and the file states three spellings
-- [ ] Task 2: a comment on lines of its own is grey paragraphs
+- [x] Task 2: a comment on lines of its own is grey paragraphs
 - [ ] Task 3: the Obsidian spelling reaches the same node
 - [ ] Task 4: a pencil goes where a mark goes
 - [ ] Task 5: gdoc's own two comments are markers
