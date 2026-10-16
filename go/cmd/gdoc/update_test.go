@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"gdoc/internal/guard"
+	"gdoc/internal/settings"
 	"gdoc/internal/tty"
 	"gdoc/internal/update"
 )
@@ -807,5 +808,430 @@ func TestAPanicInAnUpdateStopsTheSpinner(t *testing.T) {
 	}
 	if strings.Contains(settled, "installed") {
 		t.Errorf("a panic finished nothing, so there is no result line: %q", settled)
+	}
+}
+
+// The app the presence installs, as the darwin zips carry it. Both literals
+// are the test's own: the path the release packs the bundle at, and the
+// identifier gdoc installs. The production variable is held against the first
+// of them in TestWithThePresenceOffAnUpdateIsTodaysUpdate, so a path that
+// moved on one side fails rather than quietly agreeing.
+const (
+	bundleInZip     = "presence/GdocPresence.app"
+	bundleIdentity  = "com.altery.gdoc.presence"
+	bundleExecutabl = "Contents/MacOS/GdocPresence"
+	bundlePlist     = "Contents/Info.plist"
+)
+
+// appPlist is the bundle's own Info.plist, which is what says whose app it is
+// and which release it came out of. The version is the tag without the v,
+// because that is how a version is spelled on a Mac.
+func appPlist(tag string) []byte {
+	return []byte(`<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0">
+<dict>
+	<key>CFBundleIdentifier</key>
+	<string>` + bundleIdentity + `</string>
+	<key>CFBundleShortVersionString</key>
+	<string>` + strings.TrimPrefix(tag, "v") + `</string>
+</dict>
+</plist>
+`)
+}
+
+// appEntries is the app inside a release zip: the plist and one executable,
+// under the path the release packs them at.
+func appEntries(tag string) []zipEntry {
+	return []zipEntry{
+		{name: bundleInZip + "/" + bundlePlist, body: appPlist(tag)},
+		{name: bundleInZip + "/" + bundleExecutabl, body: []byte("the app of " + tag)},
+	}
+}
+
+// appAt points the run's destination at a folder of this test's own and
+// answers where the app would go, so no test touches the ~/Applications of
+// the machine it runs on.
+func appAt(t *testing.T) string {
+	t.Helper()
+	dest := filepath.Join(t.TempDir(), "Applications", "GdocPresence.app")
+	old := presenceBundle
+	presenceBundle = func() (string, error) { return dest, nil }
+	t.Cleanup(func() { presenceBundle = old })
+	return dest
+}
+
+// appInstalled writes the app a person already has at the path handed in,
+// stamped with the release it came from.
+func appInstalled(t *testing.T, bundle, tag string) {
+	t.Helper()
+	for name, body := range map[string][]byte{
+		bundlePlist:     appPlist(tag),
+		bundleExecutabl: []byte("the app of " + tag),
+	} {
+		path := filepath.Join(bundle, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, body, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// appVersionAt is what the app at a path says it is, read the way the updater
+// reads it.
+func appVersionAt(t *testing.T, bundle string) string {
+	t.Helper()
+	got, err := update.BundleVersion(bundle)
+	if err != nil {
+		t.Fatalf("the app at %s does not say what it is: %v", bundle, err)
+	}
+	return got
+}
+
+// noAppFields fails the test unless the object says nothing about an app,
+// which is what every run of a gdoc with the flag off says, and every run
+// that touched no app.
+func noAppFields(t *testing.T, data map[string]any) {
+	t.Helper()
+	for _, field := range []string{"presence", "presence_version", "presence_sha256", "presence_previous"} {
+		if _, ok := data[field]; ok {
+			t.Errorf("%s is in the object of a run that installed no app: %v", field, data)
+		}
+	}
+}
+
+// noAppAt fails the test unless nothing at all is at the destination.
+func noAppAt(t *testing.T, dest string) {
+	t.Helper()
+	if _, err := os.Lstat(dest); !os.IsNotExist(err) {
+		t.Errorf("nothing may be at %s, and os.Lstat says %v", dest, err)
+	}
+}
+
+// The pin under the whole task: with the flag off, `gdoc update` is the update
+// it was before the presence existed. The same object, the same words on
+// stderr, the same two files on disk, and no app anywhere, out of a release
+// whose zip carries one.
+//
+// The two step lists the recorded screens are drawn from are stated here as
+// literals too, because the goldens under testdata/screens are drawn from
+// installSteps and a step added to either list would rewrite six recorded
+// screens.
+func TestWithThePresenceOffAnUpdateIsTodaysUpdate(t *testing.T) {
+	desktopSeams(t, "darwin")
+	pl := &stubPlain{
+		listing: listing("v2.1.0", "v2.0.0"),
+		files:   publishedWith(t, "v2.1.0", []byte("new"), appEntries("v2.1.0")...),
+	}
+	path := installedAt(t, "v2.0.0", []byte("old"), pl)
+	dest := appAt(t)
+	platform := update.Platform(runtime.GOOS, runtime.GOARCH)
+
+	got, _, stderr, code := runUpdateCapturing(t, "update")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("the update must answer: %v (exit %d)", got, code)
+	}
+	want := "gdoc update\n" +
+		"  ✓ read releases        nhusnullin/gdoc, 2 listed\n" +
+		"  ✓ choose release       v2.1.0, stable, " + platform + ", from v2.0.0\n" +
+		"  ✓ read checksums       SHA256SUMS-v2.1.0\n" +
+		"  ✓ download             " + update.AssetName("v2.1.0", platform) + ", 6.1 MB\n" +
+		"  ✓ verify checksum      matches SHA256SUMS-v2.1.0\n" +
+		"  ✓ replace binary       " + path + ", the old one kept beside it\n" +
+		"  ✓ read back            sha256 " + hexSum([]byte("new"))[:12] + "\n" +
+		"gdoc v2.1.0 installed. gdoc update --rollback goes back.\n"
+	if stderr != want {
+		t.Errorf("stderr is\n%s\nand must be\n%s", stderr, want)
+	}
+	data := updateObject(t, got)
+	if data["action"] != "updated" || data["sha256"] != hexSum([]byte("new")) {
+		t.Errorf("the binary was installed and the object says so: %v", data)
+	}
+	noAppFields(t, data)
+	noAppAt(t, dest)
+	if fileText(t, path) != "new" || fileText(t, path+".previous") != "old" {
+		t.Errorf("the two binaries are the update's own: %q and %q", fileText(t, path), fileText(t, path+".previous"))
+	}
+	if presenceInZip != bundleInZip {
+		t.Errorf("the updater takes the app out of %q, and a release packs it at %q", presenceInZip, bundleInZip)
+	}
+	for _, c := range []struct {
+		desktop, app bool
+		want         string
+	}{
+		{want: "read checksums|download|verify checksum|replace binary|read back"},
+		{desktop: true, want: "read checksums|download|verify checksum|read extension|replace binary|read back|write extension"},
+	} {
+		if got := strings.Join(installSteps(c.desktop, c.app), "|"); got != c.want {
+			t.Errorf("with desktop %v and the app %v the steps are\n%s\nand the recorded screens are drawn from\n%s", c.desktop, c.app, got, c.want)
+		}
+	}
+}
+
+// runUpdateCapturingSet is runUpdateCapturing for a run whose settings are not
+// the defaults, which is how a test turns the presence on.
+func runUpdateCapturingSet(t *testing.T, set settings.InEffect, args ...string) (map[string]any, string, string, int) {
+	t.Helper()
+	var out, errOut bytes.Buffer
+	code := run(context.Background(), args, &out, &errOut, set)
+	return decodeOne(t, strings.NewReader(out.String())), out.String(), errOut.String(), code
+}
+
+// An app that could not be installed is a warning and never a refusal. The
+// binary has already been replaced by then, and gdoc does not take a binary
+// back because a folder beside it did not land: the warning names both paths
+// and the run still says ok.
+func TestAPresenceFailureIsAWarningNamingBothPathsAndTheBinaryIsUpdated(t *testing.T) {
+	desktopSeams(t, "darwin")
+	// A release whose zip carries no app at all, which is every release before
+	// this one.
+	pl := &stubPlain{
+		listing: listing("v2.1.0", "v2.0.0"),
+		files:   published(t, "v2.1.0", []byte("new")),
+	}
+	path := installedAt(t, "v2.0.0", []byte("old"), pl)
+	dest := appAt(t)
+
+	got, _, stderr, code := runUpdateCapturingSet(t, presenceOn(), "update")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("the binary landed, so the run answers: %v (exit %d)", got, code)
+	}
+	data := updateObject(t, got)
+	if data["action"] != "updated" || data["verified"] != true || fileText(t, path) != "new" {
+		t.Errorf("the binary must be the one that was published: %v, %q", data, fileText(t, path))
+	}
+	noAppFields(t, data)
+	noAppAt(t, dest)
+	warnings := fmt.Sprint(got["warnings"])
+	for _, named := range []string{dest, path} {
+		if !strings.Contains(warnings, named) {
+			t.Errorf("the warning must name %s: %v", named, got["warnings"])
+		}
+	}
+	if !strings.Contains(stderr, "✗ install app") {
+		t.Errorf("the step a person watched must be marked failed:\n%s", stderr)
+	}
+}
+
+// A run with nothing newer to install still installs the app, out of the
+// release the binary on this machine came from, where there is no app there
+// yet. It is how a person who turned the flag on gets the app without
+// waiting for the next release.
+func TestAnUpToDateRunWithThePresenceOnInstallsItFromTheReleaseHere(t *testing.T) {
+	desktopSeams(t, "darwin")
+	pl := &stubPlain{
+		listing: listing("v2.1.0"),
+		files:   publishedWith(t, "v2.1.0", []byte("old"), appEntries("v2.1.0")...),
+	}
+	path := installedAt(t, "v2.1.0", []byte("old"), pl)
+	dest := appAt(t)
+
+	got, code := runJSONSet(t, presenceOn(), "update")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("an up-to-date binary is an answer: %v (exit %d)", got, code)
+	}
+	data := updateObject(t, got)
+	if data["action"] != "up_to_date" {
+		t.Errorf("no binary was installed, and the object says so: %v", data)
+	}
+	if data["presence"] != dest || data["presence_version"] != "2.1.0" {
+		t.Errorf("the app of the release that is here must be installed at %s: %v", dest, data)
+	}
+	if data["presence_sha256"] == nil || data["presence_previous"] != nil {
+		t.Errorf("a first install sums the tree and keeps no earlier app: %v", data)
+	}
+	if got := appVersionAt(t, dest); got != "2.1.0" {
+		t.Errorf("the app at %s says %q", dest, got)
+	}
+	nothingMoved(t, path, "old")
+
+	// The same run again installs nothing: the app that is there is the app
+	// the release holds, so the zip is never downloaded.
+	pl2 := &stubPlain{listing: listing("v2.1.0"), files: publishedWith(t, "v2.1.0", []byte("old"), appEntries("v2.1.0")...)}
+	installedAt(t, "v2.1.0", []byte("old"), pl2)
+	got, code = runJSONSet(t, presenceOn(), "update")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("the second run must answer too: %v (exit %d)", got, code)
+	}
+	noAppFields(t, updateObject(t, got))
+	if len(pl2.got) != 1 || pl2.got[0] != releasesURL {
+		t.Errorf("the app is already the release's own, so nothing is downloaded: %v", pl2.got)
+	}
+}
+
+// --rollback with the flag on swaps both: the binary, then the app, each swap
+// its own involution.
+func TestRollbackWithThePresenceOnSwapsBoth(t *testing.T) {
+	desktopSeams(t, "darwin")
+	pl := &stubPlain{}
+	path := installedAt(t, "v2.1.0", []byte("new"), pl)
+	if err := os.WriteFile(path+".previous", []byte("old"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	dest := appAt(t)
+	appInstalled(t, dest, "v2.1.0")
+	appInstalled(t, dest+".previous", "v2.0.0")
+
+	got, code := runJSONSet(t, presenceOn(), "update", "--rollback")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("the rollback must answer: %v (exit %d)", got, code)
+	}
+	data := updateObject(t, got)
+	if data["action"] != "rolled_back" || data["previous"] != path+".previous" {
+		t.Errorf("the binary went back: %v", data)
+	}
+	if data["presence"] != dest || data["presence_version"] != "2.0.0" || data["presence_previous"] != dest+".previous" {
+		t.Errorf("the app went back too, and the object says where both are: %v", data)
+	}
+	if data["presence_sha256"] == nil {
+		t.Errorf("the app that is there now is summed: %v", data)
+	}
+	if fileText(t, path) != "old" || fileText(t, path+".previous") != "new" {
+		t.Errorf("the two binaries must have swapped: %q and %q", fileText(t, path), fileText(t, path+".previous"))
+	}
+	if got := appVersionAt(t, dest); got != "2.0.0" {
+		t.Errorf("the app at %s says %q", dest, got)
+	}
+	if got := appVersionAt(t, dest+".previous"); got != "2.1.0" {
+		t.Errorf("the app kept beside it says %q", got)
+	}
+	if len(pl.got) != 0 {
+		t.Errorf("a rollback is a local move and reads nothing: %v", pl.got)
+	}
+}
+
+// A rollback where there is no earlier app keeps the app that is there, takes
+// the binary back, and says so in a warning. The two are judged apart, so one
+// of them having nowhere to go is not a reason to leave the other where it is.
+func TestRollbackWithNoPreviousAppWarnsAndKeepsIt(t *testing.T) {
+	desktopSeams(t, "darwin")
+	pl := &stubPlain{}
+	path := installedAt(t, "v2.1.0", []byte("new"), pl)
+	if err := os.WriteFile(path+".previous", []byte("old"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	dest := appAt(t)
+	appInstalled(t, dest, "v2.1.0")
+
+	got, code := runJSONSet(t, presenceOn(), "update", "--rollback")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("the binary went back, so the run answers: %v (exit %d)", got, code)
+	}
+	data := updateObject(t, got)
+	if data["action"] != "rolled_back" || fileText(t, path) != "old" {
+		t.Errorf("the binary must have gone back: %v, %q", data, fileText(t, path))
+	}
+	noAppFields(t, data)
+	if got := appVersionAt(t, dest); got != "2.1.0" {
+		t.Errorf("the app at %s must be the one that was there, and says %q", dest, got)
+	}
+	warnings := fmt.Sprint(got["warnings"])
+	for _, named := range []string{dest, path} {
+		if !strings.Contains(warnings, named) {
+			t.Errorf("the warning must name %s: %v", named, got["warnings"])
+		}
+	}
+}
+
+// The app is a macOS application. On every other platform the flag records
+// what a run is doing and installs nothing, and the run says which platform it
+// is on rather than being quiet about it.
+func TestThePresenceOffMacOSWritesNothingAndNamesThePlatform(t *testing.T) {
+	desktopSeams(t, "linux")
+	pl := &stubPlain{
+		listing: listing("v2.1.0", "v2.0.0"),
+		files:   publishedWith(t, "v2.1.0", []byte("new"), appEntries("v2.1.0")...),
+	}
+	path := installedAt(t, "v2.0.0", []byte("old"), pl)
+	dest := appAt(t)
+
+	got, _, stderr, code := runUpdateCapturingSet(t, presenceOn(), "update")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("the update must answer: %v (exit %d)", got, code)
+	}
+	data := updateObject(t, got)
+	if data["action"] != "updated" || fileText(t, path) != "new" {
+		t.Errorf("the binary is installed on every platform: %v, %q", data, fileText(t, path))
+	}
+	noAppFields(t, data)
+	noAppAt(t, dest)
+	if warnings := fmt.Sprint(got["warnings"]); !strings.Contains(warnings, "linux") {
+		t.Errorf("the one warning must name the platform: %v", got["warnings"])
+	}
+	if strings.Contains(stderr, "install app") {
+		t.Errorf("there is no app to install here, so no step is drawn:\n%s", stderr)
+	}
+}
+
+// --check installs nothing, and the app is nothing. It is the rehearsal with
+// the flag on, over a run that would take a release and a run that would take
+// none.
+func TestCheckNeverInstallsTheApp(t *testing.T) {
+	for _, c := range []struct{ name, installed string }{
+		{name: "a release to take", installed: "v2.0.0"},
+		{name: "nothing to take", installed: "v2.1.0"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			desktopSeams(t, "darwin")
+			pl := &stubPlain{
+				listing: listing("v2.1.0"),
+				files:   publishedWith(t, "v2.1.0", []byte("new"), appEntries("v2.1.0")...),
+			}
+			path := installedAt(t, c.installed, []byte("old"), pl)
+			dest := appAt(t)
+
+			got, code := runJSONSet(t, presenceOn(), "update", "--check")
+			if code != 0 || got["ok"] != true {
+				t.Fatalf("a check must answer: %v (exit %d)", got, code)
+			}
+			noAppFields(t, updateObject(t, got))
+			noAppAt(t, dest)
+			nothingMoved(t, path, "old")
+			if len(pl.got) != 1 || pl.got[0] != releasesURL {
+				t.Errorf("a check reads the listing and downloads nothing: %v", pl.got)
+			}
+		})
+	}
+}
+
+// gdoc never launches the app. A first install says the one thing a person has
+// to go and do, and a run that replaced an app says nothing of the sort: the
+// app that is running shows its own row about having been updated.
+func TestTheResultSaysToOpenTheAppOnce(t *testing.T) {
+	desktopSeams(t, "darwin")
+	pl := &stubPlain{
+		listing: listing("v2.1.0", "v2.0.0"),
+		files:   publishedWith(t, "v2.1.0", []byte("new"), appEntries("v2.1.0")...),
+	}
+	installedAt(t, "v2.0.0", []byte("old"), pl)
+	dest := appAt(t)
+
+	_, _, stderr, code := runUpdateCapturingSet(t, presenceOn(), "update")
+	if code != 0 {
+		t.Fatalf("the update must answer: exit %d", code)
+	}
+	if want := "open " + dest; !strings.Contains(stderr, want) {
+		t.Errorf("a first install names %q:\n%s", want, stderr)
+	}
+
+	pl2 := &stubPlain{
+		listing: listing("v2.1.0", "v2.0.0"),
+		files:   publishedWith(t, "v2.1.0", []byte("new"), appEntries("v2.1.0")...),
+	}
+	installedAt(t, "v2.0.0", []byte("old"), pl2)
+	got, _, stderr, code := runUpdateCapturingSet(t, presenceOn(), "update")
+	if code != 0 {
+		t.Fatalf("the second update must answer: exit %d", code)
+	}
+	if strings.Contains(stderr, "open "+dest) {
+		t.Errorf("the app was already open, so nothing tells a person to open it:\n%s", stderr)
+	}
+	data := updateObject(t, got)
+	if data["presence_previous"] != dest+".previous" {
+		t.Errorf("the app that was there is kept beside the new one: %v", data)
+	}
+	if got := appVersionAt(t, dest); got != "2.1.0" {
+		t.Errorf("the app at %s says %q", dest, got)
 	}
 }

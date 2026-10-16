@@ -206,6 +206,13 @@
 // after the other and judged apart, so a machine can sit with the two at
 // different versions, and the app is the one that says so.
 //
+// BundleVersion is that reading on its own: what the app at a path says it
+// is. It is here rather than in the command because this is the one room that
+// knows what a plist is, and the command asks one question of it, before it
+// downloads anything on a run with nothing to install: whether the app on
+// this machine is already the app the release holds.
+// TestTheVersionOfAnInstalledBundleIsReadOffItsPlist.
+//
 // Windows is the same three renames, and os.Rename replaces the file it lands
 // on there as it does here. It is unmeasured until the checklist in
 // docs/backlog/windows-rollout-checklist.md runs, which is the first time gdoc

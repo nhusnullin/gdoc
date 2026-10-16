@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -86,6 +87,27 @@ var openPlain = func(p *guard.Policy) plain { return gapi.OpenPlain(p, nil) }
 // can point a run at a file it made itself.
 var executable = os.Executable
 
+// presenceInZip is where the app travels inside a darwin release zip, and
+// presenceBundle where this machine keeps it. Both are behind variables for
+// the reason executable is: a test points a run at paths it made itself, and
+// no test may touch the ~/Applications of the machine it runs on.
+var (
+	presenceInZip  = "presence/GdocPresence.app"
+	presenceBundle = homeBundle
+)
+
+// homeBundle is ~/Applications/GdocPresence.app, which is the folder a
+// person's own applications live in and the one an install needs no
+// administrator for. The folder itself is made by internal/update where it is
+// not there.
+func homeBundle() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return "", fmt.Errorf("gdoc cannot find the home directory the app goes under, so no app was installed: %v", err)
+	}
+	return filepath.Join(home, "Applications", "GdocPresence.app"), nil
+}
+
 // updateData is what `gdoc update` prints. Every field is a fact about this
 // run: what was installed, what the two channels hold, what was done, and what
 // the file at the path hashes to afterwards.
@@ -119,6 +141,21 @@ type updateData struct {
 	// extension step: it wrote none, or it wrote one and the open failed, and
 	// the warnings say which.
 	ExtensionOpened bool `json:"extension_opened,omitempty"`
+	// The menu bar app, on a run that installed one or took one back.
+	// Presence is where the bundle is, PresenceVersion what its own plist
+	// says it is, PresenceSHA256 the sum of the whole folder, and
+	// PresencePrevious where the app that was there went, which is absent on
+	// a first install. All four are omitempty, so a gdoc with the flag off
+	// prints the object it always printed, and so does a run that reached no
+	// app: a field nobody wrote says nothing.
+	//
+	// The app and the binary are installed apart and may sit at different
+	// versions, which is why PresenceVersion is its own field rather than
+	// read off `to`.
+	Presence         string `json:"presence,omitempty"`
+	PresenceVersion  string `json:"presence_version,omitempty"`
+	PresenceSHA256   string `json:"presence_sha256,omitempty"`
+	PresencePrevious string `json:"presence_previous,omitempty"`
 }
 
 func cmdUpdate(ctx context.Context, a *args, errOut io.Writer) emit.Result {
@@ -140,9 +177,9 @@ func cmdUpdate(ctx context.Context, a *args, errOut io.Writer) emit.Result {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
 	if flags.Rollback {
-		return runRollback(path)
+		return runRollback(path, a.set.Presence)
 	}
-	return runUpdate(ctx, path, flags, desktop, errOut)
+	return runUpdate(ctx, path, flags, desktop, a.set.Presence, errOut)
 }
 
 // oneDesktopRun refuses the two flags --desktop cannot be typed beside.
@@ -233,8 +270,14 @@ func binaryPath() (string, error) {
 // envelope's `version`, and putting it under `installed` beside a `sha256` of
 // the older file would be one fact contradicting another.
 //
-// TestRollbackPutsTheEarlierBinaryBack.
-func runRollback(path string) emit.Result {
+// With the presence on the app goes back after the binary, and whatever
+// happens to it is a warning: the binary is already back by then, and gdoc
+// does not undo a rollback a person asked for because a folder beside it had
+// nowhere to go.
+//
+// TestRollbackPutsTheEarlierBinaryBack, TestRollbackWithThePresenceOnSwapsBoth
+// and TestRollbackWithNoPreviousAppWarnsAndKeepsIt.
+func runRollback(path string, presenceOn bool) emit.Result {
 	data := updateData{Path: path}
 	res, err := update.Rollback(path)
 	if err != nil {
@@ -243,7 +286,51 @@ func runRollback(path string) emit.Result {
 	data.Action = string(update.RolledBack)
 	data.SHA256 = res.Sum
 	data.Previous = res.Previous
-	return emit.Result{OK: true, Data: data}
+	withApp, warns := appHere(presenceOn)
+	if withApp {
+		data, warns = rollbackPresence(data, warns)
+	}
+	return emit.Result{OK: true, Data: data, Warnings: warns}
+}
+
+// appHere is whether this run touches the app at all, and the one warning for
+// a flag that is on where there is no app to touch.
+//
+// The app is a macOS application in this milestone. A person who turned the
+// flag on on Linux still gets the record beside the token, and is told that
+// is all there is here rather than left to wonder where the menu bar icon is.
+//
+// TestThePresenceOffMacOSWritesNothingAndNamesThePlatform.
+func appHere(on bool) (bool, []string) {
+	if !on {
+		return false, nil
+	}
+	if desktopOS != "darwin" {
+		return false, []string{fmt.Sprintf("the presence app is a macOS application and this machine runs %s, so no app was installed or taken back and the record beside the token is the whole of the presence here", desktopOS)}
+	}
+	return true, nil
+}
+
+// rollbackPresence puts the earlier app back, and turns everything that goes
+// wrong into a warning naming both the app and the binary, so a person reads
+// which of the two went back.
+//
+// TestRollbackWithThePresenceOnSwapsBoth and
+// TestRollbackWithNoPreviousAppWarnsAndKeepsIt.
+func rollbackPresence(data updateData, warns []string) (updateData, []string) {
+	dest, err := presenceBundle()
+	if err != nil {
+		return data, append(warns, err.Error())
+	}
+	res, err := update.RollbackBundle(dest)
+	if err != nil {
+		return data, append(warns, fmt.Sprintf("%v, so the app at %s is the app that was there and the binary at %s is the earlier one", err, tildePath(dest), tildePath(data.Path)))
+	}
+	data.Presence = dest
+	data.PresenceVersion = res.Version
+	data.PresenceSHA256 = res.TreeSum
+	data.PresencePrevious = res.Previous
+	return data, warns
 }
 
 // The steps a run narrates on stderr, in the order it takes them. The first
@@ -259,6 +346,7 @@ const (
 	stepReadBack  = "read back"
 	stepTemplate  = "read extension"
 	stepExtension = "write extension"
+	stepApp       = "install app"
 )
 
 // runUpdate is the whole of a run that looks at GitHub, with its steps drawn
@@ -273,11 +361,11 @@ const (
 // The list settles on every way out, a panic included, so the spinner never
 // draws over the crash text safeDispatch writes: TestAPanicInAnUpdateStopsTheSpinner.
 // A panic gets no result line, because nothing finished.
-func runUpdate(ctx context.Context, path string, flags update.Flags, desktop bool, errOut io.Writer) emit.Result {
+func runUpdate(ctx context.Context, path string, flags update.Flags, desktop, presenceOn bool, errOut io.Writer) emit.Result {
 	pr := openProgress(errOut, "update")
 	defer pr.settle()
 	pr.Plan(stepRead, stepChoose)
-	r := checkAndInstall(ctx, path, flags, desktop, pr)
+	r := checkAndInstall(ctx, path, flags, desktop, presenceOn, pr)
 	pr.Finish(resultLines(r, pr.live)...)
 	return r
 }
@@ -286,9 +374,13 @@ func runUpdate(ctx context.Context, path string, flags update.Flags, desktop boo
 // the terminal form over a buffer.
 var openProgress = newProgress
 
-// checkAndInstall reads the listing and hands it on to be decided.
-func checkAndInstall(ctx context.Context, path string, flags update.Flags, desktop bool, pr *progress) emit.Result {
+// checkAndInstall reads the listing and hands it on to be decided. It is also
+// where the flag becomes an answer about this machine: whether there is an app
+// to install here at all.
+func checkAndInstall(ctx context.Context, path string, flags update.Flags, desktop, presenceOn bool, pr *progress) emit.Result {
 	installed, warns := installedVersion()
+	withApp, appWarns := appHere(presenceOn)
+	warns = append(warns, appWarns...)
 	data := updateData{Installed: installed.String(), Path: path}
 	pr.Label(takingLabel(installed, update.Version{}))
 
@@ -311,12 +403,12 @@ func checkAndInstall(ctx context.Context, path string, flags update.Flags, deskt
 		return emit.Result{OK: true, Data: data, Warnings: reachWarnings(reach, warns)}
 	}
 	pr.Done(fmt.Sprintf("%s, %d listed", updateRepo, len(entries)))
-	return decideUpdate(ctx, reach, entries, flags, desktop, installed, data, warns, pr)
+	return decideUpdate(ctx, reach, entries, flags, desktop, withApp, installed, data, warns, pr)
 }
 
 // decideUpdate chooses a release of each channel, decides, and hands a
 // decision to install on to installDecided.
-func decideUpdate(ctx context.Context, reach plain, entries []update.Entry, flags update.Flags, desktop bool, installed update.Version, data updateData, warns []string, pr *progress) emit.Result {
+func decideUpdate(ctx context.Context, reach plain, entries []update.Entry, flags update.Flags, desktop, withApp bool, installed update.Version, data updateData, warns []string, pr *progress) emit.Result {
 	pr.Start(stepChoose, "")
 	platform := update.Platform(runtime.GOOS, runtime.GOARCH)
 	stable, stableErr := update.Choose(entries, update.Stable, platform)
@@ -352,28 +444,43 @@ func decideUpdate(ctx context.Context, reach plain, entries []update.Entry, flag
 	data.To = d.To.String()
 	data.Run = d.Run
 	if !d.Installs() {
-		if desktop {
-			return refreshExtension(ctx, reach, releaseHere(latest, stable, nightly, installed), installed, data, warns, pr)
-		}
-		return emit.Result{OK: true, Data: data, Warnings: reachWarnings(reach, warns)}
+		// --check installs nothing at all, the app included: it is the
+		// rehearsal, and a rehearsal that wrote a folder into ~/Applications
+		// would be the run it was standing in for.
+		return refreshHere(ctx, reach, releaseHere(latest, stable, nightly, installed), installed, desktop, withApp && !flags.Check, data, warns, pr)
 	}
-	pr.Plan(installSteps(desktop)...)
+	pr.Plan(installSteps(desktop, withApp)...)
 	chosen := stable
 	if nightly.Version == d.To {
 		chosen = nightly
 	}
-	return installDecided(ctx, reach, chosen, desktop, data, warns, pr)
+	return installDecided(ctx, reach, chosen, desktop, withApp, data, warns, pr)
 }
 
 // installSteps is the list a run that installs draws, with the two extension
-// steps in it only when --desktop was typed. The template is read before the
-// binary is replaced, because a release that cannot write an extension is a
-// release this run refuses while the gdoc on this machine is still untouched.
-func installSteps(desktop bool) []string {
-	if !desktop {
-		return []string{stepChecksums, stepDownload, stepVerify, stepReplace, stepReadBack}
+// steps in it only when --desktop was typed and the app step only when the
+// presence is on. The template is read before the binary is replaced, because
+// a release that cannot write an extension is a release this run refuses while
+// the gdoc on this machine is still untouched; the app is installed after it,
+// because the app is the thing a failure may be a warning about.
+//
+// The six recorded screens under testdata/screens are drawn from this list
+// with both false, so a step added to that case rewrites every one of them:
+// TestWithThePresenceOffAnUpdateIsTodaysUpdate states the two lists as
+// literals.
+func installSteps(desktop, app bool) []string {
+	steps := []string{stepChecksums, stepDownload, stepVerify}
+	if desktop {
+		steps = append(steps, stepTemplate)
 	}
-	return []string{stepChecksums, stepDownload, stepVerify, stepTemplate, stepReplace, stepReadBack, stepExtension}
+	steps = append(steps, stepReplace, stepReadBack)
+	if desktop {
+		steps = append(steps, stepExtension)
+	}
+	if app {
+		steps = append(steps, stepApp)
+	}
+	return steps
 }
 
 // releaseHere is the listed release that names the binary this machine runs,
@@ -398,52 +505,172 @@ func releaseHere(asked, stable, nightly update.Release, installed update.Version
 	return asked
 }
 
-// refreshExtension is --desktop on a run with nothing to install. The extension
-// names the binary that is here, so the template comes from the release that is
-// here: the zip is downloaded for that one file and no binary moves.
+// refreshHere is a run with nothing to install that still has something to
+// fetch: --desktop writes the extension of the gdoc that is here, and the
+// presence installs the app of it. Both come out of the one release that names
+// the binary on this machine, so the zip is downloaded once and no binary
+// moves.
 //
 // A run that found a release it did not install, which is a major it declined,
-// writes no extension. The template would name a version this machine does not
-// run, and not knowing never resolves to overwrite.
+// writes no extension and installs no app. The template would name a version
+// this machine does not run and the app would be another release's, and not
+// knowing never resolves to overwrite.
 //
-// TestDesktopWhenAlreadyNewestStillRefreshesTheExtension.
-func refreshExtension(ctx context.Context, reach plain, rel update.Release, installed update.Version, data updateData, warns []string, pr *progress) emit.Result {
-	if update.Compare(rel.Version, installed) != 0 {
+// TestDesktopWhenAlreadyNewestStillRefreshesTheExtension and
+// TestAnUpToDateRunWithThePresenceOnInstallsItFromTheReleaseHere.
+func refreshHere(ctx context.Context, reach plain, rel update.Release, installed update.Version, desktop, withApp bool, data updateData, warns []string, pr *progress) emit.Result {
+	app := false
+	if withApp {
+		var why string
+		app, why = appNeeded(rel, installed)
+		if why != "" {
+			warns = append(warns, why)
+		}
+	}
+	if desktop && update.Compare(rel.Version, installed) != 0 {
 		warns = append(warns, fmt.Sprintf("--desktop writes the extension of the gdoc that is installed, and this run installed nothing: %s is here and %s is what the release this run found holds, so Claude Desktop is as it was", installed, rel.Version))
 		return emit.Result{OK: true, Data: data, Warnings: reachWarnings(reach, warns)}
 	}
-	pr.Plan(stepChecksums, stepDownload, stepVerify, stepTemplate, stepExtension)
+	if !desktop && !app {
+		return emit.Result{OK: true, Data: data, Warnings: reachWarnings(reach, warns)}
+	}
+	pr.Plan(refreshSteps(desktop, app)...)
 	ctx, cancel := context.WithTimeout(ctx, downloadTimeout)
 	defer cancel()
-	template, err := readTemplate(ctx, reach, rel, pr)
+	got, err := readRelease(ctx, reach, rel, desktop, pr)
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: reachWarnings(reach, warns)}
 	}
-	data, warns = withExtension(template, rel.Version.String(), data, warns, pr)
+	if desktop {
+		data, warns = withExtension(got.template, rel.Version.String(), data, warns, pr)
+	}
+	if app {
+		data, warns = withPresence(got, rel, data, warns, pr)
+	}
 	return emit.Result{OK: true, Data: data, Warnings: reachWarnings(reach, warns)}
+}
+
+// refreshSteps is what a run that replaces no binary draws: the two reads and
+// the check, and then whichever of the extension and the app it came for.
+func refreshSteps(desktop, app bool) []string {
+	steps := []string{stepChecksums, stepDownload, stepVerify}
+	if desktop {
+		steps = append(steps, stepTemplate, stepExtension)
+	}
+	if app {
+		steps = append(steps, stepApp)
+	}
+	return steps
+}
+
+// appNeeded is whether a run with nothing to install goes and gets the app,
+// and the one sentence for a run that would have and could not.
+//
+// Three things have to be true. The release has to be the one the binary here
+// came from, because the app and the binary of one release are one build. The
+// app that is here has to be missing, or at another version: an app that
+// already says what the release says is nothing to download megabytes for.
+// And a version that cannot be read at all is treated as another version, so
+// a half-written bundle is replaced rather than left: internal/update refuses
+// anything at the destination that is not this app.
+//
+// TestAnUpToDateRunWithThePresenceOnInstallsItFromTheReleaseHere.
+func appNeeded(rel update.Release, installed update.Version) (bool, string) {
+	dest, err := presenceBundle()
+	if err != nil {
+		return false, err.Error()
+	}
+	if have, err := update.BundleVersion(dest); err == nil && have == strings.TrimPrefix(rel.Tag, "v") {
+		return false, ""
+	}
+	if update.Compare(rel.Version, installed) != 0 {
+		return false, fmt.Sprintf("the app comes out of the release the gdoc here came from, and this run installed nothing: %s is here and %s is what the release this run found holds, so %s is as it was", installed, rel.Version, tildePath(dest))
+	}
+	return true, ""
 }
 
 // installDecided carries out a decision to install, and fills in what the
 // file at the path is afterwards.
-func installDecided(ctx context.Context, reach plain, chosen update.Release, desktop bool, data updateData, warns []string, pr *progress) emit.Result {
+func installDecided(ctx context.Context, reach plain, chosen update.Release, desktop, withApp bool, data updateData, warns []string, pr *progress) emit.Result {
 	// Past here something is replaced, so the action stops being true until it
 	// is: a run that fails on the download says what it was taking and claims
 	// no action at all.
 	data.Action = ""
-	res, template, err := install(ctx, reach, chosen, data.Path, desktop, pr)
+	got, err := install(ctx, reach, chosen, data.Path, desktop, pr)
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: reachWarnings(reach, warns)}
 	}
 	data.Action = string(update.Updated)
 	data.Verified = true
-	data.SHA256 = res.Sum
-	data.Previous = res.Previous
+	data.SHA256 = got.res.Sum
+	data.Previous = got.res.Previous
 	if desktop {
-		data, warns = withExtension(template, chosen.Version.String(), data, warns, pr)
-	} else if extensionChanged(template, data.Path, chosen.Version.String()) {
+		data, warns = withExtension(got.template, chosen.Version.String(), data, warns, pr)
+	} else if extensionChanged(got.template, data.Path, chosen.Version.String()) {
 		warns = append(warns, hintLine())
 	}
+	if withApp {
+		data, warns = withPresence(got, chosen, data, warns, pr)
+	}
 	return emit.Result{OK: true, Data: data, Warnings: reachWarnings(reach, warns)}
+}
+
+// withPresence installs the menu bar app out of the same verified zip the
+// binary came from, as one drawn step.
+//
+// Everything that goes wrong here is a warning rather than a refusal, as it is
+// in withExtension, and for a sharper reason: the binary has already been
+// replaced by the time this runs, and gdoc never takes a binary back because a
+// folder beside it did not land. So the warning names both paths, the app and
+// the binary, and the two may sit at different versions until the next run.
+// The app is what says so, because it reads its own plist.
+//
+// Nothing here opens the app. A first install says the one thing a person has
+// to go and do and leaves them to do it, which is why withExtension is still
+// the only caller of runProgram:
+// TestTheOneProgramOpensOnlyTheExtension in go/boundary.
+//
+// TestAPresenceFailureIsAWarningNamingBothPathsAndTheBinaryIsUpdated and
+// TestTheResultSaysToOpenTheAppOnce.
+func withPresence(got fetched, rel update.Release, data updateData, warns []string, pr *progress) (updateData, []string) {
+	dest, err := presenceBundle()
+	if err != nil {
+		return data, append(warns, err.Error())
+	}
+	var res update.BundleResult
+	err = pr.Do(stepApp, tildePath(dest), func() (string, error) {
+		var err error
+		res, err = update.ApplyBundle(got.archive, got.sums, rel.AssetName, presenceInZip, dest)
+		if err != nil {
+			return "", fmt.Errorf("%v. The gdoc at %s is the release this run installed, and it is not undone, so %s is the app of an earlier one until a later run installs it", err, tildePath(data.Path), tildePath(dest))
+		}
+		if res.Previous == "" {
+			return "open " + tildePath(dest) + " to start it", nil
+		}
+		return joinDetail(tildePath(dest), "the one that was there kept beside it"), nil
+	})
+	if err != nil {
+		return data, append(warns, err.Error())
+	}
+	data.Presence = dest
+	data.PresenceVersion = res.Version
+	data.PresenceSHA256 = res.TreeSum
+	data.PresencePrevious = res.Previous
+	return data, warns
+}
+
+// fetched is what one run took off a release: the zip and the checksum file it
+// was verified against, the Claude Desktop template out of it, and what
+// replacing the binary left on disk.
+//
+// The zip is kept because the app comes out of the same verified bytes the
+// binary did, after the binary landed. Downloading it a second time would
+// mean two zips deciding one run.
+type fetched struct {
+	archive  []byte
+	sums     []byte
+	template []byte
+	res      update.Result
 }
 
 // withExtension writes the extension and hands it to Claude Desktop, as one
@@ -499,13 +726,16 @@ func withExtension(template []byte, version string, data updateData, warns []str
 // The read back is inside Apply, so a read back that fails is drawn on the
 // replace step, and the read back step is drawn only once there is a hash.
 //
-// The second return is the Claude Desktop manifest template out of the same
-// verified zip, and it is read before the binary is replaced. With --desktop a
-// release that carries none is refused right there, while the gdoc on this
-// machine is still the gdoc that was here. Without it the template is read for
-// the comparison the hint rests on, and a release that carries none is no
-// hint and no trouble at all.
-func install(ctx context.Context, reach plain, rel update.Release, path string, desktop bool, pr *progress) (update.Result, []byte, error) {
+// The Claude Desktop manifest template comes out of the same verified zip, and
+// it is read before the binary is replaced. With --desktop a release that
+// carries none is refused right there, while the gdoc on this machine is still
+// the gdoc that was here. Without it the template is read for the comparison
+// the hint rests on, and a release that carries none is no hint and no trouble
+// at all.
+//
+// The zip itself is answered too, for the app that is installed out of it
+// after the binary landed.
+func install(ctx context.Context, reach plain, rel update.Release, path string, desktop bool, pr *progress) (fetched, error) {
 	ctx, cancel := context.WithTimeout(ctx, downloadTimeout)
 	defer cancel()
 	sumsName := update.ChecksumsName(rel.Tag)
@@ -561,28 +791,29 @@ func install(ctx context.Context, reach plain, rel update.Release, path string, 
 		// what a plain update is.
 		if s.name == stepTemplate && !desktop {
 			if _, err := s.run(); err != nil {
-				return update.Result{}, nil, err
+				return fetched{}, err
 			}
 			continue
 		}
 		if err := pr.Do(s.name, s.detail, s.run); err != nil {
-			return update.Result{}, nil, err
+			return fetched{}, err
 		}
 	}
 	pr.Start(stepReadBack, "")
 	pr.Done("sha256 " + shortSum(res.Sum))
-	return res, template, nil
+	return fetched{archive: archive, sums: sums, template: template, res: res}, nil
 }
 
-// readTemplate is the Claude Desktop manifest template out of a release this
-// run is not installing anything from. It is the two reads and the check with
-// nothing after them: a refresh writes the extension and never a binary.
+// readRelease is a release read by a run that is installing no binary from it:
+// the two reads and the check, and the Claude Desktop template where the run
+// came for one. A refresh writes the extension or the app and never a binary.
 //
-// TestDesktopWhenAlreadyNewestStillRefreshesTheExtension.
-func readTemplate(ctx context.Context, reach plain, rel update.Release, pr *progress) ([]byte, error) {
+// TestDesktopWhenAlreadyNewestStillRefreshesTheExtension and
+// TestAnUpToDateRunWithThePresenceOnInstallsItFromTheReleaseHere.
+func readRelease(ctx context.Context, reach plain, rel update.Release, desktop bool, pr *progress) (fetched, error) {
 	sumsName := update.ChecksumsName(rel.Tag)
 	var sums, archive, template []byte
-	for _, s := range []struct {
+	steps := []struct {
 		name, detail string
 		run          func() (string, error)
 	}{
@@ -603,19 +834,25 @@ func readTemplate(ctx context.Context, reach plain, rel update.Release, pr *prog
 		{stepVerify, "", func() (string, error) {
 			return "matches " + sumsName, update.Verify(archive, sums, rel.AssetName)
 		}},
-		{stepTemplate, templateInZip, func() (string, error) {
+	}
+	if desktop {
+		steps = append(steps, struct {
+			name, detail string
+			run          func() (string, error)
+		}{stepTemplate, templateInZip, func() (string, error) {
 			var err error
 			if template, err = update.FileFrom(archive, sums, rel.AssetName, templateInZip); err != nil {
 				return "", fmt.Errorf("%v, so no extension was written. %s is packed into every release from v2.9.0 on: install a newer release, or drop --desktop", err, templateInZip)
 			}
 			return "", nil
-		}},
-	} {
+		}})
+	}
+	for _, s := range steps {
 		if err := pr.Do(s.name, s.detail, s.run); err != nil {
-			return nil, err
+			return fetched{}, err
 		}
 	}
-	return template, nil
+	return fetched{archive: archive, sums: sums, template: template}, nil
 }
 
 // chosenDetail is the choose step's line: the release, the channel and the

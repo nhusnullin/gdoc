@@ -103,14 +103,14 @@ func TestTheUpdateScreensAreTheirRecordedBytes(t *testing.T) {
 	}{
 		{name: "update-running", draw: func(t *testing.T, p *progress) {
 			readAndChoose(p)
-			p.Plan(installSteps(false)...)
+			p.Plan(installSteps(false, false)...)
 			p.Start(stepChecksums, screenSums)
 			p.Done("")
 			p.Start(stepDownload, screenAsset+", 6.1 MB")
 		}},
 		{name: "update-installed", draw: func(t *testing.T, p *progress) {
 			readAndChoose(p)
-			p.Plan(installSteps(false)...)
+			p.Plan(installSteps(false, false)...)
 			drawInstall(p, "", nil)
 			p.Finish(resultLines(emit.Result{OK: true, Data: installedData()}, true)...)
 		}},
@@ -134,13 +134,13 @@ func TestTheUpdateScreensAreTheirRecordedBytes(t *testing.T) {
 		}},
 		{name: "update-failed", draw: func(t *testing.T, p *progress) {
 			readAndChoose(p)
-			p.Plan(installSteps(false)...)
+			p.Plan(installSteps(false, false)...)
 			drawInstall(p, stepVerify, errors.New(screenAsset+" hashes to "+strings.Repeat("a", 64)+" and the release said "+strings.Repeat("b", 64)+", so it is not the file the release published"))
 			p.Finish(resultLines(emit.Result{OK: false, Error: "it is not the file the release published"}, true)...)
 		}},
 		{name: "update-extension", draw: func(t *testing.T, p *progress) {
 			readAndChoose(p)
-			p.Plan(installSteps(true)...)
+			p.Plan(installSteps(true, false)...)
 			p.Start(stepChecksums, screenSums)
 			p.Done("")
 			p.Start(stepDownload, screenAsset+", 6.1 MB")

@@ -755,3 +755,25 @@ func TestTheReleasesTagIsReadOutOfTheAssetName(t *testing.T) {
 		}
 	}
 }
+
+// The version of an app already on disk is read off its own plist, which is
+// what a run with nothing to install asks before it downloads anything. A
+// path with no app there is an error naming the file it looked for.
+func TestTheVersionOfAnInstalledBundleIsReadOffItsPlist(t *testing.T) {
+	dest := filepath.Join(t.TempDir(), "GdocPresence.app")
+	writeBundleAt(t, dest, bundleIdentifier, "2.12.1", "the app")
+
+	got, err := BundleVersion(dest)
+	if err != nil {
+		t.Fatalf("the app at %s does not say what it is: %v", dest, err)
+	}
+	if got != "2.12.1" {
+		t.Errorf("the app says %q, and its plist is stamped 2.12.1", got)
+	}
+	missing := filepath.Join(t.TempDir(), "GdocPresence.app")
+	if _, err := BundleVersion(missing); err == nil {
+		t.Errorf("there is no app at %s, and reading its version answered one", missing)
+	} else if !strings.Contains(err.Error(), filepath.Join(missing, plistInBundle)) {
+		t.Errorf("the refusal must name the file it looked for: %v", err)
+	}
+}

@@ -304,11 +304,11 @@ every box in it is ticked and its commit is on the branch.
 - Modify: `go/cmd/gdoc/update.go`, `go/cmd/gdoc/update_test.go`, `go/cmd/gdoc/updatescreen_test.go`
 - Modify: `go/boundary/boundary_test.go`
 
-- [ ] pins, passing before and after: `TestWithThePresenceOffAnUpdateIsTodaysUpdate`
+- [x] pins, passing before and after: `TestWithThePresenceOffAnUpdateIsTodaysUpdate`
       (envelope, stderr, the screen goldens, and the disk, byte for byte),
       `TestTheOneProgramOpensOnlyTheExtension` in `go/boundary`
       (`withExtension` is the only caller of `runProgram`)
-- [ ] failing first: `TestAPresenceFailureIsAWarningNamingBothPathsAndTheBinaryIsUpdated`,
+- [x] failing first: `TestAPresenceFailureIsAWarningNamingBothPathsAndTheBinaryIsUpdated`,
       `TestAnUpToDateRunWithThePresenceOnInstallsItFromTheReleaseHere`,
       `TestRollbackWithThePresenceOnSwapsBoth`,
       `TestRollbackWithNoPreviousAppWarnsAndKeepsIt`,
@@ -316,7 +316,7 @@ every box in it is ticked and its commit is on the branch.
       `TestCheckNeverInstallsTheApp`, `TestTheResultSaysToOpenTheAppOnce`
       (the step line names `open ~/Applications/GdocPresence.app` on a first
       install only)
-- [ ] `updateData` gains `presence`, `presence_version`, `presence_sha256`,
+- [x] `updateData` gains `presence`, `presence_version`, `presence_sha256`,
       `presence_previous`, all omitempty; the bundle path in the zip and the
       destination behind variables like `executable`; the install runs the
       binary's `Apply`, then `ApplyBundle`, and a bundle failure is a warning
@@ -324,7 +324,7 @@ every box in it is ticked and its commit is on the branch.
       the installed binary is that release, the app is missing or at another
       version, and `--check` was not given; `runRollback` swaps the bundle
       after the binary when a previous exists and warns otherwise
-- [ ] `make test`, with every update golden unchanged
+- [x] `make test`, with every update golden unchanged
 
 ### Task 7: the Swift package: the core, the fold, the tail, the shared fixture
 

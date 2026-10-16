@@ -60,6 +60,19 @@ type BundleResult struct {
 // where RollbackBundle looks for it.
 func BundlePreviousPath(dest string) string { return dest + ".previous" }
 
+// BundleVersion is what the app at a path says it is, out of its own
+// Info.plist, and an error where there is no app there or its plist does not
+// read.
+//
+// It is here rather than in the command because this package is the one room
+// that knows what a plist is, and the caller asks one question of it: whether
+// the app on this machine is the app the release holds. A run that cannot
+// tell installs, and ApplyBundle then refuses anything at the destination
+// that is not this app.
+//
+// TestTheVersionOfAnInstalledBundleIsReadOffItsPlist.
+func BundleVersion(bundle string) (string, error) { return versionAt(bundle) }
+
 // ApplyBundle verifies the zip, takes the app bundle out of it and puts it at
 // dest, keeping whatever was there as BundlePreviousPath(dest).
 //

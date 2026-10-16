@@ -703,6 +703,52 @@
 // chat sets it in settings.yaml, which the session reads at its start like any
 // other run.
 //
+// # The presence app is installed beside the binary, and never started
+//
+// With the presence on, `gdoc update` installs the menu bar app too, out of
+// the same verified zip the binary came from: the darwin zips carry it at
+// presence/GdocPresence.app and it lands at ~/Applications/GdocPresence.app,
+// with the app that was there kept as GdocPresence.app.previous. The paths are
+// behind two variables for the reason executable is, so no test touches the
+// ~/Applications of the machine it runs on. The whole of the extraction is
+// internal/update's ApplyBundle, and the rules it refuses by are its doc.go's.
+//
+// Off the flag nothing of this happens. The object a caller reads is the
+// object it always was, the steps on stderr are the steps they always were,
+// and no app is installed, refreshed or uninstalled:
+// TestWithThePresenceOffAnUpdateIsTodaysUpdate, which also states the two
+// step lists the recorded screens are drawn from as literals.
+//
+// Every app failure is a warning naming both paths, never a refusal. The
+// binary has landed by the time the app is touched, and gdoc does not take a
+// binary back because a folder beside it did not arrive, so the two may sit
+// at different versions until a later run and the app is what says so:
+// TestAPresenceFailureIsAWarningNamingBothPathsAndTheBinaryIsUpdated. The
+// four fields it reports, `presence`, `presence_version`, `presence_sha256`
+// and `presence_previous`, are all omitempty, so a run that reached no app
+// says nothing about one.
+//
+// A run with nothing newer still installs the app, out of the release the
+// binary here came from, where the app is missing or at another version. It is
+// how a person who has just turned the flag on gets the app without waiting
+// for the next release, and it costs one download rather than a second one:
+// TestAnUpToDateRunWithThePresenceOnInstallsItFromTheReleaseHere. --check
+// installs nothing, the app included: TestCheckNeverInstallsTheApp. A platform
+// with no app gets one warning naming itself:
+// TestThePresenceOffMacOSWritesNothingAndNamesThePlatform.
+//
+// --rollback swaps the app after the binary, each swap its own involution, and
+// a machine with no earlier app keeps the one it has and is told so:
+// TestRollbackWithThePresenceOnSwapsBoth and
+// TestRollbackWithNoPreviousAppWarnsAndKeepsIt.
+//
+// gdoc never launches the app. The first launch is the person, so a first
+// install says `open ~/Applications/GdocPresence.app` on its step line and a
+// refresh says nothing of the sort, because the app that is running shows its
+// own row about having been updated: TestTheResultSaysToOpenTheAppOnce.
+// withExtension stays the one caller of runProgram, which go/boundary's
+// TestTheOneProgramOpensOnlyTheExtension holds by reading the syntax tree.
+//
 // # The update draws its steps on stderr
 //
 // A person who types `gdoc update` sees what it is doing while it does it: a
