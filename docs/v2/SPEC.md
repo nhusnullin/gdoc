@@ -727,9 +727,12 @@ machine.
 2026-09-16. A tag builds it: the four checks every push runs, then `make dist`
 with the client secret from a repository secret, then one zip per line of
 `release/platforms`, named `gdoc-<tag>-<platform>.zip`, and one
-`SHA256SUMS-<tag>` over all of them. A zip carries six things: the binary, the
-user `README.md`, `install.sh`, `skills/`, `example/` and the Claude Desktop
-extension template under `mcpb/`. `release/platforms` is
+`SHA256SUMS-<tag>` over all of them. A zip carries seven things on darwin: the
+binary, the user `README.md`, `install.sh`, `skills/`, `example/`, the Claude
+Desktop extension template under `mcpb/`, and the presence app at
+`presence/GdocPresence.app`, which a second job on a macOS image builds and the
+publishing job waits for. Every other platform carries the first six.
+`release/platforms` is
 `darwin-arm64` and `darwin-amd64`, and Windows joins it under its own tag once a
 colleague has run its checklist.
 
@@ -751,8 +754,10 @@ skills and Claude Desktop all run the same file, and `gdoc update` updates all
 three. The extension travels as a template in the zip, `mcpb/manifest.json`,
 with two placeholders for the path and the version, because the settings live in
 Claude Desktop's own form rather than in a file a person edits. macOS only, and
-the one program gdoc runs is `/usr/bin/open` on the file it has just written.
-Added 2026-10-03, DECISIONS.md.
+the one program gdoc runs is `/usr/bin/open` on the extension file it has just
+written, and on nothing else: the presence app is never one of them, so its
+first launch is the person's. Added 2026-10-03, DECISIONS.md, the app
+2026-10-17.
 
 **The skills travel as a Claude Code plugin.** This repository carries
 `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`, so it is

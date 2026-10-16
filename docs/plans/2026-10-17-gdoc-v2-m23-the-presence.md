@@ -441,7 +441,7 @@ every box in it is ticked and its commit is on the branch.
 - Modify: `CLAUDE.md`, `docs/v2/SPEC.md`
 - Create: `docs/guide/presence.md`
 
-- [ ] `CLAUDE.md`: `presence/` and `go/internal/presence/` in the table, one
+- [x] `CLAUDE.md`: `presence/` and `go/internal/presence/` in the table, one
       new invariant (the presence file is the one file gdoc appends to,
       written only under the setting, never read by the binary, carrying only
       the listed fields), the existing "nothing runs an external program"
@@ -454,17 +454,17 @@ every box in it is ticked and its commit is on the branch.
       `.ralphex/board/README.md`, and the "Skills are linked" invariant to
       five. The file stays at or under 300; `TestTheTaskMapNamesFilesThatExist`
       green
-- [ ] `docs/v2/SPEC.md:719` says the zip carries seven things on darwin, the
+- [x] `docs/v2/SPEC.md:719` says the zip carries seven things on darwin, the
       app the seventh; `:743` says the app is never one of them, gdoc runs
       the one program on the extension and nothing else
-- [ ] `docs/guide/presence.md`: what the glyph means, the setting, the
+- [x] `docs/guide/presence.md`: what the glyph means, the setting, the
       argument, the first `open`, the file and what is never in it, local
       disk only, the bootstrap order (update to the release that knows the
       flag, set it, run `gdoc update` again) and the rollback trap, what
       `spctl` says about an ad-hoc bundle and why that is expected, in reader
       words. No README line: the flag is experimental and the README is at
       its ceiling
-- [ ] `make test`, because `go/boundary` reads these documents
+- [x] `make test`, because `go/boundary` reads these documents
 
 ### Task 11: the measurements
 
