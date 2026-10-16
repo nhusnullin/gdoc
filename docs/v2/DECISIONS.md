@@ -45,7 +45,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-08-29 | Everything gdoc writes opens with 🤖 | superseded 2026-10-04 (the mark is a setting, ⁘ by default and possibly empty, and 🤖 stays a known mark; why a marker is needed holds) |
 | 2026-08-29 | gdoc reads back what it proposed, before saying it worked | holds |
 | 2026-08-29 | The preview may vanish, and the risk is accepted. Loudly | superseded 2026-10-02 (suggestions are generally available; a silent edit is still loud, through the read-back and the stop) |
-| 2026-08-29 | The guard owns the transport, and every id carries a write level. Widened 2026-09-09 (M7 splits) by a third level, `LevelInPlace` | holds |
+| 2026-08-29 | The guard owns the transport, and every id carries a write level. Widened 2026-09-09 (M7 splits) by a third level, `LevelInPlace`, and 2026-10-17 by a third door, one asset that is not a document | holds |
 | 2026-08-29 | Publish runs once. Everything after travels as suggestions | superseded 2026-09-19 (a note may be published more than once, and each publish is a new document) |
 | 2026-08-29 | Live review is a session, not a service | holds |
 | 2026-09-07 | A replace proposal cannot be fully withdrawn by a delete | holds |
@@ -62,7 +62,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-09-11 | `restyle --new` is not built | holds |
 | 2026-09-16 | Help is an answer, completion is a written file, and two skills learn the tool from the tool | superseded 2026-10-03 (its "what was rejected: an MCP server inside the binary" paragraph only; everything else in the entry holds) |
 | 2026-09-16 | M8 is deferred to the backlog, and the release goes next | holds |
-| 2026-09-16 | The release: `x.y.z` with a nightly, an updater on demand with one read-only guard door, skills as a Claude Code plugin | superseded 2026-09-18 (the "no check, no stamp file" clause only: `help` checks once a day; everything else in the entry holds) |
+| 2026-09-16 | The release: `x.y.z` with a nightly, an updater on demand with one read-only guard door, skills as a Claude Code plugin | superseded 2026-09-18 (the "no check, no stamp file" clause only: `help` checks once a day) and 2026-10-17 (the assessment that the Altery logo is public: the tree carries none from then on); everything else in the entry holds |
 | 2026-09-16 | The source repository is public, and the client secret is injected at build time | holds |
 | 2026-09-16 | What the update door actually reaches: two asset hosts, one bigger page, and a version that is only ever a tag | holds |
 | 2026-09-17 | There is no rc. The nightly is the pre-release channel | holds |
@@ -93,6 +93,8 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-10-15 | What the M18 review closed: a label defined twice, a heading no line scan sees, a mark inside a footnote, and the two questions the parse answers rather than the line | superseded 2026-10-16 (the span paragraphs only: the attribute counted against the spans the parse formed, and the words a span cannot hold; everything else in the entry holds) |
 | 2026-10-16 | `---` is a page break | holds |
 | 2026-10-16 | Pencil is a comment: `<!-- words -->` or `%% words %%`, and the span goes | holds |
+| 2026-10-17 | The logo lives in Drive, not in the tree | holds |
+| 2026-10-17 | The presence: gdoc appends one fact line per run to a file it never reads, and a separate menu bar app reads it | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -4703,3 +4705,228 @@ binary.
 `TestHelpMarksPrintsBothPencilSpellings`; `internal/live`'s
 `TestLiveRoundTrip`, whose pencil pair changes; and `go/boundary`'s
 `TestThePublishingPageSaysAPencilIsAComment`.
+
+## 2026-10-17. The logo lives in Drive, not in the tree.
+
+Nail's decision, taken on 2026-10-16 in a brainstorm that put the question to
+three readers: a Google Workspace API researcher, a UK brand counsel, and
+Codex for a fresh read of the code against the principles. The repository is
+public since 2026-09-16, and the 2026-10-02 entry took the firm's domain out
+of the tree. The firm's logo stayed: a base64 PNG in `house.yaml`, embedded in
+every release, written into every document gdoc builds, including one built
+by a stranger who installs the tool and never signs in. From this entry the
+tree carries no logo. `house.yaml` names the firm's logo by the id of one file
+in the firm's Shared Drive, and a run gets the bytes only when the account it
+signed in as can read that file. Supersedes one assessment in the 2026-09-16
+release entry, "what is public is the Altery logo", and nothing else in it.
+
+**What was found first.** No Google API returns a Workspace organisation's
+logo. The Admin console logo is upload-only, Directory `customers.get` returns
+nine fields and none is a picture, Cloud Identity has no branding resource,
+and the template gallery cannot be listed. The only two readable places are a
+file in Drive by id, under the `drive` scope the token already carries, and
+an inline image inside a Doc, whose `contentUri` lives thirty minutes on a
+host the guard refuses. The OAuth client is User type Internal, so only an
+account in the firm's Workspace can sign in at all: `publish` and `restyle`
+were gated before this entry, and what was exposed is `build`, which writes a
+branded docx with no sign-in, and the bytes themselves in `house.yaml`, three
+test docx and every release. The legal risk of the public PNG is low, a logo
+on the firm's website is already public; the concern is a stranger producing
+a document that looks like the firm's.
+
+**What was rejected.** An identity gate, reading the signed-in account through
+`AllowAccountRead` and comparing its domain to a configured value: the logo
+would stay public in the repository, and identity would become a gate, which
+no invariant lets it be. The whole house file in Drive: the sizes and the
+styles are the generator's own business, a firm that forks gdoc edits one
+file in the tree, and it is the picture that is the firm's. The house file in
+the hub: it ties the brand to one vault, and Nail wants the same file to serve
+a colleague without one. A Drive folder found by listing or by name:
+`files.list` stays refused, and anybody who shares a file of the right name
+with a colleague would brand their documents. An id in `settings.yaml`
+written by the installer: every install would depend on one line on the
+wiki being right. A fetch from `login`, from the daily release check, from
+the installer or from a command of its own: `login` is the token and nothing
+else, the daily check carries no credential on purpose, the installer has no
+token, and a command of its own is a line on the wiki somebody forgets.
+
+**`house.yaml` stays, and names the logo by id.** `logo:` keeps `mime`, `px`,
+the sizes and the anchor and carries exactly one of `drive`, a Drive file id,
+and `base64`, the bytes. Both or neither is refused naming the key. The
+embedded file carries `drive`. `base64` stays for a test house and for a firm
+that prefers embedding, so `--house <file>` is the override and there is no
+setting. `internal/house` still reaches nothing: it checks the id's shape, and
+the PNG check moves to the room that has the bytes.
+
+**One room, `internal/asset`, and one grant, `AllowAsset`.** The room reads
+one Drive file by id as bytes, checks them against what the house says of
+them, and caches them. It is handed a client and never builds one, and it
+knows no logo as such, so test data kept in the same Drive later is the same
+call with another id. The grant is the seventh of the shape the six before it
+have: one id for one run, dying with the process, nowhere written down. It
+admits `GET /drive/v3/files/{id}` with `alt=media` and `supportsAllDrives`,
+both already in the guard's parameter list for `files.get`, and nothing else
+on that id, no metadata read, no Docs read, no patch, no copy. It is a third
+door into the reachable set, for one object that is not a document, and the
+set cannot grow through it because a PNG carries no id.
+
+**Fetched at render, through a cache, once a day.** `build` and `publish` are
+the two commands that write a docx, and they are the two that read the logo.
+Each looks in the config dir beside the token, at `assets/<id>` with a stamp
+in `internal/lastcheck`'s shape; a stamp older than a day, missing or
+unreadable makes one request, a fresh one makes none. Six moments were
+weighed, and this one costs one five-kilobyte read a day across both
+commands, keeps `build` as fast as it was on every other day, and is the same
+mechanism the release check already uses, so nothing new is kept on disk
+that gdoc does not already keep. `export`, `restyle` and `help marks` read the
+house file for other reasons and never touch the room, so `read` still makes
+no request. The invariant that two commands ask unasked is untouched: the
+request here is asked, by the house file the run named.
+
+**Not knowing never resolves to an unbranded document.** Offline, refused or
+timed out, the cached bytes are used and the envelope says so, with their age
+and the reason. No token and a cache is the same. No token and no cache
+refuses, naming `gdoc login`: a stranger's `build` on the embedded house
+refuses, which is the point, and a colleague has a token before the first
+build because every skill asks for one. Bytes that come back and are not a
+PNG of the stated size refuse the run even when a good cache exists, because
+the firm's file is wrong and the refusal is the only message that reaches
+whoever can fix it. A cache that cannot be written still builds the document
+and says the cache was not saved. The envelope carries a `logo` block of
+facts, `source` as `drive`, `cache` or `file`, with the id and the time or the
+age and the reason, and judges none of them; in chat the person hears about
+the logo only when it came from the cache.
+
+**What this strains.** Principle 1. The logo no longer travels with the
+binary. It travels with the firm's sign-in, is cached beside the token, and a
+machine that has never signed in builds nothing in the firm's style. Nail
+accepted that on 2026-10-16. History and the 28 tags before this entry are
+not rewritten: every old binary carries the old logo, and the removal stops
+gdoc shipping it from now on rather than recalling what is out. The README
+says in one line that the firm's logo and marks are not licensed with the
+code; the repository has no licence file, and adding one is a decision of its
+own, not taken here.
+
+**The tree carries no logo.** The three test docx, the drift master and the
+two live probes, carry a neutral placeholder PNG of the same 195 by 97 pixels
+in place of the firm's, and drift's seven logo items still measure because
+they read geometry and never a pixel. A boundary test holds the real PNG's
+SHA-256 the way the domain test holds the domain's, walks every tracked file
+and inside every docx, and fails on a match.
+
+**What is not built.** A folder of assets found by listing. A settings
+override for the id. A metadata read for the file's revision. A rewrite of
+history. Any second caller of the grant.
+
+**Tests.** `internal/house`'s `TestALogoNamesExactlyOneOfDriveAndBase64`,
+`TestADriveIdThatIsNotOneIsRefusedByName`, `TestADriveLogoCarriesNoBytes` and
+`TestTheEmbeddedLogoIsADriveIdAndCarriesNoBytes`; `internal/guard`'s
+`TestTheAssetGrantAdmitsOneMediaReadAndNothingElse`,
+`TestWithoutTheAssetGrantTheReadIsRefused`, `TestTheAssetGrantAdmitsNoDocument`
+and `TestTheAssetGrantDiesWithThePolicy`; `internal/asset`'s
+`TestAStaleStampFetchesOnce`, `TestAFreshStampMakesNoRequest`,
+`TestNoTokenAndACacheUsesTheCache`, `TestNoTokenAndNoCacheRefusesNamingTheLogin`,
+`TestARefusedReadUsesTheCacheAndNamesTheReason`,
+`TestABadFileRefusesEvenWithAGoodCache`, `TestACacheWriteFailureStillBuilds`
+and `TestTheCacheIsWrittenAtomically`; `cmd/gdoc`'s
+`TestBuildReportsTheLogoSource`, `TestPublishReportsTheLogoSource` and
+`TestBuildWithNoTokenAndNoCacheRefusesNamingTheLogin`; `go/boundary`'s
+`TestTheLogoIsNotInTheTree`, `TestTheLogoScanFindsAPlantedPNG`,
+`TestOnlyBuildAndPublishCallTheAssetRoom` and
+`TestReadExportRestyleAndHelpNeverReachTheAssetRoom`; and `internal/live`'s
+`TestPublishCarriesTheHouseLogo`, under `GDOC_LIVE_WRITE`. The specification
+is `docs/plans/2026-10-17-gdoc-v2-m22-the-logo-lives-in-drive-spec.md` and
+the task list is beside it.
+
+## 2026-10-17. The presence: gdoc appends one fact line per run to a file it never reads, and a separate menu bar app reads it.
+
+Nail's brief, given the night of 2026-10-17 and designed the same night by
+four seats in parallel, with the project manager resolving their
+disagreements and Nail not yet having reviewed the result
+(`docs/design/2026-10-17-presence-mechanism.md` lists what he is most likely
+to reverse). The brief, in meaning: gdoc must not change in kind; it may
+report what it is doing in real time, and the engineers choose how. The
+presence is a separate application whose changes never touch gdoc. `gdoc
+update` updates it too. It is behind a settings flag an argument can set, so
+only whoever sets it has it. Main gdoc stays backward compatible. Serves
+principle 4: a live review is hours of silence in a chat, and one glance at
+the menu bar now answers "is it alive" and "is it waiting on me". Strains
+principle 2 and principle 1, and the specification's gate names both.
+
+**The channel.** One append-only JSONL file per month,
+`presence/<yyyy>-<mm>.jsonl` in the config directory, 0700 and 0600 like the
+token. Each event is one open with `O_APPEND`, one write of one line, one
+close. The binary writes it at `dispatch`, start and end of every command
+that names a document plus `update` and `auth login`, and at the holds in
+`gdoc mcp`: held, released, expired. It never reads it: the package exports
+no reader, `O_APPEND` appears in no other room, and no hold rule, receipt or
+cursor depends on a line in it, because the day a hold rule read the log, any
+local process could append "gdoc wrote reply X" and a stranger's marked remark
+would pass as gdoc's own. Rejected, each independently by more than one seat:
+a unix socket (two-way at the OS level, loses every event while the app is
+closed, a dial outside the guard), a named pipe (blocks or fails with no
+reader, no history), stderr or terminal sequences (land in Claude Code
+transcripts, never reach the app), distributed notifications (cgo, and the
+build is CGO off), and a `gdoc status` command (turns the binary into a
+reader of its own record).
+
+**The event is a projection, never the envelope.** Product decision 7 of the
+design pass said "append the same envelope"; that would write every document
+body `read` prints and every comment word onto disk beside the token, and
+all four seats refused it. The event is a fixed allowlisted struct, schema
+version 1: the instant, the pid and the process start, a call counter, the
+event kind, the command, terminal or chat, the document id, at the end the
+title, `ok` and `verified`, and for a hold its id, its rule and when it runs
+out. Never a document word but the title, never a quote, a hold's value or
+text, an error sentence, a path, the account, the token, argv, the cursor,
+the mark, or a judging word. A canary test holds the line. The title is the
+one document word, capped at 200 runes, because without it the app would run
+`gdoc read` to fill a row, which pulls a whole body into a second process.
+The binary keeps this and last month's file and removes older ones when it
+writes, which reverses product decision 8 of the design pass ("the app never
+prunes"); a forever history of titles would become the most sensitive
+readable thing in the config directory once the token moves to the Keychain.
+
+**The flag.** `presence: true` in `settings.yaml` and `--presence true` on
+the line, a third setting flag beside `--mark` and `--config`, the argument
+over the file, a setting and never an identity check. It is in the table
+marked experimental: no help screen line, no completion line, and `help
+--json` carries it only when it is on, so the goldens stay byte for byte for a
+colleague. Off is today's bytes: no directory is created, no envelope
+changes, `gdoc update` is unchanged, and the app is never uninstalled.
+Settings are decoded strictly, so a binary older than this key refuses a file
+that carries it: the flag ships one release before anyone sets it, and the
+guide says so.
+
+**The delivery.** The app travels inside both darwin zips at
+`presence/GdocPresence.app/`, one universal bundle under the one
+`SHA256SUMS`, built by a second job in `release.yml` on a macOS image, which
+the ubuntu job needs; the platforms file stays the one list. A broken Swift
+build fails the release rather than shipping a split version. With the flag
+on, `gdoc update` installs the bundle at `~/Applications/GdocPresence.app`
+out of the verified zip, by a stage, a read-back and a rename swap after the
+binary's own three renames, keeping the previous bundle; every app failure
+is a warning and never undoes the binary, and rollback swaps both. gdoc
+never launches the app: the first launch is the person, and after an update
+the app sees its on-disk version differ and relaunches itself. The one
+external program stays the one, pinned by a new test on its one caller.
+Gatekeeper is not asked about a bundle Go wrote, because Go sets no
+quarantine attribute; measured in part, and the plan carries the rest into
+MEASURED.md with Nail confirming the method.
+
+**The app.** Native Swift in its own package at `presence/`, an AppKit
+status item and panel with SwiftUI content, macOS 14 minimum. It tails the
+file, decodes strictly, treats every line as forgeable data, and runs
+exactly one gdoc command, `auth status`, as a fixed argv at an absolute path.
+No flag, variable or subcommand exists for the app alone, and gdoc never
+behaves differently because the app is the caller. No channel runs from the
+app into `gdoc mcp`: the hold card says "Open chat" and nothing else, and the
+panel never says "Release", because in the binary that word means send. The
+first milestone shows a ring, the mark, a pause glyph or nothing, with NOW
+and TODAY; the panel the design files draw is the next milestone.
+
+**What this reverses or defers.** "The wait writes no file of its own" in
+`comments/doc.go` stays literally true, because the hook is in `dispatch`,
+and gains a pointer. Product decisions 8, 31, 47 and 48 of the design pass
+are reversed or deferred as the mechanism document says. `gdoc auth logout`
+waits.
