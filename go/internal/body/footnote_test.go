@@ -525,7 +525,9 @@ func TestAFootnoteMarkInsideAPicturesAltTextIsRefusedByLine(t *testing.T) {
 // The line is the block's own and not the definition's, so a note written over
 // several lines sends the author to the line they have to change. A picture is
 // an inline and is named by the line of the paragraph it sits in, which in the
-// one-line case here is the line the definition opens on.
+// one-line case here is the line the definition opens on. A page break carries
+// neither lines nor text, so its line is the position goldmark set on it,
+// which is the same answer the body's own breaks name.
 func TestWhatTheHouseStyleCannotSetInAFootnoteIsWarnedAndLeftOut(t *testing.T) {
 	for _, c := range []struct{ name, markdown, want string }{
 		{"a list", "A claim.[^a]\n\n[^a]: the detail.\n\n    - one\n    - two\n",
@@ -540,8 +542,8 @@ func TestWhatTheHouseStyleCannotSetInAFootnoteIsWarnedAndLeftOut(t *testing.T) {
 			"line 3: a picture inside a footnote is not rendered in the house style and was left out"},
 		{"a picture in the note's second paragraph", "A claim.[^a]\n\n[^a]: the detail.\n\n    See ![the chart](diagram.png).\n",
 			"line 5: a picture inside a footnote is not rendered in the house style and was left out"},
-		{"a page break, which carries no line of its own", "A claim.[^a]\n\n[^a]: the detail.\n\n    ---\n",
-			"line 3: a page break inside a footnote is not rendered in the house style and was left out"},
+		{"a page break, whose line is the position goldmark set on it", "A claim.[^a]\n\n[^a]: the detail.\n\n    ---\n",
+			"line 5: a page break inside a footnote is not rendered in the house style and was left out"},
 	} {
 		out, err := Render(config(t), []byte(c.markdown), "testdata/docs", true)
 		if err != nil {

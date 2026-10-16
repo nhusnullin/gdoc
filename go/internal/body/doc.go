@@ -338,9 +338,11 @@
 // is a sentence, and the house style has no geometry for a table in one. The
 // line is the block's own, so a note written over several lines sends the
 // author to the line they have to change. A picture is an inline and takes the
-// line of the paragraph it sits in, and the definition's own line is the answer
-// only for a block carrying no source position anywhere under it, which a
-// thematic break is.
+// line of the paragraph it sits in, and a thematic break, which carries neither
+// lines nor text, takes the position goldmark set on it, so a break further
+// down a long note names the line it is on. The definition's own line is the
+// answer only for a block carrying nothing anywhere under it and no position
+// either.
 // TestWhatTheHouseStyleCannotSetInAFootnoteIsWarnedAndLeftOut is the pin, and
 // it asks each of them, a picture in the note's second paragraph and a page
 // break among them.
@@ -519,6 +521,23 @@
 // what the look-ahead reads. TestAPageBreakBeforeNothingIsNothing and
 // TestTheFootnoteSeparatorIsNotAPageBreak are the pins.
 //
+// Nothing is the next block the document holds rather than the break's own
+// next sibling. A break that ends a list item has no sibling at all, and
+// reading only siblings dropped the author's page turn between two items in
+// silence while keeping the same break when one more paragraph of that item
+// followed it. A list the break ends still ends on the item above it: the
+// break paragraph holds nothing and states zero space on both sides, so the
+// space the body puts under a list is the item's. A list and an item are not
+// blocks the document prints, so the look-ahead descends into them: the page
+// opens on the first block the next item holds, and an item opening with a
+// break is a break the rule below has to see. A block quote is not descended
+// into, because the break inside one is left out and the page opens on the
+// quoted words under it.
+// TestABreakEndingAListItemIsTheBreakBeforeTheNextOne,
+// TestAListEndingOnABreakEndsOnTheItemAboveIt,
+// TestTwoItemsEachHoldingABreakAreOneBreak and
+// TestABreakEndingTheLastListItemOfTheNoteIsNothing are the pins.
+//
 // A break before a break is one break. A break standing directly before the
 // first body heading, while the house breaks before that heading, would turn
 // one page into two empty ones, so the heading's own break is the one that
@@ -533,11 +552,18 @@
 // A break inside a footnote definition or a block quote is warned about by line
 // and left out, the way a picture in a footnote is: the notes sit under the
 // page Word puts them on, and the break paragraph is a body paragraph that
-// would open a page in the middle of a quote. A table cell needs no rule at
-// all, because a pipe table's cell holds inline text and goldmark builds no
+// would open a page in the middle of a quote. Every one of them is warned
+// about, so the quote is asked before the look-ahead: the look-ahead reads a
+// break that ends a quote as a break before nothing and left that one out in
+// silence. The line is the break's own position, because goldmark appends no
+// lines to a thematic break and builds no text inside one, and reading its
+// lines named line 1 for every break in every note. A table cell needs no rule
+// at all, because a pipe table's cell holds inline text and goldmark builds no
 // thematic break in one; the sentence that said the walker warns about one was
 // corrected the day it was measured (DECISIONS.md, 2026-10-16).
 // TestABreakInsideAFootnoteOrAQuoteIsWarnedAndLeftOut,
+// TestEveryBreakInsideAQuoteIsWarnedAbout,
+// TestABreakInsideAQuoteNamesItsLine,
 // TestThreeHyphensInACellAreNotABreak and
 // TestBuildAndPublishCarryThePageBreakCount are the pins.
 //

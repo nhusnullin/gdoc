@@ -4504,11 +4504,22 @@ break gets. A horizontal rule still prints `[rule]`, and the footnote
 separator stays `---`.
 
 `export` writes `---` for a page break that stands on its own, the flag's line
-or a native element that is a paragraph's only content, as a line of its own
-between blank lines, and leaves out the break on the first body heading
+or a native element that is a body paragraph's only content, as a line of its
+own between blank lines, and leaves out the break on the first body heading
 because `build` puts that one back. A break inside a sentence keeps its
 `[page break]` marker and its warning, because no line of markdown says a page
 turns mid-sentence.
+
+**Only a body paragraph's break is written as that line**, which this entry
+said as "a paragraph's only content" until the review of the same day. A
+native break that is all a heading, a list item or a table cell holds keeps the
+placeholder and the warning instead, because the line would come back as
+something else on the next build: `# ---` as a heading saying `---`, `1. ---`
+as an item holding a break, and `---` in a cell as three hyphens of text, since
+a pipe table's cell holds inline text and goldmark reads no thematic break in
+one. The flag's line is unaffected: it is written in front of the paragraph and
+carries no prefix. `internal/view`'s
+`TestOnlyABodyParagraphsBreakIsWrittenAsTheCallersLine` is the pin.
 
 **What is not built here.** No syntax for a horizontal rule in a note. No
 `insertPageBreak` in `propose`, in `annotate` or in `restyle`'s body pass, so

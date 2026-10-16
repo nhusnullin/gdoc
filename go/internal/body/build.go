@@ -555,3 +555,14 @@ func (r *renderer) pageBreak() *etree.Element {
 	before, after := 0.0, 0.0
 	return r.para(paraOpts{PageBreak: true, BeforePt: &before, AfterPt: &after})
 }
+
+// isBreakParagraph says whether this block is one pageBreak wrote: a paragraph
+// that breaks the page before it and holds no run at all. A heading breaks the
+// page the same way and is not one, because it holds its own words.
+func isBreakParagraph(block *etree.Element) bool {
+	if block.Tag != "p" || len(block.SelectElements("w:r")) > 0 {
+		return false
+	}
+	pPr := block.SelectElement("w:pPr")
+	return pPr != nil && pPr.SelectElement("w:pageBreakBefore") != nil
+}

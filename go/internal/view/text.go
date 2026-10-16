@@ -371,12 +371,20 @@ type emitter struct {
 	// "#" prefix, whatever style the paragraph carries.
 	inHeading bool
 	// breakAlone says the runs being written are one page break and the
-	// newline its paragraph ends with, which is the only shape a caller can
-	// write a line of markdown for. It is the runs' question rather than the
-	// paragraph's, because a table cell hands its paragraph's runs over
-	// directly, and runs sets it for either way in.
+	// newline its paragraph ends with, and that the line they stand on is the
+	// break's own, which together are the only shape a caller can write a line
+	// of markdown for. The runs are half the question and the paragraph is the
+	// other half: a table cell hands its paragraph's runs over directly, and
+	// runs sets the flag for either way in.
 	breakAlone bool
-	warnings   []string
+	// breakOwnsItsLine says the paragraph being written is a body paragraph of
+	// the document, which takes no prefix and is a line of the file on its
+	// own. A heading, an item of a list and a cell are not: "# ---" rebuilds
+	// as a heading reading "---", "1. ---" as an item holding a break, and
+	// "---" in a cell as three hyphens of text, so each of those keeps the
+	// placeholder and the warning that says the break was lost.
+	breakOwnsItsLine bool
+	warnings         []string
 }
 
 func (e *emitter) chunk(s string) {
@@ -693,11 +701,15 @@ func (e *emitter) paragraph(p *docs.Paragraph) {
 		e.chunk(e.breakLine(p.StartIndex))
 	}
 	// The style is read before the runs are written, because what the next
-	// build reads a mark on this line as depends on the "#" prefix below. A
-	// paragraph is never written inside another, so one flag is enough.
+	// build reads a mark on this line as depends on the "#" prefix below, and
+	// because a page break of its own is written as a line of markdown only
+	// where that line carries no prefix. A paragraph is never written inside
+	// another, so one flag of each is enough.
 	e.inHeading = headingLevel(p.Style) > 0
+	e.breakOwnsItsLine = !e.inHeading && p.Bullet == nil
 	text := e.capture(func() { e.runs(p.Runs) })
 	e.inHeading = false
+	e.breakOwnsItsLine = false
 	// The prefix is taken even when the text is empty, so an item of a numbered
 	// list that holds no text still counts: the numbers then say what the
 	// document shows rather than closing the gap over an item nobody typed into.
@@ -1186,7 +1198,7 @@ func standaloneBreak(rs []docs.Run) bool {
 // the formatting changes and two markers around one suggested phrase would read
 // as two suggestions.
 func (e *emitter) runs(rs []docs.Run) {
-	e.breakAlone = standaloneBreak(rs)
+	e.breakAlone = e.breakOwnsItsLine && standaloneBreak(rs)
 	e.ownSyntax(rs)
 	for i := 0; i < len(rs); {
 		j := i + 1

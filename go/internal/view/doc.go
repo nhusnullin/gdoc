@@ -199,6 +199,15 @@
 // sentence keeps both: no line of markdown says a page turns mid-sentence.
 // TestACallerThatNamesALineForABreakGetsItAndNoWarning is the pin.
 //
+// Standing on its own is the paragraph's question as well as the runs'. The
+// line is written only where the paragraph takes no prefix and is not a cell:
+// "# ---" is a heading reading "---" to the next build, "1. ---" is an item
+// holding a break, and "---" in a cell is three hyphens of text, because a
+// pipe table's cell holds inline text and goldmark reads no thematic break in
+// one. Each of those keeps the placeholder and the warning that says the break
+// did not survive, which is what every break printed before the line existed.
+// TestOnlyABodyParagraphsBreakIsWrittenAsTheCallersLine is the pin.
+//
 // # A horizontal rule prints [rule] and not ---
 //
 // The footnote separator is already ---, and one line meaning two things is a

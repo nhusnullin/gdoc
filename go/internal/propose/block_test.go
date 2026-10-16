@@ -243,10 +243,10 @@ func TestARefusedConstructNamesItsLine(t *testing.T) {
 	}
 }
 
-// A thematic break is the construct goldmark builds with no source position at
-// all, so its line is the first line holding anything after the paragraph above
-// it. Line 1 would send the author to the top of a file whose break is further
-// down, which is the wrong end of it.
+// A thematic break is the construct goldmark builds with no lines appended and
+// no text inside it, so its line is the first line holding anything after the
+// paragraph above it. Line 1 would send the author to the top of a file whose
+// break is further down, which is the wrong end of it.
 func TestARuleWithNoSourcePositionStillNamesItsLine(t *testing.T) {
 	_, err := ParseContent("one\n\n---\n\ntwo\n")
 	if err == nil {

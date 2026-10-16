@@ -68,7 +68,7 @@ written as markdown.
 | `![](assets/note-1.png)` | a picture, written as a file |
 | `[^1]` | a footnote, with the notes under a `---` line at the end of the file |
 | `---` on a line of its own | the document starts a new page there. `---` is what a note writes for a page break, so the next build puts the same break back: there is nothing to resolve |
-| `[page break]` | a page break inside a sentence. No line of markdown says a page turns mid-sentence, so this one stays a marker, with a warning |
+| `[page break]` | a page break the file has no line for: one inside a sentence, or one that is all a heading, a list item or a table cell holds. It stays a marker, with a warning |
 | `[rule]` | a horizontal rule the document draws. A note has no spelling for one, so it stays a marker too |
 | `==words==`, `==🟢 words==` | a mark the words carry in the document, written as Obsidian writes it |
 | `[words]{.pencil}` | the grey pencil mark, written as Pandoc's span |
@@ -115,7 +115,9 @@ the file publishes back to a document that breaks in the same place. The break
 the house style puts before the first heading is left out, because `build` puts
 that one back by itself. A page break Google put inside a sentence has no line
 of markdown to be, so it stays `[page break]` with a warning: decide where the
-page should turn, or take it out. A horizontal rule the document draws comes
+page should turn, or take it out. A break that is all a heading, a list item or
+a table cell holds keeps the marker for the same reason: `# ---` reads back as
+a heading saying `---` rather than as a page break. A horizontal rule the document draws comes
 home as `[rule]` for the opposite reason: a note has no spelling for a rule at
 all.
 

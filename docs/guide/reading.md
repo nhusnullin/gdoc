@@ -47,7 +47,8 @@ milestone 19, and a document of twenty pages read as one run of prose. Both
 shapes print the same placeholder now: the paragraph property, which is what a
 document built from a note carries, and a break Google put inside a sentence,
 which prints where it stands. A note writes `---` for that break, so
-`/gdoc-export` brings one home as `---` rather than as the marker.
+`/gdoc-export` brings a break on a body line of its own home as `---` rather
+than as the marker.
 
 Every placeholder row in that table comes back with a warning naming what the
 read did not take from it, the chips and the breaks included. A policy with

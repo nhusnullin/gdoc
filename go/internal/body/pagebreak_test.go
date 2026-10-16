@@ -199,16 +199,22 @@ func TestABreakInsideAFootnoteOrAQuoteIsWarnedAndLeftOut(t *testing.T) {
 		what string
 		note string
 		says string
+		line string
 	}{
 		{
 			what: "a footnote",
 			note: "A claim.[^1]\n\n[^1]: The note.\n\n    ---\n\n    More of it.\n",
 			says: "a page break inside a footnote",
+			// The break's own line, five lines down, not the line the
+			// definition opens on: a long note is where naming the wrong one
+			// costs the author the most.
+			line: "line 5: ",
 		},
 		{
 			what: "a block quote",
 			note: "Prose.\n\n> Quoted words.\n>\n> ---\n>\n> More quoted words.\n",
 			says: "a page break inside a block quote",
+			line: "line 5: ",
 		},
 	} {
 		t.Run(c.what, func(t *testing.T) {
@@ -226,8 +232,8 @@ func TestABreakInsideAFootnoteOrAQuoteIsWarnedAndLeftOut(t *testing.T) {
 			if !strings.Contains(said, c.says) {
 				t.Errorf("the warning does not say what was left out: %q, want %q in it", said, c.says)
 			}
-			if !strings.Contains(said, "line ") {
-				t.Errorf("the warning names no line: %q", said)
+			if !strings.HasPrefix(said, c.line) {
+				t.Errorf("the warning is %q, want it to open with %q", said, c.line)
 			}
 		})
 	}
@@ -252,5 +258,139 @@ func TestThreeHyphensInACellAreNotABreak(t *testing.T) {
 	}
 	if out.Counts.Tables != 1 {
 		t.Errorf("Counts.Tables is %d, want the one table", out.Counts.Tables)
+	}
+}
+
+// A break that ends a list item is a break before the next item, not a break
+// before nothing. The look-ahead reads the next block the document holds
+// rather than the break's own next sibling, which inside an item is nothing at
+// all: the author's page turn between two items used to disappear without a
+// word, and whether it survived depended on whether more of the same item
+// followed it.
+func TestABreakEndingAListItemIsTheBreakBeforeTheNextOne(t *testing.T) {
+	out := walk(t, "1. one\n\n   ***\n\n2. two\n")
+
+	if n := len(out.Blocks); n != 3 {
+		t.Fatalf("%d blocks rendered, want item, break, item:\n%s", n, serialise(t, out.Blocks))
+	}
+	if find(out.Blocks[1], "w:pageBreakBefore") == nil {
+		t.Errorf("the middle block is not the break:\n%s", serialise(t, out.Blocks))
+	}
+	if out.Counts.PageBreaks != 1 {
+		t.Errorf("Counts.PageBreaks is %d, want 1", out.Counts.PageBreaks)
+	}
+	if n := len(out.Warnings); n != 0 {
+		t.Errorf("the honoured break warned: %v", out.Warnings)
+	}
+}
+
+// A break that ends the last item of a list, with prose after the list, is
+// honoured for the same reason, and the list still ends on the item above it:
+// the break paragraph holds nothing and states zero space on both sides, so
+// the space the body puts under a list belongs to the item.
+func TestAListEndingOnABreakEndsOnTheItemAboveIt(t *testing.T) {
+	out := walk(t, "1. one\n\n   ***\n\nProse.\n")
+
+	if n := len(out.Blocks); n != 3 {
+		t.Fatalf("%d blocks rendered, want item, break, paragraph:\n%s", n, serialise(t, out.Blocks))
+	}
+	if find(out.Blocks[1], "w:pageBreakBefore") == nil {
+		t.Fatalf("the middle block is not the break:\n%s", serialise(t, out.Blocks))
+	}
+	if got := attr(t, find(out.Blocks[0], "w:spacing"), "w:after"); got != "240" {
+		t.Errorf("the item has %s twips below it, want the body's 240", got)
+	}
+	if got := attr(t, find(out.Blocks[1], "w:spacing"), "w:after"); got != "0" {
+		t.Errorf("the break has %s twips below it, want 0", got)
+	}
+	if out.Counts.PageBreaks != 1 {
+		t.Errorf("Counts.PageBreaks is %d, want 1", out.Counts.PageBreaks)
+	}
+}
+
+// Two items each holding one break are one break, the way two breaks in a row
+// in the body are: the look-ahead descends into the item after the break, so
+// the break that ends the first item sees the break that opens the second and
+// stands down. Reading the item itself as the next block emitted both and the
+// document opened a page holding nothing.
+func TestTwoItemsEachHoldingABreakAreOneBreak(t *testing.T) {
+	for _, note := range []string{
+		"- ***\n- ***\n\nProse.\n",
+		"1. one\n\n   ***\n\n2. ***\n\n   two\n",
+	} {
+		t.Run(note, func(t *testing.T) {
+			out := walk(t, note)
+
+			if body := serialise(t, out.Blocks); strings.Count(body, "w:pageBreakBefore") != 1 {
+				t.Errorf("%d break paragraphs, want the one:\n%s", strings.Count(body, "w:pageBreakBefore"), body)
+			}
+			if out.Counts.PageBreaks != 1 {
+				t.Errorf("Counts.PageBreaks is %d, want 1", out.Counts.PageBreaks)
+			}
+		})
+	}
+}
+
+// A break that ends a list ending the note is still a break before nothing,
+// because nothing in the document follows the list either.
+func TestABreakEndingTheLastListItemOfTheNoteIsNothing(t *testing.T) {
+	out := walk(t, "1. one\n\n   ***\n")
+
+	if body := serialise(t, out.Blocks); strings.Contains(body, "w:pageBreakBefore") {
+		t.Errorf("a trailing break inside a list reached the document:\n%s", body)
+	}
+	if out.Counts.PageBreaks != 0 {
+		t.Errorf("Counts.PageBreaks is %d, want 0", out.Counts.PageBreaks)
+	}
+	if n := len(out.Warnings); n != 0 {
+		t.Errorf("the dropped break warned: %v", out.Warnings)
+	}
+}
+
+// Every break inside a quote is warned about, wherever it stands in the quote:
+// the quote is asked before the look-ahead, which reads a break that ends the
+// quote as a break before nothing and would drop it in silence.
+func TestEveryBreakInsideAQuoteIsWarnedAbout(t *testing.T) {
+	for _, c := range []struct {
+		what  string
+		note  string
+		warns int
+	}{
+		{what: "ending the quote", note: "> Quoted.\n>\n> ---\n\nProse.\n", warns: 1},
+		{what: "two in a row", note: "> Quoted.\n>\n> ---\n>\n> ---\n>\n> More.\n", warns: 2},
+		{what: "ending the note", note: "Prose.\n\n> Quoted.\n>\n> ---\n", warns: 1},
+	} {
+		t.Run(c.what, func(t *testing.T) {
+			out := walk(t, c.note)
+			if body := serialise(t, out.Blocks); strings.Contains(body, "w:pageBreakBefore") {
+				t.Errorf("a break inside a quote reached the document:\n%s", body)
+			}
+			if out.Counts.PageBreaks != 0 {
+				t.Errorf("Counts.PageBreaks is %d, want 0", out.Counts.PageBreaks)
+			}
+			if n := len(out.Warnings); n != c.warns {
+				t.Fatalf("%d warnings, want %d naming the break: %v", n, c.warns, out.Warnings)
+			}
+			for _, said := range out.Warnings {
+				if !strings.Contains(said, "a page break inside a block quote") {
+					t.Errorf("the warning does not say what was left out: %q", said)
+				}
+			}
+		})
+	}
+}
+
+// The warning names the line the break is on. goldmark appends no lines to a
+// thematic break and builds no text inside one, so the line comes from the
+// node's own position: reading its lines named line 1 for every break in every
+// note, which in a note is the front matter's own delimiter.
+func TestABreakInsideAQuoteNamesItsLine(t *testing.T) {
+	out := walk(t, "Prose.\n\n> Quoted words.\n>\n> ---\n>\n> More quoted words.\n")
+
+	if len(out.Warnings) != 1 {
+		t.Fatalf("%d warnings, want the one naming the break: %v", len(out.Warnings), out.Warnings)
+	}
+	if said := out.Warnings[0]; !strings.HasPrefix(said, "line 5: ") {
+		t.Errorf("the warning is %q, want it to name line 5, where the break stands", said)
 	}
 }

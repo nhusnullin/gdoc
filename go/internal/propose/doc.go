@@ -177,9 +177,12 @@
 // A refusal names the line because content is a file a person wrote and a block
 // is tens of lines long. A thematic break, which a note writes for a page break
 // (DECISIONS.md, 2026-10-16), is the one construct goldmark builds with no
-// source position at all, so its line is the first line holding anything after
-// the block above it: naming line 1 would send the author to the top of a file
-// whose break is thirty lines down, which is the wrong end of it.
+// lines appended and no text inside it, so the line the other refusals read
+// names line 1 for it, and line 1 would send the author to the top of a file
+// whose break is thirty lines down, which is the wrong end of it. Its line
+// here is the first line holding anything after the block above it. The node's
+// own Pos is the same answer and is what internal/body reads, because the
+// scan cannot serve a break inside a block quote and this subset refuses one.
 // TestARefusedConstructNamesItsLine and
 // TestARuleWithNoSourcePositionStillNamesItsLine are the pins.
 //

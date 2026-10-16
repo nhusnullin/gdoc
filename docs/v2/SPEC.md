@@ -497,8 +497,9 @@ referenced twice in the hub comes back as two notes, because a document holds
 one note per mark. A mark the author wrote comes back as the syntax it left
 as. A page break that stands on its own comes back as `---` on a line of its
 own, which is the line the next build reads as that same break; the one on the
-first body heading is left out, because `build` puts it back, and a break
-inside a sentence keeps its `[page break]` marker and its warning.
+first body heading is left out, because `build` puts it back, and a break the
+file has no line for, inside a sentence or alone in a heading, a list item or a
+table cell, keeps its `[page break]` marker and its warning.
 The front matter of a file `export` creates holds
 the `gdoc:` block and nothing else: a skill adds `title` when it makes the file
 a note.

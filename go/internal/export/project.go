@@ -147,9 +147,11 @@ func Project(d *docs.Document, pics PictureNames, palette []view.Mark) ([]TabFil
 // out. It is the one marker of this projection that is not a marker to resolve,
 // because the note's own spelling for the fact is a line of markdown.
 //
-// A break inside a sentence is not this shape and keeps its [page break]
-// marker and its warning, which internal/view decides: no line of markdown
-// says a page turns mid-sentence.
+// A break the file has no line for is not this shape and keeps its
+// [page break] marker and its warning, which internal/view decides: one inside
+// a sentence, because no line of markdown says a page turns mid-sentence, and
+// one that is all a heading, a list item or a table cell holds, because the
+// line would read back as text rather than as a break.
 const PageBreakLine = "---"
 
 // headingLine is a heading line of the projection, which is what the break
