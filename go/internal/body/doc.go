@@ -422,6 +422,15 @@
 // prose instead.
 // TestABacktickSpanIsNotACodeFence is the pin.
 //
+// A code span wraps, and one line cannot see that it did: the opening backtick
+// run has no closer where it stands, while goldmark reads the paragraph to its
+// end and shuts the span on the line below. So the spans come off the parse
+// too, with their insides blanked out of the lines the checks read, the way
+// the lines of a block of HTML do. Read as the document's own words instead,
+// every one of the three checks refused a note for the one place nothing is
+// markdown, and named a loss that could not happen.
+// TestAWrappedCodeSpanIsStillCode is the pin.
+//
 // A footnote mark inside a table cell is refused as well. The spec carries
 // none, and a cell's paragraph has no footnotes part to write into, so the note
 // would be numbered in the body and written nowhere.
