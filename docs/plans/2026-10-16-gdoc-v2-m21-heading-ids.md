@@ -158,14 +158,14 @@ in the test folder.
 - Modify: `go/internal/body/doc.go`
 - Modify: `go/internal/render/doc.go`
 
-- [ ] rewrite "An anchor link is a jump to a bookmark on the heading it names"
+- [x] rewrite "An anchor link is a jump to a bookmark on the heading it names"
       in `go/internal/body/doc.go`: every heading carries a hidden bookmark,
       why (Drive's import mints the heading id from it, Word hides it), what a
       `#` link anchors at, and the tests from Task 2 by name
-- [ ] add one paragraph to "The contents list is a Word field" in
+- [x] add one paragraph to "The contents list is a Word field" in
       `go/internal/render/doc.go`: an entry opens its heading only because of
       the hidden bookmark the body writes, naming the body test
-- [ ] run `make test`, because `TestEveryPackageHasExactlyOnePackageComment`
+- [x] run `make test`, because `TestEveryPackageHasExactlyOnePackageComment`
       and the task map tests read these
 
 ### Task 4: The publish read-back counts headings without an id
