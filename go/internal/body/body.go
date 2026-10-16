@@ -831,9 +831,17 @@ func (r *renderer) block(node ast.Node, level int, list listCtx) error {
 		// standing alone, so it reaches the document as grey paragraphs
 		// rather than being left out. Every other block of HTML keeps the
 		// rule it has always had: named by line, left out whole.
-		if paragraphs, comment := blockComment(typed, r.source); comment {
+		if paragraphs, opener, comment := blockComment(typed, r.source); comment {
 			r.curLine = r.line(node)
-			r.greyParagraphs(paragraphs, level, list)
+			r.greyParagraphs(paragraphs, opener, level, list)
+			return nil
+		}
+		if unclosedObsidianComment(typed, r.source) {
+			// Named as the comment it is: an author told they wrote a block of
+			// HTML would go looking for a tag that is not in the note.
+			r.warn("line %d: a %s comment that is never closed is not rendered in the house style and was left out",
+				r.line(node), obsidianDelimiter)
+			r.afterTable = false
 			return nil
 		}
 		r.warn("line %d: a block of HTML is not rendered in the house style and was left out",
@@ -1033,6 +1041,16 @@ func (r *renderer) paragraphBlock(node ast.Node, level int, list listCtx) error 
 		r.warnImages(images, line, "a list item")
 	}
 
+	// A paragraph that renders not one run and names not one picture is no
+	// paragraph: the only way to write one is a comment holding no words, and
+	// an empty paragraph there is a blank line the author never typed and the
+	// hub's reader never sees. A paragraph that names a picture it cannot
+	// place is not this case: it keeps its place, and warnImages said so.
+	if len(runs) == 0 && len(images) == 0 {
+		r.afterTable = false
+		return nil
+	}
+
 	if len(images) > 0 && level == 0 {
 		// The words first, then each picture on its own line.
 		if len(runs) > 0 {
@@ -1078,9 +1096,9 @@ func (r *renderer) emitRuns(runs []Run, level int, list listCtx) {
 // paragraph per stretch of lines. It goes where the walk stands, so an aside
 // inside a bullet is that bullet's and an aside inside a quote is indented
 // with it. A list wins over a quote, the way a paragraph inside both does.
-func (r *renderer) greyParagraphs(paragraphs []string, level int, list listCtx) {
+func (r *renderer) greyParagraphs(paragraphs []string, opener string, level int, list listCtx) {
 	for _, words := range paragraphs {
-		runs := []Run{{Text: words, Mark: r.marks.comment(commentOpener)}}
+		runs := []Run{{Text: words, Mark: r.marks.comment(opener)}}
 		if level == 0 && r.quoteDepth > 0 {
 			r.emit(r.quote(runs, r.quoteDepth))
 			r.counts.Paragraphs++

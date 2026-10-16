@@ -206,13 +206,13 @@ func appendInline(out *[]Run, node ast.Node, source []byte, m marks, ctx inlineC
 			// A comment holding no words marks none, so there is nothing to
 			// colour and nothing was lost. Any other raw HTML is left out and
 			// warnRawHTML names the line.
-			words, comment := commentWords(typed, source)
+			words, opener, comment := commentWords(typed, source)
 			if !comment || words == "" {
 				continue
 			}
 			*out = append(*out, Run{Text: words, Bold: m.bold, Italic: m.italic,
 				Strike: m.strike, Mono: m.mono,
-				Mark: ctx.marks.comment(commentOpener), Link: m.link})
+				Mark: ctx.marks.comment(opener), Link: m.link})
 		case *ast.HTMLBlock:
 			continue
 		default:

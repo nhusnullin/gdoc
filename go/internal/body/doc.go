@@ -195,6 +195,27 @@
 // inside a quote is indented with it. TestACommentOnLinesOfItsOwnIsGreyParagraphs
 // and TestACommentOnOneLineOfItsOwnIsOneGreyParagraph are the pins.
 //
+// A comment has a second spelling, Obsidian's "%% words %%", and obsidian.go
+// parses it into the two nodes goldmark gives the HTML one: an ast.RawHTML
+// inside a sentence and an ast.HTMLBlock for a "%%" fence on lines of its
+// own. So there is one meaning and one set of arms, and every rule above
+// holds for both spellings. The pair that matched is what the mark is looked
+// up by, so the house style says which mark each spelling is and this package
+// says which spellings there are. TestAnObsidianCommentIsAPencilRun,
+// TestTheWordsInsideAnObsidianCommentAreLiteral,
+// TestAnEmptyObsidianCommentIsLeftOut, TestAnObsidianFenceIsGreyParagraphs,
+// TestAnObsidianFenceInterruptsAParagraph,
+// TestAnObsidianCommentOnOneLineOfItsOwnIsOneGreyParagraph and
+// TestAnObsidianCommentInCodeIsCode are the pins, with
+// TestAnUnterminatedObsidianFenceIsNamedAndLeftOut over the fence that never
+// closes.
+//
+// A paragraph that renders not one run and names not one picture emits
+// nothing. The only way to write one is a comment holding no words, and an
+// empty paragraph there is a blank line the author never typed and the hub's
+// reader never sees. TestAnEmptyCommentIsLeftOut and
+// TestAnEmptyObsidianCommentIsLeftOut are the pins.
+//
 // A footnote is no longer one of them: it is set in the document, and what the
 // house style cannot set inside one is the warning instead. The section below
 // on footnotes holds the rules and its pins.

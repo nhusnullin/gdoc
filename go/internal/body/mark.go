@@ -315,7 +315,7 @@ func (p *spanCloseParser) Parse(parent ast.Node, block text.Reader, pc parser.Co
 
 type markExtension struct{}
 
-// Mark enables ==highlight== and [words]{.pencil}.
+// Mark enables ==highlight==, [words]{.pencil} and Obsidian's %% comment %%.
 var Mark goldmark.Extender = &markExtension{}
 
 func (e *markExtension) Extend(m goldmark.Markdown) {
@@ -326,6 +326,14 @@ func (e *markExtension) Extend(m goldmark.Markdown) {
 		// would never be asked.
 		util.Prioritized(&spanOpenParser{}, 150),
 		util.Prioritized(&spanCloseParser{}, 150),
+		// The Obsidian comment runs where the highlight runs, after
+		// goldmark's code span parser at 100: nothing inside backticks is a
+		// comment.
+		util.Prioritized(&obsidianInlineParser{}, 500),
+	), parser.WithBlockParsers(
+		// Where goldmark's own block of HTML runs, which is after every fence
+		// and before the paragraph: a fence inside a code block opens nothing.
+		util.Prioritized(&obsidianBlockParser{}, 900),
 	))
 }
 

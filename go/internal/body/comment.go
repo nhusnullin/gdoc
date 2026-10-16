@@ -9,9 +9,11 @@ package body
 //
 // goldmark already parses HTML's comment, inside a sentence as an ast.RawHTML
 // holding the whole of it and on lines of its own as an ast.HTMLBlock. So
-// there is no parser here, only the reading: is this raw HTML a comment, and
-// what are the words inside it. Obsidian's own %% spelling has no node in
-// goldmark and is parsed by this package.
+// there is no parser here for that spelling, only the reading: is this raw
+// HTML a comment, and what are the words inside it. Obsidian's own %%
+// spelling has no node in goldmark, and obsidian.go parses it into those same
+// two nodes so that everything below reads one shape and every rule a comment
+// has holds for both spellings without being written twice.
 
 import (
 	"strings"
@@ -30,10 +32,25 @@ const (
 	commentCloser = "-->"
 )
 
-// commentWords is the words inside a piece of raw HTML, and whether that raw
-// HTML is a comment at all. Raw HTML that is not one is the caller's to warn
-// about and leave out, which is the rule it has always followed.
-func commentWords(node *ast.RawHTML, source []byte) (string, bool) {
+// obsidianDelimiter opens and shuts the second spelling. Obsidian dims it
+// while editing and hides it while reading, which is the whole reason a pencil
+// is a comment.
+const obsidianDelimiter = "%%"
+
+// commentDelimiters is every pair a comment may be written with, in the order
+// they are tried. The pair that matched is what the mark is looked up by, so
+// the house style says which mark each spelling is and this package says which
+// spellings there are.
+var commentDelimiters = [2][2]string{
+	{commentOpener, commentCloser},
+	{obsidianDelimiter, obsidianDelimiter},
+}
+
+// commentWords is the words inside a piece of raw HTML, the delimiter it was
+// written with, and whether that raw HTML is a comment at all. Raw HTML that
+// is not one is the caller's to warn about and leave out, which is the rule it
+// has always followed.
+func commentWords(node *ast.RawHTML, source []byte) (words, opener string, ok bool) {
 	var b strings.Builder
 	for i := 0; i < node.Segments.Len(); i++ {
 		segment := node.Segments.At(i)
@@ -42,37 +59,41 @@ func commentWords(node *ast.RawHTML, source []byte) (string, bool) {
 	return insideComment(b.String())
 }
 
-// insideComment is one written comment with its delimiters taken off, and
-// whether it is one.
+// insideComment is one written comment with its delimiters taken off, which
+// delimiter opened it, and whether it is a comment at all.
 //
 // One space inside each delimiter is the delimiter's, the way the space after
 // a highlight's colour emoji is: an author writes "<!-- words -->" to separate
 // the words from the syntax, and a grey run opening with a space is not what
 // was typed. A second space is the author's own.
-func insideComment(raw string) (string, bool) {
-	if len(raw) < len(commentOpener)+len(commentCloser) ||
-		!strings.HasPrefix(raw, commentOpener) ||
-		!strings.HasSuffix(raw, commentCloser) {
-		return "", false
+func insideComment(raw string) (words, opener string, ok bool) {
+	for _, pair := range commentDelimiters {
+		open, shut := pair[0], pair[1]
+		if len(raw) < len(open)+len(shut) ||
+			!strings.HasPrefix(raw, open) ||
+			!strings.HasSuffix(raw, shut) {
+			continue
+		}
+		inner := raw[len(open) : len(raw)-len(shut)]
+		return strings.TrimSuffix(strings.TrimPrefix(inner, " "), " "), open, true
 	}
-	inner := raw[len(commentOpener) : len(raw)-len(commentCloser)]
-	return strings.TrimSuffix(strings.TrimPrefix(inner, " "), " "), true
+	return "", "", false
 }
 
 // isComment says whether a piece of raw HTML is a comment.
 func isComment(node *ast.RawHTML, source []byte) bool {
-	_, comment := commentWords(node, source)
+	_, _, comment := commentWords(node, source)
 	return comment
 }
 
 // blockComment is the paragraphs inside a comment written on lines of its own,
-// and whether this block of HTML is a comment at all. A block that is not one
-// is the caller's to name and leave out, which is the rule it has always
-// followed.
+// the delimiter it was written with, and whether this block of HTML is a
+// comment at all. A block that is not one is the caller's to name and leave
+// out, which is the rule it has always followed.
 //
 // goldmark holds the closing line of such a block apart from the rest, so the
 // written comment is its lines and then its closure.
-func blockComment(node *ast.HTMLBlock, source []byte) ([]string, bool) {
+func blockComment(node *ast.HTMLBlock, source []byte) ([]string, string, bool) {
 	var b strings.Builder
 	lines := node.Lines()
 	for i := 0; i < lines.Len(); i++ {
@@ -83,11 +104,11 @@ func blockComment(node *ast.HTMLBlock, source []byte) ([]string, bool) {
 		closure := node.ClosureLine
 		b.Write(closure.Value(source))
 	}
-	words, comment := insideComment(strings.TrimSpace(b.String()))
+	words, opener, comment := insideComment(strings.TrimSpace(b.String()))
 	if !comment {
-		return nil, false
+		return nil, "", false
 	}
-	return commentParagraphs(words), true
+	return commentParagraphs(words), opener, true
 }
 
 // commentParagraphs gathers the lines inside a comment into paragraphs.
