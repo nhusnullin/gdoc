@@ -268,6 +268,81 @@ func checkOldPencilSpan(source []byte, root ast.Node) error {
 	return refusal
 }
 
+// openersRead counts, by line, the comment openers goldmark did read: every
+// one inside a piece of raw HTML, counted against the line that piece of it
+// sits on.
+//
+// Every opener the parse consumed is inside raw HTML, in both spellings and
+// whether or not the raw HTML is a comment: goldmark's own parser claims the
+// whole of "<!-- ... -->" and obsidian.go hands its pair over as the same
+// node, and a piece of raw HTML that is no comment is warned about and left
+// out rather than published. An opener the walk reads as a comment's own words
+// is counted too, because "<!-- an aside about <!-- itself -->" is one comment
+// holding two of them, and a count that missed the inner one would refuse an
+// author for quoting the syntax inside their own aside.
+//
+// The count is per line rather than per node because a comment wraps: an
+// author writes one aside and their editor breaks it, so goldmark hands the
+// node over as one segment per line and each line is asked about its own.
+func openersRead(source []byte, root ast.Node) map[int]int {
+	out := map[int]int{}
+	if root == nil {
+		return out
+	}
+	_ = ast.Walk(root, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+		raw, ok := node.(*ast.RawHTML)
+		if !ok {
+			return ast.WalkContinue, nil
+		}
+		for i := 0; i < raw.Segments.Len(); i++ {
+			segment := raw.Segments.At(i)
+			out[lineOf(source, segment.Start)] +=
+				strings.Count(string(segment.Value(source)), commentOpener)
+		}
+		return ast.WalkContinue, nil
+	})
+	return out
+}
+
+// checkUnclosedComment refuses an opener inside a sentence that the parse
+// never read, naming the line and the closer to write.
+//
+// An opener on a line of its own opens a block of HTML, which the walk names
+// as the comment it is and leaves out with every line under it. An opener in
+// the middle of a sentence opens nothing at all: goldmark reads raw HTML only
+// once it has the closer, so the aside stays prose and reaches the document
+// black, with the typographer rewriting the two dashes of the opener into an
+// en dash on the way. The author wrote words nobody was meant to read, and the
+// build said ok. That is the failure every line check in this package exists
+// to prevent, so this is read off the same lines the others are and refuses
+// nothing inside backticks, inside a code block or inside a block of HTML.
+//
+// Only the HTML spelling is asked about. A lone "%%" is two characters an
+// author may well have typed for themselves, and obsidian.go puts the reader
+// back where it found it when no closer is reached, so those characters stay
+// the author's own words rather than becoming a delimiter.
+// TestAnUnclosedCommentInsideASentenceIsRefusedByLine and
+// TestAnOpenerGoldmarkReadIsNotRefused are the pins.
+func checkUnclosedComment(source []byte, root ast.Node) error {
+	var refusal error
+	read := openersRead(source, root)
+	checkLines(source, root, func(l sourceLine) {
+		if refusal != nil {
+			return
+		}
+		if strings.Count(l.text, commentOpener) <= read[l.at] {
+			return
+		}
+		refusal = fmt.Errorf("line %d: %s inside a sentence opens a comment this line never closes, and an opener nothing closes is not read as one: the aside and the %s in front of it would reach the document as words rather than grey; shut it with %s, or write the aside as %s words %s, which Obsidian hides while somebody reads the note",
+			l.at, commentOpener, commentOpener, commentCloser,
+			obsidianDelimiter, obsidianDelimiter)
+	})
+	return refusal
+}
+
 // isCommentBlock says whether a block of HTML is a comment, closed or not. A
 // comment the note never closes is one too, in either spelling: naming it a
 // block of HTML would send the author looking for a tag they never wrote.

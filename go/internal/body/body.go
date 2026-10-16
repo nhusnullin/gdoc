@@ -172,7 +172,17 @@ func Render(cfg *house.Config, markdown []byte, base string, numbering bool) (Re
 	// builds: the export writes it into the middle of a sentence, and the
 	// sentence is a paragraph like any other. internal/markers holds why every
 	// route out of the hub asks, and TestBuildRefusesAMarkerByLine is the pin.
+	//
+	// The sentence has two halves because the markers do. gdoc's markup is
+	// syntax nobody writes by hand, so a note that carries it was exported;
+	// four of the eight are a comment opening with an ordinary English word,
+	// which an author may have typed for themselves, and telling that author
+	// about an export sends them looking for one that never happened.
+	// TestAnAsideOpeningLikeGdocsOwnCommentSaysSo is that half's pin.
 	if m, line := markers.Lines(string(source)); line > 0 {
+		if markers.IsComment(m) {
+			return Result{}, fmt.Errorf("line %d opens a comment with %s, which is one of gdoc's own and says a thing about a document that the document itself holds otherwise; a comment opening with those words is read as gdoc's wherever a note goes back into a document, so reword the aside to open with something else, or resolve the export this note came out of", line, m)
+		}
 		return Result{}, fmt.Errorf("line %d carries %s, one of gdoc's own markers; the note was exported out of a document and its suggestions and comments have not been resolved, so publishing it would put the marker into the document as words", line, m)
 	}
 	// The parse carries a context of Render's own, because readDefinitions
@@ -180,15 +190,19 @@ func Render(cfg *house.Config, markdown []byte, base string, numbering bool) (Re
 	// holds why the parse is the only place one of them can be seen.
 	pc := parser.NewContext()
 	root := parse().Parser().Parse(text.NewReader(source), parser.WithContext(pc))
-	// The footnotes and the grey mark's old spelling are refused before a
-	// block is built, both off the source lines: a mark naming no note and a
-	// span nothing parses any more are facts about a line, and goldmark is
+	// The footnotes, the grey mark's old spelling and a comment opener nothing
+	// closes are refused before a block is built, all three off the source
+	// lines: a mark naming no note, a span nothing parses any more and an
+	// opener the parse never read are facts about a line, and goldmark is
 	// silent in each of them. footnote.go and comment.go hold why each is
 	// asked here.
 	if err := checkFootnotes(source, root, definitionsRead(pc)); err != nil {
 		return Result{}, err
 	}
 	if err := checkOldPencilSpan(source, root); err != nil {
+		return Result{}, err
+	}
+	if err := checkUnclosedComment(source, root); err != nil {
 		return Result{}, err
 	}
 	order, numbers := footnoteNumbers(root)

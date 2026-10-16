@@ -228,6 +228,21 @@
 // TestAnUnclosedFenceEndingInTheDelimiterIsStillUnclosed and
 // TestABlockOfHTMLThatIsNoCommentIsStillNamedAsOne are the pins.
 //
+// An opener with no closer inside a sentence is refused by line instead. That
+// one opens no block, and goldmark reads raw HTML only once it has the
+// closer, so the aside stayed prose: it reached the document black, with the
+// typographer rewriting the two dashes of the opener into an en dash on the
+// way, and the build said ok. The words nobody was meant to read are the
+// reason it is a refusal rather than the warning the block gets, and the
+// refusal is read off the same lines every other line check is, so an opener
+// inside backticks, inside a code block or inside a block of HTML refuses
+// nothing. An opener the parse did read refuses nothing either, which is how
+// a comment the author's editor wrapped and an opener inside a comment's own
+// words stay what they are. Only the HTML spelling is asked about: a lone
+// "%%" is two characters an author may have typed for themselves.
+// TestAnUnclosedCommentInsideASentenceIsRefusedByLine and
+// TestAnOpenerGoldmarkReadIsNotRefused are the pins.
+//
 // A pencil goes where a mark goes, because the milestone's one decision is
 // that the grey mark keeps everything it does and changes its spelling. So a
 // comment that marks words is one of the shapes isMark names, and it is
@@ -486,6 +501,18 @@
 // comes out grey.
 // TestGdocsOwnCommentsAreMarkersAndNotPencil and
 // TestAnAuthorsOwnCommentIsStillAPencil are the two halves.
+//
+// Those four are also the reason the refusal has two sentences. gdoc's markup
+// is syntax nobody types by hand, so a note carrying "{+" was exported out of
+// a document and the way out is to resolve the export. A comment marker is an
+// ordinary English word behind an opener an author writes every day, so
+// "<!-- tab order matters -->" may be an aside somebody wrote for themselves,
+// and an export is the wrong thing to send them looking for: that half names
+// the opener as gdoc's own and asks for the aside to be reworded.
+// internal/markers' IsComment is which half a marker is in, there rather than
+// here because that package owns the list.
+// TestAnAsideOpeningLikeGdocsOwnCommentSaysSo and
+// TestAMarkupMarkerStillNamesTheExport are the pins.
 //
 // It is a refusal rather than the warning a code block gets. A code block
 // leaves one block out of the document; a marker puts words into it that the

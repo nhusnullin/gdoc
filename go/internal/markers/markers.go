@@ -167,6 +167,27 @@ func commentMarkers() []string {
 	return out
 }
 
+// IsComment says whether a marker is one of gdoc's own comments rather than
+// its markup.
+//
+// The two halves of the list are refused the same way and read differently by
+// the person who meets the refusal. Markup is syntax nobody types by hand, so
+// a note carrying "{+" came out of a document and the way out is to resolve
+// the export. A comment marker is four ordinary English words behind an
+// opener an author writes every day, so a note carrying "<!-- tab " may be an
+// aside somebody wrote for themselves, and the way out is to reword it.
+// internal/body is the one caller, because the build is the one route a
+// hand-written note takes. internal/body's
+// TestAnAsideOpeningLikeGdocsOwnCommentSaysSo is the pin.
+func IsComment(marker string) bool {
+	for _, m := range comments {
+		if m == marker {
+			return true
+		}
+	}
+	return false
+}
+
 // Comment is the first of gdoc's own comment markers this text carries, and
 // whether it carries one.
 //

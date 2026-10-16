@@ -626,3 +626,55 @@ func TestABlockOfHTMLThatIsNoCommentIsStillNamedAsOne(t *testing.T) {
 		t.Errorf("a block of HTML warned %q, want the block named", out.Warnings)
 	}
 }
+
+// TestAnUnclosedCommentInsideASentenceIsRefusedByLine. An opener on a line of
+// its own opens a block, which the warning above names and leaves out. An
+// opener in the middle of a sentence opens nothing: goldmark reads raw HTML
+// only once it has the closer, so the aside stayed prose, black, with the
+// typographer rewriting the two dashes into an en dash on the way. The author
+// wrote words nobody was meant to read and the build said ok, which is the
+// one failure every line check in this package exists to prevent, so the note
+// is refused by line the way the old span is.
+func TestAnUnclosedCommentInsideASentenceIsRefusedByLine(t *testing.T) {
+	for _, note := range []string{
+		"Words.\n\nSome prose <!-- an aside with no closer\n",
+		"Words.\n\nSome prose <!--an aside with no closer\n",
+		"Words.\n\nSome prose <!-- an aside\nthat wraps with no closer\n",
+		"Words.\n\nA <!-- shut one --> and <!-- one left open\n",
+	} {
+		got := refused(t, note)
+		if !strings.Contains(got, "line 3:") {
+			t.Errorf("%q: the refusal is %q, want it to name line 3", note, got)
+		}
+		if !strings.Contains(got, commentOpener) {
+			t.Errorf("%q: the refusal is %q, and it does not name the opener", note, got)
+		}
+		if !strings.Contains(got, commentCloser) {
+			t.Errorf("%q: the refusal is %q, and it does not name the closer to write", note, got)
+		}
+	}
+}
+
+// The other side of it: every shape where goldmark did read the opener, and
+// every shape where nothing on the line is markdown. A comment that wraps over
+// lines is one comment, an opener inside a comment's own words is that
+// comment's words, and an opener inside backticks or inside a code block is
+// the author writing about the syntax rather than using it.
+func TestAnOpenerGoldmarkReadIsNotRefused(t *testing.T) {
+	for _, note := range []string{
+		"Words.\n\nA <!-- quiet --> aside.\n",
+		"Words.\n\nA <!-- an aside\nthat wraps --> over lines.\n",
+		"Words.\n\nA <!-- aside about <!-- itself --> here.\n",
+		"Words.\n\nA <!-- one --> and <!-- two --> on a line.\n",
+		"Words.\n\nThe opener is `<!--` and the closer is `-->`.\n",
+		"Words.\n\nA <!-- an aside holding `<!--` in code --> here.\n",
+		"Words.\n\n```\n<!-- an aside with no closer\n```\n",
+		"Words.\n\n    <!-- an aside with no closer\n",
+		"Words.\n\n<!-- an aside with no closer\n",
+		"Words.\n\n<div>\n<!-- an aside with no closer\n</div>\n",
+	} {
+		if _, err := Render(config(t), []byte(note), "testdata/docs", true); err != nil {
+			t.Errorf("%q was refused: %v", note, err)
+		}
+	}
+}

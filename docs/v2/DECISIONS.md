@@ -95,6 +95,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-10-16 | Pencil is a comment: `<!-- words -->` or `%% words %%`, and the span goes | holds |
 | 2026-10-16 | What the M20 review closed: a comment with words after it on one line, two comments on one line, a comment the editor wrapped, the line a pencil's refusal names, an empty comment in a quote, and the four comments that are gdoc's own | holds |
 | 2026-10-17 | What the second M20 review closed: a comment the editor wrapped in Obsidian's spelling, a comment the note never closes, and the old span on the way home | holds |
+| 2026-10-17 | What the third M20 review closed: an opener with no closer inside a sentence, and the refusal that blamed an export the author never made | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -4868,3 +4869,57 @@ than a review fix.
 `TestAnUnclosedFenceEndingInTheDelimiterIsStillUnclosed` and
 `TestABlockOfHTMLThatIsNoCommentIsStillNamedAsOne`; and `internal/export`'s
 `TestWordsHoldingTheOldPencilSpanAreNamed`.
+
+## 2026-10-17. What the third M20 review closed: an opener with no closer inside a sentence, and the refusal that blamed an export the author never made.
+
+Two corrections to the entries above, found by the third review of the
+milestone. Both are rules those entries already state, applied where they were
+not. Nothing here changes what a pencil is.
+
+**An opener with no closer inside a sentence is refused by line.** The entry
+above says a comment the note never closes runs to the end of the note and is
+named as the comment it is. That is true of an opener on a line of its own,
+which opens a block of HTML. An opener in the middle of a sentence opens
+nothing: goldmark reads raw HTML only once it has the closer, so
+`Some prose <!-- an aside with no closer` stayed one paragraph of prose, the
+aside reached the document black, and the typographer rewrote the two dashes
+of the opener into an en dash on the way. The build said ok. That is the one
+failure every line check in `internal/body` exists to prevent, and the words
+are an aside the author wrote for nobody, so it is a refusal rather than the
+warning the block gets. It is read off the lines every other line check is
+read off, and it counts the openers goldmark did read before it refuses: a
+comment the author's editor wrapped, an opener inside a comment's own words,
+and an opener inside backticks or a code block all refuse nothing. Only the
+HTML spelling is asked about, because a lone `%%` is two characters an author
+may well have typed for themselves.
+
+**A note refused for a comment of gdoc's own is told what to do about it.**
+The entry above made four of the eight markers a comment opening with an
+ordinary English word. The refusal they share was written when every marker
+was syntax nobody types by hand, so it says the note was exported out of a
+document and its suggestions have not been resolved. For
+`Text with <!-- tab order matters --> inside` that sentence is false: the
+author exported nothing, and it sends them looking for an export that never
+happened and names no way out. The refusal now has two halves.
+`internal/markers`' `IsComment` is which half a marker is in, there because
+that package owns the list. The markup half keeps the sentence it had. The
+comment half names the opener as gdoc's own and asks for the aside to be
+reworded. The refusal itself does not move: a comment opening with those words
+is read as gdoc's on every route back into a document, which is what makes it
+a marker.
+
+**What was left.** The two shapes the entry above left for Nail are still
+Nail's: the backslash a grey run's words gain on the way home, and the old
+span refused inside a pencil's own words. `internal/view` names a shape twice
+when a pencil's mark cannot be carried and a non-commented shape stands in the
+same run, and it says the next build "refuses the file for" the old span where
+a whole grey paragraph comes home as a block of HTML and the next build does
+not. Both are wording in a warning that is already raised, so neither puts a
+character into a document and neither is worth a change this late in the
+milestone.
+
+**Where they are pinned.** `internal/body`'s
+`TestAnUnclosedCommentInsideASentenceIsRefusedByLine`,
+`TestAnOpenerGoldmarkReadIsNotRefused`,
+`TestAnAsideOpeningLikeGdocsOwnCommentSaysSo` and
+`TestAMarkupMarkerStillNamesTheExport`.

@@ -97,3 +97,52 @@ func TestAnAuthorsOwnCommentIsStillAPencil(t *testing.T) {
 		t.Errorf("the aside names style %q, want Pencil", got)
 	}
 }
+
+// TestAnAsideOpeningLikeGdocsOwnCommentSaysSo. Four of the eight markers are
+// a comment opening with an ordinary English word, and this milestone is what
+// made them so: before it, every marker was syntax nobody types by hand, and
+// "the note was exported out of a document" was true of every note that
+// carried one. An author who writes "<!-- tab order matters -->" for
+// themselves exported nothing, so that sentence sends them looking for an
+// export that never happened. The refusal names the opener as gdoc's own and
+// says what to do about it instead.
+func TestAnAsideOpeningLikeGdocsOwnCommentSaysSo(t *testing.T) {
+	for _, c := range []struct{ name, note string }{
+		{"a tab", "One.\n\nText with <!-- tab order matters --> inside.\n"},
+		{"an image", "One.\n\nA <!-- image: see the appendix --> aside.\n"},
+		{"a drawing", "One.\n\nA <!-- drawing: by hand --> aside.\n"},
+		{"an object", "One.\n\nA <!-- object: of the exercise --> aside.\n"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			_, err := Render(config(t), []byte(c.note), "testdata/docs", true)
+			if err == nil {
+				t.Fatal("the note was built, and an opener of gdoc's own has to be refused")
+			}
+			got := err.Error()
+			if !strings.Contains(got, "line 3") {
+				t.Errorf("the refusal is %q, want it to name line 3", got)
+			}
+			if strings.Contains(got, "exported out of a document") {
+				t.Errorf("the refusal is %q, and it blames an export the author never made", got)
+			}
+			if !strings.Contains(got, "reword") {
+				t.Errorf("the refusal is %q, and it names no way out for the author", got)
+			}
+		})
+	}
+}
+
+// The other side of it: a marker that is gdoc's own markup keeps the sentence
+// it has always had, because a note carrying one really did come out of a
+// document.
+func TestAMarkupMarkerStillNamesTheExport(t *testing.T) {
+	note := "One.\n\nThe team {+meets weekly+}[s:AAA] in Q3.\n"
+
+	_, err := Render(config(t), []byte(note), "testdata/docs", true)
+	if err == nil {
+		t.Fatal("the note was built, and a marker has to be refused")
+	}
+	if !strings.Contains(err.Error(), "exported out of a document") {
+		t.Errorf("the refusal is %q, want the export named", err.Error())
+	}
+}
