@@ -54,6 +54,13 @@ Serves: 1 and 4, as the spec says. Strains: none.
   and `reading.md:65` list the placeholders. `skills/gdoc-publish/SKILL.md:238`
   reads `body.marks` and `:248` `body.footnotes` off the build envelope.
 - `docs/v2/MEASURED.md` has no row on a page break.
+- A pipe table's cell holds inline text, so `---` in one is the words `---`
+  and goldmark builds no thematic break there. Measured in Task 3: the spec's
+  sentence saying the walker warns about a break in a cell is wrong, the
+  outcome it asked for holds anyway, and the spec, the decision entry and
+  `body/doc.go` were corrected rather than the code bent. The cell half of
+  `TestABreakInsideAFootnoteOrACellIsWarnedAndLeftOut` is its own test, and a
+  break inside a block quote is the half the spec named and the plan did not.
 
 ## Development Approach
 
@@ -128,7 +135,7 @@ Checkboxes below. A task is done when its commit is on the branch.
 - Modify: `go/internal/body/body.go`, `go/internal/body/pagebreak_test.go`,
   `go/cmd/gdoc/build.go`, `go/cmd/gdoc/publish.go`, and their tests
 
-- [ ] `TestAPageBreakBeforeNothingIsNothing`: a note ending in `---` renders
+- [x] `TestAPageBreakBeforeNothingIsNothing`: a note ending in `---` renders
       no break paragraph after its last paragraph and no warning.
       `TestTheFootnoteSeparatorIsNotAPageBreak`: a note with `[^1]` in the
       prose and `---` then `[^1]: text` renders the footnote and no break.
@@ -137,15 +144,17 @@ Checkboxes below. A task is done when its commit is on the branch.
       `w:pageBreakBefore`, on the heading. `TestTwoBreaksInARowAreOne`.
       `TestABreakBetweenTwoParagraphsIsAlwaysHonoured` with five in a row of
       paragraphs gives five.
-- [ ] The walker looks one block ahead: a thematic break whose next sibling
+- [x] The walker looks one block ahead: a thematic break whose next sibling
       is nil, a `*east.FootnoteList`, another thematic break, or the first
       heading while the house breaks before it, emits nothing. No warning,
       because the author's intent is met either way.
-- [ ] `Counts.PageBreaks` counts the paragraphs emitted, not the breaks
-      parsed. `TestTheBuildEnvelopeCarriesPageBreaks` and the publish twin
-      read `body.page_breaks` off the envelope as a literal key.
-      `TestABreakInsideAFootnoteOrACellIsWarnedAndLeftOut`.
-- [ ] `git commit -m "feat(body): a break before nothing is nothing, and the count"`
+- [x] `Counts.PageBreaks` counts the paragraphs emitted, not the breaks
+      parsed. `TestBuildAndPublishCarryThePageBreakCount` reads
+      `body.page_breaks` off both envelopes as a literal key, the build and
+      the publish twin in one table beside the debt counts' own.
+      `TestABreakInsideAFootnoteOrAQuoteIsWarnedAndLeftOut` and
+      `TestThreeHyphensInACellAreNotABreak` are the cell half, measured.
+- [x] `git commit -m "feat(body): a break before nothing is nothing, and the count"`
 
 ### Task 4: the measurement, how read prints the two kinds of break
 

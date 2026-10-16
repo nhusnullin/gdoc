@@ -42,6 +42,11 @@ type Counts struct {
 	Tables     int `json:"tables"`
 	Images     int `json:"images"`
 	Footnotes  int `json:"footnotes"`
+	// PageBreaks is how many breaks the document got, which is the paragraphs
+	// the walk emitted and not the `---` lines the note held: a break before
+	// nothing and a break before a break are left out, so counting the lines
+	// would report pages the reader never turns.
+	PageBreaks int `json:"page_breaks"`
 	// Marks is how many of each debt mark the note holds, by name, zero
 	// included. Only the marks the house style calls a debt are in here, for
 	// the reason countMarks gives.
@@ -776,8 +781,20 @@ func (r *renderer) block(node ast.Node, level int, list listCtx) error {
 		return nil
 
 	case *ast.ThematicBreak:
-		r.emit(r.pageBreak())
 		r.afterTable = false
+		if !r.breakReachesTheDocument(typed) {
+			return nil
+		}
+		if r.quoteDepth > 0 {
+			// A quote is a run of indented paragraphs, and the break paragraph
+			// is a body paragraph: emitting one here would open a page in the
+			// middle of the quote and leave the rest of it looking like prose.
+			r.warn("line %d: a page break inside a block quote is not rendered in the house style and was left out",
+				r.line(typed))
+			return nil
+		}
+		r.emit(r.pageBreak())
+		r.counts.PageBreaks++
 		return nil
 
 	case *ast.HTMLBlock:
@@ -799,6 +816,39 @@ func (r *renderer) block(node ast.Node, level int, list listCtx) error {
 		r.afterTable = false
 		return nil
 	}
+}
+
+// breakReachesTheDocument reads the one block after a thematic break and says
+// whether the author's page break is worth a paragraph. Neither drop warns:
+// what the author meant is what the document got, and a divider somebody wrote
+// out of habit is on hundreds of notes.
+//
+// A break before nothing is nothing. The next block is absent, so the page it
+// opens would hold not one word. A FootnoteList is the same case: goldmark
+// lifts the definitions to the end of the document, and the `---` above them
+// is the line internal/view prints and internal/export writes rather than
+// anything the author chose, so a note that came home out of a document
+// publishes again without a blank last page.
+//
+// A break before a break is one break. Another thematic break is going to
+// break the page itself, and the first body heading breaks it already while
+// the house style says so, so standing a break in front of either adds a page
+// holding nothing. A figure-only heading emits no heading paragraph and so no
+// break of its own, which is why it is not one of them.
+func (r *renderer) breakReachesTheDocument(node ast.Node) bool {
+	switch next := node.NextSibling().(type) {
+	case nil:
+		return false
+	case *east.FootnoteList:
+		return false
+	case *ast.ThematicBreak:
+		return false
+	case *ast.Heading:
+		if r.firstHeading && r.cfg.Body.FirstHeadingPageBreak && !isFigureOnly(next, r.source) {
+			return false
+		}
+	}
+	return true
 }
 
 // headingBookmark is the name the bookmark on this heading takes, or empty

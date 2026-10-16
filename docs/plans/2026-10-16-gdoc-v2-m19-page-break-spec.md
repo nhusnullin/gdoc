@@ -79,10 +79,12 @@ decides the rule.
   exports as `[rule]`, to be resolved by hand.
 - No `insertPageBreak` in `propose`, in `annotate` or in `restyle`'s body
   pass. The house's own breaks in the prelude are untouched.
-- No page break inside a table cell, a footnote or a block quote: goldmark
-  parses a thematic break there as a block of its own and the walker warns
-  and leaves it out the way it does a picture in a footnote. A test pins the
-  footnote and the cell.
+- No page break inside a footnote or a block quote: goldmark parses a
+  thematic break there as a block of its own and the walker warns and leaves
+  it out the way it does a picture in a footnote. A test pins each. The table
+  cell this sentence also named needs no rule: Task 3 measured a pipe table's
+  cell as inline text, in which goldmark builds no thematic break at all, so
+  there is nothing for the walker to warn about. A test pins that too.
 - No house value. The break is the author's, not the template's, so
   `house.yaml` loses a key and gains none.
 - No column break.

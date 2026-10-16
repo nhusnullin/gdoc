@@ -4504,10 +4504,12 @@ says a page turns mid-sentence.
 **What is not built here.** No syntax for a horizontal rule in a note. No
 `insertPageBreak` in `propose`, in `annotate` or in `restyle`'s body pass, so
 `propose --block` keeps refusing a thematic break in its content and its
-refusal now says a page break. No page break inside a table cell, a footnote
-or a block quote: the walker warns and leaves it out the way it does a picture
-in a footnote. No house value, because the break is the author's rather than
-the template's. No column break.
+refusal now says a page break. No page break inside a footnote definition or a
+block quote: the walker warns and leaves it out the way it does a picture in a
+footnote. A table cell needs no rule, because a pipe table's cell holds inline
+text and goldmark builds no thematic break in one, which Task 3 measured after
+the specification said the walker warns there. No house value, because the
+break is the author's rather than the template's. No column break.
 
 **What is measured.** The docx route needs no gate. What was not known is the
 shape `read` gives the two kinds of break, so the milestone publishes a note
@@ -4522,9 +4524,11 @@ task stops and Nail decides the rule.
 `TestTheFootnoteSeparatorIsNotAPageBreak`,
 `TestABreakBeforeTheFirstHeadingIsTheHeadingsOwn`,
 `TestTwoBreaksInARowAreOne`,
-`TestABreakBetweenTwoParagraphsIsAlwaysHonoured` and
-`TestABreakInsideAFootnoteOrACellIsWarnedAndLeftOut`;
-`cmd/gdoc`'s `TestTheBuildEnvelopeCarriesPageBreaks` and its publish twin;
+`TestABreakBetweenTwoParagraphsIsAlwaysHonoured`,
+`TestABreakInsideAFootnoteOrAQuoteIsWarnedAndLeftOut` and
+`TestThreeHyphensInACellAreNotABreak`;
+`cmd/gdoc`'s `TestBuildAndPublishCarryThePageBreakCount`, the build and the
+publish twin in one table;
 `internal/export`'s `TestAPageBreakOfItsOwnExportsAsThreeHyphens`,
 `TestTheFirstHeadingsBreakIsLeftOut`,
 `TestAPageBreakInsideASentenceKeepsItsMarker` and

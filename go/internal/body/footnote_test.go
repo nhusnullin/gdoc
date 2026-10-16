@@ -324,7 +324,7 @@ func TestAFootnoteInsideACodeBlockIsNotAFootnote(t *testing.T) {
 // with.
 func TestAFootnoteInsideAnIndentedCodeBlockIsNotAFootnote(t *testing.T) {
 	// An indented code block opens after a blank line, and after any line that
-	// cannot be continued: a heading, a horizontal rule, the underline of a
+	// cannot be continued: a heading, a thematic break, the underline of a
 	// setext heading, and a fence that shut. What it cannot interrupt is a
 	// paragraph, which is why the blank line is not the whole rule and the
 	// indent alone is not enough.
@@ -540,8 +540,8 @@ func TestWhatTheHouseStyleCannotSetInAFootnoteIsWarnedAndLeftOut(t *testing.T) {
 			"line 3: a picture inside a footnote is not rendered in the house style and was left out"},
 		{"a picture in the note's second paragraph", "A claim.[^a]\n\n[^a]: the detail.\n\n    See ![the chart](diagram.png).\n",
 			"line 5: a picture inside a footnote is not rendered in the house style and was left out"},
-		{"a horizontal rule, which carries no line", "A claim.[^a]\n\n[^a]: the detail.\n\n    ---\n",
-			"line 3: a horizontal rule inside a footnote is not rendered in the house style and was left out"},
+		{"a page break, which carries no line of its own", "A claim.[^a]\n\n[^a]: the detail.\n\n    ---\n",
+			"line 3: a page break inside a footnote is not rendered in the house style and was left out"},
 	} {
 		out, err := Render(config(t), []byte(c.markdown), "testdata/docs", true)
 		if err != nil {

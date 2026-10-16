@@ -119,7 +119,7 @@ func (r *renderer) footnoteList(list *east.FootnoteList) error {
 // over several lines sends an author to the line they have to change. A
 // picture is an inline and takes the line of the paragraph it sits in, which
 // is that paragraph's own. The definition's line is the answer only for a
-// block carrying no source position anywhere under it, which a horizontal rule
+// block carrying no source position anywhere under it, which a thematic break
 // is.
 func (r *renderer) footnoteBlocks(note *east.Footnote) []*etree.Element {
 	opens := 1
@@ -227,7 +227,7 @@ func footnoteBlockName(node ast.Node) string {
 	case *ast.HTMLBlock:
 		return "a block of HTML"
 	case *ast.ThematicBreak:
-		return "a horizontal rule"
+		return "a page break"
 	default:
 		return "this block"
 	}

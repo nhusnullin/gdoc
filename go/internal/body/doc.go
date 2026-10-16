@@ -291,7 +291,7 @@
 // and the whole rule lives in scan.go because the footnote scan and the span
 // scan read the same lines. An indented block opens wherever a new block may:
 // after a blank line, at the start of the file, and after a line that closed a
-// block of its own, which is a heading, a horizontal rule, the underline of a
+// block of its own, which is a heading, a thematic break, the underline of a
 // setext heading or a fence that shut. The one thing it cannot do is interrupt
 // a paragraph, and a scan that asked only for the blank line refused the line
 // after a heading and the line after a closed fence.
@@ -340,10 +340,10 @@
 // author to the line they have to change. A picture is an inline and takes the
 // line of the paragraph it sits in, and the definition's own line is the answer
 // only for a block carrying no source position anywhere under it, which a
-// horizontal rule is.
+// thematic break is.
 // TestWhatTheHouseStyleCannotSetInAFootnoteIsWarnedAndLeftOut is the pin, and
-// it asks each of them, a picture in the note's second paragraph and a
-// horizontal rule among them.
+// it asks each of them, a picture in the note's second paragraph and a page
+// break among them.
 //
 // A link inside a footnote is its words. A link is a relationship in
 // word/_rels/document.xml.rels, and the footnotes part names no relationships
@@ -530,10 +530,16 @@
 //
 // Result.Counts.PageBreaks counts the paragraphs the walk emitted and not the
 // breaks it parsed, so the number on an envelope is the pages the document got.
-// A break inside a footnote, a table cell or a block quote is warned about by
-// line and left out, the way a picture in a footnote is.
-// TestABreakInsideAFootnoteOrACellIsWarnedAndLeftOut and
-// TestTheBuildEnvelopeCarriesPageBreaks are the pins.
+// A break inside a footnote definition or a block quote is warned about by line
+// and left out, the way a picture in a footnote is: the notes sit under the
+// page Word puts them on, and the break paragraph is a body paragraph that
+// would open a page in the middle of a quote. A table cell needs no rule at
+// all, because a pipe table's cell holds inline text and goldmark builds no
+// thematic break in one; the sentence that said the walker warns about one was
+// corrected the day it was measured (DECISIONS.md, 2026-10-16).
+// TestABreakInsideAFootnoteOrAQuoteIsWarnedAndLeftOut,
+// TestThreeHyphensInACellAreNotABreak and
+// TestBuildAndPublishCarryThePageBreakCount are the pins.
 //
 // # The body breathes: 12pt under a paragraph, 3pt between items, 12pt under
 // the last
@@ -549,7 +555,7 @@
 // TestTheLastItemOfAListEndsItLikeAParagraph,
 // TestANestedListEndsOnItsInnermostLastItem,
 // TestAListThatRenderedNothingLeavesTheBlockBeforeItAlone,
-// TestAPictureSitsOnItsCaption, TestARuleAndAQuoteEndLikeAParagraph,
+// TestAPictureSitsOnItsCaption, TestAQuoteEndsLikeAParagraph,
 // TestACellHasFivePointsOnEverySide and TestACellParagraphIsSingleSpaced are
 // the pins.
 //
