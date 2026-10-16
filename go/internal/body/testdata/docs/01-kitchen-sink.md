@@ -44,7 +44,7 @@ sitting inside the sentence rather than on a line of its own.
 The seven marks, one of each: ==a figure to replace==, ==🟢 a claim to
 confirm==, ==🟣 a question for one reviewer==, ==🔵 a line changed since
 the last version==, ==🔴 a warning==, ==🟠 an aside==, and
-[a line that stays in the document but is not the argument]{.pencil}.
+a note <!-- that stays in the document but is not the argument --> of my own.
 
 Two of the claims above are cited under the page rather than argued in the
 sentence,[^master] which is where a citation costs a reader least.[^cost]

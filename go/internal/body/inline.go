@@ -34,8 +34,9 @@ type Run struct {
 	Mono   bool
 	// Mark is the house mark this run carries, by name, or empty for a run
 	// carrying none. A highlight is yellow unless a colour emoji opened it,
-	// and a span is the pencil: internal/body/mark.go reads the names off the
-	// house style, and internal/render writes one character style per name.
+	// and a comment is the pencil: internal/body/mark.go reads the names off
+	// the house style, and internal/render writes one character style per
+	// name.
 	Mark string
 	// Link is the destination when this run sits inside a hyperlink, empty
 	// otherwise. The destination becomes a package relationship, so the reader
@@ -78,7 +79,8 @@ type ImageRef struct {
 // notes is the number each footnote mark in the note takes, which footnoteNumbers
 // read off the whole tree before the blocks were walked: the number is the
 // mark's position in reading order, and no node knows its own. table is the
-// house palette, which is what names the mark a highlight or a span carries. A
+// house palette, which is what names the mark a highlight or a comment
+// carries. A
 // caller with no footnotes to place, or one asking what a heading reads as,
 // passes nil and the zero table: neither reaches a run that carries a colour.
 func inlineRuns(node ast.Node, source []byte, notes map[ast.Node]int, table markTable) []Run {
@@ -138,10 +140,6 @@ func appendInline(out *[]Run, node ast.Node, source []byte, m marks, ctx inlineC
 				inner[0].Text = withoutOpener(inner[0].Text, opener)
 			}
 			*out = append(*out, inner...)
-		case *Span:
-			next := m
-			next.mark = ctx.marks.span(typed)
-			appendInline(out, typed, source, next, ctx)
 		case *east.Strikethrough:
 			next := m
 			next.strike = true

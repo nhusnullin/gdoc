@@ -586,7 +586,7 @@ func TestTheRoundTripNoteCarriesAFootnoteAndEveryMark(t *testing.T) {
 		{"🔵", "blue"},
 		{"🔴", "red"},
 		{"🟠", "orange"},
-		{"{.pencil}", "pencil"},
+		{"<!--", "pencil"},
 	} {
 		if !strings.Contains(note, c.syntax) {
 			t.Errorf("%s holds no %q, so the round trip measures no %s mark", kitchenSinkNote, c.syntax, c.mark)

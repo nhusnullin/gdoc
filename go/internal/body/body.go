@@ -180,16 +180,15 @@ func Render(cfg *house.Config, markdown []byte, base string, numbering bool) (Re
 	// holds why the parse is the only place one of them can be seen.
 	pc := parser.NewContext()
 	root := parse().Parser().Parse(text.NewReader(source), parser.WithContext(pc))
-	// The footnotes and the spans are refused before a block is built, both
-	// mostly off the source lines: a mark naming no note and an attribute
-	// closing no span are facts about a line, and goldmark is silent in each
-	// of them. Each asks the parse the one question a line cannot answer,
-	// which is whether goldmark read the same thing there; footnote.go and
-	// mark.go hold which question that is.
+	// The footnotes and the grey mark's old spelling are refused before a
+	// block is built, both off the source lines: a mark naming no note and a
+	// span nothing parses any more are facts about a line, and goldmark is
+	// silent in each of them. footnote.go and comment.go hold why each is
+	// asked here.
 	if err := checkFootnotes(source, root, definitionsRead(pc)); err != nil {
 		return Result{}, err
 	}
-	if err := checkSpans(source, root); err != nil {
+	if err := checkOldPencilSpan(source, root); err != nil {
 		return Result{}, err
 	}
 	order, numbers := footnoteNumbers(root)

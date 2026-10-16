@@ -99,7 +99,7 @@ cd go && GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1 go test ./internal/live -run 'RoundT
 - [x] Task 4: a pencil goes where a mark goes
 - [x] Task 5: gdoc's own two comments are markers
 - [x] Task 6: export writes a pencil home as an HTML comment, and the comment spelling comes first
-- [ ] Task 7: the span goes, `]{.pencil}` is refused by name, and the file states two spellings
+- [x] Task 7: the span goes, `]{.pencil}` is refused by name, and the file states two spellings
 - [ ] Task 8: the live round trip
 - [ ] Task 9: the words in the guide, the skills, the backlog and the README
 - [ ] Task 10: the acceptance table
@@ -261,6 +261,45 @@ refusal is one regular expression on the lines `checkLines` reads, beside
 `TestHelpMarksPrintsBothPencilSpellings` in `cmd/gdoc` reads them off
 `help marks --json`. `doc.go`'s span section is rewritten as the comment
 section, naming the tests above.
+
+Ran 2026-10-16. The span is gone: both parsers, the `Span` and `spanOpen`
+nodes, `spanAhead`, `checkSpans`, `spanLines`, `spanWritten`, `spanClosed`,
+`spanAttribute`, `spanCloser`, `pencilAttribute` and the eleven tests the plan
+names, with `markTable.span` and the `*Span` arms of `countMarks`, `isMark` and
+`inline.go`. `checkOldPencilSpan` in `comment.go` is the one regular
+expression left, built off `oldPencilSpelling`, the one place the old string is
+still written down.
+
+Three things the task found. The refusal names the words the author bracketed,
+because `(?:\[([^\[\]]*))?\]\{\.pencil\}` captures them when the bracket
+is on the line, so `[a note]{.pencil}` is answered with `<!-- a note -->`
+rather than with a shape; a closer with no bracket in front of it is answered
+with `<!-- words -->`. Both spellings are offered, because an author who wrote
+the span once chose where the aside shows.
+
+`TestAPencilAttributeInsideABlockOfHTMLRefusesNothing` went with the span, and
+the rule it held did not: `checkLines` still leaves out a block of HTML, so
+that case is a fourth row of
+`TestTheOldSpanWhereNothingIsMarkdownIsNotRefused` beside the code span, the
+fence and the indented block, and `scan.go` names it. What is not exempt is an
+author writing `]{.pencil}` inside a comment of their own on a line of prose:
+goldmark reads that comment as inline raw HTML, the line reaches `checkLines`,
+and the note is refused. One regular expression on the prose lines is what the
+plan asks for, the shape is a sentence about gdoc inside an aside about gdoc,
+and the refusal names the fix, so it is left as it is.
+
+Two fixtures carried the span and now carry a comment, which moved both
+goldens. `01-kitchen-sink.md` took three tries: a comment that opens a line is
+an HTML block even in the middle of a paragraph, and a line whose comment shuts
+before the end of it is no comment at all, so the aside was warned about and
+left out with the sentence's full stop. The pencil sits inside the line now.
+`TestTwoMarksSideBySideStayTwoRuns` moved for the same reason and says so.
+`internal/live/roundtrip_test.go`'s guard over the kitchen sink reads `<!--`
+rather than `{.pencil}`, because this commit changed the note it reads;
+`TestLiveRoundTrip` itself is Task 8's. `make vet`, gofmt and the raced suite
+are green over the whole tree with the live variables unset, which is how this
+session ran them: `internal/live` publishes the pencil pair and that pair is
+Task 8's.
 
 ### Task 8: the live round trip
 

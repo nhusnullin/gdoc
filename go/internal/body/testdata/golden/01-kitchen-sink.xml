@@ -273,7 +273,7 @@
         <w:sz w:val="24"/>
         <w:szCs w:val="24"/>
       </w:rPr>
-      <w:t xml:space="preserve">, and </w:t>
+      <w:t xml:space="preserve">, and a note </w:t>
     </w:r>
     <w:r>
       <w:rPr>
@@ -282,14 +282,14 @@
         <w:sz w:val="24"/>
         <w:szCs w:val="24"/>
       </w:rPr>
-      <w:t xml:space="preserve">a line that stays in the document but is not the argument</w:t>
+      <w:t xml:space="preserve">that stays in the document but is not the argument</w:t>
     </w:r>
     <w:r>
       <w:rPr>
         <w:sz w:val="24"/>
         <w:szCs w:val="24"/>
       </w:rPr>
-      <w:t xml:space="preserve">.</w:t>
+      <w:t xml:space="preserve"> of my own.</w:t>
     </w:r>
   </w:p>
   <w:p>

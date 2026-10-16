@@ -29,61 +29,45 @@
 // ==mark== is mark.go, written here rather than pulled in, and it carries seven
 // marks rather than one highlight (DECISIONS.md, 2026-10-14). ==words== is
 // yellow, a colour emoji at the start of the highlight picks one of the other
-// five, and [words]{.pencil} is the one Pandoc span this package reads, text
-// colour rather than shading. house.yaml states the seven with their syntax,
-// kind and Doc colour, so no emoji and no hex is a constant here; the one
-// string written out is the attribute ".pencil", because the parsers are built
-// before any house file is read, and TestThePencilSyntaxIsTheHouseStyles pins
-// it to the pencil mark's own syntax. What is carried is the mark on the run;
-// what is refused by line is a nested mark, an empty span, a highlight whose
-// only content is the colour emoji that opened it, which marks no words the way
-// an empty span marks none and counted a colour on an envelope the document does
-// not carry, a span carrying any
-// other attribute, a span that does not open and close on one line, a mark
-// inside a heading, for the reason a footnote mark in a heading is refused, and
-// a mark inside a picture's alt text, which becomes the caption: the caption is
-// built with no palette at all, so the mark was dropped there and the colour
-// emoji that opened it reached the document as words. An
-// emoji anywhere but the start of a highlight, and a bracket not followed by
-// ]{, are the author's own words. A bracket inside a code span is neither: the
-// parser steps over a code span the way the line scan does, so the two agree
-// on what opens a span.
+// five, and the grey pencil is a comment, text colour rather than shading:
+// HTML's "<!-- words -->" or Obsidian's "%% words %%", read by comment.go and
+// obsidian.go. house.yaml states the seven with their syntax, kind and Doc
+// colour, so no emoji and no hex is a constant here; the two strings written
+// out are the comment delimiters, because the walk reads a comment before any
+// house file is in hand, and TestThePencilSyntaxIsTheHouseStyles pins them to
+// the pencil mark's own syntax. What is carried is the mark on the run; what
+// is refused by line is a nested mark, a highlight whose only content is the
+// colour emoji that opened it, which marks no words and counted a colour on
+// an envelope the document does not carry, a mark inside a heading, for the
+// reason a footnote mark in a heading is refused, and a mark inside a
+// picture's alt text, which becomes the caption: the caption is built with no
+// palette at all, so the mark was dropped there and the colour emoji that
+// opened it reached the document as words. An emoji anywhere but the start of
+// a highlight is the author's own words, and so is a bracket: no mark opens
+// with one.
 //
-// The words question is asked of a line that lost no code. The line scan reads
-// a line with its code spans taken out, so a span whose whole content is one,
-// "[`code`]{.pencil}", read as "[]{.pencil}" and was refused for marking no
-// words, naming a span nowhere in the file and refusing a note the parser was
-// about to render grey. An empty span on a line that held code is still
-// refused, because the parse forms no span for a bracket with nothing in it
-// and the attribute then closes none.
-//
-// The attribute is counted against the spans the parse formed, because a
-// bracket this package's parser never gets to claim still reads as a span by
-// line: a bracket after "!" is a picture's, a bracket holding a caret is a
-// footnote mark's, and a bracket followed by a target or a reference is a
-// link's. In each of those "{.pencil}" closed nothing and was published as
-// words with the build saying ok, which is the failure the line check exists
-// to prevent.
+// The grey mark was a Pandoc span, "[words]{.pencil}", until milestone 20, and
+// that spelling is refused by line now, naming the comment to write instead.
+// Nothing parses it, so a note that still carries it would publish the
+// brackets and the braces as the characters the author typed with the build
+// saying ok, which is the failure every line check in this package exists to
+// prevent. The refusal is one regular expression on the lines checkLines
+// reads, in comment.go beside the reading of the spelling that replaced it, so
+// the old syntax written in a code span or a code block refuses nothing: a
+// note explaining the change is not refused for explaining it.
 // TestAHighlightOpeningWithAColourEmojiCarriesItsMark,
-// TestAnEmojiElsewhereInAHighlightIsText, TestAPencilSpanIsARunCarryingItsMark,
-// TestALinkIsStillALink, TestABracketNotFollowedByAttributesIsText,
-// TestASpanWithAnotherAttributeIsRefusedByLineNamingPencil,
-// TestANestedMarkIsRefusedByLine, TestAnEmptySpanIsRefusedByLine,
+// TestAnEmojiElsewhereInAHighlightIsText, TestALinkIsStillALink,
+// TestABracketIsTheAuthorsOwnWords, TestANestedMarkIsRefusedByLine,
 // TestAHighlightOfOnlyItsColourEmojiIsRefusedByLine,
 // TestAHighlightWithWordsAfterItsColourIsNotRefused,
-// TestASpanCrossingAParagraphIsRefusedByLine,
-// TestASpanWhoseWordsHoldACodeSpanWithABracketIsStillASpan,
-// TestASpanInsideACodeBlockIsNotASpan,
-// TestAPencilAttributeThatOpensNoSpanIsRefusedByLine,
-// TestAPencilAttributeInsideABlockOfHTMLRefusesNothing,
-// TestASpanTheParseFormsIsNotRefused,
-// TestASpanWhoseWordsAreOnlyACodeSpanIsStillASpan,
-// TestAnEmptySpanBesideACodeSpanIsStillRefused and
-// TestAMarkInAHeadingIsRefusedByLine and
-// TestAMarkInAPicturesAltTextIsRefusedByLine are the pins, with
+// TestAMarkInAHeadingIsRefusedByLine,
+// TestAMarkInAPicturesAltTextIsRefusedByLine,
+// TestTheOldSpanIsRefusedByLineNamingTheComment and
+// TestTheOldSpanWhereNothingIsMarkdownIsNotRefused are the pins, with
 // TestTwoMarksSideBySideStayTwoRuns over merge and
 // TestTheDebtsAreCountedAndTheOthersAreNot over the three counted on the
-// envelope.
+// envelope. The comment itself is the warnings section below, which holds what
+// a pencil is and where it goes.
 //
 // A mark reaches Word twice over. The run names the character style
 // internal/render writes, so Word lists the marks and a reader finds every
@@ -347,8 +331,8 @@
 // it on as many.
 // A code block is a fence or four spaces, a fenced block shuts only on its own
 // character in a run at least as long as its opener and carrying nothing else,
-// and the whole rule lives in scan.go because the footnote scan and the span
-// scan read the same lines. An indented block opens wherever a new block may:
+// and the whole rule lives in scan.go because the footnote scan and the scan
+// for the grey mark's old spelling read the same lines. An indented block opens wherever a new block may:
 // after a blank line, at the start of the file, and after a line that closed a
 // block of its own, which is a heading, a thematic break, the underline of a
 // setext heading or a fence that shut. The one thing it cannot do is interrupt

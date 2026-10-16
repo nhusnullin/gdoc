@@ -33,7 +33,7 @@ func TestTheSevenMarksAreStatedAsLiterals(t *testing.T) {
 		{"blue", []string{"🔵"}, "highlight", "#5DB3FF", false},
 		{"red", []string{"🔴"}, "highlight", "#FF6B6B", false},
 		{"orange", []string{"🟠"}, "highlight", "#FFB85C", false},
-		{"pencil", []string{"<!--", "%%", ".pencil"}, "text", "#9A9A9A", false},
+		{"pencil", []string{"<!--", "%%"}, "text", "#9A9A9A", false},
 	}
 	for _, c := range cases {
 		mark, ok := cfg.Marks[c.name]

@@ -194,7 +194,7 @@ func proseLines(source []byte, f func(sourceLine)) {
 // "```x``` is a span" opens nothing: goldmark reads a code span there and the
 // rest of the line as words. Read as an opener, every line after it was left
 // out of both checks until something closed the block, so a mark naming no
-// note and an attribute closing no span reached the document as the words the
+// note and the grey mark's old spelling reached the document as the words the
 // author wrote; and a real fenced block under such a line was read as prose
 // instead, which refused a note nothing was wrong with. A tilde fence's info
 // string may hold anything, backticks included.
@@ -302,14 +302,15 @@ func ticks(line []byte, i int) int {
 // checkLines calls f for every source line a refusal may be read off: the
 // prose lines, with the lines of a block of HTML left out.
 //
-// A block of HTML is named on the envelope and left out of the document, and
-// nothing inside one is markdown: goldmark reads the whole block as one leaf,
-// so a footnote definition written there defines nothing and a span written
-// there is never formed. That is the rule a code block already has, and the
-// lines come off the parse rather than off a second reading of the source,
-// because CommonMark opens a block of HTML on seven different conditions and
-// shuts it on as many. TestADefinitionInsideABlockOfHTMLRefusesNothing and
-// TestAPencilAttributeInsideABlockOfHTMLRefusesNothing are the pins.
+// A block of HTML that is not a comment is named on the envelope and left out
+// of the document, and nothing inside one is markdown: goldmark reads the
+// whole block as one leaf, so a footnote definition written there defines
+// nothing and the grey mark's old spelling marks nothing. That is the rule a
+// code block already has, and the lines come off the parse rather than off a
+// second reading of the source, because CommonMark opens a block of HTML on
+// seven different conditions and shuts it on as many.
+// TestADefinitionInsideABlockOfHTMLRefusesNothing and
+// TestTheOldSpanWhereNothingIsMarkdownIsNotRefused are the pins.
 func checkLines(source []byte, root ast.Node, f func(sourceLine)) {
 	html := htmlBlockLines(source, root)
 	proseLines(source, func(l sourceLine) {

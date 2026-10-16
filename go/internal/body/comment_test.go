@@ -308,3 +308,46 @@ func TestAHighlightInsideAPencilIsWords(t *testing.T) {
 		pencil(t, out.Blocks, "a ==b== c", "a comment holding a highlight")
 	}
 }
+
+// TestTheOldSpanIsRefusedByLineNamingTheComment. The grey mark was a Pandoc
+// span until this milestone, "[words]{.pencil}", and the spelling is gone:
+// nothing parses it, so a note that still carries it would publish the
+// brackets and the braces as words. It is refused by line instead, and the
+// refusal names the comment to write in its place, because an author who
+// typed the old spelling knows what they meant and needs the new one.
+func TestTheOldSpanIsRefusedByLineNamingTheComment(t *testing.T) {
+	for _, c := range []struct{ note, names string }{
+		{"Words.\n\nA [a note]{.pencil} here.\n", "<!-- a note -->"},
+		{"Words.\n\nA ]{.pencil} with no bracket in front of it.\n", "<!-- words -->"},
+	} {
+		got := refused(t, c.note)
+		if !strings.Contains(got, "line 3:") {
+			t.Errorf("%q: the refusal is %q, want it to name line 3", c.note, got)
+		}
+		if !strings.Contains(got, c.names) {
+			t.Errorf("%q: the refusal is %q, and it does not name %q to write instead",
+				c.note, got, c.names)
+		}
+		if !strings.Contains(got, "%%") {
+			t.Errorf("%q: the refusal is %q, and it names one spelling of two", c.note, got)
+		}
+	}
+}
+
+// The other side of it: the old spelling where nothing is markdown is an
+// author writing about gdoc rather than marking words, which is the rule every
+// line check in this package already follows. The guide holds the span in a
+// code span, and a note explaining the change would be refused for explaining
+// it. A block of HTML is the fourth place, left out of the document whole.
+func TestTheOldSpanWhereNothingIsMarkdownIsNotRefused(t *testing.T) {
+	for _, source := range []string{
+		"Words.\n\nThe old spelling was `[words]{.pencil}` once.\n",
+		"Words.\n\n```\n[words]{.pencil}\n```\n",
+		"Words.\n\n    [words]{.pencil}\n",
+		"Words.\n\n<div>\n[a]{.pencil}\n</div>\n",
+	} {
+		if _, err := Render(config(t), []byte(source), "testdata/docs", true); err != nil {
+			t.Errorf("%q was refused: %v", source, err)
+		}
+	}
+}

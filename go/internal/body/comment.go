@@ -16,6 +16,8 @@ package body
 // has holds for both spellings without being written twice.
 
 import (
+	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/yuin/goldmark/ast"
@@ -154,6 +156,54 @@ func isPencil(node ast.Node, source []byte) bool {
 	}
 	words, _, comment := commentWords(raw, source)
 	return comment && words != ""
+}
+
+// oldPencilSpelling is the attribute the grey mark was a Pandoc span with
+// until milestone 20, "[words]{.pencil}". The spelling is gone from the
+// parser and from the house style, and this is the one place it is still
+// written down: a note that carries it is refused by name.
+const oldPencilSpelling = ".pencil"
+
+// oldPencilSpan is that spelling as a line carries it: the words in brackets
+// where the bracket is on this line, and the attribute that shut them in
+// either case. The bracket is optional because a span never had to open and
+// close on one line for the attribute to reach the document as words.
+var oldPencilSpan = regexp.MustCompile(
+	`(?:\[([^\[\]]*))?\]\{` + regexp.QuoteMeta(oldPencilSpelling) + `\}`)
+
+// checkOldPencilSpan refuses the old spelling by line, naming the comment to
+// write instead.
+//
+// Nothing parses the span now, so the brackets and the braces would reach the
+// document as the characters the author typed, with the build saying ok. That
+// is the failure every line check in this package exists to prevent, and the
+// refusal is read off the same lines the others are: nothing inside backticks,
+// inside a code block or inside a block of HTML is markdown, so a note
+// explaining the change is not refused for explaining it.
+// TestTheOldSpanIsRefusedByLineNamingTheComment and
+// TestTheOldSpanWhereNothingIsMarkdownIsNotRefused are the pins.
+func checkOldPencilSpan(source []byte, root ast.Node) error {
+	var refusal error
+	checkLines(source, root, func(l sourceLine) {
+		if refusal != nil {
+			return
+		}
+		m := oldPencilSpan.FindStringSubmatch(l.text)
+		if m == nil {
+			return
+		}
+		// A closer with no bracket in front of it names no words, so the
+		// refusal shows the shape to write rather than the author's own
+		// aside.
+		words := strings.TrimSpace(m[1])
+		if words == "" {
+			words = "words"
+		}
+		refusal = fmt.Errorf("line %d: %s is how the grey mark was written before milestone 20, and a pencil is a comment now: write %s %s %s, or %s %s %s, which Obsidian hides while somebody reads the note; left as it is, the brackets and the braces would reach the document as words",
+			l.at, m[0], commentOpener, words, commentCloser,
+			obsidianDelimiter, words, obsidianDelimiter)
+	})
+	return refusal
 }
 
 // isCommentBlock says whether a block of HTML is a comment, closed or not. A
