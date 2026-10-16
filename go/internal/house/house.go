@@ -591,12 +591,20 @@ func (c *Config) Style(name string) (Style, bool) {
 	return s, ok
 }
 
+// LogoDrive is the id of the file in Drive this house's logo is, or empty
+// when the bytes are in logo.base64. It is the one place the key is trimmed,
+// so the question "is this logo in Drive" has one answer wherever it is
+// asked: here, in Validate, and in the command that fetches it.
+func (c *Config) LogoDrive() string {
+	return strings.TrimSpace(c.Logo.Drive)
+}
+
 // LogoBytes decodes the logo out of the config. A house whose logo is one
 // file in Drive carries no bytes here, and the error names the file so
 // whoever reads it knows where to look: internal/asset fetches those, and
 // this package reaches nothing.
 func (c *Config) LogoBytes() ([]byte, error) {
-	if drive := strings.TrimSpace(c.Logo.Drive); drive != "" {
+	if drive := c.LogoDrive(); drive != "" {
 		return nil, fmt.Errorf("logo: this house's logo is file %s in Drive, and logo.base64 is not set", drive)
 	}
 	raw, err := base64.StdEncoding.DecodeString(strings.TrimSpace(c.Logo.Base64))
@@ -941,7 +949,7 @@ func (c *Config) validateLogo() error {
 	if err := c.validateLogoPlacement(); err != nil {
 		return err
 	}
-	drive, b64 := strings.TrimSpace(c.Logo.Drive), strings.TrimSpace(c.Logo.Base64)
+	drive, b64 := c.LogoDrive(), strings.TrimSpace(c.Logo.Base64)
 	switch {
 	case drive != "" && b64 != "":
 		return fmt.Errorf("logo: exactly one of logo.drive and logo.base64 is wanted, and both are set")

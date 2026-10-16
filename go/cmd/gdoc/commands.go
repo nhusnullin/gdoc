@@ -389,8 +389,8 @@ func commands() []command {
 				"--- on a line of its own is a page break: the document starts a new page there, and ***, ___ and - - - are that same break. A break before nothing, at the end of a note or before its footnote definitions, and a break directly before another one, are left out, because the page they open holds nothing. body.page_breaks on this envelope is the pages the document got, not the lines the note held.",
 			},
 			example: "gdoc build --md note.md --out note.docx",
-			run: func(_ context.Context, a *args, _ io.Writer) emit.Result {
-				return cmdBuild(a)
+			run: func(ctx context.Context, a *args, _ io.Writer) emit.Result {
+				return cmdBuild(ctx, a)
 			},
 		},
 		{
@@ -403,8 +403,8 @@ func commands() []command {
 			},
 			summary: "Build the note as a house-style document and upload it into one folder.",
 			example: "gdoc publish --md note.md --folder-id 1AbC...",
-			run: func(_ context.Context, a *args, _ io.Writer) emit.Result {
-				return cmdPublish(a)
+			run: func(ctx context.Context, a *args, _ io.Writer) emit.Result {
+				return cmdPublish(ctx, a)
 			},
 		},
 		{

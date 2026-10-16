@@ -195,7 +195,7 @@ func rendered(t *testing.T, markdown string) []byte {
 	if err != nil {
 		t.Fatalf("the note's markdown did not render: %v", err)
 	}
-	pkg, err := render.Build(cfg, fields, walked.Blocks, walked.Media, walked.Footnotes, walked.NumberedLists)
+	pkg, err := render.Build(cfg, houseLogo(t, cfg), fields, walked.Blocks, walked.Media, walked.Footnotes, walked.NumberedLists)
 	if err != nil {
 		t.Fatalf("the document did not build: %v", err)
 	}
@@ -210,3 +210,15 @@ func rendered(t *testing.T, markdown string) []byte {
 // decoder reads it: a:blip already says the reference is a picture, and an
 // export that spelled the type differently would otherwise lose every one.
 const imageRelType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"
+
+// houseLogo is the mark render is handed. Build takes the logo from its caller
+// now rather than reading it off the config, because a house style may name
+// one file in Drive instead of carrying the bytes.
+func houseLogo(t *testing.T, cfg *house.Config) []byte {
+	t.Helper()
+	raw, err := cfg.LogoBytes()
+	if err != nil {
+		t.Fatalf("LogoBytes: %v", err)
+	}
+	return raw
+}

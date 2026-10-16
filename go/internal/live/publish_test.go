@@ -341,7 +341,7 @@ func renderNoteFile(t *testing.T, path string) noteDocument {
 	for _, w := range walked.Warnings {
 		t.Logf("render warning: %s", w)
 	}
-	pkg, err := render.Build(cfg, fields, walked.Blocks, walked.Media, walked.Footnotes, walked.NumberedLists)
+	pkg, err := render.Build(cfg, houseLogo(t, cfg), fields, walked.Blocks, walked.Media, walked.Footnotes, walked.NumberedLists)
 	if err != nil {
 		t.Fatalf("the document did not build: %v", err)
 	}
@@ -474,4 +474,16 @@ func TestTheLiveFixturesRenderWithNoNetwork(t *testing.T) {
 	if _, err := os.Stat(masterDocx); err != nil {
 		t.Errorf("the Word master the live gate measures against is not at %s: %v", masterDocx, err)
 	}
+}
+
+// houseLogo is the mark render is handed. Build takes the logo from its caller
+// now rather than reading it off the config, because a house style may name
+// one file in Drive instead of carrying the bytes.
+func houseLogo(t *testing.T, cfg *house.Config) []byte {
+	t.Helper()
+	raw, err := cfg.LogoBytes()
+	if err != nil {
+		t.Fatalf("LogoBytes: %v", err)
+	}
+	return raw
 }

@@ -121,6 +121,29 @@
 // here rather than in review. A call written for a third room is a reach
 // somebody has to decide on, which is a DECISIONS.md entry and not a refactor.
 //
+// # The asset room has one path into it, and it ends at two commands
+//
+// internal/asset reads the bytes of one file out of Drive, which is the house
+// logo and nothing else today. The grant that admits the read is held narrow
+// by internal/guard's own asset_test.go; what is held here is who may open
+// it. The path is four names long: asset.Fetch is called in logoFor in
+// cmd/gdoc/logo.go, logoFor is called in renderNote, and renderNote is called
+// by cmdBuild and cmdPublish. TestOnlyBuildAndPublishCallTheAssetRoom reads
+// each link out of the syntax tree, the way the account tests above read
+// theirs, and counts.
+//
+// TestReadExportRestyleAndHelpNeverReachTheAssetRoom holds the other half
+// over cmd/gdoc's call graph: no command but those two reaches logoFor by any
+// path. export, restyle and help marks read the house style for their own
+// reasons and read, comments and suggestions read a document; none of them
+// renders a note, so a request to Drive from any of them is a request nobody
+// asked for. The graph is the generous reading, by called name rather than by
+// resolved symbol, because a test asking whether a path exists must not miss
+// one. The command table is the one node left out of it: it names every
+// command by construction, so a path through it is the dispatcher rather than
+// one command reaching another. The test also fails if the two commands stop
+// reaching the room, because a rule nothing exercises holds nothing.
+//
 // # The mark is read in one place
 //
 // The mark is the only record of authorship a thread itself carries, so the

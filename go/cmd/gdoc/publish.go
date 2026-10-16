@@ -53,6 +53,7 @@ type publishData struct {
 	URL          string         `json:"url,omitempty"`
 	Title        string         `json:"title,omitempty"`
 	House        string         `json:"house"`
+	Logo         logoData       `json:"logo"`
 	Bytes        int64          `json:"bytes"`
 	Tabs         int            `json:"tabs,omitempty"`
 	Verified     bool           `json:"verified"`
@@ -62,7 +63,7 @@ type publishData struct {
 	Body         body.Counts    `json:"body"`
 }
 
-func cmdPublish(a *args) emit.Result {
+func cmdPublish(ctx context.Context, a *args) emit.Result {
 	md, err := required(a, "--md")
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
@@ -88,9 +89,10 @@ func cmdPublish(a *args) emit.Result {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
 
-	doc, err := renderNote(source, md, a)
+	doc, err := renderNote(ctx, source, md, a)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return emit.Result{OK: false, Error: err.Error(), Warnings: doc.Warnings,
+			Data: publishData{FolderID: folder, House: doc.House, Logo: doc.Logo}}
 	}
 
 	// One door, and it is the folder. No file is named, so the document this
@@ -102,7 +104,7 @@ func cmdPublish(a *args) emit.Result {
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
-	return runPublish(context.Background(), s, md, source, folder, doc)
+	return runPublish(ctx, s, md, source, folder, doc)
 }
 
 // runPublish is the run itself: upload, verify, pair, and take the document
@@ -112,6 +114,7 @@ func runPublish(ctx context.Context, s session, md string, source []byte, folder
 	data := publishData{
 		FolderID: folder,
 		House:    doc.House,
+		Logo:     doc.Logo,
 		Bytes:    int64(len(doc.Docx)),
 		Body:     doc.Counts,
 	}
