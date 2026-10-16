@@ -93,15 +93,20 @@
 //
 // # One more file out of the same zip
 //
-// FileFrom is the whole of what a caller may take from a release besides the
-// binary: one named file, out of bytes that have already matched the published
-// checksum. `gdoc update --desktop` reads the Claude Desktop manifest template
-// that way, so the template a person's Claude Desktop is handed came out of the
-// same verified zip as the binary it names, and no second download decides
-// anything. Nothing on disk moves.
+// FileFrom is what a caller may read out of a release without writing
+// anything: one named file, out of bytes that have already matched the
+// published checksum. `gdoc update --desktop` reads the Claude Desktop
+// manifest template that way, so the template a person's Claude Desktop is
+// handed came out of the same verified zip as the binary it names, and no
+// second download decides anything. Nothing on disk moves.
 // TestFileFromTakesOneFileOutOfTheVerifiedZip,
 // TestFileFromRefusesAZipThatDoesNotMatchItsChecksum and
 // TestFileFromRefusesAFileTheZipDoesNotHoldByName.
+//
+// Apply, FileFrom and sumLine are each about one named file, and until the
+// presence landed that was the whole of what this package took out of a zip.
+// ApplyBundle is the one route that takes a tree, and the section below is
+// what that costs.
 //
 // Rollback is a swap rather than a move: what was installed becomes
 // <path>.previous and the earlier binary comes back, so a rollback taken by
@@ -118,6 +123,88 @@
 // A rollback reports no installed version. The binary it put back is the one
 // gdoc is not running, and reading its version would mean running it.
 // TestRollbackPutsTheEarlierBinaryBack.
+//
+// # A folder out of the same zip, and the app it is
+//
+// ApplyBundle installs the macOS app bundle the darwin zips carry at
+// presence/GdocPresence.app. It is a second function rather than a flag on
+// Apply because almost nothing about a tree is the same as a file. A folder
+// cannot go through internal/atomicfile, which replaces one file's contents.
+// A zip holding a tree can hold a path that climbs out of it, a symlink, a
+// second entry for the same file, a path that is a different file here and
+// the same file on a Mac's case-insensitive disk, and a resource fork, none
+// of which a single named file can be. And rename will not replace a folder,
+// so the bundle kept from the run before has to be cleared out of the way
+// rather than written over.
+//
+// The order is Apply's order. The zip is verified first, so a zip that fails
+// its checksum extracts nothing:
+// TestABundleIsTakenOutOfTheVerifiedZipOnly. Then every entry is judged
+// before any of them is written. A name no entry of a release ever carries
+// is refused wherever it sits in the archive: an absolute path, a .. or .
+// segment, a backslash, the __MACOSX folder a Mac packs beside what it
+// zipped, and a resource fork. Everything else is judged only under the
+// bundle path, and an entry elsewhere in the zip is simply not taken,
+// because the same archive holds the binary, the installer and the skills.
+// TestOnlyEntriesUnderTheBundlePathAreTaken and
+// TestAPathOutsideTheBundleASymlinkAndAnAppleDoubleEntryAreRefusedByName.
+//
+// Two ceilings, 2,000 entries and 64 MiB expanded, are both far above a
+// plist and one universal executable and far below what a zip bomb needs.
+// They are added up off the entries' own headers before anything is written,
+// and each entry is then read through a limit of the size its header
+// declared, so an entry that unpacks past what it promised cannot walk
+// through the ceiling that was added up from it.
+// TestTooManyEntriesOrTooManyBytesAreRefusedByName.
+//
+// The last judgement is the bundle's own Info.plist, read strictly with
+// encoding/xml: it has to name com.altery.gdoc.presence and carry the
+// release's own version, which is the asset name's tag without the v. A zip
+// and a stamp that did not come out of the same build are refused by name.
+// Reading the plist with encoding/xml and nothing else is also what keeps it
+// in the XML format, because a plist converted to the binary one would stop
+// reading here. TestAnotherIdentifierOrAnotherVersionIsRefusedByName and
+// TestOnlyAnXMLPlistReads, with TestTheReleasesTagIsReadOutOfTheAssetName
+// for where the version compared against comes from.
+//
+// What is already at the destination is judged too, and nothing has moved
+// when that refusal is raised. A symlink is refused because the rename would
+// replace the link and leave whatever it pointed at; a file because a bundle
+// is a folder; a folder whose plist does not read, or names somebody else,
+// because not knowing never resolves to overwrite. A person who put
+// something else there removes it, and the next run installs.
+// TestADestinationThatIsASymlinkAFileOrAnotherAppMovesNothing. A missing
+// ~/Applications is made rather than refused:
+// TestAMissingApplicationsFolderIsMade.
+//
+// Then the tree is written under <dest>.new, with a stale stage cleared
+// first, read back off the disk and summed, and swapped in by rename. A file
+// the zip marked executable is left at 0755 and everything else at 0644,
+// whatever the person's umask would have taken off, and every folder at
+// 0755. TestModesComeFromTheZip and TestAStaleStageIsRemovedFirst.
+//
+// TreeSum is what a tree has instead of Sum: one line per file, the path
+// under the bundle, a NUL, that file's SHA-256, sorted by path, and the
+// SHA-256 of all of it. The NUL is the separator because it is the one byte
+// a path cannot hold. TestTheStageIsReadBackAndSummed. TODO(test): nothing
+// drives the comparison between the tree that was written and the tree read
+// back, because within one call nothing can make the two differ.
+//
+// The swap is two renames and the clearing before them, and the second
+// rename failing undoes the first. TestTheSwapKeepsThePreviousBundle and
+// TestAFailedSwapPutsTheOldBundleBack, which calls the swap with nothing
+// staged, because ApplyBundle cannot be made to hit it on purpose.
+//
+// RollbackBundle is the bundle's involution, as Rollback is the binary's:
+// TestRollbackOfTheBundleRunTwiceIsWhereItStarted and
+// TestRollbackOfTheBundleWithNoPreviousIsRefusedByName. It differs from
+// Rollback in one way. A rollback reports no installed binary version,
+// because reading it would mean running the binary; a bundle's version is a
+// file, so the rollback reads it and says what went back.
+//
+// Nothing here undoes the binary. The app and the binary are installed one
+// after the other and judged apart, so a machine can sit with the two at
+// different versions, and the app is the one that says so.
 //
 // Windows is the same three renames, and os.Rename replaces the file it lands
 // on there as it does here. It is unmeasured until the checklist in

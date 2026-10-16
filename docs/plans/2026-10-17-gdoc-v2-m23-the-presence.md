@@ -274,7 +274,7 @@ every box in it is ticked and its commit is on the branch.
 - Create: `go/internal/update/bundle.go`, `go/internal/update/bundle_test.go`, `go/internal/update/testdata/bundle.zip`
 - Modify: `go/internal/update/doc.go`
 
-- [ ] `TestABundleIsTakenOutOfTheVerifiedZipOnly` (a zip failing `Verify`
+- [x] `TestABundleIsTakenOutOfTheVerifiedZipOnly` (a zip failing `Verify`
       extracts nothing), `TestOnlyEntriesUnderTheBundlePathAreTaken`,
       `TestAPathOutsideTheBundleASymlinkAndAnAppleDoubleEntryAreRefusedByName`
       (`..`, an absolute path, a symlink entry, `__MACOSX/`, `._x`, a duplicate
@@ -289,13 +289,13 @@ every box in it is ticked and its commit is on the branch.
       `TestRollbackOfTheBundleRunTwiceIsWhereItStarted`,
       `TestADestinationThatIsASymlinkAFileOrAnotherAppMovesNothing`,
       `TestAMissingApplicationsFolderIsMade`
-- [ ] `ApplyBundle(archive, sums, asset, inZip, dest) (BundleResult, error)`
+- [x] `ApplyBundle(archive, sums, asset, inZip, dest) (BundleResult, error)`
       and `RollbackBundle(dest)`; the stage is `<dest>.new`, removed first if
       stale, the previous `<dest>.previous`, `RemoveAll` on the stale
       previous because rename will not replace a folder, every rename after
       the first undone on failure; `BundleResult` carries `Version`,
       `TreeSum`, `Previous`
-- [ ] `update/doc.go` gains the section and amends its "one named file"
+- [x] `update/doc.go` gains the section and amends its "one named file"
       sentence, with the tests by name
 
 ### Task 6: `gdoc update` installs, refreshes and rolls back the app under the flag
