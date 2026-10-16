@@ -266,12 +266,32 @@
 // cannot accept its own suggestion, so the probe leaves that document in the
 // folder and prints its URL.
 //
-// # Three tests leave their document behind, on purpose
+// # Four tests leave their document behind, on purpose
 //
 // The anchors test, the prelude acceptance and the named range probe's accept
 // row each leave a document in the folder with its URL in the log. The numbers
 // say the anchors survived and the suggestion ids are there; whether the cover
 // reads right is Nail's, in the document. Trash them once you have looked.
+//
+// TestAPublishedHeadingCarriesAnIdAndAJumpIsAHeadingLink is the fourth, M21's
+// acceptance, and it creates its document rather than copying one. It
+// publishes a note of three headings and one `#` link into the test folder,
+// reads the document back through the read every command makes, and asserts
+// three things: every heading came back carrying a heading id, the jump came
+// back as a link to a heading naming the right one's id, and the publish
+// report says headings_without_id is 0. That is the whole of what Drive's
+// import does with the hidden bookmark internal/body writes before every
+// heading's runs, and no fixture can answer it: the offline tests of that
+// package say the docx carries the pair, and whether Google still mints an id
+// from it is Google's answer on the day.
+//
+// The document stays in the folder because the one step no API can take is the
+// refresh of the contents list. The Docs API has no request that builds or
+// refreshes one, so an entry that opens its heading is a click in the UI and
+// Nail's eyes on the hover card, which is the gate the milestone's own
+// measurement passed on 2026-10-16. The URL is in the log. It names no
+// variable of its own: GDOC_LIVE_TEST, GDOC_LIVE_WRITE and GDOC_LIVE_FOLDER_ID
+// with its default are the whole of what it reads.
 //
 // # The export measurement asserts nothing
 //
@@ -289,10 +309,12 @@
 // # Nine tests here ask for no network at all
 //
 // TestTheLiveFixturesRenderWithNoNetwork runs in `make test`, with neither
-// variable set. Two of the live tests render a note before they reach Drive,
+// variable set. Three of the live tests render a note before they reach Drive,
 // so a note that stopped rendering or a fixture path that moved would
 // otherwise be found by Nail in the middle of a live run rather than by the
-// suite. It is the pin, and it is in publish_test.go beside the tests it
+// suite. It renders all three and holds the heading id note to its shape as
+// well, three headings and one `#` link, because the run above asserts those
+// counts. It is the pin, and it is in publish_test.go beside the tests it
 // covers.
 //
 // TestTheMeasurementReadsTheFixtureItPairsAgainst is the same pin for the

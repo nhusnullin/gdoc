@@ -192,14 +192,18 @@ in the test folder.
 - Modify: `go/internal/live/publish_test.go` (or the live file that already publishes)
 - Modify: `go/internal/live/doc.go`
 
-- [ ] write `TestAPublishedHeadingCarriesAnIdAndAJumpIsAHeadingLink` under
+- [x] write `TestAPublishedHeadingCarriesAnIdAndAJumpIsAHeadingLink` under
       `GDOC_LIVE_WRITE`: publish a note with three headings and one `#` link
       into the test folder, read it back, every heading carries a `headingId`,
       the link came back as a heading link naming the right heading's id, and
       the report says `headings_without_id: 0`
-- [ ] name the test and its variables in `go/internal/live/doc.go`
-- [ ] run it once by hand with the variables set, and leave the document in
-      the test folder
+- [x] name the test and its variables in `go/internal/live/doc.go`
+- [x] run it once by hand with the variables set, and leave the document in
+      the test folder. Ran 2026-10-16: all three headings carry an id
+      (`h.u5qdkb8kq25v`, `h.s1s6r2n5npjo`, `h.bkqyii8w0q89`), the jump points
+      at the second, `headings_without_id` is 0, and the document is
+      `1lpe_mZSm3YmzTeJ6KQUm-SeR3PaRQJqwYHplgz52mNk` in the test folder,
+      waiting for the refresh in Task 7
 
 ### Task 6: The guide, the skill and the help say what a reader gets
 
