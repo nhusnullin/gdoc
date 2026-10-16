@@ -178,7 +178,11 @@
 // # A horizontal rule prints [rule] and not ---
 //
 // The footnote separator is already ---, and one line meaning two things is a
-// line neither of them can be read from. A footnote referenced twice is one
+// line neither of them can be read from. Since 2026-10-16 that line has a
+// second job on the way in, where `---` written in a note is a page break
+// (DECISIONS.md), so a horizontal rule has no spelling in a note at all: this
+// package prints a document's own rule as [rule] for somebody to resolve, and
+// nothing a build reads turns back into one. A footnote referenced twice is one
 // entry under that rule, numbered as the document numbers it, and a footnote's
 // own paragraphs are joined with spaces rather than dropped.
 // TestASecondReferenceToOneFootnotePrintsTheSameNumber and

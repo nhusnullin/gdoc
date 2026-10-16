@@ -80,21 +80,21 @@ Checkboxes below. A task is done when its commit is on the branch.
 - Modify: `docs/v2/DECISIONS.md`, `docs/v2/SPEC.md`,
   `go/internal/body/doc.go`, `go/internal/view/doc.go`
 
-- [ ] One DECISIONS.md entry dated 2026-10-16, "`---` is a page break", with
+- [x] One DECISIONS.md entry dated 2026-10-16, "`---` is a page break", with
       its register row: Nail's decision, the two alternatives declined, the
       hub count he was shown, the design rules from the spec, the two drops
       (before nothing, before a break), and that `read` is unchanged.
-- [ ] `docs/v2/SPEC.md`: the sentence on what a note's body may hold says a
+- [x] `docs/v2/SPEC.md`: the sentence on what a note's body may hold says a
       thematic break is a page break and no longer a rule; the block refusal
       at `:370` says "a page break (`---`)"; the house-style section's "The
       front matter's page breaks" paragraph gains one sentence saying the
       body's breaks are the author's and go through the same paragraph shape.
-- [ ] `body/doc.go` gains a section "`---` is a page break" naming the two
+- [x] `body/doc.go` gains a section "`---` is a page break" naming the two
       drops and the tests of Tasks 2 and 3 (named now, written then).
       `view/doc.go`'s "A horizontal rule prints [rule] and not ---" keeps its
       reason and gains one sentence: `---` in a note is a page break, and a
       rule has no spelling in a note.
-- [ ] `git commit -m "docs: --- is a page break, the decision"`
+- [x] `git commit -m "docs: --- is a page break, the decision"`
 
 ### Task 2: a thematic break is a page-break paragraph, and the rule goes
 

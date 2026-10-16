@@ -491,6 +491,50 @@
 // TestTwoDeadAnchorsOnOneLineWarnOncePerDestination and
 // TestTheSameDeadAnchorOnTwoLinesWarnsTwice are the pins.
 //
+// # `---` is a page break
+//
+// A line of three hyphens on its own in a note is a page break and not a
+// horizontal rule (DECISIONS.md, 2026-10-16). Every thematic break goldmark
+// parses is that one break, `---`, `***` or `___`, three or more and with or
+// without spaces, because the node carries no spelling and reading the source
+// again would be a second parse to keep in step. The shape is the one the
+// front matter already uses, an empty paragraph carrying pageBreakBefore
+// through paraOpts, so nothing new is written into the XML and Drive's import
+// of it is the route the house's own breaks have taken since M13. The rule
+// goes with it: nothing else in this package draws a line, and a document that
+// holds a rule of its own is internal/view's business rather than this
+// package's. TestAThematicBreakIsAPageBreakParagraph and
+// TestEveryThematicBreakSpellingIsTheSameBreak are the pins.
+//
+// Two breaks are dropped, and neither is warned about, because the author's
+// intent is met either way and a warning on a divider somebody wrote out of
+// habit is noise on every note in the hub.
+//
+// A break before nothing is nothing. A break that is the last block of the
+// body, or that only footnote definitions follow, would add a page holding
+// nothing. The second case is not the author's doing at all: `---` before the
+// notes is the line internal/view prints and internal/export writes, so an
+// exported note has to publish again without a blank last page. goldmark lifts
+// footnote definitions into a FootnoteList at the end of the document, which is
+// what the look-ahead reads. TestAPageBreakBeforeNothingIsNothing and
+// TestTheFootnoteSeparatorIsNotAPageBreak are the pins.
+//
+// A break before a break is one break. A break standing directly before the
+// first body heading, while the house breaks before that heading, would turn
+// one page into two empty ones, so the heading's own break is the one that
+// stands. Two breaks in a row are one for the same reason. Nothing else is
+// collapsed: a break between two paragraphs is always honoured, however many
+// of them the note holds, because that is the author saying where a page ends.
+// TestABreakBeforeTheFirstHeadingIsTheHeadingsOwn, TestTwoBreaksInARowAreOne
+// and TestABreakBetweenTwoParagraphsIsAlwaysHonoured are the pins.
+//
+// Result.Counts.PageBreaks counts the paragraphs the walk emitted and not the
+// breaks it parsed, so the number on an envelope is the pages the document got.
+// A break inside a footnote, a table cell or a block quote is warned about by
+// line and left out, the way a picture in a footnote is.
+// TestABreakInsideAFootnoteOrACellIsWarnedAndLeftOut and
+// TestTheBuildEnvelopeCarriesPageBreaks are the pins.
+//
 // # The body breathes: 12pt under a paragraph, 3pt between items, 12pt under
 // the last
 //
