@@ -367,12 +367,101 @@ paragraph saying why the read printed nothing for a break until this milestone.
 
 ### Task 7: verify acceptance, and M19 completed
 
-- [ ] Every acceptance item in the spec, run and ticked in the task log, the
+- [x] Every acceptance item in the spec, run and ticked in the task log, the
       live ones with their document ids. Item 1's Word check is Nail's.
-- [ ] `make test`, `make vet`, `make dist`.
-- [ ] Both plan files move to `docs/plans/completed/`; `docs/v2/PLAN.md`
+- [x] `make test`, `make vet`, `make dist`.
+- [x] Both plan files move to `docs/plans/completed/`; `docs/v2/PLAN.md`
       gains the M19 row in its Done table.
-- [ ] `git commit -m "chore: M19 completed"`
+- [x] `git commit -m "chore: M19 completed"`
+
+**Task 7 outcome, 2026-10-16.** The eight acceptance items, each run and what
+it printed.
+
+1. **A note with `---` between two paragraphs breaks the page there.** No
+   golden holds a `w:pBdr` any more, in any of the six. The kitchen sink's
+   body break is `testdata/golden/01-kitchen-sink.xml:2165`, an empty
+   paragraph whose `w:pPr` is `w:pageBreakBefore w:val="1"` and zero spacing,
+   standing where the fixture's `---` at `testdata/docs/01-kitchen-sink.md:133`
+   was. The golden's other break, at its line 5, is the house's own on the
+   first heading and every golden carries one. The item's "two
+   `w:pageBreakBefore` paragraphs where its two rules were" is the count Task
+   2 corrected: the fixture holds one body break, because the `---` at its
+   lines 1 and 28 are the front matter's fences. `TestAThematicBreakIsAPageBreakParagraph`
+   and `TestEveryThematicBreakSpellingIsTheSameBreak` are the pins. **The docx
+   opened in Word is Nail's**, as the item says.
+2. **Published, the break is where `---` stood, and `read` prints
+   `[page break]` there.** Live, document
+   `1rRIIlr7sC6CgOS7PjMvueDyLj9pTeKzgVcTc5mjSqEs`, published by hand into the
+   test folder and trashed after item 6, `verified: true` on all three
+   read-backs. `read` printed four `[page break]` lines: two for the prelude's,
+   one before `# 1-Where the page turns` and one between the two body
+   paragraphs, which is where the note's `---` was. `TestLivePageBreakShape`
+   printed the same for `19WivNELollQPnTD0LcsD8dLBHjNxEVI4Pux3MFl5qgs`, which
+   it trashed itself.
+3. **A `---` before nothing adds no page.** A note of a heading, a paragraph,
+   two breaks in a row and a trailing break built with `page_breaks: 1` and no
+   warning, from five `---` lines in the file. No golden holds a break after
+   its last paragraph. `TestAPageBreakBeforeNothingIsNothing` and
+   `TestTheFootnoteSeparatorIsNotAPageBreak` are the pins.
+4. **A `---` before the first heading adds no second break.** A note opening
+   with `---` then `# The first heading` built with `page_breaks: 0` and
+   exactly three `w:pageBreakBefore` in its `document.xml`, which is the
+   house's own three: the cover, the contents list and the first heading.
+   `TestABreakBeforeTheFirstHeadingIsTheHeadingsOwn` is the pin.
+5. **Both envelopes carry `page_breaks`, counting breaks and not lines.**
+   `gdoc build` on the kitchen-sink note printed `page_breaks: 1` from a file
+   holding three `---` lines, and the publish of item 2 printed `page_breaks:
+   1` beside `footnotes: 0`. The collapsing note of item 3 printed 1 from
+   five. `TestBuildAndPublishCarryThePageBreakCount` is the pin.
+6. **The export writes `---` where the break stands, and the rebuild carries
+   the same breaks.** Live, the document of item 2. The exported file holds
+   `---` on a line of its own between blank lines where the break was, and
+   `# Where the page turns` stands directly after the front-matter fence with
+   no `---` before it. The export strips the prelude, so the file carries no
+   title and `build` refuses it by name; given back the note's own front
+   matter, it built with `page_breaks: 1` and four `w:pageBreakBefore`, which
+   is what the first build of the same note produced.
+7. **A rule still prints `[rule]`, and the document of item 2 prints
+   `[page break]` twice.** The rule half is the fixture
+   `internal/docs/testdata/page-breaks.json`, under
+   `TestAHorizontalRuleStillExportsAsItsMarker`, which holds both the `[rule]`
+   line and the warning that names its index. It is a fixture and not a live
+   document because `build` draws no rule any more, so no document gdoc
+   publishes can hold one. The `[page break]` half is item 2's read.
+8. **`make test`, `make vet` and `make dist` green.** With the live variables
+   unset: 41 packages ok under `-race`, `go vet` and the gofmt check clean,
+   and the three platform binaries written. The live round trip is green on
+   the pairing: `TestLiveExportRoundTrip` on the six notes printed 27 unnamed
+   lines and **not one of them is a `---` or a `[page break]`**, and no named
+   reason had to excuse a break. Its three red notes are the ones that have
+   been red since `744534f`: the kitchen sink's wrapped quote and list
+   starting at seven, pictures' reference-style image and link markup, and
+   edge cases' task boxes and ampersand heading. Documents
+   `1XNEwkkG9DCbMrpaL9Xmp1z9KO7WbOSJe6yn9wjbESWE`,
+   `1_ZKQi9ePzqkAlF197AI1tc6GzVytVVkUpCZ2IaMAFvc`,
+   `1rCYkITLIVSSL-1ld574stc1MJAFe8GYkUIGyGicFVRQ`,
+   `1MPnp0sDsF9wK6sdF_9czpKOW4RhZ6cA6MO3o3DzYr7o`,
+   `1JDSyGhTXXIeolvFgYqNXUek_pPStk054-civ_ebLgHY` and
+   `1vStYbp53ITaavXjvmxE-oY0w-s6vzdcK-n9dmvUD6rg`, all trashed by the test.
+
+**The whole live package, run once with both variables set.** Five tests are
+red and none of them is this milestone's. Four are red for a document id the
+session does not set, and say so themselves: `TestLiveReadOfARealDocument`
+wants `GDOC_LIVE_DOC_ID`, `TestLiveRestyleKeepsAnchorsAndSuggestions`
+`GDOC_LIVE_ANCHOR_DOC_ID`, `TestLivePreludeIsProposedNotWritten`
+`GDOC_LIVE_PRELUDE_DOC_ID` and `TestLiveRestylePreservesTenFeatures`
+`GDOC_LIVE_IDEAL_DOC_ID`. The fifth is `TestLiveDrift`, on two rows that are
+not in `drift.Known`, `body H1 indentStart` and `body H2 indentStart`, both
+`<none>` against the master's 36 and 72. That one was checked rather than
+assumed: a worktree at `8652a71`, the v2.12.0 commit this milestone started
+from, fails on the same two rows, so it is older than M19 and belongs to
+whoever opens it next.
+
+**One thing left undone, and it is not M19's.** `docs/v2/PLAN.md`'s Done table
+has no M18 row, although `docs/plans/completed/` holds M18's two files and
+v2.12.0 shipped it. Its "What is next" paragraph still names M17, which has
+not run. Writing M18's row needs M18's own summary and release date, so this
+task added the M19 row beside M16's and left the gap for Nail.
 
 ## Post-Completion
 
