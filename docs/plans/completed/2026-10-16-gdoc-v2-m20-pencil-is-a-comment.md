@@ -102,7 +102,7 @@ cd go && GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1 go test ./internal/live -run 'RoundT
 - [x] Task 7: the span goes, `]{.pencil}` is refused by name, and the file states two spellings
 - [x] Task 8: the live round trip
 - [x] Task 9: the words in the guide, the skills, the backlog and the README
-- [ ] Task 10: the acceptance table
+- [x] Task 10: the acceptance table
 
 ## Tasks
 
@@ -391,3 +391,28 @@ with the live variables unset.
 
 One row per rule in the spec, pass or the test that says otherwise, written
 into the spec file. Both plan files move to `docs/plans/completed/`.
+
+Ran 2026-10-16. Fourteen rows, one per rule the spec states, each naming the
+tests that hold it, and every row passes. The three places where the plan's
+words and the code read differently are named under the table rather than left
+in the task logs alone: the footnote holds two shapes, the formatting a pencil
+can lose is the link rather than the bold, and the loss rule learns the opener
+rather than the closer. The live round trip's unnamed differences are named as
+not this milestone's, with the reason they are Nail's.
+
+One rule had no pin and now has one. "In code, code" was held for Obsidian's
+spelling by `TestAnObsidianCommentInCodeIsCode`, because that fence is this
+package's own parser and had to be told; HTML's spelling rested on goldmark's
+code span with no test of its own. `TestAnHTMLCommentInCodeIsCode` is that
+line, in `internal/body/comment_test.go`: a comment in backticks is one
+monospace run carrying its delimiters, and a comment inside a fence goes with
+the code block that is left out, with the paragraph after it still there. A
+table row saying pass against no test would be the wrong kind of row.
+
+`make vet`, gofmt and the raced suite are green over every package. `make test`
+itself fails in this session, and not on an assertion: `GDOC_LIVE_TEST` and
+`GDOC_LIVE_WRITE` are set in the ralphex environment, so `internal/live` runs
+every writer against Drive and passes the 600 second ceiling `go test` sets by
+default. Raced and green are `go test -race $(go list ./... | grep -v
+internal/live)` and `internal/live` with both variables unset. The live round
+trip itself ran in Task 8, against Drive, and both pencil shapes came home.

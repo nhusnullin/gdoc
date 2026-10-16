@@ -351,3 +351,36 @@ func TestTheOldSpanWhereNothingIsMarkdownIsNotRefused(t *testing.T) {
 		}
 	}
 }
+
+// TestAnHTMLCommentInCodeIsCode. Nothing inside backticks is markdown, and the
+// HTML spelling is no exception: a note explaining the syntax shows it in a
+// code span, and the words have to come out of the document as the author
+// typed them rather than grey. TestAnObsidianCommentInCodeIsCode is the same
+// line for the other spelling, where this package's own parser has to be told;
+// here goldmark's code span is what holds it, and the acceptance table for
+// milestone 20 names both.
+func TestAnHTMLCommentInCodeIsCode(t *testing.T) {
+	runs := firstBlockRuns(t, "a `<!-- quiet -->` b\n")
+
+	got := runCarrying(t, runs, "quiet")
+	if !got.Mono {
+		t.Errorf("the code span is %#v, want the monospace", got)
+	}
+	if got.Mark != "" {
+		t.Errorf("the code span carries mark %q, want none", got.Mark)
+	}
+	if got.Text != "<!-- quiet -->" {
+		t.Errorf("the code span reads %q, want the delimiters as typed", got.Text)
+	}
+
+	out := walk(t, "```\n<!-- not a comment -->\n```\n\nAfter.\n")
+	if !warned(out.Warnings, "a code block") {
+		t.Errorf("a code block holding a comment warned %q, want the code block named", out.Warnings)
+	}
+	if got := serialise(t, out.Blocks); strings.Contains(got, "not a comment") {
+		t.Errorf("the fenced comment reached the document:\n%s", got)
+	}
+	if run := runElement(t, out.Blocks, "After."); run == nil {
+		t.Error("the paragraph after the code block is gone, so the comment opened inside the code")
+	}
+}
