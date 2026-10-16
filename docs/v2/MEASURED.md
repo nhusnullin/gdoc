@@ -601,6 +601,54 @@ a numbered list starting at seven.
 `docs/backlog/round-trip-fails-on-a-wrapped-quote-and-a-list-starting-at-seven.md`
 holds both with the decision each needs.
 
+## How read prints the two kinds of page break
+
+Measured 2026-10-16 by `TestLivePageBreakShape`
+(`go/internal/live/pagebreak_test.go`), one document, built from a note of a
+heading, a paragraph, `---` and a paragraph, and trashed on the way out. The
+document was `1MmipMWaS96OmV3ONxFioNFmaKhBYHWb7w3jrrF90hic`. It reads through
+`docs.URL`, which is the read every command makes, and it asserts nothing about
+the answer: the answer is Google's.
+
+**Neither kind comes back as a `pageBreak` element. Both come back as
+`pageBreakBefore` on the paragraph's own style, a field `internal/docs` does
+not decode, so `read` prints nothing at all where the page turns.**
+
+| Kind | What the Docs answer holds | What `read` printed |
+|---|---|---|
+| the body break, where the note wrote `---` | a `NORMAL_TEXT` paragraph whose only element is a `textRun` of `"\n"`, carrying `paragraphStyle.pageBreakBefore: true`. No `pageBreak` element | nothing. One blank line between the two paragraphs, the same blank line any two paragraphs have |
+| the first body heading's break, the house's own | the heading paragraph itself, `HEADING_1`, text `1-Where the page turns\n`, carrying `paragraphStyle.pageBreakBefore: true`. So it rides inside the heading and is not a paragraph before it | `# 1-Where the page turns`, with no marker of any kind |
+| the front matter's own two breaks, measured because they were in the same document | two `NORMAL_TEXT` paragraphs of `"\n"` each, both carrying `paragraphStyle.pageBreakBefore: true` | nothing |
+
+The document walked as 69 paragraphs and not one of them held a `page_break`
+run. The four `pageBreakBefore` paragraphs above are every break in it.
+
+So a `pageBreak` element is a Docs-native break, the one a person inserts with
+Insert, Break, Page break, and the shape
+`go/internal/docs/testdata/elements.json` was built from. A break that reached
+a document through a docx import is not that element, and nothing in the read
+path sees it. The round trip's `page breaks` entry has been excusing a
+`[page break]` line that a published document never produced.
+
+This is the gate Task 4 of the M19 plan set, and it did not hold. The
+specification's export rule assumed a body break comes back as a paragraph
+holding one `pageBreak` and no text. It comes back as a paragraph style, so
+`export` as it stands cannot see a break at all, and Task 5 stops here. Nail
+decides the rule. Three ways out, none of them taken yet:
+
+- `internal/docs` decodes `pageBreakBefore` as a fact on a `Paragraph`, and
+  `view` and `export` read it. That is the smallest change and it touches the
+  one room every read goes through.
+- `render` writes the break paragraph as a run holding `w:br w:type="page"`,
+  the docx spelling of an inline break, instead of `w:pageBreakBefore` on the
+  paragraph. Whether Drive's import turns that one into a `pageBreak` element
+  is itself unmeasured.
+- M19 ships without the export half, and a document's page breaks stay
+  invisible to `read` the way they have been since M13.
+
+Recheck when Google's docx import changes, or before anything downstream of
+`read` is asked about a page break.
+
 ## Not measured yet
 
 One of the M14 measurements stayed open on 2026-10-03: whether Google emails an

@@ -162,20 +162,43 @@ Checkboxes below. A task is done when its commit is on the branch.
 - Create: `go/internal/live/pagebreak_test.go`
 - Modify: `docs/v2/MEASURED.md`, `go/internal/live/doc.go`
 
-- [ ] `TestLivePageBreakShape`, behind `GDOC_LIVE_TEST=1` and
+- [x] `TestLivePageBreakShape`, behind `GDOC_LIVE_TEST=1` and
       `GDOC_LIVE_WRITE=1`: builds a note of a heading, a paragraph, `---`, a
       paragraph; publishes it through `liveWriteSession` into the test folder;
       reads it back; prints the paragraph that holds each `pageBreak` element,
       its other elements and its text; trashes it with `trashLive`. Fails on
-      a failed publish or read and on nothing else.
-- [ ] MEASURED.md gets a dated row per kind, body break and first-heading
+      a failed publish or read and on nothing else. It prints the raw
+      paragraphs too, because the element the gate named is not what came
+      back. `TestThePageBreakNoteRendersWithNoNetwork` beside it is the
+      offline pin, this package's eighth.
+- [x] MEASURED.md gets a dated row per kind, body break and first-heading
       break, with the document id and the shape `read` printed. `live/doc.go`
       names the test and its variables.
-- [ ] **If a body break came back as anything but a paragraph holding one
+- [x] **If a body break came back as anything but a paragraph holding one
       `pageBreak` and no text, Task 5 stops here** and says what came back.
-- [ ] `git commit -m "test(live): measure how read prints a page break"`
+      It came back as anything but. **The gate did not hold.** Ticked as
+      asked, and what came back is below.
+- [x] `git commit -m "test(live): measure how read prints a page break"`
+
+**Task 4 outcome, 2026-10-16, document
+`1MmipMWaS96OmV3ONxFioNFmaKhBYHWb7w3jrrF90hic`.** Neither kind of break is a
+`pageBreak` element. Drive's import writes both as
+`paragraphStyle.pageBreakBefore: true`, a field `internal/docs` does not
+decode, so `read` prints nothing at all where the page turns. The body break
+is a `NORMAL_TEXT` paragraph whose only element is a `textRun` of `"\n"`
+carrying that flag; the first heading's break rides inside the `HEADING_1`
+paragraph itself rather than standing before it. The document walked as 69
+paragraphs and not one held a `page_break` run. MEASURED.md, "How read prints
+the two kinds of page break", holds the table, the three ways out and the
+recheck line.
 
 ### Task 5: export writes `---`, and the round trip pairs it
+
+**STOPPED by Task 4's gate. Do not implement this task.** The measurement
+found no `pageBreak` element for a published break, so `export` cannot see one
+and every checkbox below rests on a shape that does not exist. Nail decides
+which of the three ways out in MEASURED.md M19 takes, and this task is
+rewritten from his answer. Read the Task 4 outcome above first.
 
 **Files:**
 - Modify: `go/internal/export/project.go` (or the file that writes a
