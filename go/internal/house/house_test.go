@@ -3,10 +3,12 @@ package house
 import (
 	"bytes"
 	"encoding/base64"
+	"image"
 	"image/png"
 	"math"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -570,5 +572,146 @@ func TestUsableWidthIsTheSpaceBetweenTheSideMargins(t *testing.T) {
 	p := Page{WidthPt: 100, MarginLeftPt: 10, MarginRightPt: 15}
 	if got := p.UsableWidthPt(); got != 75 {
 		t.Errorf("a 100pt page inside 10 and 15 leaves %v points, want 75", got)
+	}
+}
+
+// houseWithLogo returns the embedded house file with its whole logo: block
+// replaced by the one stated here. logo: is the last top-level key in the
+// file, so the cut needs no end. Every variant below states its block in
+// full, because the thing under test is which keys are there.
+func houseWithLogo(t *testing.T, block string) []byte {
+	t.Helper()
+	cut := bytes.Index(embedded, []byte("\nlogo:\n"))
+	if cut < 0 {
+		t.Fatal("the logo block was not found to replace")
+	}
+	return append(append([]byte{}, embedded[:cut+1]...), []byte(block)...)
+}
+
+// logoBlock is a well-formed logo: block carrying every key but the two that
+// name the bytes. The caller appends one of them, or both, or neither.
+const logoBlock = `logo:
+  mime: image/png
+  px:
+  - 195
+  - 97
+  width_pt: 146.25
+  height_pt: 72.75
+  anchor:
+    in: first_page_header
+    relative_h: column
+    offset_x_pt: 404.25
+    relative_v: paragraph
+    offset_y_pt: -5.15
+    wrap: square
+    wrap_dist_pt: 9
+`
+
+// aDriveID is a file id of the shape Drive mints, written out here so no test
+// in this package names the firm's own file.
+const aDriveID = "1AbCdEfGhIjKlMnOpQrStUvWxYz012345"
+
+// pngOfHouseSize is a PNG of the size the house file states, so a refusal in
+// these tests is never about the bytes.
+func pngOfHouseSize(t *testing.T) string {
+	t.Helper()
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, image.NewRGBA(image.Rect(0, 0, 195, 97))); err != nil {
+		t.Fatalf("encode: %v", err)
+	}
+	return base64.StdEncoding.EncodeToString(buf.Bytes())
+}
+
+// TestALogoNamesExactlyOneOfDriveAndBase64 holds the door the bytes come
+// through: logo.drive, one file in Drive, or logo.base64, the bytes in the
+// file. Both is a file with two answers and neither is a file with none, and
+// each is refused naming the keys rather than failing later at the PNG.
+func TestALogoNamesExactlyOneOfDriveAndBase64(t *testing.T) {
+	for _, c := range []struct{ name, tail string }{
+		{"both", "  drive: " + aDriveID + "\n  base64: " + pngOfHouseSize(t) + "\n"},
+		{"neither", ""},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			_, err := LoadFile(write(t, houseWithLogo(t, logoBlock+c.tail)))
+			if err == nil {
+				t.Fatalf("a logo naming %s of drive and base64 was accepted", c.name)
+			}
+			if !strings.Contains(err.Error(), "logo") {
+				t.Errorf("error %q does not name the logo", err)
+			}
+			if !strings.Contains(err.Error(), "logo.drive") {
+				t.Errorf("error %q does not name logo.drive, so it does not say which keys", err)
+			}
+			if !strings.Contains(err.Error(), "logo.base64") {
+				t.Errorf("error %q does not name logo.base64, so it does not say which keys", err)
+			}
+		})
+	}
+}
+
+// TestADriveIdThatIsNotOneIsRefusedByName is all this package can judge about
+// a file it cannot read: the shape of the id. 25 or more of the characters
+// Drive mints ids from, and nothing else.
+func TestADriveIdThatIsNotOneIsRefusedByName(t *testing.T) {
+	for _, bad := range []string{"", "a/b", "x", "1AbCdEfGhIjKlMnOpQrStUvW"} {
+		t.Run("refused "+bad, func(t *testing.T) {
+			tail := "  drive: " + strconv.Quote(bad) + "\n"
+			_, err := LoadFile(write(t, houseWithLogo(t, logoBlock+tail)))
+			if err == nil {
+				t.Fatalf("drive: %q was accepted as a file id", bad)
+			}
+			if !strings.Contains(err.Error(), "logo.drive") {
+				t.Errorf("error %q does not name logo.drive", err)
+			}
+		})
+	}
+	for _, good := range []string{aDriveID, "1AbCdEfGhIjKlMnOpQrStUvWx"} {
+		t.Run("accepted "+good, func(t *testing.T) {
+			tail := "  drive: " + good + "\n"
+			if _, err := LoadFile(write(t, houseWithLogo(t, logoBlock+tail))); err != nil {
+				t.Errorf("drive: %q was refused: %v", good, err)
+			}
+		})
+	}
+}
+
+// TestADriveLogoCarriesNoBytes is the other half of the move: with the bytes
+// in Drive this package checks no PNG, because it has none and reaches
+// nothing, and says so when somebody asks it for the bytes. What it still
+// requires is everything render reads to place the mark on the page.
+func TestADriveLogoCarriesNoBytes(t *testing.T) {
+	cfg, err := LoadFile(write(t, houseWithLogo(t, logoBlock+"  drive: "+aDriveID+"\n")))
+	if err != nil {
+		t.Fatalf("a logo in Drive was refused: %v", err)
+	}
+	if cfg.Logo.Drive != aDriveID {
+		t.Errorf("logo.drive = %q, want %s", cfg.Logo.Drive, aDriveID)
+	}
+	raw, err := cfg.LogoBytes()
+	if err == nil {
+		t.Fatalf("LogoBytes returned %d bytes for a logo that is in Drive", len(raw))
+	}
+	if !strings.Contains(err.Error(), aDriveID) {
+		t.Errorf("error %q does not name the file the bytes are in", err)
+	}
+	for _, c := range []struct{ name, drop, names string }{
+		{"no width", "  width_pt: 146.25\n", "logo.width_pt"},
+		{"no height", "  height_pt: 72.75\n", "logo.height_pt"},
+		{"no anchor", "    in: first_page_header\n", "logo.anchor"},
+		{"no wrap", "    wrap: square\n", "logo.anchor.wrap"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			block := strings.Replace(logoBlock, c.drop, "", 1)
+			if block == logoBlock {
+				t.Fatalf("the line %q is not in the block, so nothing was dropped", c.drop)
+			}
+			_, err := LoadFile(write(t, houseWithLogo(t, block+"  drive: "+aDriveID+"\n")))
+			if err == nil {
+				t.Fatalf("a logo with %s was accepted", c.name)
+			}
+			if !strings.Contains(err.Error(), c.names) {
+				t.Errorf("error %q does not name %s", err, c.names)
+			}
+		})
 	}
 }
