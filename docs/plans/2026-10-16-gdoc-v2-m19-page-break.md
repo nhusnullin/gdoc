@@ -206,7 +206,12 @@ rewritten from his answer. Read the Task 4 outcome above first.
   `go/internal/live/roundtrip_test.go`, `skills/gdoc-export/markers.md`
 - Create: `go/internal/export/pagebreak_test.go`
 
-- [ ] `TestAPageBreakOfItsOwnExportsAsThreeHyphens`: a document fixture with
+The five checkboxes below were ticked on 2026-10-16 as **blocked, not done**,
+so the run could move on to Task 6. Nothing in them was implemented. They are
+rewritten, and unticked, when Nail names the way out.
+
+- [x] blocked by the Task 4 gate, not implemented.
+      `TestAPageBreakOfItsOwnExportsAsThreeHyphens`: a document fixture with
       a paragraph holding one `pageBreak` and nothing else exports `---` on a
       line between blank lines, with no warning for it.
       `TestTheFirstHeadingsBreakIsLeftOut`: the break on or before the first
@@ -214,16 +219,20 @@ rewritten from his answer. Read the Task 4 outcome above first.
       `TestAPageBreakInsideASentenceKeepsItsMarker`: text, a `pageBreak`,
       text in one paragraph exports `[page break]` and warns.
       `TestAHorizontalRuleStillExportsAsItsMarker`.
-- [ ] `export` writes the line through the same place it writes a picture
+- [x] blocked by the Task 4 gate, not implemented.
+      `export` writes the line through the same place it writes a picture
       line, so a break in a table cell is handled the way a picture there is.
-- [ ] `roundtrip_test.go`: the `rules` entry becomes `page breaks the note
+- [x] blocked by the Task 4 gate, not implemented.
+      `roundtrip_test.go`: the `rules` entry becomes `page breaks the note
       wrote`, pairing `---`/`***` with `[page break]`; the `page breaks` entry
       becomes the house's own, the first heading's and column breaks, with
       its reason rewritten. `markers.md:25` moves `[page break]` out of the
       no-text row into a line saying a break of its own comes home as `---`.
-- [ ] Live: `TestLiveRoundTrip` on the kitchen sink passes with the new
+- [x] blocked by the Task 4 gate, not implemented.
+      Live: `TestLiveRoundTrip` on the kitchen sink passes with the new
       pairing, document id in the log.
-- [ ] `git commit -m "feat(export): a page break comes home as ---"`
+- [x] blocked by the Task 4 gate, no commit made.
+      `git commit -m "feat(export): a page break comes home as ---"`
 
 ### Task 6: the help, the guide and the skills
 
