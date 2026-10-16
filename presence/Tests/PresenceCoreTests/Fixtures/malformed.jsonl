@@ -1,0 +1,6 @@
+{"v":1,"at":"2026-10-17T09:15:00Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","call":1,"event":"start","command":"comments","via":"terminal","doc":"1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789","wait":true}
+not json at all
+[1,2,3]
+{"v":1,"at":"2026-10-17T09:15:02Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","call":1,"event":"end","command":"comments","via":"terminal","doc":"1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789","title":"Supplier register","ok":true,"ms":540000}
+{"v":1,"at":"not a time","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","call":2,"event":"start","command":"reply","via":"chat","doc":"1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789"}
+{"v":1,"at":"2026-10-17T09:15:04Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","call":3,"event":"start","command":"reply","via":"chat","doc":"1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789"}

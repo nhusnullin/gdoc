@@ -335,9 +335,9 @@ every box in it is ticked and its commit is on the branch.
 - Create: `presence/Tests/PresenceCoreTests/Fixtures/{events-v1,day,torn,malformed,future}.jsonl`
 - Modify: `Makefile`, `.gitignore`, `go/boundary/presence_test.go`
 
-- [ ] `TestTheSwiftFixtureIsTheGoFixture` in `go/boundary`: the two
+- [x] `TestTheSwiftFixtureIsTheGoFixture` in `go/boundary`: the two
       `events-v1.jsonl` are byte for byte one file
-- [ ] Swift tests, written first: `testAVersionOneLineDecodesAndAnUnknownFieldIsIgnored`,
+- [x] Swift tests, written first: `testAVersionOneLineDecodesAndAnUnknownFieldIsIgnored`,
       `testAnUnknownVersionIsRefusedAsNewer` (`future.jsonl`),
       `testAnUndecodableRecordIsSkippedAndTailingGoesOn` (`malformed.jsonl`),
       `testOnlyNewlineTerminatedRecordsAreParsedAndTheTailIsBounded`
@@ -357,14 +357,14 @@ every box in it is ticked and its commit is on the branch.
       `gone`), `testNoSourceFileImportsNetworkOrLaunchesAProcess` (the whole
       package: `URLSession`, `import Network`, and `Process` as a word, not
       `ProcessInfo`)
-- [ ] `Package.swift`: tools 6.0, `.macOS(.v14)`, targets `PresenceCore` and
+- [x] `Package.swift`: tools 6.0, `.macOS(.v14)`, targets `PresenceCore` and
       `PresenceCoreTests` only (the executable and the UI targets are declared
       in Task 8, because a declared target with no source fails a clean
       clone), fixtures as `.copy("Fixtures")`; Makefile targets `app-test`
       (`cd presence && swift test`) and `app-lint`
       (`swift format lint --strict -r Sources Tests`); `.gitignore` gains
       `presence/.build/` and `presence/.swiftpm/`
-- [ ] `make app-test`, `make app-lint`, `make test`
+- [x] `make app-test`, `make app-lint`, `make test`
 
 ### Task 8: the app: the glyph, the panel, the reopen row
 

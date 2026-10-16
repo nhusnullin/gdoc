@@ -33,3 +33,8 @@ go/internal/live/testdata/*
 # A `go build` run from inside go/cmd/gdoc leaves the binary beside the source.
 # `bin/` above does not cover that path, and one got committed once.
 go/cmd/gdoc/gdoc
+
+# SwiftPM's build directory and its per-user state, under presence/. Both are
+# rebuilt by `make app-test`, and neither is the only copy of anything.
+presence/.build/
+presence/.swiftpm/

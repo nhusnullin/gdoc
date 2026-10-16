@@ -19,7 +19,10 @@ func TestNoGoogleClientSecretInTheTree(t *testing.T) {
 	prefix := "GOC" + "SPX-"
 	// Hidden directories at the root are tool state, the review logs among
 	// them, and bin/ is build output. Neither is the tree, and .github is
-	// the one hidden directory that is.
+	// the one hidden directory that is. presence/.build and presence/.swiftpm
+	// are the presence app's build output, which is not at the root and
+	// carries symlinks a read would fail on.
+	built := map[string]bool{".build": true, ".swiftpm": true}
 	root, err := filepath.Abs(repoRoot)
 	if err != nil {
 		t.Fatal(err)
@@ -34,7 +37,7 @@ func TestNoGoogleClientSecretInTheTree(t *testing.T) {
 			if path == root {
 				return nil
 			}
-			if (atRoot && (hidden || d.Name() == "bin")) || d.Name() == ".git" {
+			if (atRoot && (hidden || d.Name() == "bin")) || d.Name() == ".git" || built[d.Name()] {
 				return filepath.SkipDir
 			}
 			return nil

@@ -59,6 +59,19 @@ dist:
 	@cd go && CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -trimpath -ldflags "$(LDFLAGS)" -o ../bin/gdoc-darwin-amd64 ./cmd/gdoc
 	@cd go && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "$(LDFLAGS)" -o ../bin/gdoc-windows-amd64.exe ./cmd/gdoc
 
+# The presence app, in presence/. It is a separate program in its own Swift
+# package: `make test` never builds it, and a change to it touches no Go file.
+# Both targets are macOS only, which is the only platform the app is for, and
+# neither runs from CI's ubuntu job.
+#
+# app-lint is the same line the release job runs, so the formatter's version is
+# the one lint was written against and a reformat is never a release's surprise.
+app-test:
+	cd presence && swift test
+
+app-lint:
+	cd presence && swift format lint --strict -r Sources Tests
+
 # `make tag VERSION=vX.Y.0` cuts a release by hand: it writes the version into
 # the plugin manifest, commits, tags and pushes, and the tag is what the
 # release workflow builds from.
@@ -81,4 +94,4 @@ tag:
 	git push origin HEAD
 	git push origin "refs/tags/$(VERSION)"
 
-.PHONY: test vet build dist tag
+.PHONY: test vet build dist app-test app-lint tag

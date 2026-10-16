@@ -224,3 +224,34 @@ func TestNoSkillPassesThePresenceFlag(t *testing.T) {
 		t.Fatal("no files under skills/. A moved skills directory is a failure, not an empty pass")
 	}
 }
+
+// swiftFixture and goFixture are the two copies of the one scripted run, each
+// written out rather than derived, so a file that moves is a failure a person
+// reads rather than a test that quietly passes over nothing.
+const (
+	goFixture    = "go/internal/presence/testdata/events-v1.jsonl"
+	swiftFixture = "presence/Tests/PresenceCoreTests/Fixtures/events-v1.jsonl"
+)
+
+// TestTheSwiftFixtureIsTheGoFixture holds the schema still across two
+// languages.
+//
+// The Go writer writes the bytes and a Go test pins them; the presence app
+// decodes the same bytes in Swift. Two copies of a format is how a field
+// quietly means one thing on one side and another on the other, so the copies
+// are one file: byte for byte, including the trailing newline and the order of
+// the keys. A change to the event is then a change both sides see at once.
+func TestTheSwiftFixtureIsTheGoFixture(t *testing.T) {
+	want, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(goFixture)))
+	if err != nil {
+		t.Fatalf("%s: %v", goFixture, err)
+	}
+	got, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(swiftFixture)))
+	if err != nil {
+		t.Fatalf("%s: %v", swiftFixture, err)
+	}
+	if string(got) != string(want) {
+		t.Errorf("%s is not %s byte for byte; the schema would drift between Go and Swift.\nswift: %q\ngo:    %q",
+			swiftFixture, goFixture, got, want)
+	}
+}
