@@ -29,8 +29,10 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"slices"
 	"strings"
 	"sync"
@@ -41,6 +43,7 @@ import (
 	"gdoc/internal/docs"
 	"gdoc/internal/emit"
 	"gdoc/internal/mcp"
+	"gdoc/internal/presence"
 	"gdoc/internal/propose"
 )
 
@@ -76,6 +79,15 @@ type mcpHolds struct {
 	mu   sync.Mutex
 	byID map[string]chat.Hold
 
+	// on is whether this session records what it is doing, and errOut where
+	// the one line goes when the record cannot be written. A hold is the one
+	// thing in a chat a person is waiting on without the chat saying so, so
+	// each of the four ways a hold begins and leaves writes one line:
+	// TestAHeldWriteRecordsTheRuleAndNoneOfItsWords and
+	// TestEveryWayAHoldLeavesIsExactlyOneLine.
+	on     bool
+	errOut io.Writer
+
 	// lister is where a hold's confirm tool goes, and confirm is what builds
 	// one. Both are set once the session has a server to tell, because the
 	// tools are built before the server is. A session that wired neither keeps
@@ -85,8 +97,8 @@ type mcpHolds struct {
 }
 
 // newMCPHolds is one session's own.
-func newMCPHolds() *mcpHolds {
-	return &mcpHolds{byID: map[string]chat.Hold{}}
+func newMCPHolds(on bool, errOut io.Writer) *mcpHolds {
+	return &mcpHolds{byID: map[string]chat.Hold{}, on: on, errOut: errOut}
 }
 
 // listIn is where this session's confirm tools are listed. serveMCP calls it
@@ -110,7 +122,7 @@ func (h *mcpHolds) listIn(l mcpLister, confirm func(chat.Hold) mcp.Tool) {
 //
 // The same write is chat.WriteKey's reading of it, which is the write memory's
 // own, so the two cannot disagree about the order of the properties.
-func (h *mcpHolds) keep(held chat.Hold) chat.Hold {
+func (h *mcpHolds) keep(ctx context.Context, held chat.Hold) chat.Hold {
 	key := chat.WriteKey(held.Tool, held.Args)
 	h.mu.Lock()
 	for _, open := range h.byID {
@@ -122,6 +134,12 @@ func (h *mcpHolds) keep(held chat.Hold) chat.Hold {
 	h.byID[held.ID] = held
 	lister, confirm := h.lister, h.confirm
 	h.mu.Unlock()
+	// One hold is one held line, so the retry above is already gone: it is the
+	// hold that is open and not a second one. What travels is the rule's name
+	// and never the value it tripped on, the reason or the words, because
+	// every one of those is text somebody else wrote.
+	presence.Held(ctx, h.on, releaseVersion(), held.Tool, held.DocID, held.ID, held.Rule,
+		held.Created.Add(mcpHoldLife), h.errOut)
 	if lister == nil || confirm == nil {
 		return held
 	}
@@ -157,11 +175,15 @@ func (h *mcpHolds) sweep(now time.Time) {
 	}
 	lister := h.lister
 	h.mu.Unlock()
+	// Sorted, so two expiring together leave in the same order every run, in
+	// the record as well as on the list.
+	slices.Sort(gone)
+	for _, id := range gone {
+		presence.Expired(h.on, releaseVersion(), id, h.errOut)
+	}
 	if lister == nil {
 		return
 	}
-	// Sorted, so two expiring together leave in the same order every run.
-	slices.Sort(gone)
 	for _, id := range gone {
 		lister.Remove(mcpConfirmPrefix + id)
 	}
@@ -191,11 +213,15 @@ func (h *mcpHolds) landed(tool string, args json.RawMessage) {
 	}
 	lister := h.lister
 	h.mu.Unlock()
+	// Sorted, so two leaving together leave in the same order every run, in
+	// the record as well as on the list.
+	slices.Sort(gone)
+	for _, id := range gone {
+		presence.Landed(h.on, releaseVersion(), id, h.errOut)
+	}
 	if lister == nil {
 		return
 	}
-	// Sorted, so two leaving together leave in the same order every run.
-	slices.Sort(gone)
 	for _, id := range gone {
 		lister.Remove(mcpConfirmPrefix + id)
 	}
@@ -209,7 +235,11 @@ func (h *mcpHolds) release(id string) {
 	delete(h.byID, id)
 	lister := h.lister
 	h.mu.Unlock()
-	if !ok || lister == nil {
+	if !ok {
+		return
+	}
+	presence.Released(h.on, releaseVersion(), id, h.errOut)
+	if lister == nil {
 		return
 	}
 	lister.Remove(mcpConfirmPrefix + id)
@@ -222,7 +252,7 @@ func (h *mcpHolds) release(id string) {
 // Three things stop a call: arguments the write cannot be read out of, a text
 // carrying characters nobody can see, which is refused outright, and a rule that
 // trips, which is held. Everything else goes on to the command.
-func mcpJudge(c mcpCommand, args json.RawMessage, target mcpTarget, ch *mcpChat) (mcp.Result, bool) {
+func mcpJudge(ctx context.Context, c mcpCommand, args json.RawMessage, target mcpTarget, ch *mcpChat) (mcp.Result, bool) {
 	w, err := mcpWriteOf(c, args, target, ch.ledger)
 	if err != nil {
 		return mcpEnvelope(emit.Result{OK: false, Error: err.Error()}), true
@@ -239,7 +269,7 @@ func mcpJudge(c mcpCommand, args json.RawMessage, target mcpTarget, ch *mcpChat)
 	held.Args = args
 	// And the answer is the hold the session kept, which is this one unless the
 	// same write is already held: keep says which.
-	return mcpHeldAnswer(ch.holds.keep(*held)), true
+	return mcpHeldAnswer(ch.holds.keep(ctx, *held)), true
 }
 
 // holdData is what a held write answers with: nothing was sent, and the facts a

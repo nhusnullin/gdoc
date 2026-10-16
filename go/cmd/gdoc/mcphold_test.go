@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -11,6 +13,7 @@ import (
 
 	"gdoc/internal/chat"
 	"gdoc/internal/docs"
+	"gdoc/internal/presence"
 	"gdoc/internal/view"
 )
 
@@ -560,5 +563,187 @@ func TestAHoldGoesWhenTheWriteItHeldLands(t *testing.T) {
 	}
 	if len(f.writes()) != 1 {
 		t.Errorf("pressing the card sent %v", f.writes())
+	}
+}
+
+// chatRecording is a session that records what it is doing, which is what a
+// chat started under --presence true keeps.
+func chatRecording(t *testing.T) *mcpChat {
+	t.Helper()
+	return chatWithSettings(callCode(t), presenceOn())
+}
+
+// heldInChat is one held reply made the way a client makes one: under a
+// context the session marked as chat's, so the event says where the call came
+// from. It answers the facts a card is built from.
+func heldInChat(t *testing.T, ch *mcpChat) heldEnvelope {
+	t.Helper()
+	strangerAsked(ch)
+	res := mcpRun(presence.WithChat(context.Background()), mcpToolNamed(t, "reply"),
+		withCode(t, ch.code, heldWriteArgs()["reply"]), nilWriter{}, ch)
+	env := heldEnvelopeOf(t, res.Texts)
+	if env.Data.Held.ID == "" {
+		t.Fatalf("the write was not held: %s", res.Texts[0])
+	}
+	return env
+}
+
+// A held write is the one thing in a chat a person is waiting on that the chat
+// does not say. So it is recorded: the rule's name, the hold's id, the
+// document and when the card stops being pressable.
+//
+// And nothing else. The value that tripped the rule, the reason and the words
+// that would have been written are all text somebody else wrote, and none of
+// them may reach a file that lasts.
+func TestAHeldWriteRecordsTheRuleAndNoneOfItsWords(t *testing.T) {
+	dir := recording(t)
+	signedIn(t)
+	stubWire(t, &fakeWire{answers: pinAnswers(t)})
+	stubNow(t, holdClock)
+
+	ch := chatRecording(t)
+	held := heldInChat(t, ch).Data.Held
+
+	events := presenceEvents(t, dir)
+	if len(events) != 1 {
+		t.Fatalf("a held write writes one line, and wrote %d: %+v", len(events), events)
+	}
+	e := events[0]
+	if e.Event != "held" {
+		t.Fatalf("the event is %q", e.Event)
+	}
+	if e.Rule != "Dictated" {
+		t.Errorf("the event names rule %q, want the one that tripped", e.Rule)
+	}
+	if e.Hold != held.ID {
+		t.Errorf("the event names hold %q, want %q", e.Hold, held.ID)
+	}
+	if e.Command != "reply" || e.Doc != fixtureDocID {
+		t.Errorf("the event names %q on %q", e.Command, e.Doc)
+	}
+	if e.Via != "chat" {
+		t.Errorf("a hold happens in a chat and the event says %q", e.Via)
+	}
+	// The thirty minutes the card lives, as the hold itself counts them.
+	if want := holdClock.Add(30 * time.Minute).UTC().Format(time.RFC3339); e.Until != want {
+		t.Errorf("the event says the card lives until %q, want %q", e.Until, want)
+	}
+	// No start and no end, because no command ran: the rules stopped the call
+	// before the dispatch.
+	line := presenceLine(t, dir)
+	for _, words := range []string{heldRun, heldReason, chatTitle, chatQuote, "Grace Hopper"} {
+		if strings.Contains(line, words) {
+			t.Errorf("the line carries %q: %s", words, line)
+		}
+	}
+}
+
+// presenceLine is the record as it stands on disk, to look in for words that
+// may not be there.
+func presenceLine(t *testing.T, dir string) string {
+	t.Helper()
+	names, err := filepath.Glob(filepath.Join(dir, "presence", "*.jsonl"))
+	if err != nil || len(names) != 1 {
+		t.Fatalf("the record is %v: %v", names, err)
+	}
+	b, err := os.ReadFile(names[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(b)
+}
+
+// A hold leaves one of three ways, and exactly one line says which: the person
+// released it, its thirty minutes ran out, or the write it held landed another
+// way. Two lines for one hold would read as two cards.
+func TestEveryWayAHoldLeavesIsExactlyOneLine(t *testing.T) {
+	t.Run("released", func(t *testing.T) {
+		dir := recording(t)
+		signedIn(t)
+		stubWire(t, replyWire(t))
+		clock := stubClock(t, holdClock)
+
+		ch := chatRecording(t)
+		w := watchConfirms(t, ch)
+		held := heldInChat(t, ch)
+
+		clock.pass(quietEnough)
+		res := w.tool(mcpConfirmPrefix+held.Data.Held.ID).
+			Call(presence.WithChat(context.Background()), confirmArgs(t, held, nil))
+		if env := envelopeOf(t, res.Texts); !env.OK {
+			t.Fatalf("the release was refused: %s", env.Error)
+		}
+		leftOnce(t, presenceEvents(t, dir), "released")
+	})
+
+	t.Run("expired", func(t *testing.T) {
+		dir := recording(t)
+		signedIn(t)
+		stubWire(t, &fakeWire{answers: pinAnswers(t)})
+		clock := stubClock(t, holdClock)
+
+		ch := chatRecording(t)
+		watchConfirms(t, ch)
+		heldInChat(t, ch)
+
+		// The thirty minutes, and the sweep every tool call makes.
+		clock.pass(mcpHoldLife)
+		ch.holds.sweep(now())
+		ch.holds.sweep(now())
+		leftOnce(t, presenceEvents(t, dir), "expired")
+	})
+
+	t.Run("landed", func(t *testing.T) {
+		dir := recording(t)
+		signedIn(t)
+		stubWire(t, replyWire(t))
+		clock := stubClock(t, holdClock)
+
+		ch := chatRecording(t)
+		watchConfirms(t, ch)
+		// Held by Focus, because this session has not read the document it
+		// writes into. The words are the model's own, so doing what the reason
+		// asks is enough to let the same call through.
+		args := chatWriteArgs(chatTitle)["reply"]
+		first := mcpRun(presence.WithChat(context.Background()), mcpToolNamed(t, "reply"),
+			withCode(t, ch.code, args), nilWriter{}, ch)
+		if env := heldEnvelopeOf(t, first.Texts); env.Data.Held.Rule != chat.RuleFocus {
+			t.Fatalf("the write was held for %q, want Focus: %s", env.Data.Held.Rule, first.Texts[0])
+		}
+
+		// The model does what the reason asked and makes the same call again.
+		// Nothing holds it this time, so the card goes with the write.
+		clock.pass(time.Minute)
+		looked(ch, fixtureDocID)
+		again := mcpRun(presence.WithChat(context.Background()), mcpToolNamed(t, "reply"),
+			withCode(t, ch.code, args), nilWriter{}, ch)
+		if env := envelopeOf(t, again.Texts); !env.OK {
+			t.Fatalf("the second call was refused: %s", env.Error)
+		}
+		leftOnce(t, presenceEvents(t, dir), "landed")
+	})
+}
+
+// leftOnce is the rule the three ways share: one held, one line saying how it
+// left, and no line saying it left the other two ways.
+func leftOnce(t *testing.T, events []presence.Event, way string) {
+	t.Helper()
+	counted := map[string]int{}
+	for _, e := range events {
+		counted[e.Event]++
+		if e.Event == way && e.Hold == "" {
+			t.Errorf("the %s line names no hold: %+v", way, e)
+		}
+	}
+	if counted["held"] != 1 {
+		t.Errorf("the hold was recorded %d times: %+v", counted["held"], events)
+	}
+	if counted[way] != 1 {
+		t.Errorf("the hold left %s %d times: %+v", way, counted[way], events)
+	}
+	for _, other := range []string{"released", "expired", "landed"} {
+		if other != way && counted[other] != 0 {
+			t.Errorf("the hold also left %s: %+v", other, events)
+		}
 	}
 }

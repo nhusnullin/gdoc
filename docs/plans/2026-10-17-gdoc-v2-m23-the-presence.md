@@ -219,7 +219,7 @@ every box in it is ticked and its commit is on the branch.
 - Create: `go/cmd/gdoc/presence_test.go`
 - Modify: `go/cmd/gdoc/mcphold_test.go`
 
-- [ ] `TestTheFlagChangesNoByteOfTheObject`: read, comments --wait with a done
+- [x] `TestTheFlagChangesNoByteOfTheObject`: read, comments --wait with a done
       context, reply and publish over the stubbed session, stdout, stderr and
       exit code equal with the flag off and on, the only difference the file;
       `TestAnUnwritableLogChangesNoByteOfTheObject` (the presence path is a
@@ -236,7 +236,7 @@ every box in it is ticked and its commit is on the branch.
       `TestAHeldWriteRecordsTheRuleAndNoneOfItsWords`,
       `TestEveryWayAHoldLeavesIsExactlyOneLine` (released, expired, landed);
       `TestStdoutCarriesOnlyJSONRPC` run again with the flag on
-- [ ] the table entry gains `report bool` and `readsBack bool`: `report` true
+- [x] the table entry gains `report bool` and `readsBack bool`: `report` true
       for read, comments, suggestions, export, restyle, reply, propose,
       withdraw, annotate, publish, update, auth login; `readsBack` true for
       reply, propose, withdraw, annotate, publish; `dispatch` calls `Begin`
@@ -245,7 +245,7 @@ every box in it is ticked and its commit is on the branch.
       session context with `presence.WithChat`; `mcpHolds.keep`, the release
       path, the expiry branch of `sweep` and `landed` each write their event
       once
-- [ ] `make test`; the canary test and the held-write test are the guards
+- [x] `make test`; the canary test and the held-write test are the guards
       over the ledger, since `TestTheLedgerIsPerProcessAndWritesNothingToDisk`
       reads only `ledger.go`'s imports
 

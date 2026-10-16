@@ -36,7 +36,7 @@ func chatWith(code *chat.Code) *mcpChat {
 // mark in effect in front of the words, so a session built with none would
 // write a comment no run of gdoc's would.
 func chatWithSettings(code *chat.Code, set settings.InEffect) *mcpChat {
-	return &mcpChat{code: code, ledger: chat.NewLedger(), holds: newMCPHolds(),
+	return &mcpChat{code: code, ledger: chat.NewLedger(), holds: newMCPHolds(set.Presence, io.Discard),
 		memory: chat.NewMemory[mcp.Result](), set: set}
 }
 

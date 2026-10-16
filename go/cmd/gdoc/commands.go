@@ -207,6 +207,22 @@ type command struct {
 	// "takes none" and "said nothing" are the same answer, which is not
 	// true of words and flags: TestHelpBuildNamesFootnotesAndMarks.
 	notes []string
+	// report is whether a run of this command reaches the presence record:
+	// the start and the end internal/presence writes where the flag is on.
+	// It is the work a person is waiting on, so the twelve commands that
+	// read or write a document, or replace this binary, or make a browser
+	// trip, carry it, and `auth status`, probe, build, help, completion and
+	// mcp do not: a question about the token and a page of help are not a
+	// run to watch, build is one local file, probe is a throwaway, and mcp
+	// is the session every other event is reported under.
+	//
+	// readsBack is whether this command reads its own write back, and it is
+	// the only thing that lets a verified into the record: update and
+	// restyle print verified: false to mean no write happened, which must
+	// never be kept as a failed read-back.
+	// TestOnlyTheReadBackWritersCarryVerified.
+	report    bool
+	readsBack bool
 }
 
 // anyCount is the word count of a command that takes however many words it is
@@ -263,6 +279,7 @@ func commands() []command {
 			group:   groupAccount,
 			summary: "Print the Google sign-in URL and wait for the browser to come back.",
 			example: "gdoc auth login",
+			report:  true,
 			run: func(ctx context.Context, _ *args, errOut io.Writer) emit.Result {
 				return authLogin(ctx, errOut)
 			},
@@ -276,6 +293,7 @@ func commands() []command {
 			},
 			summary: "Print the document as text, with the ids a comment or a suggestion is named by.",
 			example: "gdoc read https://docs.google.com/document/d/1AbC.../edit",
+			report:  true,
 			run: func(ctx context.Context, a *args, _ io.Writer) emit.Result {
 				return cmdRead(ctx, a)
 			},
@@ -291,6 +309,7 @@ func commands() []command {
 			},
 			summary: "List the comment threads with their ranges, their replies and the next cursor.",
 			example: "gdoc comments https://docs.google.com/document/d/1AbC.../edit --since <cursor> --wait 9m",
+			report:  true,
 			run: func(ctx context.Context, a *args, _ io.Writer) emit.Result {
 				return cmdComments(ctx, a)
 			},
@@ -304,6 +323,7 @@ func commands() []command {
 			},
 			summary: "List the suggestions pending in the document.",
 			example: "gdoc suggestions https://docs.google.com/document/d/1AbC.../edit --md note.md",
+			report:  true,
 			run: func(ctx context.Context, a *args, _ io.Writer) emit.Result {
 				return cmdSuggestions(ctx, a)
 			},
@@ -317,6 +337,7 @@ func commands() []command {
 			},
 			summary: "Write the document into the hub as Markdown, one file per tab, with its pictures beside it.",
 			example: "gdoc export https://docs.google.com/document/d/1AbC.../edit --out note.md",
+			report:  true,
 			run: func(ctx context.Context, a *args, _ io.Writer) emit.Result {
 				return cmdExport(ctx, a)
 			},
@@ -332,6 +353,7 @@ func commands() []command {
 			},
 			summary: "Survey a document against the house style, or apply that style where the document stands.",
 			example: "gdoc restyle https://docs.google.com/document/d/1AbC.../edit --dry-run",
+			report:  true,
 			run: func(_ context.Context, a *args, _ io.Writer) emit.Result {
 				return cmdRestyle(a)
 			},
@@ -361,7 +383,9 @@ func commands() []command {
 			// word (TestEveryExampleIsACallTheTableAccepts) and a reply's
 			// words have spaces in them. The usage line above it offers
 			// --body first, which is the route a person types.
-			example: "gdoc reply https://docs.google.com/document/d/1AbC.../edit AAAA1234 --body-file reply.txt",
+			example:   "gdoc reply https://docs.google.com/document/d/1AbC.../edit AAAA1234 --body-file reply.txt",
+			report:    true,
+			readsBack: true,
 			run: func(ctx context.Context, a *args, _ io.Writer) emit.Result {
 				return cmdReply(ctx, a)
 			},
@@ -375,8 +399,10 @@ func commands() []command {
 				{"--md", kindFile, needOptional, "the note to record the proposals in, so they can be taken back later"},
 				{"--folder", kindFolderID, needOptional, "ignored: propose no longer creates a working copy, and the flag will be removed in a later release"},
 			},
-			summary: "Propose changes as native suggestions, each with the comment that says why.",
-			example: "gdoc propose https://docs.google.com/document/d/1AbC.../edit --from changes.json --md note.md",
+			summary:   "Propose changes as native suggestions, each with the comment that says why.",
+			example:   "gdoc propose https://docs.google.com/document/d/1AbC.../edit --from changes.json --md note.md",
+			report:    true,
+			readsBack: true,
 			run: func(ctx context.Context, a *args, _ io.Writer) emit.Result {
 				return cmdPropose(ctx, a)
 			},
@@ -388,8 +414,10 @@ func commands() []command {
 			flags: []flag{
 				{"--md", kindFile, needRequired, "the note that records which suggestions gdoc wrote"},
 			},
-			summary: "Take back one pending suggestion, and only one gdoc proposed itself.",
-			example: "gdoc withdraw https://docs.google.com/document/d/1AbC.../edit suggest.abc123 --md note.md",
+			summary:   "Take back one pending suggestion, and only one gdoc proposed itself.",
+			example:   "gdoc withdraw https://docs.google.com/document/d/1AbC.../edit suggest.abc123 --md note.md",
+			report:    true,
+			readsBack: true,
 			run: func(_ context.Context, a *args, _ io.Writer) emit.Result {
 				return cmdWithdraw(a)
 			},
@@ -403,8 +431,10 @@ func commands() []command {
 				{"--from", kindFile, needEither, "the file holding the comments to leave, each with the words it goes on"},
 				{"--body-file", kindFile, needOptional, "the file holding the reason, which --quote needs"},
 			},
-			summary: "Leave a comment on the exact words you quote, under your mark, changing nothing.",
-			example: "gdoc annotate https://docs.google.com/document/d/1AbC.../edit --from annotations.json",
+			summary:   "Leave a comment on the exact words you quote, under your mark, changing nothing.",
+			example:   "gdoc annotate https://docs.google.com/document/d/1AbC.../edit --from annotations.json",
+			report:    true,
+			readsBack: true,
 			run: func(ctx context.Context, a *args, _ io.Writer) emit.Result {
 				return cmdAnnotate(ctx, a)
 			},
@@ -437,8 +467,10 @@ func commands() []command {
 				{"--folder-id", kindFolderID, needRequired, "the Drive folder the document is created in"},
 				{"--house", kindFile, needOptional, "a house style file other than the one inside gdoc"},
 			},
-			summary: "Build the note as a house-style document and upload it into one folder.",
-			example: "gdoc publish --md note.md --folder-id 1AbC...",
+			summary:   "Build the note as a house-style document and upload it into one folder.",
+			example:   "gdoc publish --md note.md --folder-id 1AbC...",
+			report:    true,
+			readsBack: true,
 			run: func(_ context.Context, a *args, _ io.Writer) emit.Result {
 				return cmdPublish(a)
 			},
@@ -455,6 +487,7 @@ func commands() []command {
 			},
 			summary: "Replace this gdoc with the newest release, or say what one would take.",
 			example: "gdoc update",
+			report:  true,
 			run: func(ctx context.Context, a *args, errOut io.Writer) emit.Result {
 				return cmdUpdate(ctx, a, errOut)
 			},
