@@ -93,6 +93,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-10-15 | What the M18 review closed: a label defined twice, a heading no line scan sees, a mark inside a footnote, and the two questions the parse answers rather than the line | superseded 2026-10-16 (the span paragraphs only: the attribute counted against the spans the parse formed, and the words a span cannot hold; everything else in the entry holds) |
 | 2026-10-16 | `---` is a page break | holds |
 | 2026-10-16 | Pencil is a comment: `<!-- words -->` or `%% words %%`, and the span goes | holds |
+| 2026-10-16 | What the M20 review closed: a comment with words after it on one line, two comments on one line, a comment the editor wrapped, the line a pencil's refusal names, an empty comment in a quote, and the four comments that are gdoc's own | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -4703,3 +4704,106 @@ binary.
 `TestHelpMarksPrintsBothPencilSpellings`; `internal/live`'s
 `TestLiveRoundTrip`, whose pencil pair changes; and `go/boundary`'s
 `TestThePublishingPageSaysAPencilIsAComment`.
+
+
+## 2026-10-16. What the M20 review closed: a comment with words after it on one line, two comments on one line, a comment the editor wrapped, the line a pencil's refusal names, an empty comment in a quote, and the four comments that are gdoc's own.
+
+Six corrections to the entry above, found by the external review of the
+milestone the same day. Each is the rule that entry already states, applied
+where it was not. Nothing here changes what a pencil is.
+
+**A comment with the author's own words after it on one line is a pencil and
+that prose.** CommonMark opens a block of HTML on any line beginning `<!--`
+and gives the block the whole of the line holding the closer, so
+`<!-- todo --> We ship in May.` was one block of HTML: named by line and left
+out whole, with the sentence never reaching the document. Obsidian shows that
+line as the sentence with the aside hidden, and `export` writes exactly this
+shape whenever a paragraph opens with a grey run, so a document exported and
+published again lost the paragraph. `internal/body` claims the line in front
+of goldmark's own block parser and reads it as the paragraph it is: the
+comment is the pencil, the rest is markdown. A comment alone on its line is
+untouched and stays the second of the two shapes. The same line wrapped over
+two, where the closer is inside a block of HTML, is still left out, and the
+warning names it as a comment with words after its closer rather than as a
+block of HTML.
+
+**A pencil's line wraps the way any other paragraph's line wraps.** The claim
+above opens a paragraph, and the first reading of it shut that paragraph on
+every following line. goldmark treats an open paragraph as continuable, so it
+skips the parser's Continue and offers the next line only to the parsers that
+may interrupt a paragraph, and its own paragraph parser is not one of them:
+nothing opened, the line was advanced past, and it reached no node at all.
+`<!-- todo --> Revenue grew 10%.` with `Costs fell 5%.` under it published the
+first line and lost the second without a word, which is worse than the loss it
+was fixing, and a lazy line in a list item or a quote went the same way. The
+line now continues the paragraph, which is also the reading Obsidian shows and
+what lets a second comment the editor wrapped reach its closer.
+
+**Two comments on one line are two pencils.** The words of an HTML comment end
+at the first closer a reader meets, so a piece of text that opens with `<!--`,
+ends with `-->` and holds another closer between them is never one comment.
+Read as one, `<!-- first --> <!-- second -->` reached the document as the one
+grey paragraph `first --> <!-- second`, with both delimiters printed as words,
+and `<!-- a --> prose <!-- b -->` turned the author's black prose grey. The
+reading refuses that shape, and the line itself is now two pencils and the
+words between them, by the rule above. Obsidian's fence is not affected: it is
+delimited by whole lines, so `%%` inside it is words.
+
+**A comment the editor wrapped is one line in the document.** goldmark hands
+an inline comment that spans two lines back with the newline inside it, and a
+newline in a run is a hard line break in the published paragraph. The lines
+are joined by one space, which is what the block form already does and what a
+soft break in prose already means.
+
+**A pencil's refusal names the pencil's own line.** A comment is the one
+inline node that holds its characters as segments rather than as text
+children, so a heading whose whole content is one carries no text at all and
+the line lookup climbed past it to the first text in the note: `# <!-- tbd -->`
+on line 5 sent the author to line 1. The span this spelling replaced had text
+children and never showed it.
+
+**An empty comment inside a block quote is nothing.** "Empty is nothing" is
+checked where a paragraph is emitted, and a quote is the one path that emits
+one without going through that check, so `> %%%%` left an indented blank line
+the author never typed.
+
+**gdoc's own comments are four, not two.** `<!-- tab ` and `<!-- image: ` were
+named; the floating placeholder names the kind, so `<!-- drawing: ` and
+`<!-- object: ` are written by the same line of code and are the same sort of
+statement about a document. Left out of `markers.Pairs`, a drawing that floats
+beside the text came home in the file and the next build published the grey
+paragraph `drawing: floating, kix.p1` without a word. All four join the pairs,
+and `internal/view`'s own test holds the two lists in step, because a label
+this package does not know is a line the next build reads as the author's
+aside.
+
+**Two more on the way home, from the same reading.** A grey run whose words
+would be written home as one of those markers comes home as its words with the
+loss named, the way a mark that cannot carry its syntax already does. The
+question is asked of the comment as it will be written, not of its opening:
+`<!-- ` and the words `tab` give `<!-- tab`, which carries no marker, while
+the line gdoc writes is `<!-- tab -->`, which carries one, and a marker in the
+middle of the words is the same refused line. And the document's own `%%` is
+named where the next build reads it as syntax: `export` writes HTML's spelling
+and never Obsidian's, but the next build reads both, so `LIKE '%%abc%%'` came
+home with no warning and published again with the words between the pairs grey
+and the delimiters gone. Inside a pencil's own words it is not named, because
+nothing inside a comment is markdown and the characters come home as
+themselves. A footnote mark inside those words is still named: `build` refuses
+a mark naming no note off the source line, and an aside in the middle of a
+paragraph's line is on that line.
+
+**Where they are pinned.** `internal/body`'s
+`TestACommentWithProseAfterItIsAPencilAndThatProse`,
+`TestTwoCommentsOnOneLineAreTwoPencils`,
+`TestAWrappedCommentInsideASentenceIsOneLine`,
+`TestAPencilsRefusalNamesItsOwnLine`,
+`TestAnEmptyCommentInsideAQuoteIsLeftOut`,
+`TestAPencilsLineWrapsLikeAnyOtherParagraph` and
+`TestACommentsWordsCarryNoSpaceOnEitherEdge`; `internal/markers`'s
+`TestMarkersNamesEachOpener`, `TestFindNamesTheFirstMarkerOnTheLine` and
+`TestCommentReadsTheLineGdocIsAboutToWrite`;
+`internal/view`'s `TestEveryFloatingPlaceholderIsAMarker`; and
+`internal/export`'s `TestAPencilWhoseWordsWouldReadAsAMarkerComesHomeAsItsWords`,
+`TestWordsHoldingTheObsidianSpellingAreNamed` and
+`TestAGreyRunHoldingAFootnoteMarkIsStillNamed`.

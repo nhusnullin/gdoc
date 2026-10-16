@@ -843,6 +843,19 @@ func (r *renderer) block(node ast.Node, level int, list listCtx) error {
 			r.afterTable = false
 			return nil
 		}
+		if commentThenWords(blockText(typed, r.source)) {
+			// A comment that shuts part-way through the block, with the
+			// author's own words after it. commentline.go claims the
+			// one-line shape of this and reads it as a pencil and its prose,
+			// so what is left here wrapped over lines, where the closer is
+			// the block's own end and the words after it are inside it.
+			// Named as the comment it is, for the reason above.
+			// TestTwoCommentsOnOneLineAreTwoPencils holds this half.
+			r.warn("line %d: a comment with words after its closer is not rendered in the house style and was left out: put the comment on a line of its own, or write the whole of it inside the sentence",
+				r.line(node))
+			r.afterTable = false
+			return nil
+		}
 		r.warn("line %d: a block of HTML is not rendered in the house style and was left out",
 			r.line(node))
 		r.afterTable = false
@@ -1130,8 +1143,18 @@ func (r *renderer) quoteBlock(quote *ast.Blockquote, level int, list listCtx) er
 		// that block's line and the author looks for it there.
 		r.curLine = line
 		r.warnRawHTML(paragraph, line)
-		r.warnImages(collectImages(paragraph, r.source), line, "a block quote")
-		r.emit(r.quote(inlineRuns(paragraph, r.source, r.footnoteNumber, r.marks), r.quoteDepth))
+		images := collectImages(paragraph, r.source)
+		r.warnImages(images, line, "a block quote")
+		runs := inlineRuns(paragraph, r.source, r.footnoteNumber, r.marks)
+		// Empty is nothing here too, which is the check paragraphBlock makes
+		// and this path does not go through: a comment holding no words is
+		// the one way to write a paragraph with nothing in it, and an
+		// indented blank line is one the author never typed.
+		// TestAnEmptyCommentInsideAQuoteIsLeftOut is the pin.
+		if len(runs) == 0 && len(images) == 0 {
+			continue
+		}
+		r.emit(r.quote(runs, r.quoteDepth))
 		r.counts.Paragraphs++
 	}
 	r.afterTable = false

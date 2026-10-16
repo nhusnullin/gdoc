@@ -76,9 +76,14 @@ func Palette(cfg *house.Config) []view.Mark {
 			continue
 		}
 		out = append(out, view.Mark{
-			Colour:  m.Color,
-			Open:    m.Syntax[0] + " ",
-			Shut:    " " + commentCloser,
+			Colour: m.Color,
+			Open:   m.Syntax[0] + " ",
+			Shut:   " " + commentCloser,
+			// The spellings that are never written are still read by the
+			// next build, so the projection has to know them: a document's
+			// own "%%" is a loss to name, and one inside another mark's
+			// words is a mark inside a mark.
+			Others:  m.Syntax[1:],
 			Literal: true,
 		})
 	}

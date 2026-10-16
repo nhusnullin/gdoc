@@ -23,7 +23,7 @@
 //
 //   - internal/body, so `build` and `publish` refuse a note whose body still
 //     carries one, by line: TestBuildRefusesAMarkerByLine. The question is
-//     asked before the note is parsed, so gdoc's own two comments are refused
+//     asked before the note is parsed, so gdoc's own comments are refused
 //     rather than read as the grey mark they look like:
 //     TestGdocsOwnCommentsAreMarkersAndNotPencil.
 //   - internal/plaintext, so `reply` and `annotate` refuse one in a thread,
@@ -46,27 +46,36 @@
 // and a forgotten marker is not: TestFindLeavesAnEscapedMarkerAlone and
 // TestAnAuthorsBackslashDoesNotHideAMarker.
 //
-// # Three of the twelve literals are not looked for
+// # Five of the sixteen literals are not looked for
 //
-// Nine of them are gdoc's markup and nothing else. The other three are text a
+// Eleven of them are gdoc's markup and nothing else. The other five are text a
 // note is entitled to carry.
 //
 // One is a single "]", which a note holds in every markdown link and every
-// numbered reference. The other two are the one "-->", written twice: it shuts
-// the tab comment, it shuts the floating picture's comment, and it shuts every
-// grey aside an author writes, because a pencil is a comment. Looking for any
-// of the three would refuse a note nothing is wrong with.
+// numbered reference. The other four are the one "-->", written four times: it
+// shuts the tab comment, it shuts each of the three comments a floating object
+// is written as, and it shuts every grey aside an author writes, because a
+// pencil is a comment. Looking for any of the five would refuse a note nothing
+// is wrong with.
 //
 // Looking for none of them leaves no hole, because each marker's opener always
-// comes first and every opener is looked for. The two comment openers are the
-// whole of what makes gdoc's own comments markers: "<!-- tab " and
-// "<!-- image: " say a thing about a document that the document itself holds
-// otherwise, and "<!-- anything else -->" is the author's own aside, carried
-// into the document grey. TestAPencilIsNotAMarker is that line, and
-// internal/body's TestGdocsOwnCommentsAreMarkersAndNotPencil is the same line
-// on the route that builds.
+// comes first and every opener is looked for. The four comment openers are the
+// whole of what makes gdoc's own comments markers: "<!-- tab ",
+// "<!-- image: ", "<!-- drawing: " and "<!-- object: " say a thing about a
+// document that the document itself holds otherwise, and "<!-- anything else
+// -->" is the author's own aside, carried into the document grey.
+// TestAPencilIsNotAMarker is that line, and internal/body's
+// TestGdocsOwnCommentsAreMarkersAndNotPencil is the same line on the route
+// that builds.
 //
-// Pairs holds all twelve because the pairs are what a person reading the
+// The three object openers are internal/view's placeholder labels for a
+// floating object, which are the only kinds a positioned object comes back as:
+// an image, a drawing, and the object a read cannot name.
+// internal/view's TestEveryFloatingPlaceholderIsAMarker is the pin that keeps
+// the two lists in step, because a label this package does not know comes home
+// as a line the next build publishes grey.
+//
+// Pairs holds all sixteen because the pairs are what a person reading the
 // exported file is told, and TestMarkersNamesEachOpener pins them.
 package markers
 
@@ -86,11 +95,14 @@ var Pairs = []Pair{
 	{"[s:", "]"},
 	{"<!-- tab ", "-->"},
 	{"<!-- image: ", "-->"},
+	{"<!-- drawing: ", "-->"},
+	{"<!-- object: ", "-->"},
 }
 
 // looked is what Find looks for: every literal in Pairs except the bare "]" and
-// the two "-->", for the reason the package comment gives.
-var looked = []string{"{+", "+}", "{-", "-}", "[[c:", "[[/c]]", "[s:", "<!-- tab ", "<!-- image: "}
+// the four "-->", for the reason the package comment gives.
+var looked = []string{"{+", "+}", "{-", "-}", "[[c:", "[[/c]]", "[s:",
+	"<!-- tab ", "<!-- image: ", "<!-- drawing: ", "<!-- object: "}
 
 // Find is the first marker of gdoc's on this line, and whether there is one. An
 // escaped marker is the author's own text and is not one.
@@ -134,4 +146,50 @@ func Lines(text string) (string, int) {
 		}
 	}
 	return "", 0
+}
+
+// commentOpener is what every comment, gdoc's own and an author's aside, is
+// written with.
+const commentOpener = "<!--"
+
+// comments is the openers of gdoc's own comments, read off Pairs rather than
+// written again, so a fifth comment marker is asked about here the day it is
+// added.
+var comments = commentMarkers()
+
+func commentMarkers() []string {
+	var out []string
+	for _, p := range Pairs {
+		if strings.HasPrefix(p.Open, commentOpener) {
+			out = append(out, p.Open)
+		}
+	}
+	return out
+}
+
+// Comment is the first of gdoc's own comment markers this text carries, and
+// whether it carries one.
+//
+// internal/view asks it of the comment it is about to write around a
+// document's own words. The opener is gdoc's and the words are the document's,
+// so a grey run reading "tab" is written home as "<!-- tab -->", which carries
+// this package's own "<!-- tab " and which every route back in refuses by
+// line. The words reading "see <!-- image: x" is the same failure in the
+// middle of them.
+//
+// Find is the question about a line as a file holds it, and this is the
+// question about a line gdoc has not written yet: the words are not escaped
+// yet, so the characters are the whole question. Only the comment markers are
+// asked about, because internal/view escapes the pair markup inside a comment
+// and escapes none of these, and a marker it escapes is the author's own text
+// by the time the line is read back. internal/export's
+// TestAPencilWhoseWordsWouldReadAsAMarkerComesHomeAsItsWords is the pin.
+func Comment(text string) (string, bool) {
+	first, at := "", -1
+	for _, m := range comments {
+		if i := strings.Index(text, m); i >= 0 && (at < 0 || i < at) {
+			first, at = m, i
+		}
+	}
+	return first, at >= 0
 }

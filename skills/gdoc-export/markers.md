@@ -19,7 +19,7 @@ and any later session reads this file and undoes them. `gdoc-export` and
 | `[[c:ID]]words[[/c]]` | the words a comment thread is anchored to, by Drive comment id |
 | `[^1]` and `[^1]: text` | a footnote reference, with its text under a `---` line at the end. That one `---` is the separator above the notes and not a page break: it is the last one in the file and the definitions follow it |
 | `![](assets/<stem>-<n>.png)` | a picture, as the file export wrote beside the note |
-| `<!-- image: floating, <id> -->` | a picture laid out beside the text, after the paragraph it is anchored to. A drawing reads `drawing:` |
+| `<!-- image: floating, <id> -->` | a picture laid out beside the text, after the paragraph it is anchored to. A drawing reads `drawing:`, and an object the read cannot name reads `object:` |
 | `[drawing]` `[equation]` `[object]` | content the read does not take, with a warning naming it |
 | `[person: Name]` `[date: Sep 9, 2026]` `[link: Title]` | a smart chip, with the label the document shows |
 | `[auto text: PAGE_NUMBER]` `[column break]` `[rule]` | the members that hold no text of their own |
@@ -34,8 +34,9 @@ The seven marks are not markers to undo. They are the author's own syntax:
 written in the note, carried into the document as a colour, and written back
 here as the words left. Keep them.
 
-gdoc's own two comments are markers and not pencils: `<!-- image: ` and
-`<!-- tab `, each shut by `-->`. The build refuses a note carrying either by
+gdoc's own comments are markers and not pencils: `<!-- tab `, and the three a
+floating object is written with, `<!-- image: `, `<!-- drawing: ` and
+`<!-- object: `, each shut by `-->`. The build refuses a note carrying one by
 line, the way it refuses the other markers, so an author's own comment stays a
 pencil and gdoc's never comes back as one. A pencil an author wrote is also
 written `%% words %%` in a note, which Obsidian hides while somebody reads it;
@@ -54,8 +55,10 @@ were marked in the document and nothing in the note will say so.
 
 A mark the export could not write around its own words is plain words too, with
 a warning naming the index. The words hold the `==` a highlight is written
-with, or the `<!--` a pencil is, or the `-->` that would shut a pencil in the
-middle of them, and the syntax written round them would not be read back: the
+with, or a highlight's words hold the `<!--` or `%%` a pencil is written with,
+or they hold the `-->` that would shut a pencil in the middle of them, or the
+comment a grey run would be written inside would carry one of gdoc's own
+comment markers, so the syntax written round them would not be read back: the
 file has to build again. Read the warning out and say which words lost their
 colour, because nothing in the note will.
 
@@ -154,8 +157,9 @@ text. Renaming them is the person's call, not yours.
 is the note's own link: leave that alone, because the note's own picture may be
 rendered from an SVG that is the master.
 
-**A floating picture's comment.** `<!-- image: floating, <id> -->`, or
-`<!-- drawing: floating, <id> -->`, says a picture sits beside the text there.
+**A floating picture's comment.** `<!-- image: floating, <id> -->`,
+`<!-- drawing: floating, <id> -->` or `<!-- object: floating, <id> -->` says
+something sits beside the text there.
 The file for it is written. Decide with the person whether the note wants the
 picture as a line at that place, then delete the comment.
 

@@ -384,3 +384,212 @@ func TestAnHTMLCommentInCodeIsCode(t *testing.T) {
 		t.Error("the paragraph after the code block is gone, so the comment opened inside the code")
 	}
 }
+
+// TestACommentWithProseAfterItIsAPencilAndThatProse. CommonMark opens a block
+// of HTML on a line beginning "<!--" and gives it the whole line, so the
+// author's sentence after the closer was left out with the comment. Obsidian
+// shows that line as the sentence with the aside hidden, and internal/view
+// writes exactly this shape whenever a paragraph opens with a grey run, so a
+// document exported and published again lost the paragraph.
+//
+// The markdown after the comment is markdown, which is what makes this a
+// paragraph rather than a second reading of a block of HTML.
+func TestACommentWithProseAfterItIsAPencilAndThatProse(t *testing.T) {
+	runs := firstBlockRuns(t, "<!-- todo --> We **ship** in May.\n")
+
+	if len(runs) != 4 {
+		t.Fatalf("the line built %d runs, want the aside and the sentence: %#v", len(runs), runs)
+	}
+	if runs[0].Mark != "pencil" || runs[0].Text != "todo" {
+		t.Errorf("the first run is %#v, want the grey aside", runs[0])
+	}
+	if runs[1].Mark != "" || runs[1].Text != " We " {
+		t.Errorf("the words after the comment are %#v, want them black", runs[1])
+	}
+	if !runs[2].Bold || runs[2].Text != "ship" {
+		t.Errorf("the bold word came back as %#v, want it bold: what follows a comment is markdown", runs[2])
+	}
+
+	// The whole line reaches the document, and no warning says anything was
+	// left out.
+	out := walk(t, "<!-- todo --> We ship in May.\n")
+	if len(out.Warnings) != 0 {
+		t.Errorf("the line warned %q, and nothing was left out", out.Warnings)
+	}
+	if got := serialise(t, out.Blocks); !strings.Contains(got, "We ship in May.") {
+		t.Errorf("the author's sentence never reached the document:\n%s", got)
+	}
+
+	// A list item and a block quote are the same line with a marker in front
+	// of it, and each one lost the same sentence.
+	for _, source := range []string{"- <!-- aside --> item text\n", "> <!-- aside --> quoted text\n"} {
+		out := walk(t, source)
+		if got := serialise(t, out.Blocks); !strings.Contains(got, "text") {
+			t.Errorf("%q lost its words:\n%s", source, got)
+		}
+		if len(out.Warnings) != 0 {
+			t.Errorf("%q warned %q, and nothing was left out", source, out.Warnings)
+		}
+	}
+}
+
+// TestTwoCommentsOnOneLineAreTwoPencils. goldmark shuts a block of HTML on the
+// first line holding the closer, so two comments on one line of their own were
+// one block, and reading it as one comment put both delimiters into the
+// document as grey words.
+func TestTwoCommentsOnOneLineAreTwoPencils(t *testing.T) {
+	runs := firstBlockRuns(t, "<!-- first --> <!-- second -->\n")
+
+	if len(runs) != 3 {
+		t.Fatalf("the line built %d runs, want two asides and the space between them: %#v", len(runs), runs)
+	}
+	if runs[0].Mark != "pencil" || runs[0].Text != "first" {
+		t.Errorf("the first aside is %#v", runs[0])
+	}
+	if runs[2].Mark != "pencil" || runs[2].Text != "second" {
+		t.Errorf("the second aside is %#v", runs[2])
+	}
+	for _, run := range runs {
+		if strings.Contains(run.Text, commentOpener) || strings.Contains(run.Text, commentCloser) {
+			t.Errorf("a delimiter reached the document as words: %#v", runs)
+		}
+	}
+
+	// An aside on each side of the author's own words is the same block, and
+	// the prose between them stays black.
+	around := firstBlockRuns(t, "<!-- a --> real prose <!-- b -->\n")
+	if len(around) != 3 || around[1].Mark != "" || around[1].Text != " real prose " {
+		t.Fatalf("the prose between two asides came back as %#v", around)
+	}
+
+	// Wrapped over lines the pair is goldmark's block of HTML to the end, so
+	// there is no pencil to read and the loss is named as the comment it is.
+	out := walk(t, "<!-- a\nb --> <!-- c -->\n")
+	if len(out.Blocks) != 0 {
+		t.Errorf("the wrapped pair built %d blocks, want none:\n%s", len(out.Blocks), serialise(t, out.Blocks))
+	}
+	if len(out.Warnings) != 1 || !strings.Contains(out.Warnings[0], "words after its closer") {
+		t.Errorf("the wrapped pair warned %q, want the one sentence naming the comment", out.Warnings)
+	}
+}
+
+// TestAWrappedCommentInsideASentenceIsOneLine. goldmark hands a comment the
+// author's editor wrapped back with the newline inside it, and a newline in a
+// run is a hard line break in the published paragraph. A line break inside a
+// comment means no more than it does in prose, which is the rule the block
+// form already follows.
+func TestAWrappedCommentInsideASentenceIsOneLine(t *testing.T) {
+	runs := firstBlockRuns(t, "Prose <!-- an aside that\nwraps --> more.\n")
+
+	got := runCarrying(t, runs, "aside")
+	if got.Mark != "pencil" {
+		t.Errorf("the wrapped comment is mark %q, want pencil", got.Mark)
+	}
+	if got.Text != "an aside that wraps" {
+		t.Errorf("the wrapped comment marks %q, want its lines joined by one space", got.Text)
+	}
+	if strings.Contains(got.Text, "\n") {
+		t.Errorf("the comment carries a newline, which is a line break the author never typed: %q", got.Text)
+	}
+}
+
+// TestACommentsWordsCarryNoSpaceOnEitherEdge. One space inside each delimiter
+// is the delimiter's, the way the space after a highlight's colour emoji is.
+// A second one is trimmed as well: both readings hand the words to
+// commentParagraphs, which trims each line, so a grey run that opened or shut
+// on a space the author never meant as a word is not one the walk can build.
+func TestACommentsWordsCarryNoSpaceOnEitherEdge(t *testing.T) {
+	runs := firstBlockRuns(t, "Prose <!--  an aside  --> more.\n")
+
+	got := runCarrying(t, runs, "aside")
+	if got.Mark != "pencil" || got.Text != "an aside" {
+		t.Errorf("the comment marks %#v, want the words with no space on either edge", got)
+	}
+
+	// The block form is the same reading, and was already this one.
+	out := walk(t, "<!--  an aside  -->\n")
+	if got := serialise(t, out.Blocks); !strings.Contains(got, ">an aside<") {
+		t.Errorf("the block form came back as\n%s", got)
+	}
+}
+
+// TestAPencilsLineWrapsLikeAnyOtherParagraph. The line a pencil opens is a
+// paragraph, so the line under it is that paragraph's next line, the way it
+// is under any other line of prose and the way Obsidian shows it.
+//
+// Shutting the paragraph on every line lost that next line whole and said
+// nothing: goldmark treats an open paragraph as continuable, skips Continue
+// and offers the line only to the parsers that may interrupt a paragraph, and
+// its own paragraph parser is not one of them. Nothing opened, so the line
+// reached no node at all.
+func TestAPencilsLineWrapsLikeAnyOtherParagraph(t *testing.T) {
+	for _, c := range []struct{ source, lost string }{
+		{"<!-- todo --> Revenue grew 10%.\nCosts fell 5%.\n", "Costs fell 5%."},
+		{"- <!-- a --> item\n  more\n", "more"},
+		{"> <!-- a --> b\n> more\n", "more"},
+	} {
+		out := walk(t, c.source)
+		got := serialise(t, out.Blocks)
+		if !strings.Contains(got, c.lost) {
+			t.Errorf("%q lost %q and warned %q:\n%s", c.source, c.lost, out.Warnings, got)
+		}
+		if len(out.Warnings) != 0 {
+			t.Errorf("%q warned %q, and nothing was left out", c.source, out.Warnings)
+		}
+	}
+
+	// A second comment the author's editor wrapped reaches its closer on the
+	// paragraph's next line, so it is the pencil it is rather than black words
+	// opening with a delimiter.
+	runs := firstBlockRuns(t, "<!-- a --> We ship <!-- check\nwith legal -->\n")
+	got := runCarrying(t, runs, "check")
+	if got.Mark != "pencil" || got.Text != "check with legal" {
+		t.Errorf("the wrapped second comment came back as %#v, want the grey aside", got)
+	}
+	for _, run := range runs {
+		if strings.Contains(run.Text, commentOpener) || strings.Contains(run.Text, commentCloser) {
+			t.Errorf("a delimiter reached the document as words: %#v", runs)
+		}
+	}
+
+	// A blank line still ends the paragraph, which is what makes the next
+	// stretch its own.
+	out := walk(t, "<!-- a --> text\n\nmore\n")
+	if len(out.Blocks) != 2 {
+		t.Errorf("the blank line built %d blocks, want two:\n%s", len(out.Blocks), serialise(t, out.Blocks))
+	}
+}
+
+// TestAnEmptyCommentInsideAQuoteIsLeftOut. "Empty is nothing" holds wherever a
+// paragraph is emitted, and a quote is the one path that emits one without
+// going through paragraphBlock: a comment holding no words left an indented
+// blank line the author never typed.
+func TestAnEmptyCommentInsideAQuoteIsLeftOut(t *testing.T) {
+	for _, source := range []string{"> %%%%\n", "> %% %%\n", "> <!-- -->\n"} {
+		out := walk(t, source)
+		if len(out.Blocks) != 0 {
+			t.Errorf("%q built %d blocks, want none:\n%s", source, len(out.Blocks), serialise(t, out.Blocks))
+		}
+		if out.Counts.Paragraphs != 0 {
+			t.Errorf("%q counted %d paragraphs, want none", source, out.Counts.Paragraphs)
+		}
+	}
+}
+
+// TestAPencilsRefusalNamesItsOwnLine. A comment is the one inline node that
+// holds its characters as segments rather than as text children, so a heading
+// whose whole content is one carries no ast.Text at all: the line lookup
+// climbed past the heading and named the first text anywhere in the note,
+// which sent the author to line 1 of a file whose problem is on line 5. The
+// span this spelling replaces had text children and never showed it.
+func TestAPencilsRefusalNamesItsOwnLine(t *testing.T) {
+	for _, note := range []string{
+		"Words.\n\nMore words.\n\n## <!-- tbd -->\n",
+		"Words.\n\nMore words.\n\n## %% tbd %%\n",
+		"Words.\n\nMore words.\n\n![<!-- tbd -->](badge.png)\n",
+	} {
+		if got := refused(t, note); !strings.Contains(got, "line 5:") {
+			t.Errorf("%q: the refusal is %q, want it to name line 5", note, got)
+		}
+	}
+}

@@ -619,11 +619,19 @@ rather than a highlight. Inside a sentence it is a grey run; on lines of its
 own it is grey paragraphs of its own, one per blank-line-separated stretch.
 The words inside it are literal and not markdown, so a highlight inside a
 pencil is words, and an empty comment is nothing and is left out with no
-warning. `export` writes the HTML spelling and never Obsidian's. gdoc's own
-two comments, `<!-- tab ` and `<!-- image: `, are markers and not pencil, and
-are refused by line on every route in. The old span `[words]{.pencil}` is no
-longer read and is refused by line naming the comment. Changed 2026-10-16,
-DECISIONS.md. The seven are stated once, in `house.yaml`
+warning. A comment with the author's own words after it on one line is that
+pencil and that prose, and that line wraps the way any other paragraph's line
+wraps; two comments on one line are two pencils.
+`export` writes the HTML spelling and never Obsidian's, and names the
+document's own `%%` as a loss where the next build reads it as syntax, which is
+everywhere but inside a pencil's own words. gdoc's own four comments,
+`<!-- tab ` and the three a floating object is written with, `<!-- image: `,
+`<!-- drawing: ` and `<!-- object: `, are markers and not pencil, and are
+refused by line on every route in; a grey run whose comment would carry one of
+them comes home as its words with the loss named. The old span
+`[words]{.pencil}` is no longer read and is refused by line naming the
+comment. Changed 2026-10-16,
+DECISIONS.md, two entries. The seven are stated once, in `house.yaml`
 under `marks:`, keyed by Obsidian's own colour names, each with its syntax, its
 kind and its Doc colour, and one of the highlights has to claim the bare `==`. `gdoc help marks` prints that table, so a skill reads
 the binary rather than carrying a copy.

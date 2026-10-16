@@ -52,13 +52,22 @@ var commentDelimiters = [2][2]string{
 // written with, and whether that raw HTML is a comment at all. Raw HTML that
 // is not one is the caller's to warn about and leave out, which is the rule it
 // has always followed.
+//
+// The words come back as one line, because a comment inside a sentence is one
+// run of the paragraph it sits in. goldmark hands a comment the author's
+// editor wrapped back with its newlines inside it, and oneLine says why they
+// go.
 func commentWords(node *ast.RawHTML, source []byte) (words, opener string, ok bool) {
 	var b strings.Builder
 	for i := 0; i < node.Segments.Len(); i++ {
 		segment := node.Segments.At(i)
 		b.Write(segment.Value(source))
 	}
-	return insideComment(b.String())
+	words, opener, ok = insideComment(b.String())
+	if !ok {
+		return "", "", false
+	}
+	return oneLine(words), opener, true
 }
 
 // insideComment is one written comment with its delimiters taken off, which
@@ -67,7 +76,18 @@ func commentWords(node *ast.RawHTML, source []byte) (words, opener string, ok bo
 // One space inside each delimiter is the delimiter's, the way the space after
 // a highlight's colour emoji is: an author writes "<!-- words -->" to separate
 // the words from the syntax, and a grey run opening with a space is not what
-// was typed. A second space is the author's own.
+// was typed. Both readings above then hand the words to commentParagraphs,
+// which trims each line, so no space on either edge of them survives: a grey
+// run never opens or shuts on one.
+// TestACommentsWordsCarryNoSpaceOnEitherEdge is the pin.
+//
+// A pair whose closer is not its opener holds no closer inside it. The words
+// of an HTML comment end at the first "-->" a reader meets, so a piece of text
+// opening with "<!--" and ending with "-->" and holding another one between
+// them is two comments and whatever stands between them, never one: reading it
+// as one put both delimiters into the document as grey words.
+// TestTwoCommentsOnOneLineAreTwoPencils is the pin. Obsidian's fence is the
+// other case, and it is delimited by whole lines, so "%%" inside it is words.
 func insideComment(raw string) (words, opener string, ok bool) {
 	for _, pair := range commentDelimiters {
 		open, shut := pair[0], pair[1]
@@ -77,9 +97,25 @@ func insideComment(raw string) (words, opener string, ok bool) {
 			continue
 		}
 		inner := raw[len(open) : len(raw)-len(shut)]
+		if open != shut && strings.Contains(inner, shut) {
+			continue
+		}
 		return strings.TrimSuffix(strings.TrimPrefix(inner, " "), " "), open, true
 	}
 	return "", "", false
+}
+
+// oneLine is a comment's words as one line, which is what a comment inside a
+// sentence reaches the document as.
+//
+// goldmark hands a comment that wraps over two lines back with the newline
+// inside it, and a newline in a run is a line break in the published
+// paragraph: an aside broke where the author's editor wrapped. The lines are
+// joined the way commentParagraphs joins the lines of a stretch, by one space,
+// because a line break inside a comment means no more than it does in prose.
+// TestAWrappedCommentInsideASentenceIsOneLine is the pin.
+func oneLine(words string) string {
+	return strings.Join(commentParagraphs(words), " ")
 }
 
 // isComment says whether a piece of raw HTML is a comment.
@@ -93,20 +129,11 @@ func isComment(node *ast.RawHTML, source []byte) bool {
 // comment at all. A block that is not one is the caller's to name and leave
 // out, which is the rule it has always followed.
 //
-// goldmark holds the closing line of such a block apart from the rest, so the
-// written comment is its lines and then its closure.
+// What a block of HTML is written as is blockText's to say, because body.go
+// asks the same question of the same node and two readings of one block are
+// one rule with a copy that can drift.
 func blockComment(node *ast.HTMLBlock, source []byte) ([]string, string, bool) {
-	var b strings.Builder
-	lines := node.Lines()
-	for i := 0; i < lines.Len(); i++ {
-		line := lines.At(i)
-		b.Write(line.Value(source))
-	}
-	if node.HasClosure() {
-		closure := node.ClosureLine
-		b.Write(closure.Value(source))
-	}
-	words, opener, comment := insideComment(strings.TrimSpace(b.String()))
+	words, opener, comment := insideComment(blockText(node, source))
 	if !comment {
 		return nil, "", false
 	}
@@ -214,4 +241,23 @@ func isCommentBlock(node *ast.HTMLBlock, source []byte) bool {
 		return true
 	}
 	return unclosedObsidianComment(node, source)
+}
+
+// blockText is every line of a block of HTML, its closing line included, with
+// the whitespace around the whole taken off. It is what the reading functions
+// above are asked about, and goldmark is why the closing line is named on its
+// own: it holds that line apart from the rest, so the written comment is a
+// block's lines and then its closure.
+func blockText(node *ast.HTMLBlock, source []byte) string {
+	var b strings.Builder
+	lines := node.Lines()
+	for i := 0; i < lines.Len(); i++ {
+		line := lines.At(i)
+		b.Write(line.Value(source))
+	}
+	if node.HasClosure() {
+		closure := node.ClosureLine
+		b.Write(closure.Value(source))
+	}
+	return strings.TrimSpace(b.String())
 }

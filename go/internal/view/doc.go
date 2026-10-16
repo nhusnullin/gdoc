@@ -50,7 +50,9 @@
 //	                                 column its parent's content starts at
 //	<!-- image: floating, kix.p1 --> an object laid out beside the text rather
 //	                                 than in it, after the paragraph it is
-//	                                 anchored to
+//	                                 anchored to. The label is the kind:
+//	                                 image, drawing, or the object a read
+//	                                 cannot name
 //
 // TITLE and SUBTITLE are plain paragraphs on purpose: the title is on the
 // envelope already, and a document whose first line is its own title reads

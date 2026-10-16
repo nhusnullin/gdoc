@@ -179,6 +179,30 @@
 // inside a quote is indented with it. TestACommentOnLinesOfItsOwnIsGreyParagraphs
 // and TestACommentOnOneLineOfItsOwnIsOneGreyParagraph are the pins.
 //
+// A comment with the author's own words after it on one line is that pencil
+// and that prose, and two comments on one line are two pencils. CommonMark
+// gives a block of HTML the whole of the line holding the closer, so both
+// shapes were one block: the first lost the sentence and the second reached
+// the document as one grey paragraph with the delimiters inside it as words.
+// commentline.go claims that line in front of goldmark's own block parser and
+// reads it as the paragraph it is, which is the shape internal/view writes
+// whenever a paragraph opens with a grey run. Wrapped over two lines, where
+// the closer sits inside a block of HTML, it is left out and named as a
+// comment with words after its closer. The claimed line wraps the way any
+// other paragraph's line wraps: shutting it on every line lost the line under
+// it whole and said nothing, for the reason commentline.go's Continue gives.
+// TestACommentWithProseAfterItIsAPencilAndThatProse,
+// TestTwoCommentsOnOneLineAreTwoPencils and
+// TestAPencilsLineWrapsLikeAnyOtherParagraph are the pins.
+//
+// A comment the author's editor wrapped is one line in the document. goldmark
+// hands an inline comment back with its newlines inside it, and a newline in a
+// run is a hard line break in the published paragraph, so its lines are joined
+// by one space the way a block comment's are. The join trims each line, so a
+// comment's words carry no space on either edge whichever shape they were
+// written in. TestAWrappedCommentInsideASentenceIsOneLine and
+// TestACommentsWordsCarryNoSpaceOnEitherEdge are the pins.
+//
 // A comment has a second spelling, Obsidian's "%% words %%", and obsidian.go
 // parses it into the two nodes goldmark gives the HTML one: an ast.RawHTML
 // inside a sentence and an ast.HTMLBlock for a "%%" fence on lines of its
@@ -198,7 +222,11 @@
 // that the grey mark keeps everything it does and changes its spelling. So a
 // comment that marks words is one of the shapes isMark names, and it is
 // refused by line inside a heading, inside a picture's alt text and inside
-// another mark, for the three reasons the marks section above gives. It is
+// another mark, for the three reasons the marks section above gives, each
+// refusal naming the comment's own line: a comment holds its characters as
+// segments rather than as text children, so the line lookup asks it before it
+// asks the block around it, and TestAPencilsRefusalNamesItsOwnLine is that
+// pin. It is
 // carried in a table cell, a list item and a block quote. A comment holding no
 // words is not a mark at all: it reaches no run, so there is nothing for a
 // refusal to protect and "empty is nothing" holds in a heading as it holds in
@@ -220,8 +248,10 @@
 // A paragraph that renders not one run and names not one picture emits
 // nothing. The only way to write one is a comment holding no words, and an
 // empty paragraph there is a blank line the author never typed and the hub's
-// reader never sees. TestAnEmptyCommentIsLeftOut and
-// TestAnEmptyObsidianCommentIsLeftOut are the pins.
+// reader never sees. A block quote is the one path that emits a paragraph
+// without going through paragraphBlock, so it makes the same check itself.
+// TestAnEmptyCommentIsLeftOut, TestAnEmptyObsidianCommentIsLeftOut and
+// TestAnEmptyCommentInsideAQuoteIsLeftOut are the pins.
 //
 // A footnote is no longer one of them: it is set in the document, and what the
 // house style cannot set inside one is the warning instead. The section below
@@ -422,7 +452,8 @@
 //
 // # A marker of gdoc's own is refused by line, before the note is parsed
 //
-// internal/view writes {+, {-, [[c:, [s:, `<!-- tab ` and `<!-- image: ` into
+// internal/view writes {+, {-, [[c:, [s:, `<!-- tab `, `<!-- image: `,
+// `<!-- drawing: ` and `<!-- object: ` into
 // the text `read` prints and `export` writes to a file, and they say a thing
 // about a document: these words are a pending insertion, this range carries a
 // comment, a picture floats here. In a document they say nothing, so a note
@@ -435,12 +466,14 @@
 // TestBuildRefusesAMarkerByLine and TestBuildLeavesAnEscapedMarkerAlone are the
 // pins.
 //
-// Two of the six markers are comments, which is the shape the grey mark is
+// Four of the eight markers are comments, which is the shape the grey mark is
 // written in since this milestone. The refusal reaches them first, because it
 // is asked before the note is parsed, so a note carrying the comment `read`
 // writes for a floating picture is named rather than published as a grey aside
-// about a document it is no longer in. Only those two openers are markers:
-// every other comment is the author's own and comes out grey.
+// about a document it is no longer in. Three of them are that comment, one per
+// kind a floating object comes back as, and the fourth is the tab's. Only
+// those four openers are markers: every other comment is the author's own and
+// comes out grey.
 // TestGdocsOwnCommentsAreMarkersAndNotPencil and
 // TestAnAuthorsOwnCommentIsStillAPencil are the two halves.
 //

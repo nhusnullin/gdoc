@@ -80,8 +80,9 @@ reading the backslashes and nothing else.
 
 **A file carrying a marker cannot become a document.** `build`, `publish`,
 `propose`, `reply` and `annotate` all refuse a file carrying one of those
-markers, naming the line. That counts gdoc's own two comments, `<!-- tab ` and
-`<!-- image: `, each of which says a thing the document holds otherwise. A
+markers, naming the line. That counts gdoc's own comments, `<!-- tab ` and the
+three a floating object is written with, `<!-- image: `, `<!-- drawing: ` and
+`<!-- object: `, each of which says a thing the document holds otherwise. A
 mark the author typed is not one of them: a note holding `==words==` or a
 comment of its own builds and publishes like any other. That is the whole cost
 of keeping the markers: nothing else in the hub minds them. There is no
@@ -146,10 +147,15 @@ its own. The words inside a comment are literal, so a highlight in them is the
 characters it is and a link on them is dropped with the loss named: inside a
 comment `[words](url)` is text rather than a link. A pencil whose words hold
 the closer `-->` comes home plain with the loss named, because the comment
-would shut in the middle of them. So does any stretch of words that holds
-`<!--` itself, because that opener reaches the closer of the next pencil in
-the file, or on a line of its own swallows every line after it. A `-->` in the
-document's own prose is left alone: it is the characters the next build reads.
+would shut in the middle of them. So does a pencil whose words would read as
+one of gdoc's own comments: a grey run saying `tab`, or `image: the chart`,
+would be written as `<!-- tab -->` or `<!-- image: the chart -->`, and every
+route back into a document refuses a line carrying one of those. A highlight
+whose words hold `<!--`, or Obsidian's `%%`, comes home plain as well, because
+the next build reads either opener as a pencil inside the highlight. Inside a
+pencil those same openers are characters, and the export says nothing about
+them: nothing inside a comment is markdown. A `-->` in the document's own prose
+is left alone too: it is the characters the next build reads.
 
 A mark Google split into several runs comes home whole. Bold or code inside a
 highlight is its own run in the document, and the run beside it carries the

@@ -158,6 +158,10 @@ func (e *markExtension) Extend(m goldmark.Markdown) {
 		// Where goldmark's own block of HTML runs, which is after every fence
 		// and before the paragraph: a fence inside a code block opens nothing.
 		util.Prioritized(&obsidianBlockParser{}, 900),
+		// In front of goldmark's block of HTML at 900, because the line this
+		// one claims is a line goldmark would take whole. Still behind every
+		// fence, for the reason above.
+		util.Prioritized(&commentLineParser{}, 850),
 	))
 }
 
@@ -279,8 +283,17 @@ func (r *renderer) markLine(node ast.Node) int { return inlineLine(r.source, nod
 // inlineLine is the line an inline node sits on. goldmark's Lines panics on an
 // inline, so the first text inside it is where it starts, and a node holding
 // no text at all resolves through the block around it.
+//
+// Raw HTML is asked first, because it is the one inline node that holds its
+// own characters as segments rather than as text children: a pencil written
+// as a comment has no ast.Text under it at all, so climbing to the parent
+// named the first text anywhere above, which for "# <!-- tbd -->" is the
+// first line of the note. TestAPencilsRefusalNamesItsOwnLine is the pin.
 func inlineLine(source []byte, node ast.Node) int {
 	for at := node; at != nil; at = at.Parent() {
+		if raw, ok := at.(*ast.RawHTML); ok && raw.Segments.Len() > 0 {
+			return lineOf(source, raw.Segments.At(0).Start)
+		}
 		if text := firstTextNode(at); text != nil {
 			return lineOf(source, text.Segment.Start)
 		}

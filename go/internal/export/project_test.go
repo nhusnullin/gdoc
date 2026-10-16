@@ -958,3 +958,135 @@ func TestProseWithNoCommentSyntaxIsNotWarnedAboutOne(t *testing.T) {
 		}
 	}
 }
+
+// TestWordsHoldingTheObsidianSpellingAreNamed. The house style gives the
+// pencil two spellings and internal/body reads both. Export writes only
+// HTML's, so Obsidian's was named nowhere, and a document's own pair of "%%"
+// came home with no warning: "LIKE '%%abc%%'" publishes again with the words
+// between the pairs grey and the delimiters gone, and a paragraph holding
+// "%%" and nothing else opens a fence that swallows the rest of the note.
+func TestWordsHoldingTheObsidianSpellingAreNamed(t *testing.T) {
+	for _, prose := range []string{"LIKE '%%abc%%'", "a line ending %%"} {
+		_, _, _, warnings := Project(oneMarked(docs.Run{Text: prose}), nil, palette(t))
+
+		named := false
+		for _, w := range warnings {
+			if strings.Contains(w, "%%") {
+				named = true
+			}
+		}
+		if !named {
+			t.Errorf("%q: no warning names the spelling the next build would read: %v", prose, warnings)
+		}
+	}
+
+	// One per cent sign is one per cent sign. The fence and the inline
+	// comment both take the pair, so a single one is the character the
+	// document shows.
+	_, _, _, warnings := Project(oneMarked(docs.Run{Text: "growth of 50% this year"}), nil, palette(t))
+	for _, w := range warnings {
+		if strings.Contains(w, "the next build reads") {
+			t.Errorf("a warning names comment syntax in words that hold none: %q", w)
+		}
+	}
+
+	// A grey run's own words are a different question: they go home inside a
+	// comment, where the next build reads "%%" as the characters the document
+	// shows. Naming a loss there is a loss read out to a person.
+	grey, _, _, quiet := Project(oneMarked(docs.Run{Text: "LIKE '%%abc%%'", Colour: "#9A9A9A"}), nil, palette(t))
+	if !strings.Contains(grey[0].Body, "<!-- LIKE '%%abc%%' -->") {
+		t.Errorf("a grey run holding the spelling came home as\n%q", grey[0].Body)
+	}
+	if len(quiet) != 0 {
+		t.Errorf("a grey run holding the spelling raised %v, and nothing was lost", quiet)
+	}
+
+	// Where the mark cannot be written the words go home as prose after all,
+	// and the spelling in them is named there.
+	prose, _, _, both := Project(oneMarked(docs.Run{Text: "holds %% and --> both", Colour: "#9A9A9A"}), nil, palette(t))
+	if strings.Contains(prose[0].Body, "<!--") {
+		t.Errorf("the aside kept its comment: %q", prose[0].Body)
+	}
+	if !warnedAbout(both, "%%") {
+		t.Errorf("the words raised %v, want the spelling named once they are prose", both)
+	}
+
+	// The same spelling inside another mark's words is a mark inside a mark,
+	// which the next build refuses, so the highlight comes home as its words.
+	files, _, _, inside := Project(oneMarked(docs.Run{Text: "a %% b %% c", Background: "#FFD500"}), nil, palette(t))
+	if strings.Contains(files[0].Body, "==") {
+		t.Errorf("the highlight came home as %q, want the words alone", files[0].Body)
+	}
+	if !warnedAbout(inside, "a mark inside this one") {
+		t.Errorf("the highlight raised %v, want the mark inside a mark named", inside)
+	}
+}
+
+// TestAGreyRunHoldingAFootnoteMarkIsStillNamed. A comment protects a comment's
+// opener, because nothing inside a comment is markdown. It protects nothing
+// from internal/body's line scan: a footnote mark naming no note refuses the
+// file off the source line, and an aside in the middle of a paragraph's line
+// is on that line.
+func TestAGreyRunHoldingAFootnoteMarkIsStillNamed(t *testing.T) {
+	_, _, _, warnings := Project(oneMarked(docs.Run{Text: "a [^1] note", Colour: "#9A9A9A"}), nil, palette(t))
+
+	if !warnedAbout(warnings, "a footnote mark of gdoc's") {
+		t.Errorf("a grey run holding a footnote mark raised %v, want the mark named", warnings)
+	}
+}
+
+// warnedAbout says whether one of these warnings holds this sentence.
+func warnedAbout(warnings []string, says string) bool {
+	for _, w := range warnings {
+		if strings.Contains(w, says) {
+			return true
+		}
+	}
+	return false
+}
+
+// TestAPencilWhoseWordsWouldReadAsAMarkerComesHomeAsItsWords. The comment a
+// pencil is written as opens with gdoc's own "<!-- ", so a grey run whose
+// words begin "tab ", "image: ", "drawing: " or "object: " is written home as
+// one of this file's markers. Every route back into a document refuses a line
+// carrying one, so the file would not build and the refusal would blame the
+// note rather than the export.
+func TestAPencilWhoseWordsWouldReadAsAMarkerComesHomeAsItsWords(t *testing.T) {
+	// The label on its own is the same marker. The question is asked of the
+	// comment as it will be written, because "<!-- " and the words alone give
+	// "<!-- tab", which carries no marker, while the line gdoc writes is
+	// "<!-- tab -->", which carries one.
+	for _, words := range []string{"tab order matters", "image: see the appendix", "drawing: the chart", "object: the sheet",
+		"tab", "image:", "drawing:", "object:"} {
+		files, _, _, warnings := Project(oneMarked(docs.Run{Text: words, Colour: "#9A9A9A"}), nil, palette(t))
+
+		if !strings.Contains(files[0].Body, words+"\n") {
+			t.Errorf("%q came home as\n%q\nwant the words alone", words, files[0].Body)
+		}
+		if strings.Contains(files[0].Body, "<!--") {
+			t.Errorf("%q came home inside a comment the next build refuses:\n%q", words, files[0].Body)
+		}
+		if len(warnings) != 1 || !strings.Contains(warnings[0], "marker") {
+			t.Errorf("%q raised %v, want the one sentence naming the marker", words, warnings)
+		}
+	}
+
+	// A marker in the middle of the words is the same refused line, so the
+	// aside comes home as its words there too.
+	mid, _, _, midWarnings := Project(oneMarked(docs.Run{Text: "see <!-- image: x", Colour: "#9A9A9A"}), nil, palette(t))
+	if !strings.Contains(mid[0].Body, "see <!-- image: x\n") || strings.Contains(mid[0].Body, "<!-- see") {
+		t.Errorf("a marker inside the words came home as\n%q\nwant the words alone", mid[0].Body)
+	}
+	if !warnedAbout(midWarnings, "marker") {
+		t.Errorf("a marker inside the words raised %v, want one sentence naming the marker", midWarnings)
+	}
+
+	// An aside that is nobody's marker keeps its comment.
+	files, _, _, warnings := Project(oneMarked(docs.Run{Text: "tabulate the rest", Colour: "#9A9A9A"}), nil, palette(t))
+	if !strings.Contains(files[0].Body, "<!-- tabulate the rest -->") {
+		t.Errorf("an aside that is no marker came home as\n%q", files[0].Body)
+	}
+	if len(warnings) != 0 {
+		t.Errorf("an aside that is no marker raised %v", warnings)
+	}
+}
