@@ -476,11 +476,25 @@ func TestTheLiveFixturesRenderWithNoNetwork(t *testing.T) {
 	}
 }
 
+// placeholderLogo is the PNG these renders are handed when the house names its
+// logo in Drive rather than carrying it. The firm's logo is one file in its
+// Drive and the tree holds no copy, and nothing in this file measures the
+// picture: every logo assertion above reads geometry. The run that reads the
+// real bytes out of Drive is TestPublishCarriesTheHouseLogo.
+const placeholderLogo = "../house/testdata/placeholder-logo.png"
+
 // houseLogo is the mark render is handed. Build takes the logo from its caller
 // now rather than reading it off the config, because a house style may name
 // one file in Drive instead of carrying the bytes.
 func houseLogo(t *testing.T, cfg *house.Config) []byte {
 	t.Helper()
+	if cfg.LogoDrive() != "" {
+		raw, err := os.ReadFile(placeholderLogo)
+		if err != nil {
+			t.Fatalf("read the placeholder logo: %v", err)
+		}
+		return raw
+	}
 	raw, err := cfg.LogoBytes()
 	if err != nil {
 		t.Fatalf("LogoBytes: %v", err)

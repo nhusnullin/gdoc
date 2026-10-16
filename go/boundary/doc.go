@@ -282,6 +282,30 @@
 // pattern names. Both use example.net, so no test here names the firm's
 // domain, whole or in parts.
 //
+// # The firm's logo is not in the tree either
+//
+// The logo was a base64 PNG in house.yaml until M22, and this repository is
+// public: the picture is the firm's and is not licensed with the code. It is
+// one file in the firm's Drive now, read once a day and cached beside the
+// token, and house.yaml names it by id. TestTheLogoIsNotInTheTree is the pin,
+// and it holds the PNG as a SHA-256 for the reason the domain test holds the
+// domain as one.
+//
+// It walks what the domain scan walks, through walkTracked, because both rules
+// are about the same tree. What it adds is the zip: a .docx is a zip, so the
+// logo inside one is invisible to any scan that hashes files off the disk, and
+// the three fixtures that measure the house style carry a picture in their
+// first-page header. Each is opened and every member hashed. A .docx this scan
+// cannot open is an error rather than an empty answer.
+//
+// It hashes whole files rather than looking for the bytes inside a larger one.
+// The two ways the logo travels are as a file and as a part of a document, and
+// a re-encoding of the same picture is a different file this scan does not
+// know. What it holds is that nobody puts this file back.
+//
+// TestTheLogoScanFindsAPlantedPNG is the canary, bare and inside a zip, and it
+// plants a payload of its own: no test here carries the firm's bytes.
+//
 // # A make target that writes into bin/ makes bin/ first
 //
 // bin/ is ignored and nothing tracks it, so a fresh clone does not have one. A

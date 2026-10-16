@@ -43,6 +43,7 @@ const theBreaksTheDocumentGot = float64(2)
 // number is a number and not a refusal, because whether a document of 216
 // pages is what somebody wanted is the skill's to say.
 func TestBuildAndPublishCarryThePageBreakCount(t *testing.T) {
+	theHouseLogoCached(t)
 	t.Run("build", func(t *testing.T) {
 		noSession(t)
 		md := writeNote(t, "register.md", breakNote)

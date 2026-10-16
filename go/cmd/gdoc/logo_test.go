@@ -20,6 +20,7 @@ import (
 
 	"gdoc/internal/config"
 	"gdoc/internal/guard"
+	"gdoc/internal/house"
 )
 
 // houseFile is the embedded style as a file, read so that a test can write a
@@ -31,6 +32,12 @@ const houseFile = "../../internal/house/house.yaml"
 // the firm's own file: nothing in this package may name a real id, because a
 // test that did would be one slip away from asking Drive for it.
 const logoFileID = "1TestLogoFileIdAAAAAAAAAAAAAAAAAAA"
+
+// fileLogoHouse is a house file whose logo is bytes in the file: internal
+// house's own copy of the shipped style with the placeholder's base64 where
+// the firm's logo used to be. The shipped style names a file in Drive since
+// M22, so a run that must fetch nothing is pointed at this one.
+const fileLogoHouse = "../../internal/house/testdata/house-base64.yaml"
 
 // placeholderLogo is the PNG every test here stands Drive up with. The firm's
 // logo is one file in its Drive and the tree carries no copy of it, so the
@@ -168,6 +175,25 @@ func cachedLogo(t *testing.T, id string, raw []byte, age time.Duration) {
 	}
 }
 
+// theHouseLogoCached hands the run a config dir of its own with the shipped
+// house's logo already in it and its stamp fresh. That is the state every
+// second run on a machine is in: the asset room answers out of the cache and
+// asks Drive nothing. It is what lets a test about anything but the logo stand
+// beside the real thing, the shipped style with no --house, and still open no
+// wire at all. A cold cache is this file's own business.
+func theHouseLogoCached(t *testing.T) {
+	t.Helper()
+	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+	cfg, err := house.Load()
+	if err != nil {
+		t.Fatalf("the embedded house style did not load: %v", err)
+	}
+	if cfg.LogoDrive() == "" {
+		return
+	}
+	cachedLogo(t, cfg.LogoDrive(), housePNG(t), 0)
+}
+
 // logoBlockOf is the logo block out of the object, as a skill reads it.
 func logoBlockOf(t *testing.T, got map[string]any) map[string]any {
 	t.Helper()
@@ -179,13 +205,14 @@ func logoBlockOf(t *testing.T, got map[string]any) map[string]any {
 }
 
 // A house whose logo is bytes in the file is built with no request at all, and
-// the envelope says so in one word.
+// the envelope says so in one word. The shipped style names a file in Drive, so
+// the house this one is given is the copy that still carries its bytes.
 func TestBuildReportsTheLogoSourceFile(t *testing.T) {
 	noSession(t)
 	dir, md := buildNote(t)
 	out := filepath.Join(dir, "out.docx")
 
-	got, code := runJSON(t, "build", "--md", md, "--out", out)
+	got, code := runJSON(t, "build", "--md", md, "--out", out, "--house", fileLogoHouse)
 	if code != 0 || got["ok"] != true {
 		t.Fatalf("build: %v (exit %d)", got, code)
 	}
@@ -392,7 +419,7 @@ func TestPublishReportsALogoInTheFile(t *testing.T) {
 	wire := &logoWire{t: t}
 	logoFetching(t, wire)
 
-	got, _ := runJSON(t, "publish", "--md", md, "--folder-id", "1AbCdEfGhIjKlMnOpQrStUvWxYz012345")
+	got, _ := runJSON(t, "publish", "--md", md, "--folder-id", "1AbCdEfGhIjKlMnOpQrStUvWxYz012345", "--house", fileLogoHouse)
 	if block := logoBlockOf(t, got); block["source"] != "file" {
 		t.Errorf("publish prints where the logo came from: %v", block)
 	}

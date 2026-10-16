@@ -37,6 +37,7 @@ var debtCounts = map[string]float64{"yellow": 1, "green": 0, "purple": 1}
 // nobody has read. Whether a document carrying a debt may be published is the
 // skill's to say, which is why the count is a number and not a refusal.
 func TestBuildAndPublishCarryTheDebtCounts(t *testing.T) {
+	theHouseLogoCached(t)
 	t.Run("build", func(t *testing.T) {
 		noSession(t)
 		md := writeNote(t, "register.md", debtNote)

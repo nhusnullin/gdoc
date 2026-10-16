@@ -93,6 +93,7 @@ func (f *fakeWire) multipart(t *testing.T) wireCall {
 }
 
 func TestPublishUploadsTheNoteAndPairsIt(t *testing.T) {
+	theHouseLogoCached(t)
 	stubWire(t, &fakeWire{answers: publishAnswers(t)})
 	_, md := buildNote(t)
 
@@ -174,6 +175,7 @@ func TestPublishUploadsTheNoteAndPairsIt(t *testing.T) {
 // The metadata part is what turns a docx into a document, and it is the only
 // thing that names the folder. The file part is the bytes the render wrote.
 func TestPublishUploadsTheMetadataAndTheDocx(t *testing.T) {
+	theHouseLogoCached(t)
 	f := stubWire(t, &fakeWire{answers: publishAnswers(t)})
 	_, md := buildNote(t)
 
@@ -207,6 +209,7 @@ func TestPublishUploadsTheMetadataAndTheDocx(t *testing.T) {
 // learned from the create the guard carried, and nothing else is reachable at
 // all.
 func TestPublishOpensWithTheFolderAndNoFile(t *testing.T) {
+	theHouseLogoCached(t)
 	f := stubWire(t, &fakeWire{answers: publishAnswers(t)})
 	_, md := buildNote(t)
 
@@ -227,6 +230,7 @@ func TestPublishOpensWithTheFolderAndNoFile(t *testing.T) {
 // entries already in the note come back byte for byte: their facts are that
 // document's history, and this run knows nothing about them.
 func TestPublishAppendsAnEntryToAPairedNote(t *testing.T) {
+	theHouseLogoCached(t)
 	stubWire(t, &fakeWire{answers: publishAnswers(t)})
 	_, md := buildNote(t)
 	pairNote(t, md, frontmatter.Entry{
@@ -381,6 +385,7 @@ func TestPublishArgumentsAreStrict(t *testing.T) {
 // The four re-read refusals. Each one is a document in Drive that the note
 // cannot be paired to, so each one takes the document back.
 func TestPublishRollsBackWhenTheNoteCannotBePaired(t *testing.T) {
+	theHouseLogoCached(t)
 	cases := []struct {
 		name  string
 		spoil func(t *testing.T, md string)
@@ -474,6 +479,7 @@ func TestPublishRollsBackWhenTheNoteCannotBePaired(t *testing.T) {
 // Not knowing must never resolve to the document being gone. A trash that could
 // not be confirmed comes back with the live id and the steps.
 func TestPublishReportsTheLiveIDWhenTheRollbackFailed(t *testing.T) {
+	theHouseLogoCached(t)
 	_, md := buildNote(t)
 	answers := publishAnswers(t)
 	answers[0].before = func() {
@@ -508,6 +514,7 @@ func TestPublishReportsTheLiveIDWhenTheRollbackFailed(t *testing.T) {
 // A create that failed is a run with no document, so there is nothing to verify,
 // to record or to take back, and the note is left alone.
 func TestPublishReportsAnUploadThatFailed(t *testing.T) {
+	theHouseLogoCached(t)
 	_, md := buildNote(t)
 	before, err := os.ReadFile(md)
 	if err != nil {
@@ -546,6 +553,7 @@ func TestPublishReportsAnUploadThatFailed(t *testing.T) {
 // the route named, and the pairing is still recorded: a caller told the run
 // failed is a caller that publishes a second one.
 func TestPublishPairsTheNoteEvenWhenARouteDidNotHold(t *testing.T) {
+	theHouseLogoCached(t)
 	_, md := buildNote(t)
 	answers := publishAnswers(t)
 	answers[2] = &answer{method: "GET", match: "/export?", bytes: []byte("not a docx")}
@@ -575,6 +583,7 @@ func TestPublishPairsTheNoteEvenWhenARouteDidNotHold(t *testing.T) {
 // uploads them, and if the two ever drifted a document would stop being what
 // the note builds to.
 func TestBuildAndPublishRenderTheSameBytes(t *testing.T) {
+	theHouseLogoCached(t)
 	dir, md := buildNote(t)
 	out := filepath.Join(dir, "supplier-register.docx")
 	noSession(t)
@@ -600,6 +609,7 @@ func TestBuildAndPublishRenderTheSameBytes(t *testing.T) {
 // envelope and in the note. That is the record of what a document was built
 // from, and "embedded" would be the wrong answer for a run under review.
 func TestPublishReportsTheHouseFileItWasGiven(t *testing.T) {
+	theHouseLogoCached(t)
 	stubWire(t, &fakeWire{answers: publishAnswers(t)})
 	dir, md := buildNote(t)
 	src, err := os.ReadFile(filepath.Join("..", "..", "internal", "house", "house.yaml"))
