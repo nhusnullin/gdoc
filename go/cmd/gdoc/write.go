@@ -82,11 +82,11 @@ func required(a *args, name string) (string, error) {
 func cmdProbe(a *args) emit.Result {
 	folder, err := required(a, "--folder")
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	id, s, err := openFolder(folder)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	report, err := probe.Run(context.Background(), s, id)
 	warns := append(append([]string{}, s.Warnings()...), report.Warnings...)
@@ -94,7 +94,7 @@ func cmdProbe(a *args) emit.Result {
 		// The report goes out beside the error: a create that succeeded and a
 		// step that then failed is exactly the run where the document id is
 		// worth most, because somebody may have to go and look at it.
-		return emit.Result{OK: false, Error: err.Error(), Data: probeReport(report), Warnings: warns}
+		return withStop(emit.Result{OK: false, Error: err.Error(), Data: probeReport(report), Warnings: warns}, err)
 	}
 	return emit.Result{OK: true, Data: probeReport(report), Warnings: warns}
 }
@@ -112,7 +112,7 @@ type replyData struct {
 func cmdReply(ctx context.Context, a *args) emit.Result {
 	body, err := replyBody(a)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	commentID := a.at(1)
 	if commentID == "" {
@@ -122,11 +122,11 @@ func cmdReply(ctx context.Context, a *args) emit.Result {
 	// would render literally is a mistake in the call, not something a write
 	// could fix.
 	if err := reply.Check(body, a.set.Mark); err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	r, err := open(a.target())
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	// The caller's time is read here and nowhere after here. A call that is
 	// already over posts nothing, and a call that runs out as the reply goes
@@ -146,7 +146,7 @@ func cmdReply(ctx context.Context, a *args) emit.Result {
 		Verified:   res.Verified,
 	}
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: r.warnings()}
+		return withStop(emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: r.warnings()}, err)
 	}
 	return emit.Result{OK: true, Data: data, Warnings: r.warnings(res.Warnings...)}
 }
@@ -242,15 +242,15 @@ type proposeData struct {
 func cmdPropose(ctx context.Context, a *args) emit.Result {
 	from, err := required(a, "--from")
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	proposals, err := readProposals(from, a.set.Mark)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	docID, err := documentID(a.target())
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	// --folder bought the probe its throwaway document, and there is no probe.
 	// The flag is still read as a folder id, so a caller who pointed it at a
@@ -261,7 +261,7 @@ func cmdPropose(ctx context.Context, a *args) emit.Result {
 	var warns []string
 	if a.has("--folder") {
 		if _, err := folderID(a.flags["--folder"]); err != nil {
-			return emit.Result{OK: false, Error: err.Error()}
+			return failed(err)
 		}
 		warns = append(warns, "--folder is ignored: propose no longer creates a working copy, and the flag will be removed in a later release")
 	}
@@ -274,7 +274,7 @@ func cmdPropose(ctx context.Context, a *args) emit.Result {
 	// TestTheFolderWarningSurvivesEveryRefusalAfterIt is the pin.
 	note, err := pairedNote(a, docID)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error(), Warnings: warns}
+		return withStop(emit.Result{OK: false, Error: err.Error(), Warnings: warns}, err)
 	}
 
 	// One policy, one door: the document at LevelSuggest. The probe's create
@@ -284,7 +284,7 @@ func cmdPropose(ctx context.Context, a *args) emit.Result {
 	p.AllowFile(docID, guard.LevelSuggest)
 	s, err := openSession(p)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error(), Warnings: warns}
+		return withStop(emit.Result{OK: false, Error: err.Error(), Warnings: warns}, err)
 	}
 	r := &reach{id: docID, session: s}
 	return runPropose(ctx, r, proposals, note, a.set.Mark, warns...)
@@ -298,7 +298,7 @@ func runPropose(ctx context.Context, r *reach, proposals []propose.Proposal, not
 
 	d, err := docs.Fetch(ctx, r.session, r.id)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings(warns...)}
+		return withStop(emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings(warns...)}, err)
 	}
 	data := proposeData{
 		DocumentID: r.id,
@@ -659,11 +659,11 @@ func cmdWithdraw(a *args) emit.Result {
 	}
 	docID, err := documentID(a.target())
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	note, err := readNote(a.flags["--md"], docID)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	if !withdraw.Mine(note.entry, suggestionID) {
 		return emit.Result{OK: false, Error: fmt.Sprintf(
@@ -675,7 +675,7 @@ func cmdWithdraw(a *args) emit.Result {
 	// the permission read from the note is also the permission on the wire.
 	r, err := open(a.target(), func(p *guard.Policy) { p.AllowReject(suggestionID) })
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	res, err := withdraw.Run(context.Background(), r.session, r.id, suggestionID, note.entry)
 	data := withdrawData{
@@ -685,7 +685,7 @@ func cmdWithdraw(a *args) emit.Result {
 		Verified:              res.Verified,
 	}
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: r.warnings()}
+		return withStop(emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: r.warnings()}, err)
 	}
 	warns := res.Warnings
 	if res.Verified {

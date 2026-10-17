@@ -75,6 +75,24 @@
 // file: cmd/gdoc's TestAPublishEndNamesTheDocumentItCreated,
 // TestARolledBackPublishNamesNoDocument and TestOnlyPublishCarriesMade.
 //
+// stop is why a failed run failed, in one of emit's seven fixed words, with
+// line beside it where the cause sits on a line of a note, which today is the
+// one picture the house style cannot carry. Both are set by cmd/gdoc, which
+// reads the typed failures the packages raise and never a sentence, and both
+// travel on emit.Result in fields the printed object does not carry, the way
+// Screen does: cmd/gdoc's stop.go holds the reading,
+// TestAStopIsOneOfTheSevenCodesAndNeverASentence, TestTheSVGRefusalCarriesItsLine
+// and TestAnUnknownFailureIsOther its rules.
+//
+// This package judges none of it. It writes a word that is one of the seven
+// and nothing otherwise, because a reader of the record could not tell a word
+// gdoc meant from a sentence that leaked out of English; it writes no stop
+// beside a run that worked, and no line without a code:
+// TestAStopIsOneOfTheSevenCodesAndNeverASentence and
+// TestAStopReachesNoSuccessfulEnd. A failure gdoc did not sort is other, which
+// cmd/gdoc fills in where the command named no word, so a failed end always
+// says something and never a guess.
+//
 // ok is the envelope's ok, and a start says nothing about it:
 // TestOkIsTheEnvelopesOk. verified is lifted only for the commands whose
 // caller says they read their own write back, because update and restyle

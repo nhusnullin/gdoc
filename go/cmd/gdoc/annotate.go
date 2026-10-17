@@ -58,11 +58,11 @@ type annotateData struct {
 func cmdAnnotate(ctx context.Context, a *args) emit.Result {
 	list, err := annotationsFor(a)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	r, err := open(a.target())
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	return runAnnotate(ctx, r, list, a.set.Mark)
 }
@@ -175,7 +175,7 @@ func runAnnotate(ctx context.Context, r *reach, list []annotate.Annotation, mark
 		}
 		res, err := annotate.Apply(context.WithoutCancel(ctx), r.session, r.id, one, mark)
 		if err != nil {
-			return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...), Error: err.Error()}
+			return withStop(emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...), Error: err.Error()}, err)
 		}
 		data.Annotations[i] = placed(res)
 		warns = append(warns, aboutAnnotation(one.Quoted, res.Warnings)...)

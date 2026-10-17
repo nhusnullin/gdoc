@@ -58,30 +58,30 @@ type buildData struct {
 func cmdBuild(ctx context.Context, a *args) emit.Result {
 	md, err := required(a, "--md")
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	out, err := required(a, "--out")
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	// Before anything is read or rendered. Not knowing must never resolve to
 	// overwrite, and the file that is already there is somebody's.
 	if err := freeToWrite(out, a.has("--force")); err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	// --force is consent to replace the document being written, never consent
 	// to replace what the run was told to read.
 	if err := notAnInput(out, input{"--md", md}, input{"--house", a.flags["--house"]}); err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 
 	source, err := noteSource(md)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	doc, err := renderNote(ctx, source, md, a)
 	if err != nil {
-		return buildFailed(doc, err.Error())
+		return buildFailed(doc, err)
 	}
 	// The note's pictures are inputs too, and which files they are is only
 	// known once the walk has read them. Asked before the walk, the check
@@ -89,10 +89,10 @@ func cmdBuild(ctx context.Context, a *args) emit.Result {
 	// picture it had just embedded. Nothing has been written yet, because the
 	// render zips into memory.
 	if err := notAnInput(out, pictures(doc.Sources)...); err != nil {
-		return buildFailed(doc, err.Error())
+		return buildFailed(doc, err)
 	}
 	if err := atomicfile.Replace(out, doc.Docx, atomicfile.ModeOf(out, buildMode)); err != nil {
-		return buildFailed(doc, fmt.Sprintf("the document could not be written: %v", err))
+		return buildFailed(doc, fmt.Errorf("the document could not be written: %w", err))
 	}
 
 	return emit.Result{OK: true, Warnings: doc.Warnings, Data: buildData{
@@ -112,9 +112,9 @@ func cmdBuild(ctx context.Context, a *args) emit.Result {
 // prints the same block on its own failure. A skill should not have to read
 // the two envelopes differently. TestAFailedBuildStillPrintsTheLogoBlock is
 // the pin. No file was written, so Out and Bytes stay empty.
-func buildFailed(doc *noteDocx, why string) emit.Result {
-	return emit.Result{OK: false, Error: why, Warnings: doc.Warnings,
-		Data: buildData{House: doc.House, Logo: doc.Logo}}
+func buildFailed(doc *noteDocx, err error) emit.Result {
+	return withStop(emit.Result{OK: false, Error: err.Error(), Warnings: doc.Warnings,
+		Data: buildData{House: doc.House, Logo: doc.Logo}}, err)
 }
 
 // noteDocx is one note rendered: the bytes, the words the cover took off it,

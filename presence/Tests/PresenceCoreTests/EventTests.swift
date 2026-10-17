@@ -12,7 +12,7 @@ import XCTest
 final class EventTests: XCTestCase {
   func testAVersionOneLineDecodesAndAnUnknownFieldIsIgnored() throws {
     let lines = try Fixture.lines("events-v1")
-    XCTAssertEqual(lines.count, 13, "the shared fixture is thirteen records")
+    XCTAssertEqual(lines.count, 15, "the shared fixture is fifteen records")
 
     let widened = try withUnknownField(lines[0])
     let event = try Event.decode(widened)
@@ -53,7 +53,7 @@ final class EventTests: XCTestCase {
       kinds,
       [
         .start, .end, .start, .end, .held, .released, .expired, .landed, .dropped, .start, .end,
-        .start, .end,
+        .start, .end, .start, .end,
       ]
     )
   }
@@ -72,7 +72,7 @@ final class EventTests: XCTestCase {
 
     let start = try Event.decode(lines[11])
     XCTAssertNil(start.made, "nothing was created when the run began")
-    for index in 0..<11 {
+    for index in 0..<lines.count where index != 12 {
       XCTAssertNil(try Event.decode(lines[index]).made, "line \(index) names a document it made")
     }
   }
@@ -100,6 +100,37 @@ final class EventTests: XCTestCase {
       [held, try Event.decode(renamed)], now: try moment("2026-10-17T09:20:00Z"),
       calendar: Calendar(identifier: .gregorian), alive: { _ in true })
     XCTAssertTrue(glance.now.isEmpty, "the dropped card is gone from NOW")
+  }
+
+  // A run that failed says why in one of gdoc's seven words, and the picture
+  // the house style cannot carry is the one cause that brings a line with it.
+  // Both are absent everywhere else: a run that worked stopped for no reason,
+  // and a start has not stopped at all.
+  func testStopAndLineDecodeAndDefaultToNil() throws {
+    let lines = try Fixture.lines("events-v1")
+
+    let end = try Event.decode(lines[14])
+    XCTAssertEqual(end.kind, .end)
+    XCTAssertEqual(end.command, "publish")
+    XCTAssertEqual(end.ok, false)
+    XCTAssertEqual(end.stop, "svg_picture")
+    XCTAssertEqual(end.line, 42)
+
+    let start = try Event.decode(lines[13])
+    XCTAssertNil(start.stop, "a run that has begun has not stopped")
+    XCTAssertNil(start.line)
+
+    for index in 0..<14 {
+      let event = try Event.decode(lines[index])
+      XCTAssertNil(event.stop, "line \(index) says why it stopped")
+      XCTAssertNil(event.line, "line \(index) names a line of a note")
+    }
+
+    // A word this app has not heard of is still the word gdoc wrote: nothing
+    // here guesses at what an unknown code means, and nothing refuses the line
+    // for carrying one.
+    let unknown = lines[14].replacingOccurrences(of: "svg_picture", with: "quota")
+    XCTAssertEqual(try Event.decode(unknown).stop, "quota")
   }
 
   func testAnUnknownVersionIsRefusedAsNewer() throws {

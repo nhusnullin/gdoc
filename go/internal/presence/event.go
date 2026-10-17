@@ -49,6 +49,8 @@ type Event struct {
 	Made     string `json:"made,omitempty"`
 	OK       *bool  `json:"ok,omitempty"`
 	Verified *bool  `json:"verified,omitempty"`
+	Stop     string `json:"stop,omitempty"`
+	Line     int    `json:"line,omitempty"`
 	MS       *int64 `json:"ms,omitempty"`
 	Hold     string `json:"hold,omitempty"`
 	Rule     string `json:"rule,omitempty"`
@@ -135,9 +137,10 @@ func (r *Run) Made(id string) {
 }
 
 // End writes the end event for a run, with the envelope's ok, the title and
-// the verified lifted out of its data, and the elapsed milliseconds.
+// the verified lifted out of its data, the stop code of a run that failed, and
+// the elapsed milliseconds.
 //
-// It takes the whole result and writes four facts out of it, because the
+// It takes the whole result and writes six facts out of it, because the
 // envelope itself carries document words, warnings, error sentences and
 // paths, and none of those may reach a file that lasts:
 // TestAnEventCarriesNoWordOfTheEnvelopeButTheTitle.
@@ -150,6 +153,7 @@ func (r *Run) End(res emit.Result) {
 	if !r.readsBack {
 		verified = nil
 	}
+	stop, line := stopOf(res)
 	ms := since(r.started).Milliseconds()
 	appendEvent(Event{
 		Gdoc:     r.version,
@@ -162,8 +166,32 @@ func (r *Run) End(res emit.Result) {
 		Made:     r.made,
 		OK:       &ok,
 		Verified: verified,
+		Stop:     stop,
+		Line:     line,
 		MS:       &ms,
 	}, r.errOut)
+}
+
+// stopOf is the one word a failed end says why in, and the line of the note
+// the cause sits on where the cause has one.
+//
+// Both are the caller's: cmd/gdoc reads the typed failures the packages raise
+// and names one of emit's seven codes, and this package judges nothing. What
+// it does refuse is a word that is not one of the seven, a sentence included,
+// because a reader of the record could not tell a word gdoc meant from a word
+// that leaked out of English: TestAStopIsOneOfTheSevenCodesAndNeverASentence.
+//
+// A run that worked says nothing about why it stopped, whatever its caller
+// set, and a line is written only beside a code, because a number alone names
+// nothing: TestAStopReachesNoSuccessfulEnd.
+func stopOf(res emit.Result) (string, int) {
+	if res.OK || !res.Stop.Known() {
+		return "", 0
+	}
+	if res.StopLine <= 0 {
+		return string(res.Stop), 0
+	}
+	return string(res.Stop), res.StopLine
 }
 
 // Held writes the one event that says a chat write is waiting for a person.

@@ -126,7 +126,8 @@ func TestOffTouchesNothing(t *testing.T) {
 func TestTheEventCarriesOnlyItsListedFields(t *testing.T) {
 	want := []string{
 		"v", "at", "gdoc", "pid", "run", "call", "event", "command", "via",
-		"doc", "wait", "title", "made", "ok", "verified", "ms", "hold", "rule", "until",
+		"doc", "wait", "title", "made", "ok", "verified", "stop", "line", "ms",
+		"hold", "rule", "until",
 	}
 	var got []string
 	ty := reflect.TypeOf(Event{})
@@ -148,6 +149,7 @@ func TestAnEventCarriesNoWordOfTheEnvelopeButTheTitle(t *testing.T) {
 		"someone@example.com",
 		"the warning about the mark",
 		"the quote \"was not found\"",
+		"line 5: /Users/nail/notes/supplier.md could not be embedded",
 	}
 	r := Begin(context.Background(), true, version, "reply", docID, false, true, errOut)
 	r.End(emit.Result{
@@ -158,10 +160,13 @@ func TestAnEventCarriesNoWordOfTheEnvelopeButTheTitle(t *testing.T) {
 			"threads": []string{canaries[1], canaries[2]},
 			"path":    canaries[3],
 			"account": canaries[4],
+			"quote":   canaries[6],
 		},
 		Warnings: []string{canaries[5]},
-		Error:    canaries[6],
+		Error:    canaries[7],
 		Version:  version,
+		Stop:     emit.StopSVGPicture,
+		StopLine: 5,
 	})
 
 	whole := strings.Join(written(t, dir, "2026-10.jsonl"), "\n")
@@ -173,6 +178,86 @@ func TestAnEventCarriesNoWordOfTheEnvelopeButTheTitle(t *testing.T) {
 	if !strings.Contains(whole, "Supplier register") {
 		t.Fatalf("the title is the one document word the record keeps:\n%s", whole)
 	}
+	// The one thing the refusal does leave: its code and its line, which name
+	// no file and quote nothing.
+	if !strings.Contains(whole, `"stop":"svg_picture"`) || !strings.Contains(whole, `"line":5`) {
+		t.Fatalf("the code and the line are what a failed end keeps:\n%s", whole)
+	}
+}
+
+// The record carries one of emit's seven words or no word at all. A sentence
+// under that key would be an error message in a file that lasts, and a word
+// nobody meant would be a code the app cannot place, so a caller that set
+// either writes neither.
+func TestAStopIsOneOfTheSevenCodesAndNeverASentence(t *testing.T) {
+	dir, errOut := scene(t)
+	ctx := context.Background()
+
+	for _, code := range emit.StopCodes() {
+		Begin(ctx, true, version, "read", docID, false, false, errOut).
+			End(emit.Result{OK: false, Stop: code})
+	}
+	for _, odd := range []emit.StopCode{
+		"", "SVG_PICTURE", "svg", "the picture could not be embedded",
+		"guard refused: the document is not in the reachable set",
+	} {
+		Begin(ctx, true, version, "read", docID, false, false, errOut).
+			End(emit.Result{OK: false, Stop: odd, StopLine: 5})
+	}
+
+	ends := endsOf(decoded(t, dir, "2026-10.jsonl"))
+	if len(ends) != len(emit.StopCodes())+5 {
+		t.Fatalf("got %d ends: %+v", len(ends), ends)
+	}
+	for i, code := range emit.StopCodes() {
+		if ends[i].Stop != string(code) {
+			t.Errorf("the end of a run that stopped at %q says %q", code, ends[i].Stop)
+		}
+	}
+	for _, end := range ends[len(emit.StopCodes()):] {
+		if end.Stop != "" || end.Line != 0 {
+			t.Errorf("a word that is not one of the seven reached the record: %+v", end)
+		}
+	}
+}
+
+// A run that worked says nothing about why it stopped, whatever its caller
+// set, and a line is written only beside a code.
+func TestAStopReachesNoSuccessfulEnd(t *testing.T) {
+	dir, errOut := scene(t)
+	ctx := context.Background()
+
+	Begin(ctx, true, version, "read", docID, false, false, errOut).
+		End(emit.Result{OK: true, Stop: emit.StopNetwork, StopLine: 12})
+	Begin(ctx, true, version, "read", docID, false, false, errOut).
+		End(emit.Result{OK: false, StopLine: 12})
+	Begin(ctx, true, version, "read", docID, false, false, errOut).
+		End(emit.Result{OK: false, Stop: emit.StopNotFound, StopLine: -3})
+
+	ends := endsOf(decoded(t, dir, "2026-10.jsonl"))
+	if len(ends) != 3 {
+		t.Fatalf("got %d ends: %+v", len(ends), ends)
+	}
+	if ends[0].Stop != "" || ends[0].Line != 0 {
+		t.Errorf("a run that worked carries %q and line %d", ends[0].Stop, ends[0].Line)
+	}
+	if ends[1].Line != 0 {
+		t.Errorf("a line with no code reached the record: %+v", ends[1])
+	}
+	if ends[2].Stop != string(emit.StopNotFound) || ends[2].Line != 0 {
+		t.Errorf("a line no note has reached the record: %+v", ends[2])
+	}
+}
+
+// endsOf is the end events of a run, in the order they were written.
+func endsOf(events []Event) []Event {
+	var out []Event
+	for _, e := range events {
+		if e.Event == "end" {
+			out = append(out, e)
+		}
+	}
+	return out
 }
 
 func TestOkIsTheEnvelopesOk(t *testing.T) {
@@ -519,7 +604,8 @@ func TestTheFixtureIsWhatTheWriterWrites(t *testing.T) {
 		clock = clock.Add(time.Second)
 		return when
 	}
-	elapsed := []time.Duration{540 * time.Second, 1200 * time.Millisecond, 0, 9300 * time.Millisecond}
+	elapsed := []time.Duration{540 * time.Second, 1200 * time.Millisecond, 0, 9300 * time.Millisecond,
+		3100 * time.Millisecond}
 	since = func(time.Time) time.Duration {
 		d := elapsed[0]
 		elapsed = elapsed[1:]
@@ -547,6 +633,10 @@ func TestTheFixtureIsWhatTheWriterWrites(t *testing.T) {
 	made := Begin(ctx, true, version, "publish", "", false, true, errOut)
 	made.Made(madeID)
 	made.End(emit.Result{OK: true, Data: map[string]any{"title": "Supplier register", "verified": true}, Version: version})
+
+	refused := Begin(ctx, true, version, "publish", "", false, true, errOut)
+	refused.End(emit.Result{OK: false, Error: "line 42: an inline picture could not be embedded",
+		Version: version, Stop: emit.StopSVGPicture, StopLine: 42})
 
 	if errOut.Len() != 0 {
 		t.Fatalf("stderr: %q", errOut.String())

@@ -167,14 +167,14 @@ func cmdUpdate(ctx context.Context, a *args, errOut io.Writer) emit.Result {
 	}
 	desktop := a.has("--desktop")
 	if err := oneRun(flags); err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	if err := oneDesktopRun(flags, desktop); err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	path, err := binaryPath()
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	if flags.Rollback {
 		return runRollback(path, a.set.Presence)
@@ -281,7 +281,7 @@ func runRollback(path string, presenceOn bool) emit.Result {
 	data := updateData{Path: path}
 	res, err := update.Rollback(path)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error(), Data: data}
+		return withStop(emit.Result{OK: false, Error: err.Error(), Data: data}, err)
 	}
 	data.Action = string(update.RolledBack)
 	data.SHA256 = res.Sum
@@ -425,7 +425,7 @@ func decideUpdate(ctx context.Context, reach plain, entries []update.Entry, flag
 	}
 	if asked != nil {
 		pr.Fail(asked)
-		return emit.Result{OK: false, Error: asked.Error(), Data: data, Warnings: reachWarnings(reach, warns)}
+		return withStop(emit.Result{OK: false, Error: asked.Error(), Data: data, Warnings: reachWarnings(reach, warns)}, asked)
 	}
 	if aside != nil {
 		warns = append(warns, fmt.Sprintf("the other channel has nothing this run could install, which changes nothing about this one: %v", aside))
@@ -548,7 +548,7 @@ func refreshHere(ctx context.Context, reach plain, rel update.Release, installed
 		if !desktop {
 			return emit.Result{OK: true, Data: data, Warnings: reachWarnings(reach, append(warns, appUntouched(err, data.Path)))}
 		}
-		return emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: reachWarnings(reach, warns)}
+		return withStop(emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: reachWarnings(reach, warns)}, err)
 	}
 	if desktop {
 		data, warns = withExtension(got.template, rel.Version.String(), data, warns, pr)
@@ -622,7 +622,7 @@ func installDecided(ctx context.Context, reach plain, chosen update.Release, des
 	data.Action = ""
 	got, err := install(ctx, reach, chosen, data.Path, desktop, pr)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: reachWarnings(reach, warns)}
+		return withStop(emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: reachWarnings(reach, warns)}, err)
 	}
 	data.Action = string(update.Updated)
 	data.Verified = true

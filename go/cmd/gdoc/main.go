@@ -296,6 +296,15 @@ func dispatch(ctx context.Context, args []string, errOut io.Writer, set settings
 	rec := presence.Begin(ctx, set.Presence && c.report, releaseVersion(),
 		c.name, presenceDoc(*c, a), a.has("--wait"), c.readsBack, errOut)
 	defer func() {
+		// And the one word a failed run says why in, where the command that
+		// failed named none: a failure gdoc did not sort is other rather than
+		// nothing, because an absent stop reads as a run that failed for no
+		// reason at all. stop.go holds the words and what names each of them;
+		// the field never reaches the object, so this changes no byte a caller
+		// reads: TestAnUnknownFailureIsOther.
+		if !r.OK && !r.Stop.Known() {
+			r.Stop, r.StopLine = emit.StopOther, 0
+		}
 		rec.Made(presenceMade(*c, r))
 		rec.End(r)
 	}()
@@ -398,7 +407,8 @@ func authStatus(ctx context.Context, withAccount bool) emit.Result {
 		// still learns which file was being read and what else is in the way,
 		// and the error names what was wrong with it. The run that fails is the
 		// one where the extra fact is worth most.
-		return emit.Result{OK: false, Error: err.Error(), Data: statusReport(report, gapi.Account{}), Warnings: warnings}
+		return withStop(emit.Result{OK: false, Error: err.Error(),
+			Data: statusReport(report, gapi.Account{}), Warnings: warnings}, err)
 	}
 	acc, read := accountFor(ctx, report, withAccount)
 	warnings = append(warnings, read...)
@@ -498,7 +508,7 @@ func statusWarnings(r *auth.StatusReport) []string {
 // come back to the loopback listener.
 func authLogin(ctx context.Context, errOut io.Writer) emit.Result {
 	if err := login(errOut); err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	return authStatus(ctx, false)
 }
@@ -516,7 +526,7 @@ func authLogin(ctx context.Context, errOut io.Writer) emit.Result {
 func cmdAuthLogout() emit.Result {
 	report, err := auth.Logout()
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error(), Data: report}
+		return withStop(emit.Result{OK: false, Error: err.Error(), Data: report}, err)
 	}
 	return emit.Result{OK: true, Data: report}
 }

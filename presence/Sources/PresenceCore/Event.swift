@@ -67,6 +67,14 @@ public struct Event: Sendable, Equatable {
   public let made: String?
   public let ok: Bool?
   public let verified: Bool?
+  /// Why a failed run stopped, in one of gdoc's seven fixed words. It is on a
+  /// failed end alone, and this app keeps it as the word gdoc wrote: a word
+  /// this version has not heard of is still a word, and nothing here guesses
+  /// at what it means.
+  public let stop: String?
+  /// The line of the note the cause sits on, where the cause has one. Today
+  /// that is the picture the house style cannot carry, and nothing else.
+  public let line: Int?
   public let ms: Int64?
   public let hold: String?
   public let rule: String?
@@ -76,7 +84,8 @@ public struct Event: Sendable, Equatable {
     schema: Int, at: Date, gdoc: String?, pid: Int32, run: String, call: Int64?, kind: EventKind,
     command: String?, via: String?, doc: String?, wait: Bool, title: String?,
     made: String? = nil, ok: Bool?,
-    verified: Bool?, ms: Int64?, hold: String?, rule: String?, until: Date?
+    verified: Bool?, stop: String? = nil, line: Int? = nil,
+    ms: Int64?, hold: String?, rule: String?, until: Date?
   ) {
     self.schema = schema
     self.at = at
@@ -93,6 +102,8 @@ public struct Event: Sendable, Equatable {
     self.made = made
     self.ok = ok
     self.verified = verified
+    self.stop = stop
+    self.line = line
     self.ms = ms
     self.hold = hold
     self.rule = rule
@@ -171,6 +182,8 @@ private struct Wire: Decodable {
   var made: String?
   var ok: Bool?
   var verified: Bool?
+  var stop: String?
+  var line: Int?
   var ms: Int64?
   var hold: String?
   var rule: String?
@@ -209,7 +222,8 @@ private struct Wire: Decodable {
     return Event(
       schema: v, at: when, gdoc: gdoc, pid: pid, run: run, call: call, kind: kind,
       command: command, via: via, doc: doc, wait: wait ?? false, title: title, made: made,
-      ok: ok, verified: verified, ms: ms, hold: hold, rule: rule, until: ran)
+      ok: ok, verified: verified, stop: stop, line: line, ms: ms, hold: hold, rule: rule,
+      until: ran)
   }
 }
 

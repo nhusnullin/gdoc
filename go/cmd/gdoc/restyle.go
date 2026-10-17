@@ -87,7 +87,7 @@ func cmdRestyle(a *args) emit.Result {
 func surveyRestyle(a *args) emit.Result {
 	r, err := open(a.target())
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	ctx := context.Background()
 
@@ -103,14 +103,14 @@ func surveyRestyle(a *args) emit.Result {
 	// window on it.
 	raws, err := comments.Fetch(ctx, r.session, r.id, nil)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}
+		return withStop(emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}, err)
 	}
 	d, err := docs.Fetch(ctx, r.session, r.id)
 	if err != nil {
 		// A failed Docs read is a failed survey, and unlike the export it has no
 		// honest partial answer: the chips, the pending suggestions, the named
 		// ranges, the tab count and the revision id are all in that one read.
-		return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}
+		return withStop(emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}, err)
 	}
 
 	// The named ranges come out of the read above rather than out of a read of
@@ -300,11 +300,11 @@ func readFields(path string) (cover.Fields, error) {
 func applyRestyle(a *args) emit.Result {
 	saved, err := readSurvey(a.flags["--from"])
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	docID, err := documentID(a.target())
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	// A survey of another document is refused before a session is opened. The
 	// survey is the only record of what this document held before the run, and
@@ -320,7 +320,7 @@ func applyRestyle(a *args) emit.Result {
 	}
 	cfg, err := house.Load()
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	// The cover's values, and they are read before a session is opened. A run
 	// that named --fields is a run that will propose words into somebody's
@@ -330,7 +330,7 @@ func applyRestyle(a *args) emit.Result {
 	if path := a.flags["--fields"]; path != "" {
 		read, err := readFields(path)
 		if err != nil {
-			return emit.Result{OK: false, Error: err.Error()}
+			return failed(err)
 		}
 		fields = &read
 	}
@@ -344,14 +344,14 @@ func applyRestyle(a *args) emit.Result {
 	p.AllowFile(docID, guard.LevelSuggest)
 	s, err := openSession(p)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	r := &reach{id: docID, session: s}
 	ctx := context.Background()
 
 	d, err := docs.Fetch(ctx, r.session, r.id)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}
+		return withStop(emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}, err)
 	}
 	data := restyleData{
 		DocumentID:       docID,
@@ -384,7 +384,7 @@ func applyRestyle(a *args) emit.Result {
 	// knowing where gdoc's words end must never resolve to restyling them.
 	marked, err := markedSpans(d)
 	if err != nil {
-		return emit.Result{OK: false, Data: data, Warnings: r.warnings(), Error: err.Error()}
+		return withStop(emit.Result{OK: false, Data: data, Warnings: r.warnings(), Error: err.Error()}, err)
 	}
 
 	// This is the line. It upgrades one document, for this run, from suggest to
@@ -444,7 +444,7 @@ func proposeThenStyle(ctx context.Context, r *reach, saved restyle.Report,
 	// suggestion already in front of Nail.
 	res, err := prelude.Propose(cfg, fields, d)
 	if err != nil {
-		return emit.Result{OK: false, Data: data, Warnings: r.warnings(), Error: err.Error()}
+		return withStop(emit.Result{OK: false, Data: data, Warnings: r.warnings(), Error: err.Error()}, err)
 	}
 	pre := &preludeData{
 		Requests:   len(res.Requests),
@@ -500,7 +500,7 @@ func proposeThenStyle(ctx context.Context, r *reach, saved restyle.Report,
 	p2.AllowFile(r.id, guard.LevelSuggest)
 	s2, err := openSession(p2)
 	if err != nil {
-		return emit.Result{OK: false, Data: data, Warnings: r.warnings(unmarkedPrelude(warns)...), Error: err.Error()}
+		return withStop(emit.Result{OK: false, Data: data, Warnings: r.warnings(unmarkedPrelude(warns)...), Error: err.Error()}, err)
 	}
 	r2 := &reach{id: r.id, session: s2}
 
@@ -769,7 +769,7 @@ func styleDocument(ctx context.Context, r *reach, saved restyle.Report, cfg *hou
 		warns = append(warns, notes...)
 	}
 	if applyErr != nil {
-		return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...), Error: applyErr.Error()}
+		return withStop(emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...), Error: applyErr.Error()}, applyErr)
 	}
 	return emit.Result{OK: true, Data: data, Warnings: r.warnings(warns...)}
 }

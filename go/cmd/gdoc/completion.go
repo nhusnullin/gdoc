@@ -74,20 +74,20 @@ func completionReport(sh shell, path string) map[string]string {
 func cmdCompletion(a *args) emit.Result {
 	sh, err := oneShell(a.positional)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	out, err := required(a, "--out")
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	// Before anything is rendered. The file already there is somebody's, and
 	// not knowing must never resolve to overwrite. The check is build's.
 	if err := freeToWrite(out, a.has("--force")); err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	script, err := sh.render(commands())
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	if err := atomicfile.Replace(out, []byte(script), atomicfile.ModeOf(out, completionMode)); err != nil {
 		return emit.Result{OK: false, Error: fmt.Sprintf("the completion script could not be written: %v", err)}

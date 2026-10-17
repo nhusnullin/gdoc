@@ -194,14 +194,23 @@ box is ticked and its commit is on the branch.
 - Modify: `go/cmd/gdoc/main.go` and the command files that build a failed result (`publish.go`, `read.go`, `write.go` or wherever each refusal becomes an `emit.Result`): each sets `Stop` from `errors.As` over the typed failures of Task 4 and `net` errors, in `cmd/gdoc` and never inside `internal/presence`
 - Modify: `go/internal/presence/event.go` (`stop`, `line` lifted from `Result.Stop` and `Result.StopLine`), `doc.go`, the two fixtures, `Event.swift`, `EventTests.swift`, `LogTailTests.swift`
 
-- [ ] `TestAStopIsOneOfTheSevenCodesAndNeverASentence`,
+- [x] `TestAStopIsOneOfTheSevenCodesAndNeverASentence` (in `cmd/gdoc` over
+      the reader and in `internal/presence` over the record),
       `TestTheSVGRefusalCarriesItsLine`, `TestANotFoundIsNotFound`,
       `TestAnAuthRefusalIsAuth`, `TestAHandshakeTimeoutIsNetwork`,
       `TestAGuardRefusalIsRefused`, `TestAnUnknownFailureIsOther`,
       `TestPresenceOpensNoWireAndRunsNothing` unchanged, the canary test
       extended with an error sentence that must not reach the line; Swift:
-      `testStopAndLineDecodeAndDefaultToNil`
-- [ ] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make app-test`
+      `testStopAndLineDecodeAndDefaultToNil`. Four things the work asked for:
+      `TestAStopReachesNoSuccessfulEnd`, because a caller may set a code on a
+      run that worked and the record may not keep one; the word filled in by
+      `dispatch`'s own deferred hook, so a command that builds a refusal by
+      hand still ends with one of the seven and no command file has to
+      remember it; `cmd/gdoc`'s three status literals, because that package
+      may not import `net/http` (`TestNetHTTPStaysInItsRooms`); and
+      `buildFailed` now taking the error rather than its sentence, which is
+      how the code reaches the envelope `build` and `publish` share
+- [x] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make app-test`
 
 ### Task 6: `step` events for publish
 
