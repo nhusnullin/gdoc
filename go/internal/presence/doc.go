@@ -1,7 +1,9 @@
 // Package presence is the channel gdoc reports what it is doing on: one
 // append-only JSONL file per month in the config directory, one line for a
-// command's start and one for its end, and one line for each way a chat hold
-// begins and leaves.
+// command's start and one for its end, one line for each part of the one
+// command that has parts, and one line for each way a chat hold begins and
+// leaves. Those are every kind there is, and the list of fields each may
+// carry is one struct: TestTheEventCarriesOnlyItsListedFields.
 //
 // A hold begins as held and leaves as released, expired, landed or dropped,
 // and a hold leaves at most once: cmd/gdoc's

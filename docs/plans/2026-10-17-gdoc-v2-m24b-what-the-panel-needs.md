@@ -268,10 +268,18 @@ box is ticked and its commit is on the branch.
 **Files:**
 - Modify: `go/internal/presence/doc.go`, `go/internal/emit/emit.go` (the package comment names `Stop`), `go/cmd/gdoc/doc.go`, `docs/guide/presence.md` (the logout paragraph and the hold's sign-in rule, two paragraphs appended at the end so M24a's edits merge cleanly)
 
-- [ ] the doc comments name every new field and kind with its test; the
+- [x] the doc comments name every new field and kind with its test; the
       guide says what logout does and does not do, and that a held write dies
       with the sign-in it was held under; CLAUDE.md is not touched beyond
-      Task 1's one word; `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`
+      Task 1's one word; `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`.
+      `internal/presence`'s own doc.go named each field as its task landed, so
+      this task adds the kind list to its opening paragraph, names `Stop` and
+      `StopLine` in `internal/emit`'s package comment beside `Screen`, and
+      gives `cmd/gdoc/doc.go` the two sections it had none of: the five facts
+      of the record this layer decides, and the hold that dies with its
+      sign-in, with the accepted rotation strain written down there. The
+      guide's paragraphs are appended under one new heading at the end of
+      `docs/guide/presence.md`
 
 ### Task 9: the acceptance rows and the close
 

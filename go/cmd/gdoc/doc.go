@@ -941,6 +941,87 @@
 // TestHelpCarriesTheEmptyMarkAsAnEmptyString and
 // TestHelpForOneCommandCarriesTheSettingsToo.
 //
+// # Five facts of the record are filled in here
+//
+// internal/presence is a file and a clock: it reads no environment, knows
+// nothing of a Drive id and nothing of a typed error. So five of the things a
+// line says are decided in this package, and the record keeps each as it was
+// handed it and judges none of them.
+//
+// via: code is one environment variable, read once in dispatch. CLAUDECODE is
+// what Claude Code's own Bash tool hands a child, measured on 2026-10-17 and
+// written down in docs/v2/MEASURED.md, and any value of it counts rather than
+// the literal 1, because the variable is Claude Code's and a release that
+// writes true in it is still Claude Code. viaOfEnv marks the context and
+// leaves a context somebody else marked alone, so a tool call of gdoc mcp
+// stays chat whatever started the process: TestViaIsCodeUnderClaudeCode and
+// TestViaChatWinsOverCodeInTheMcpSession.
+//
+// interrupted is lifted out of the waited object `gdoc comments --wait`
+// prints, which is the one place in the binary that knows a wait ended early,
+// and a wait nobody stopped writes nothing rather than a false:
+// TestAStoppedWaitsEndSaysSo.
+//
+// made is the document a publish created. presenceMade names the one command
+// it is true of and puts the id through documentID, the resolver the first
+// word of a line goes through, so a path or a sentence under that key reaches
+// no file that lasts; a publish that took its document back names nothing:
+// TestAPublishEndNamesTheDocumentItCreated,
+// TestARolledBackPublishNamesNoDocument and TestOnlyPublishCarriesMade.
+//
+// stop and line are stop.go, this package's one reader of the typed failures
+// the other packages raise: a picture the house style cannot carry with the
+// line of the note it sits on, Drive's status, the guard's refusal, a missing
+// token, more than one tab, a wire that failed, and other for everything
+// else. Nothing there reads a sentence, so a milestone that rewords a refusal
+// moves no code: TestAStopIsOneOfTheSevenCodesAndNeverASentence,
+// TestTheSVGRefusalCarriesItsLine, TestANotFoundIsNotFound,
+// TestAnAuthRefusalIsAuth, TestAGuardRefusalIsRefused and
+// TestAHandshakeTimeoutIsNetwork. The word is filled in by dispatch's own
+// deferred hook where the command that failed named none, because an absent
+// stop beside ok: false reads as a run that failed for no reason at all:
+// TestAnUnknownFailureIsOther. Both travel on emit.Result in fields the
+// printed object does not carry, the way Screen does, so none of this changes
+// a byte a skill reads.
+//
+// step is the four parts of a publish, and the one of the five this package
+// does not hand over: dispatch puts the run on the context and publish calls
+// presence.Step beside the work, so no room between here and the work is
+// handed a run. The names are internal/presence's own and the line is written
+// immediately before the part begins, which for the two network parts means
+// the line is on disk before the request leaves:
+// TestAPublishStepsAreTheFixedNamesInOrder, TestTheFirstStepsEndCarriesTheTitle
+// and TestAPanicAfterAStepStillWritesTheEnd, with go/boundary's
+// TestStepHasOnlyPublishAsCaller over the one room that calls it.
+//
+// # A hold dies with the sign-in it was held under
+//
+// A held chat write waits up to thirty minutes for a person, and in that time
+// somebody may sign out and sign in as somebody else. Releasing the held call
+// then would post it under the next account, which nobody in that chat asked
+// for. So mcpHolds keeps auth.SignInMark beside the hold, a domain-prefixed
+// SHA-256 of the refresh token and no credential, and compares it at the
+// release and in the sweep. Another mark or no token at all drops the hold,
+// removes its confirm tool, writes the record's dropped line and answers that
+// the sign-in changed and nothing was sent; a token that cannot be read keeps
+// the hold and sends nothing, because not knowing may not become a release:
+// TestAHoldRemembersTheSignInItWasHeldUnder,
+// TestAReleaseAfterTheSignInChangedSendsNothingAndDropsTheHold,
+// TestTheSweepDropsAHoldWhoseSignInChanged and
+// TestAnUnreadableTokenAtReleaseKeepsTheHoldAndSendsNothing.
+//
+// The mark is read and never shown. It is in no answer, no tool schema and no
+// line of the record, and no email is compared anywhere: a dropped hold says
+// the sign-in is a different one and never whose it is, which is the identity
+// invariant in this one place:
+// TestTheSignInMarkReachesNoAnswerNoToolAndNoLine.
+//
+// One strain, accepted and written down. This process's own refresh of the
+// refresh token is a new mark too, although internal/gapi does not count it
+// as a newer sign-in, so a hold raised before such a rotation is dropped and
+// the person is asked again. It fails towards nothing being sent, which is
+// the side to fail on: TestARotatedRefreshTokenRefusesTheRelease.
+//
 // # GDOC_CONFIG_DIR moves the config dir
 //
 // It is how every Go test avoids the real config, and it is read in one place,
