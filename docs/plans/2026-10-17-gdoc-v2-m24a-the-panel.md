@@ -105,16 +105,16 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Sources/PresenceUI/Theme/Palette.swift`, `Typography.swift`, `Grid.swift`, `Timing.swift`
 - Create: `presence/Tests/PresenceUITests/ThemeTests.swift`
 
-- [ ] `testTheDarkPaletteIsTheScreensFileLiterals` and
+- [x] `testTheDarkPaletteIsTheScreensFileLiterals` and
       `testTheLightPaletteIsTheScreensFileLiterals`: every colour of the spec's
       token sheet as a literal hex and alpha, read from the CSS by hand into
       the test; `testTheGridIsTheScreens` (320, 8, 12, 600, 36, 28, 32, 44, 28,
       108, 16, 24, 6); `testTheTimingsAreTheDecisions` (0.5, 1, 3, 5, 180, 600)
-- [ ] `Palette.dark` and `Palette.light` with the fields the blueprint lists,
+- [x] `Palette.dark` and `Palette.light` with the fields the blueprint lists,
       chosen by the SwiftUI colour scheme and never by a setting; `Typography`
       with the twelve roles; `Grid` (named so because `Metrics` already exists
       in `PanelView.swift` until Task 13); `Timing`
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 2: the status glyph and the ring
 
