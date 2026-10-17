@@ -1,0 +1,96 @@
+// The events a fold test states by hand, where a fixture would say less than
+// four lines of Swift.
+//
+// Every builder takes its moment as the string the record writes, so a test
+// reads as the record reads and no test is a function of this machine's
+// clock. The pid is the same in every builder: whether a process is alive is
+// an injected answer, never a real pid.
+
+import Foundation
+
+@testable import PresenceCore
+
+/// The one pid every built event carries. Liveness is injected, so the number
+/// matters nowhere.
+let builtPid: Int32 = 6000
+
+/// A start, with no end.
+func start(
+  at text: String, command: String, run: String, doc: String?, call: Int64 = 1,
+  via: String = "terminal", wait: Bool = false
+) -> Event {
+  built(
+    at: text, kind: .start, command: command, run: run, call: call, via: via, doc: doc, wait: wait)
+}
+
+/// An end, with the four facts an end carries.
+func end(
+  at text: String, command: String, run: String, doc: String?, call: Int64 = 1,
+  via: String = "terminal", wait: Bool = false, ok: Bool = true, verified: Bool? = nil,
+  title: String? = nil, ms: Int64? = 1200
+) -> Event {
+  built(
+    at: text, kind: .end, command: command, run: run, call: call, via: via, doc: doc, wait: wait,
+    ok: ok, verified: verified, title: title, ms: ms)
+}
+
+/// One call that ran and ended: the start, and its end twenty seconds later.
+func pair(
+  at text: String, command: String, run: String, doc: String?, call: Int64 = 1,
+  via: String = "terminal", wait: Bool = false, ok: Bool = true, verified: Bool? = nil,
+  title: String? = nil
+) -> [Event] {
+  [
+    start(at: text, command: command, run: run, doc: doc, call: call, via: via, wait: wait),
+    end(
+      at: text.secondsLater(20), command: command, run: run, doc: doc, call: call, via: via,
+      wait: wait, ok: ok, verified: verified, title: title),
+  ]
+}
+
+/// A chat write held for a person.
+func hold(
+  at text: String, run: String, doc: String?, id: String, command: String = "reply",
+  rule: String = "dictated", until: String? = nil
+) -> Event {
+  built(
+    at: text, kind: .held, command: command, run: run, call: nil, via: "chat", doc: doc,
+    hold: id, rule: rule, until: until)
+}
+
+/// A hold that stopped waiting: landed, released or expired.
+func holdEnd(
+  at text: String, kind: EventKind, run: String, doc: String?, id: String,
+  command: String = "reply"
+) -> Event {
+  built(
+    at: text, kind: kind, command: command, run: run, call: nil, via: "chat", doc: doc, hold: id)
+}
+
+private func built(
+  at text: String, kind: EventKind, command: String?, run: String, call: Int64?, via: String,
+  doc: String?, wait: Bool = false, ok: Bool? = nil, verified: Bool? = nil, title: String? = nil,
+  ms: Int64? = nil, hold: String? = nil, rule: String? = nil, until: String? = nil
+) -> Event {
+  Event(
+    schema: 1, at: text.asMoment, gdoc: "v2.14.0", pid: builtPid, run: run, call: call, kind: kind,
+    command: command, via: via, doc: doc, wait: wait, title: title, ok: ok, verified: verified,
+    ms: ms, hold: hold, rule: rule, until: until?.asMoment)
+}
+
+extension String {
+  /// The moment this string names, in the one format the record writes.
+  fileprivate var asMoment: Date {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime]
+    return formatter.date(from: self) ?? Date(timeIntervalSince1970: 0)
+  }
+
+  /// The same moment, a few seconds on, written the way the record writes it.
+  fileprivate func secondsLater(_ seconds: TimeInterval) -> String {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime]
+    formatter.timeZone = TimeZone(secondsFromGMT: 0)
+    return formatter.string(from: asMoment.addingTimeInterval(seconds))
+  }
+}

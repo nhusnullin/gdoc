@@ -261,7 +261,7 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Sources/PresenceCore/Documents.swift`, `Days.swift`
 - Create: `presence/Tests/PresenceCoreTests/DocumentsTests.swift`, `DaysTests.swift`, `Fixtures/fourteen-days.jsonl`
 
-- [ ] `testDocumentsGroupByIdInsideFourteenDaysNewestFirst`,
+- [x] `testDocumentsGroupByIdInsideFourteenDaysNewestFirst`,
       `testAReadAloneMakesNoRow`, `testTheLabelCountsTheHorizonAndToday`,
       `testTheDefaultIsFiveWithShowMore`,
       `testTodayIsTheLocalDayNewestFirstDefaultEight`,
@@ -269,8 +269,8 @@ every box is ticked and its commit is on the branch.
       started, live stopped with its totals), `testReadsAreLeftOutOfToday`,
       `testYesterdayIsOneSummaryThatOpensInline`, `testNothingOlderAppears`,
       `testAMonthBoundaryIsNotADayBoundary`
-- [ ] the two folds
-- [ ] `make app-test`
+- [x] the two folds
+- [x] `make app-test`
 
 ### Task 12: the words
 
