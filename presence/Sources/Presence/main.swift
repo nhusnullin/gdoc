@@ -54,9 +54,13 @@ final class Shell: NSObject, NSApplicationDelegate {
   }
 
   private func view(of state: AppState) -> some View {
-    PanelView(model: state.model) {
-      NSApp.terminate(nil)
-    }
+    PanelView(
+      model: state.model,
+      actions: PanelActions(perform: { kind, _ in
+        // The one action this milestone's shell performs. Tasks 17 to 21
+        // give the rest of the kinds a body, and Task 22 wires them here.
+        if kind == .quit { NSApp.terminate(nil) }
+      }))
   }
 
   /// The app's own bundle, when it is running from one. A bare executable

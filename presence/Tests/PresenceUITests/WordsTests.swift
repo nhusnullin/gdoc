@@ -38,6 +38,25 @@ final class WordsTests: XCTestCase {
     XCTAssertNil(Words.verb(nil))
   }
 
+  /// The same seven as present participles, which a job card and a
+  /// document that is being written to both say. `Publishing · Chapter 4`
+  /// is scene r1 and `publishing` is that scene's document row.
+  func testTheSevenRunningWordsAreTheParticiples() {
+    XCTAssertEqual(Words.participles.count, 7)
+    XCTAssertEqual(Set(Words.participles.keys), Now.stuckCommands)
+
+    XCTAssertEqual(Words.running("publish"), "Publishing")
+    XCTAssertEqual(Words.running("restyle"), "Restyling")
+    XCTAssertEqual(Words.running("export"), "Exporting")
+    XCTAssertEqual(Words.running("reply"), "Replying")
+    XCTAssertEqual(Words.running("propose"), "Proposing")
+    XCTAssertEqual(Words.running("withdraw"), "Withdrawing")
+    XCTAssertEqual(Words.running("annotate"), "Commenting")
+
+    XCTAssertNil(Words.running("read"))
+    XCTAssertNil(Words.running(nil))
+  }
+
   /// `since 13:10` today, Yesterday the day before, `Mon` inside the week,
   /// and a date past it, because a weekday seven days back names two days.
   func testTimesAreClockYesterdayWeekdayThenDate() throws {

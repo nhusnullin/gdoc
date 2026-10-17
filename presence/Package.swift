@@ -37,7 +37,10 @@ let package = Package(
     .target(name: "PresenceUI", dependencies: ["PresenceCore"]),
     .testTarget(
       name: "PresenceUITests",
-      dependencies: ["PresenceUI"]
+      dependencies: ["PresenceUI"],
+      // One record per scene of the screens file, copied rather than
+      // processed so a fixture in the bundle is the file somebody can read.
+      resources: [.copy("Scenes")]
     ),
     // The shell: the status item, the panel's window, the tail's delivery and
     // the watcher on its own bundle. It holds no reading and no wording.

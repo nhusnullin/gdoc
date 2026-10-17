@@ -90,10 +90,21 @@ final class AppState {
   var glyph: GlyphState { Glyph.state(for: glance) }
 
   /// What the panel draws.
+  ///
+  /// The facts are the three this milestone's shell knows: its own version,
+  /// the one the record last named, and whether the bundle under it moved.
+  /// Task 22 hands over the polled ones and what the person did.
   var model: PanelModel {
     PanelModel.build(
-      glance: glance, appVersion: version, bundle: bundle, newerGdoc: newerGdoc,
-      calendar: calendar)
+      events: events, facts: facts, ui: UIState(), now: Date(), calendar: calendar,
+      alive: Liveness.isAlive)
+  }
+
+  /// What the app knows about the machine, before any of it is asked for.
+  var facts: Facts {
+    Facts(
+      versions: Versions(app: version, gdoc: glance.gdoc), bundle: bundle,
+      newerRecord: newerGdoc)
   }
 
   private func took(_ records: Records) {

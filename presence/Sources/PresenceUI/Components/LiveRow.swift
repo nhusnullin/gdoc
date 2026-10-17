@@ -33,7 +33,7 @@ public struct LiveRowModel: Equatable, Sendable {
 /// One watch.
 public struct LiveRow: View {
   /// The words on the one icon.
-  public static let stopTip = "Stop watching"
+  public nonisolated static let stopTip = "Stop watching"
 
   public let model: LiveRowModel
   /// `.live`, or `.off` with the words the process check refuses by.

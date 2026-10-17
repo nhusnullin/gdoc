@@ -19,7 +19,7 @@ public struct EmptyState: View {
   /// The one sentence the first open says. It names the row rather than
   /// describing a state, because a person reading it has nothing to do yet
   /// and one thing to find.
-  public static let firstRun =
+  public nonisolated static let firstRun =
     "Not signed in. Sign in with the Google account that will post replies: "
     + "the Account row below."
 

@@ -293,14 +293,14 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Tests/PresenceUITests/Scenes/*.jsonl`, `Scenes.swift`
 - Modify: `presence/Tests/PresenceUITests/RenderTests.swift`
 
-- [ ] `UIState` and `Facts` are plain injected data covering every state a
+- [x] `UIState` and `Facts` are plain injected data covering every state a
       later task will produce: health facts (account, auth word, versions,
       mark, gdoc path found or not, hub set or not, extension), the sign-in
       phase with its URL and countdown, the pairing map, a pending stop, the
       remembered account, expanded sections, a forced tooltip, a copied icon,
       a confirm row, the strip seen, the banner. Tasks 16 to 24 only produce
       these values and never edit `PanelView`
-- [ ] one fixture per scene the v1 record can draw: r3, r3l, r4, r5, r6, r7,
+- [x] one fixture per scene the v1 record can draw: r3, r3l, r4, r5, r6, r7,
       r9, e1, e2, e3, e5, e8, e10; and the stated fallbacks: r1 draws an
       indeterminate ring and "Publishing" with no title, r2 draws the reason
       "Stopped at 09:05. The terminal that ran it has the reason.", r8 draws
@@ -308,13 +308,13 @@ every box is ticked and its commit is on the branch.
       strike-through, e9 draws from auth facts alone; r3's "from Claude Code"
       and r9's "stopped by you" draw their fallbacks ("from the terminal",
       "stopped") until Task 26; e4 is not built and the test says so
-- [ ] `testEveryScreenRendersInBothAppearances`: `<id>-dark.png`,
+- [x] `testEveryScreenRendersInBothAppearances`: `<id>-dark.png`,
       `<id>-light.png` at 2x plus `index.html` with each scene's title and
       caption under `PRESENCE_SHOTS`; `testTheMetricProbesHoldOnEveryScene`;
       `testThePanelNeverPassesSixHundred` (e1, e3);
       `testEveryReasonLineIsUnderEightyCharacters`; `testNowIsHiddenWhenEmpty`;
       `testHealthIsPinnedFirstWhenSignedOut`
-- [ ] `make app-lint`, `make app-test`, `make app`
+- [x] `make app-lint`, `make app-test`, `make app`
 
 ### Task 14: the menu bar image
 

@@ -62,11 +62,15 @@ public struct HealthRow: Identifiable {
   public let value: String
   public let glyph: GlyphKind
   public let tone: GlyphTone
+  /// The small ring in the glyph's place, which only a sign-in in flight
+  /// draws: `<span class="ring wait">` in the screens file.
+  public let waiting: Bool
   /// A line under the row, in the row's own words. `QUIET()` in the screens
   /// file, which is the network row's explanation.
   public let quiet: String?
-  /// The one icon a row may carry.
-  public let action: IconAction?
+  /// The icons a row carries, in the order they are drawn. Every row but
+  /// the sign-in in flight has one or none; that one has Copy and Cancel.
+  public let actions: [IconAction]
   /// The switch, on the one row that is a setting.
   public let isOn: Bool?
   public let onToggle: () -> Void
@@ -80,6 +84,7 @@ public struct HealthRow: Identifiable {
     value: String,
     glyph: GlyphKind = .blank,
     tone: GlyphTone = .quiet,
+    waiting: Bool = false,
     quiet: String? = nil,
     action: IconAction? = nil,
     isOn: Bool? = nil,
@@ -90,8 +95,35 @@ public struct HealthRow: Identifiable {
     self.value = value
     self.glyph = glyph
     self.tone = tone
+    self.waiting = waiting
     self.quiet = quiet
-    self.action = action
+    self.actions = action.map { [$0] } ?? []
+    self.isOn = isOn
+    self.onToggle = onToggle
+    self.onSelect = onSelect
+  }
+
+  /// The same row with more than one icon, which only the sign-in in
+  /// flight has.
+  public init(
+    _ kind: HealthRowKind,
+    value: String,
+    glyph: GlyphKind = .blank,
+    tone: GlyphTone = .quiet,
+    waiting: Bool = false,
+    quiet: String? = nil,
+    actions: [IconAction],
+    isOn: Bool? = nil,
+    onToggle: @escaping () -> Void = {},
+    onSelect: (() -> Void)? = nil
+  ) {
+    self.kind = kind
+    self.value = value
+    self.glyph = glyph
+    self.tone = tone
+    self.waiting = waiting
+    self.quiet = quiet
+    self.actions = actions
     self.isOn = isOn
     self.onToggle = onToggle
     self.onSelect = onSelect
@@ -102,7 +134,7 @@ public struct HealthRow: Identifiable {
 public struct HealthRows: View {
   /// The keystroke on the last row, which the app does not bind: the panel
   /// is a window and ⌘Q is the application's.
-  public static let quitShortcut = "⌘Q"
+  public nonisolated static let quitShortcut = "⌘Q"
 
   public let rows: [HealthRow]
 
@@ -133,9 +165,8 @@ struct HealthRowView: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
       RowView(
-        .compact, glyph: row.glyph, tone: row.tone, title: row.kind.label,
-        value: row.value.isEmpty ? nil : row.value,
-        trailing: { trailing }
+        .compact, title: row.kind.label, value: row.value.isEmpty ? nil : row.value,
+        leading: { leading }, trailing: { trailing }
       )
       .metricProbe("health.\(row.kind.rawValue)")
       .onTapGesture { row.onSelect?() }
@@ -147,16 +178,29 @@ struct HealthRowView: View {
     }
   }
 
+  /// The glyph, or the ring that stands in its place while Google is
+  /// being waited for.
+  @ViewBuilder
+  private var leading: some View {
+    if row.waiting {
+      RingView()
+    } else {
+      StatusGlyph(row.glyph, tone: row.tone)
+    }
+  }
+
   @ViewBuilder
   private var trailing: some View {
     if let isOn = row.isOn {
       SwitchView(isOn: isOn, action: row.onToggle)
-    } else if let action = row.action {
-      ActionButton(
-        action.icon, tip: action.tip, state: action.state,
-        forcedTooltip: action.forcedTooltip, action: action.perform)
     } else {
-      EmptyView()
+      HStack(spacing: Grid.actionGap) {
+        ForEach(row.actions) { action in
+          ActionButton(
+            action.icon, tip: action.tip, state: action.state,
+            forcedTooltip: action.forcedTooltip, action: action.perform)
+        }
+      }
     }
   }
 }

@@ -23,7 +23,7 @@ import SwiftUI
 public struct SignedInBanner: View {
   /// How long it stays, which is the same five seconds as the menu bar's
   /// check: long enough for one glance, short enough that it is not a row.
-  public static let life: TimeInterval = Timing.checkFlash
+  public nonisolated static let life: TimeInterval = Timing.checkFlash
   /// The sentence under the address.
   public static let words = "Signed in just now. Not you? Sign out and sign in again."
   /// The words on the one icon.
@@ -44,7 +44,7 @@ public struct SignedInBanner: View {
 
   /// Whether the banner is still on the screen. The clock is the caller's,
   /// so the life is a value a test states rather than a timer it waits for.
-  public static func isShowing(signedInAt: Date?, now: Date) -> Bool {
+  public nonisolated static func isShowing(signedInAt: Date?, now: Date) -> Bool {
     guard let signedInAt else { return false }
     return now.timeIntervalSince(signedInAt) < life
   }

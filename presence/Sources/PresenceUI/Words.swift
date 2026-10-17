@@ -52,6 +52,19 @@ public enum Words {
     "export": Verb(heading: "Export", past: "exported"),
   ]
 
+  /// The same seven as present participles, which is what a row says while
+  /// a command is still running. They cannot be built from the heading:
+  /// Propose is Proposing and Reply is Replying, and no rule gives both.
+  public static let participles: [String: String] = [
+    "reply": "Replying",
+    "propose": "Proposing",
+    "withdraw": "Withdrawing",
+    "annotate": "Commenting",
+    "publish": "Publishing",
+    "restyle": "Restyling",
+    "export": "Exporting",
+  ]
+
   /// The two vias the record writes today, in the panel's words.
   public static let vias: [String: String] = [
     "terminal": "from the terminal",
@@ -65,6 +78,13 @@ public enum Words {
   /// The words for one command, or none where the command is not a write.
   public static func verb(_ command: String?) -> Verb? {
     guard let command, let found = verbs[command] else { return nil }
+    return found
+  }
+
+  /// What a command that is still running is called, or none where the
+  /// command is not a write.
+  public static func running(_ command: String?) -> String? {
+    guard let command, let found = participles[command] else { return nil }
     return found
   }
 

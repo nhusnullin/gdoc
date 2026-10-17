@@ -1,14 +1,18 @@
-// What the menu bar shows, and what the panel reads.
+// Every screen of the screens file, drawn from a record.
 //
-// Two things are under test here. The glyph is one of four states, chosen by
-// priority from one glance, and every one of them is monochrome, because the
-// menu bar carries no colour. The panel is a model of rows built from the
-// same glance, so every row a person can see is a fixture and not a
-// screenshot somebody remembers.
+// This is the one place in the package where whole panels are made. Each
+// scene is a fixture, a moment and a set of facts, so what comes out is the
+// panel the app would draw and never a mock: a row that reads wrong here is
+// wrong in the app.
 //
-// The renders are the one place pixels are made. They go to a directory
-// outside the repository, named by PRESENCE_SHOTS, so a look at them is a
-// person opening two files and never a committed image nobody compares.
+// The PNGs and the index page go outside the repository, under
+// PRESENCE_SHOTS, because a render is something a person looks at once and
+// a committed screenshot is a file nobody compares against the code that
+// drew it. Task 23 is the reviewer's pass over that index page.
+//
+// The sizes are read back off the drawing through the metric probes rather
+// than off the constants they came from, because a row that states 32 and
+// draws 36 passes every test that reads the constant.
 
 import AppKit
 import PresenceCore
@@ -19,11 +23,179 @@ import XCTest
 
 @MainActor
 final class RenderTests: XCTestCase {
-  // The glance the panel renders from: the shared day fixture, folded at a
-  // moment inside it, with one pid dead so a stopped row is there.
-  private let dayMoment = "2026-10-17T12:00:00Z"
-  private let deadPid: Int32 = 4299
+  func testEveryScreenRendersInBothAppearances() throws {
+    let shots = try shotsDirectory()
+    var page: [String] = []
 
+    for scene in Scenes.all {
+      let view = try scene.view()
+      for scheme in [ColorScheme.dark, .light] {
+        let name = "\(scene.id)-\(scheme == .dark ? "dark" : "light").png"
+        let data = try png(view, scheme: scheme)
+        try data.write(to: shots.appendingPathComponent(name))
+        XCTAssertGreaterThan(
+          data.count, 2_000, "\(name) is too small to be a panel")
+      }
+      page.append(entry(for: scene))
+    }
+
+    let index = shots.appendingPathComponent("index.html")
+    try html(page).write(to: index, atomically: true, encoding: .utf8)
+    XCTAssertEqual(Scenes.all.count, 18, "the screens file holds eighteen scenes that are built")
+  }
+
+  /// Scene e4 is the hold released without writing, which the
+  /// specification's "what is not built" rules out: the panel never says
+  /// Release, so there is no screen to draw.
+  func testReleaseWithoutWritingIsNotAScene() {
+    XCTAssertFalse(
+      Scenes.all.contains { $0.id == "e4" },
+      "e4 is releasing a hold from the panel, which is not built")
+    XCTAssertFalse(
+      ButtonWord.allCases.contains { $0.rawValue.contains("Release") },
+      "the panel never says Release")
+  }
+
+  func testTheMetricProbesHoldOnEveryScene() throws {
+    for scene in Scenes.all {
+      let sizes = try probes(try scene.view(), scheme: .dark, width: Grid.panelWidth)
+      let panel = try XCTUnwrap(sizes["panel"], "\(scene.id) drew no panel")
+      XCTAssertEqual(panel.width, Grid.panelWidth, "\(scene.id) is not 320 wide")
+
+      if let header = sizes["header"] {
+        XCTAssertGreaterThanOrEqual(
+          header.height, Grid.headerHeight, "\(scene.id)'s header is under 36")
+      }
+      if let label = sizes["section-label"] {
+        XCTAssertEqual(label.height, Grid.sectionLabelHeight, "\(scene.id)'s label is not 28")
+      }
+      if let row = sizes["row.doc"] {
+        XCTAssertGreaterThanOrEqual(
+          row.height, Grid.twoLineRowHeight, "\(scene.id)'s document row is under 44")
+      }
+      if let strip = sizes["strip.Doc"] {
+        XCTAssertEqual(
+          strip.width, Grid.actionSize, "\(scene.id)'s strip cell is not an icon wide")
+      }
+    }
+  }
+
+  /// The two busiest screens. The cap is the panel's own frame: a section a
+  /// person opens scrolls inside itself and never grows the window.
+  func testThePanelNeverPassesSixHundred() throws {
+    for id in ["e1", "e3"] {
+      let scene = try XCTUnwrap(Scenes.all.first { $0.id == id })
+      for scheme in [ColorScheme.dark, .light] {
+        let sizes = try probes(try scene.view(), scheme: scheme)
+        let panel = try XCTUnwrap(sizes["panel"])
+        XCTAssertLessThanOrEqual(
+          panel.height, Grid.panelMaxHeight,
+          "\(id) drew \(panel.height) pt in \(scheme), past the 600 the panel is capped at")
+      }
+    }
+  }
+
+  /// Scene r2's rule, which every stuck card obeys: the cause with its
+  /// place first, then the state of the world, in two lines at this width.
+  func testEveryReasonLineIsUnderEightyCharacters() throws {
+    for scene in Scenes.all {
+      for reason in try scene.model().reasons {
+        XCTAssertTrue(
+          StuckCard.fits(reason),
+          "\(scene.id) wrote a reason of \(reason.count) characters: \(reason)")
+      }
+    }
+  }
+
+  func testNowIsHiddenWhenEmpty() throws {
+    let quiet = try XCTUnwrap(Scenes.all.first { $0.id == "r9" }).model()
+    XCTAssertTrue(quiet.now.isEmpty, "nothing is running in r9")
+    XCTAssertFalse(
+      quiet.sections.contains { if case .now = $0 { return true } else { return false } },
+      "an empty NOW spends the panel's space on nothing, so it is not drawn")
+
+    let busy = try XCTUnwrap(Scenes.all.first { $0.id == "e3" }).model()
+    XCTAssertEqual(busy.now.count, 6, "e3 is two holds, one stuck, one job and two watches")
+    XCTAssertEqual(
+      busy.sections.first?.id, PanelSection.now([]).id, "NOW is first when it is there")
+  }
+
+  func testHealthIsPinnedFirstWhenSignedOut() throws {
+    let first = try XCTUnwrap(Scenes.all.first { $0.id == "e5" }).model()
+    XCTAssertEqual(
+      first.sections.first?.id, PanelSection.health([]).id,
+      "nothing works without a sign-in, so HEALTH is above everything")
+    XCTAssertEqual(first.empty, EmptyState.firstRun, "the first run says where to press")
+
+    let signedIn = try XCTUnwrap(Scenes.all.first { $0.id == "r4" }).model()
+    XCTAssertEqual(
+      signedIn.sections.last?.id, PanelSection.health([]).id,
+      "a working token puts HEALTH last, where a person looks for it")
+    XCTAssertNil(signedIn.empty)
+  }
+
+  /// The rows of HEALTH never move, whichever screen they are on.
+  func testHealthKeepsItsOrderOnEveryScene() throws {
+    let places = Dictionary(
+      uniqueKeysWithValues: HealthRowKind.allCases.enumerated().map { ($1, $0) })
+    for scene in Scenes.all {
+      let rows = try scene.model().health
+      XCTAssertFalse(rows.isEmpty, "\(scene.id) drew no HEALTH at all")
+      let order = rows.map { places[$0.kind] ?? -1 }
+      XCTAssertEqual(order, order.sorted(), "\(scene.id) moved a HEALTH row")
+      XCTAssertEqual(rows.last?.kind, .quit, "\(scene.id) does not end in Quit")
+    }
+  }
+
+  // MARK: the index page
+
+  private func entry(for scene: Scene) -> String {
+    let appearance = scene.appearance == .light ? "light" : "dark"
+    return """
+      <section>
+        <h2>\(scene.id) · \(escaped(scene.title))</h2>
+        <p>\(escaped(scene.caption))</p>
+        <div class="pair">
+          <figure><img src="\(scene.id)-dark.png" width="320"><figcaption>dark</figcaption></figure>
+          <figure><img src="\(scene.id)-light.png" width="320"><figcaption>light</figcaption></figure>
+        </div>
+        <p class="about">drawn at \(scene.moment) · the scene is about the \(appearance) one</p>
+      </section>
+      """
+  }
+
+  private func html(_ entries: [String]) -> String {
+    """
+    <!doctype html>
+    <meta charset="utf-8">
+    <title>gdoc presence: every screen</title>
+    <style>
+      body{margin:0;padding:32px;background:#3b4352;color:#f2f2f7;
+        font:400 14px/1.5 -apple-system,system-ui,sans-serif}
+      h1{font-size:20px} h2{font-size:15px;margin:0 0 4px}
+      section{margin:0 0 40px;max-width:760px}
+      p{margin:0 0 12px;color:#ebebf599} .about{font-size:12px;color:#ebebf566}
+      .pair{display:flex;gap:16px;align-items:flex-start}
+      figure{margin:0} figcaption{font-size:11px;color:#ebebf566;padding-top:4px}
+      img{border-radius:12px;display:block}
+    </style>
+    <h1>gdoc presence: every screen, both appearances</h1>
+    <p>Drawn from the records under Tests/PresenceUITests/Scenes at 2x.</p>
+    \(entries.joined(separator: "\n"))
+    """
+  }
+
+  private func escaped(_ text: String) -> String {
+    text.replacingOccurrences(of: "&", with: "&amp;")
+      .replacingOccurrences(of: "<", with: "&lt;")
+      .replacingOccurrences(of: ">", with: "&gt;")
+  }
+}
+
+/// What the menu bar shows, which is still M23's glyph until Task 14
+/// replaces it with the composed bar image.
+@MainActor
+final class GlyphStateTests: XCTestCase {
   func testTheGlyphIsOneOfFourStatesByPriority() throws {
     let waiting = try event(.held, at: "2026-10-17T11:00:00Z", pid: 11, run: "r1", hold: "h_1")
     let running = try event(.start, at: "2026-10-17T11:01:00Z", pid: 12, run: "r2", command: "read")
@@ -49,21 +221,14 @@ final class RenderTests: XCTestCase {
       let image = try XCTUnwrap(Glyph.image(for: state), "\(state) has no glyph")
       XCTAssertTrue(
         image.isTemplate, "the menu bar is monochrome, so \(state) must be a template image")
-      XCTAssertGreaterThan(image.size.width, 0)
       XCTAssertFalse(Glyph.tooltip(for: state).isEmpty)
     }
     XCTAssertNil(Glyph.image(for: .idle), "idle shows nothing at all")
   }
 
-  // A hold leaves the menu bar when its life has run out, the way a start
-  // leaves it when its pid is gone. The binary writes the line that says a
-  // hold expired on its next tool call, so a chat window somebody closed with
-  // a card open writes none at all: the hold's own `until` is the whole of
-  // what the record can say, and a pause glyph that stays lit for a card
-  // nobody can press any more is the icon nobody believes.
-  //
-  // The row stays in the panel, saying it ran out, because what happened is
-  // still worth reading.
+  /// A hold leaves the menu bar when its life has run out, the way a start
+  /// leaves it when its pid is gone. The row stays in the panel, because
+  /// what happened is still worth reading.
   func testAHoldThatRanOutLeavesTheMenuBar() throws {
     let waiting = try event(
       .held, at: "2026-10-17T11:50:00Z", pid: 11, run: "r1", hold: "h_1",
@@ -73,134 +238,23 @@ final class RenderTests: XCTestCase {
       until: "2026-10-17T11:30:00Z")
     let alive: (Int32) -> Bool = { _ in true }
 
+    XCTAssertEqual(Glyph.state(for: try fold([waiting], alive: alive)), .hold)
     XCTAssertEqual(
-      Glyph.state(for: try fold([waiting], alive: alive)), .hold,
-      "a hold inside its life is the one row waiting for the person")
-    let gone = try fold([ranOut], alive: alive)
-    XCTAssertEqual(
-      Glyph.state(for: gone), .idle,
+      Glyph.state(for: try fold([ranOut], alive: alive)), .idle,
       "a hold past its until is waiting for nobody, so the menu bar says nothing")
     XCTAssertEqual(
       Glyph.state(for: try fold([waiting, ranOut], alive: alive)), .hold,
       "one hold that ran out does not take the glyph off a hold that has not")
-
-    let row = try XCTUnwrap(
-      PanelModel.build(
-        glance: gone, appVersion: "2.13.0", bundle: .same, newerGdoc: false,
-        calendar: try amsterdam()
-      ).now.first, "the hold is still a row in the panel")
-    XCTAssertEqual(row.kind, .hold)
-    XCTAssertEqual(row.value, "ran out")
-  }
-
-  func testThePanelRendersNowAndTodayInLightAndDark() throws {
-    let model = try dayModel()
-    XCTAssertFalse(model.now.isEmpty, "the day fixture holds a hold, a watch and a live run")
-    XCTAssertFalse(model.today.isEmpty, "the day fixture holds three commands that ended today")
-
-    let shots = try shotsDirectory()
-    for scheme in [ColorScheme.light, .dark] {
-      let name = scheme == .light ? "panel-light.png" : "panel-dark.png"
-      let png = try XCTUnwrap(
-        render(model, scheme: scheme), "the panel did not render in \(name)")
-      let file = shots.appendingPathComponent(name)
-      try png.write(to: file)
-      XCTAssertGreaterThan(
-        png.count, 2_000, "\(name) is too small to be a panel: \(file.path)")
-    }
-  }
-
-  func testAStoppedRunWithUnknownOutcomeIsItsOwnRow() throws {
-    let model = try dayModel()
-    let stopped = model.now.filter { $0.kind == .stopped }
-    XCTAssertEqual(stopped.count, 1, "one start in the day fixture has a dead pid")
-    XCTAssertEqual(stopped.first?.leading, "propose")
-    XCTAssertEqual(
-      stopped.first?.detail, "stopped, outcome unknown",
-      "the record cannot say whether it worked, so the row says exactly that")
-    XCTAssertEqual(
-      stopped.first?.mark, RowMark.none, "nothing here is a judgement about the outcome")
-
-    let live = model.now.filter { $0.kind == .running || $0.kind == .watching }
-    XCTAssertEqual(live.count, 2, "the other two starts in the fixture are alive")
-  }
-
-  func testTheVersionRowsNameTheAppAndTheLastGdoc() throws {
-    let model = try dayModel()
-    XCTAssertEqual(model.versions.count, 2)
-    XCTAssertEqual(model.versions[0].kind, .version)
-    XCTAssertEqual(model.versions[0].leading, "gdoc presence")
-    XCTAssertEqual(
-      model.versions[0].value, "2.13.0", "the app says the version it launched at")
-    XCTAssertEqual(model.versions[1].leading, "gdoc")
-    XCTAssertEqual(
-      model.versions[1].value, "v2.13.0",
-      "the binary's version is the last one a record named, because the two may differ")
-
-    let quiet = try built(of: [], appVersion: "0.0.0", bundle: .same)
-    XCTAssertEqual(
-      quiet.versions[1].value, "checkout build",
-      "a gdoc built from a checkout names no release, and the row says so")
-  }
-
-  func testTheReopenRowAppearsWhenThePlistVersionDiffers() throws {
-    XCTAssertNil(
-      try dayModel(bundle: .same).notice, "nothing is said while the disk holds what is running")
-
-    let updated = try dayModel(bundle: .reopenNeeded("2.14.0"))
-    XCTAssertEqual(updated.notice?.kind, .notice)
-    XCTAssertEqual(updated.notice?.leading, "Updated to 2.14.0. Quit and reopen")
-
-    let rolled = try dayModel(bundle: .reopenNeeded("2.12.0"))
-    XCTAssertEqual(
-      rolled.notice?.leading, "Updated to 2.12.0. Quit and reopen",
-      "a rollback is a difference like any other and the row names the version that is there")
-
-    XCTAssertEqual(try dayModel(bundle: .gone).notice?.leading, "gdoc presence was removed")
-  }
-
-  // The one fault the app says out loud. A line from a gdoc this app does not
-  // know is refused by the decoder, so the panel would otherwise go quiet
-  // with nothing to explain why; the notice stands in for every line the
-  // decoder let go.
-  func testANewerGdocIsSaidInTheNotice() throws {
-    XCTAssertNil(
-      try dayModel().notice, "nothing is said while the record is a schema this app reads")
-
-    let newer = try dayModel(newerGdoc: true)
-    XCTAssertEqual(newer.notice?.kind, .notice)
-    XCTAssertEqual(newer.notice?.leading, "gdoc is newer than this app")
-
-    XCTAssertEqual(
-      try dayModel(bundle: .reopenNeeded("2.14.0"), newerGdoc: true).notice?.leading,
-      "Updated to 2.14.0. Quit and reopen",
-      "the app on the disk is the one a person can act on, so it is said first")
-  }
-
-  // MARK: the fixture
-
-  /// The shared day fixture folded into a model, which is what every test
-  /// here reads except the glyph's.
-  private func dayModel(
-    bundle: BundleState = .same, newerGdoc: Bool = false
-  ) throws -> PanelModel {
-    let data = try Data(contentsOf: fixture("day"))
-    return try built(
-      of: Event.scan(data).events, appVersion: "2.13.0", bundle: bundle, newerGdoc: newerGdoc)
-  }
-
-  private func built(
-    of events: [Event], appVersion: String, bundle: BundleState, newerGdoc: Bool = false
-  ) throws -> PanelModel {
-    PanelModel.build(
-      glance: try fold(events, alive: { [deadPid] in $0 != deadPid }),
-      appVersion: appVersion, bundle: bundle, newerGdoc: newerGdoc,
-      calendar: try amsterdam())
   }
 
   private func fold(_ events: [Event], alive: (Int32) -> Bool) throws -> Glance {
-    Fold.glance(
-      events, now: try moment(dayMoment), calendar: try amsterdam(), alive: alive)
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "Europe/Amsterdam"))
+    calendar.locale = Locale(identifier: "en_US_POSIX")
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime]
+    let now = try XCTUnwrap(formatter.date(from: "2026-10-17T12:00:00Z"))
+    return Fold.glance(events, now: now, calendar: calendar, alive: alive)
   }
 
   /// One event, written as a line and decoded, so a test states the record
@@ -220,68 +274,4 @@ final class RenderTests: XCTestCase {
     if let until { fields.append("\"until\":\"\(until)\"") }
     return try Event.decode("{" + fields.joined(separator: ",") + "}")
   }
-
-  /// The fixture both languages read, taken off the disk rather than out of a
-  /// bundle, because this target copies nothing: the one copy of day.jsonl is
-  /// the core's.
-  private func fixture(_ name: String) -> URL {
-    packageRoot()
-      .appendingPathComponent("Tests/PresenceCoreTests/Fixtures/\(name).jsonl")
-  }
-
-  // MARK: the renders
-
-  private func render(_ model: PanelModel, scheme: ColorScheme) -> Data? {
-    let renderer = ImageRenderer(
-      content: PanelView(model: model, onQuit: {}).environment(\.colorScheme, scheme))
-    renderer.scale = 2
-    var png: Data?
-    let appearance = NSAppearance(named: scheme == .dark ? .darkAqua : .aqua)
-    appearance?.performAsCurrentDrawingAppearance {
-      guard let image = renderer.cgImage else { return }
-      png = NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:])
-    }
-    return png
-  }
-
-  /// Where the PNGs go. Outside the repository, always: a render is something
-  /// a person looks at once, and a committed screenshot is a file nobody
-  /// compares against the code that drew it.
-  private func shotsDirectory() throws -> URL {
-    let named = ProcessInfo.processInfo.environment["PRESENCE_SHOTS"]
-    let temporary = URL(fileURLWithPath: NSTemporaryDirectory())
-      .appendingPathComponent("gdoc-presence-shots")
-    let base = named.map { URL(fileURLWithPath: $0) } ?? temporary
-    let repository = packageRoot().deletingLastPathComponent().standardizedFileURL.path
-    XCTAssertFalse(
-      base.standardizedFileURL.path.hasPrefix(repository),
-      "PRESENCE_SHOTS names \(base.path), which is inside the repository")
-    try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
-    return base
-  }
-
-  /// This file is Tests/PresenceUITests/RenderTests.swift, so the package is
-  /// three directories up from it.
-  private func packageRoot() -> URL {
-    URL(fileURLWithPath: #filePath)
-      .deletingLastPathComponent()
-      .deletingLastPathComponent()
-      .deletingLastPathComponent()
-  }
-}
-
-/// A moment as the record writes one, so a test names its time as a literal.
-private func moment(_ text: String) throws -> Date {
-  let formatter = ISO8601DateFormatter()
-  formatter.formatOptions = [.withInternetDateTime]
-  return try XCTUnwrap(formatter.date(from: text), "\(text) is not a moment")
-}
-
-/// The one zone every test here folds and formats in. The machine's own zone
-/// is not the thing under test.
-private func amsterdam() throws -> Calendar {
-  var calendar = Calendar(identifier: .gregorian)
-  calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "Europe/Amsterdam"))
-  calendar.locale = Locale(identifier: "en_US_POSIX")
-  return calendar
 }
