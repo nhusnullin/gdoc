@@ -72,6 +72,43 @@ enum SceneDocuments {
 }
 
 enum Scenes {
+  /// What the render may have got wrong, and what nobody but Nail can
+  /// settle. The index page opens with these, so a choice nobody has agreed
+  /// to is never read as agreed.
+  ///
+  /// Each line is one choice the panel makes, the rule or the decision it
+  /// goes against, and where it can be seen. They are product choices and
+  /// not findings: a reviewer who rates one of them blocking is rating
+  /// Nail's call, which is why they are on the page rather than in a task.
+  static let stillYourCall: [String] = [
+    "The idle menu bar draws the mark at 45 percent, where principle 1 says idle is nothing "
+      + "at all and the mockup's r9 draws nothing. A dim mark says gdoc is installed; a "
+      + "blank bar says only that nothing is running.",
+    "Launch at login is registered on the first run, so the switch is on by default. "
+      + "Product decision 32 says off by default, because it is a setting.",
+    "A publish is kept out of DOCUMENTS until a run names a document, which is why r1's "
+      + "DOCUMENTS is empty. Product decision 10 puts a running job in both sections and "
+      + "the mockup draws that row dimmed.",
+    "A document in the trash keeps an ordinary row, which is e6's last one. No field of "
+      + "the record says a document is gone, so nothing is struck through and nothing "
+      + "says why.",
+    "The Account row counts the sign-in's three minutes down, as product decision 39 asks. "
+      + "Principle 5 allows facts and not promises, and the countdown is the one number in "
+      + "the panel about something that has not happened.",
+    "The DOCUMENTS header is \"N today\" where every row is from today and \"14 days · N\" "
+      + "otherwise, counting the rows behind Show more. The mockup wrote three forms of it "
+      + "on different screens.",
+  ]
+
+  /// How HEALTH's rows are chosen, said once on the index page because it
+  /// is the one section whose length changes from screen to screen, and a
+  /// reviewer comparing two screens reads a missing row as a bug.
+  static let healthRowRule =
+    "HEALTH is Account first and Quit last on every screen, and the rows between them keep "
+    + "their places. Network and Claude Desktop are drawn only where a fact carries them: "
+    + "the record's own network stop, and no extension beside the binary. There is no "
+    + "Skills row at all, because nothing gdoc prints names a version of the skills."
+
   static let account = "nail@example.com"
   static let hub = "/Users/nail/hub"
   static let gdocPath = "/Users/nail/.local/bin/gdoc"
@@ -240,7 +277,9 @@ enum Scenes {
       id: "e8", title: "Waiting for Google, and just signed in",
       caption:
         "The sign-in is the child's own three minutes, with the URL as a line that can be "
-        + "copied. The address is said once at its full size for five seconds.",
+        + "copied. The address is said once at its full size for five seconds. The render "
+        + "stacks two moments on one panel, waiting for Google above and just signed in "
+        + "below, as the mockup did: on a real machine one of them is always gone.",
       fixture: nil, moment: "2026-10-17T09:01:00Z", alive: [],
       facts: machine(
         signIn: SignInPhase(url: signInURL, secondsLeft: 163),

@@ -54,7 +54,7 @@ final class CardTests: XCTestCase {
     XCTAssertEqual(HoldCard.actionGap, 6)
     XCTAssertEqual(HoldCard.bodyInset, 24, "the glyph's 16 pt and the row's 8 pt gap")
 
-    let measured = try probes(HoldCard(model: hold()), scheme: .dark, width: cardWidth)
+    let measured = try probes(HoldCard(model: try hold()), scheme: .dark, width: cardWidth)
     XCTAssertNotNil(measured["hold.card"])
     XCTAssertNotNil(measured["hold.quiet"], "the card says where the text is waiting")
     XCTAssertEqual(measured["hold.open-chat"]?.height, 24, "`.btn{height:24px}`")
@@ -62,7 +62,8 @@ final class CardTests: XCTestCase {
 
     // Pressed once, the card asks, and the pair that answers is the inline
     // confirm the panel already has.
-    let asking = try probes(HoldCard(model: hold(), asking: true), scheme: .dark, width: cardWidth)
+    let asking = try probes(
+      HoldCard(model: try hold(), asking: true), scheme: .dark, width: cardWidth)
     XCTAssertNotNil(asking["confirm.danger"])
     XCTAssertNotNil(asking["confirm.keep"])
     XCTAssertNil(asking["hold.open-chat"], "a card that is asking carries no other action")
@@ -85,7 +86,7 @@ final class CardTests: XCTestCase {
       HoldCard.bodyInset, 24, "the glyph's 16 pt and the row's 8 pt gap")
 
     let drawn = try probeList(
-      HoldCard(model: hold(), asking: true), scheme: .dark, width: cardWidth)
+      HoldCard(model: try hold(), asking: true), scheme: .dark, width: cardWidth)
     let plate = try XCTUnwrap(
       drawn.first { $0.name == "hold.card" }, "the card drew no plate")
     let line = try XCTUnwrap(
@@ -129,7 +130,7 @@ final class CardTests: XCTestCase {
       StuckCard.fits(String(repeating: "x", count: 81)), "81 characters is one too many")
 
     let measured = try probes(
-      StuckCard(model: stuck(), actions: [note(), branch()], onDismiss: {}),
+      StuckCard(model: try stuck(), actions: [note(), branch()], onDismiss: {}),
       scheme: .dark, width: cardWidth)
     XCTAssertNotNil(measured["stuck.card"])
     XCTAssertEqual(
@@ -223,7 +224,7 @@ final class CardTests: XCTestCase {
 
     var dismissed = 0
     let card = StuckCard(
-      model: stuck(), actions: [note(), branch()], onDismiss: { dismissed += 1 })
+      model: try stuck(), actions: [note(), branch()], onDismiss: { dismissed += 1 })
     XCTAssertEqual(card.actions.map(\.icon), [.md, .branch, .xmark])
     card.actions.last?.perform()
     XCTAssertEqual(dismissed, 1, "the last icon is the one that closes the card")
@@ -240,21 +241,21 @@ final class CardTests: XCTestCase {
     XCTAssertFalse(LiveRow.showsRing(pending: false))
     XCTAssertTrue(LiveRow.showsRing(pending: true))
 
-    let row = LiveRow(model: live())
+    let row = LiveRow(model: try live())
     let measured = try probes(row, scheme: .dark, width: cardWidth)
     XCTAssertEqual(measured["row.two"]?.height, 44)
     XCTAssertEqual(measured["live.stop"]?.height, Grid.actionSize)
     XCTAssertNil(measured["live.ring"])
 
     let pending = try probes(
-      LiveRow(model: live(), pending: true), scheme: .dark, width: cardWidth)
+      LiveRow(model: try live(), pending: true), scheme: .dark, width: cardWidth)
     XCTAssertNil(pending["live.stop"])
     XCTAssertEqual(pending["live.ring"], CGSize(width: Grid.glyphSize, height: Grid.glyphSize))
 
     // Off with its own words, which is the check in Task 18 refusing: the
     // row still draws one icon and never two.
-    let off = LiveRow(model: live(), stop: .off("This watch is not one gdoc presence can stop"))
-    XCTAssertEqual(off.state, .off("This watch is not one gdoc presence can stop"))
+    let off = LiveRow(model: try live(), stop: .off(Tips.cannotStop))
+    XCTAssertEqual(off.state, .off(Tips.cannotStop))
     XCTAssertEqual(LiveRow.icons(pending: false).count, 1)
   }
 
@@ -272,9 +273,9 @@ final class CardTests: XCTestCase {
       measured.keys.filter { $0.hasPrefix("job.step.") }.isEmpty,
       "nothing is known about the steps, so the card draws none")
 
-    // Scene r1: four steps, two done, one running with its fraction, one
-    // that has not happened.
-    let known = job()
+    // Scene r1, whose record names the second of the four parts as the one
+    // that began last: one done, one running, two that have not happened.
+    let known = try job()
     XCTAssertTrue(JobCard.showsSteps(known))
     let drawn = try probes(JobCard(model: known), scheme: .dark, width: cardWidth)
     XCTAssertEqual(drawn.keys.filter { $0.hasPrefix("job.step.") }.count, 4)
@@ -425,22 +426,42 @@ final class CardTests: XCTestCase {
 
   /// The sheet: the nine pieces in both appearances, so they are looked at
   /// once rather than trusted from a pixel count.
+  ///
+  /// Every word on it is a scene's, through `SheetPieces`: the sheet is one
+  /// of the two pages with no record behind it, and a string written by
+  /// hand here is a string Nail reads as the app's own.
   func testTheCardSheetRenders() throws {
     let shots = try shotsDirectory()
+    let hold = try SheetPieces.hold()
+    let stuck = try SheetPieces.stuck()
+    let live = try SheetPieces.live()
+    let job = try SheetPieces.job()
+    let health = try SheetPieces.health().map { row in
+      HealthRow(
+        row.kind, value: row.value, glyph: row.glyph, tone: row.tone, waiting: row.waiting,
+        quiet: row.quiet,
+        actions: row.actions.map { IconAction($0.icon, tip: $0.tip, state: $0.state) },
+        isOn: row.isOn)
+    }
+    let icons = stuck.actions.map { IconAction($0.icon, tip: $0.tip, state: $0.state) }
+    let mark = try XCTUnwrap(
+      SheetPieces.health().first { $0.kind == .mark }, "no scene drew the mark row"
+    ).value
+
     for scheme in [ColorScheme.dark, .light] {
       let palette = Palette.of(scheme)
       let sheet = VStack(alignment: .leading, spacing: Grid.unit) {
-        HoldCard(model: hold())
-        HoldCard(model: hold(), asking: true)
-        StuckCard(model: stuck(), actions: [note(), branch()], onDismiss: {})
-        LiveRow(model: live())
-        LiveRow(model: live(), pending: true)
-        JobCard(model: job())
+        HoldCard(model: hold)
+        HoldCard(model: hold, asking: true)
+        StuckCard(model: stuck.card, actions: icons, onDismiss: {})
+        LiveRow(model: live)
+        LiveRow(model: live, pending: true)
+        JobCard(model: job)
         IconStrip()
-        URLLine(url: "https://accounts.google.com/o/oauth2/auth?client_id=…")
-        SignedInBanner(account: "nail@example.com")
-        HealthRows(rows: healthScreen())
-        EmptyState(mark: "⁘", words: EmptyState.firstRun)
+        URLLine(url: Scenes.signInURL)
+        SignedInBanner(account: Scenes.account)
+        HealthRows(rows: health)
+        EmptyState(mark: mark, words: EmptyState.firstRun)
       }
       .frame(width: cardWidth)
       .padding(Grid.unit)
@@ -455,57 +476,25 @@ final class CardTests: XCTestCase {
 
   // MARK: the fixtures
   //
-  // Every value a piece draws is a plain value stated here, which is the
-  // rule for this whole task: no process, no file and no machine behind any
-  // of them.
+  // Every value a piece draws is a scene's, through `SheetPieces`: the
+  // records under Scenes/ are the one place a string in this package comes
+  // from, so a measurement here is taken on the words the panel really
+  // draws. The two icons are the panel's own tooltips.
 
-  private func hold() -> HoldCardModel {
-    HoldCardModel(
-      title: "Waiting for you · 14 min",
-      sub: "Reply to a thread · Group Channel Policy · rule Dictated",
-      quiet: "Posts from nail@example.com with the ⁘ mark. The text is in the chat.",
-      question: "Dismiss this hold?",
-      consequence: "Nothing will be written. The hold stays in the chat.")
+  private func hold() throws -> HoldCardModel {
+    try SheetPieces.hold()
   }
 
-  private func stuck() -> StuckCardModel {
-    StuckCardModel(
-      title: "Publish stopped · Chapter 4",
-      reason: "SVG picture at line 41. Nothing was created; the note is unchanged.")
+  private func stuck() throws -> StuckCardModel {
+    try SheetPieces.stuck().card
   }
 
-  private func live() -> LiveRowModel {
-    LiveRowModel(title: "Live · Chapter 5 storyline", sub: "since 13:10 · quiet 2 h")
+  private func live() throws -> LiveRowModel {
+    try SheetPieces.live()
   }
 
-  private func job() -> JobCardModel {
-    JobCardModel(
-      title: "Publishing · Chapter 4", sub: "step 2 of 4 · started 09:03 · Falcon / Drafts",
-      progress: 0.5,
-      steps: [
-        JobStep(title: "Built the docx", value: "7 pages · 3 pictures", state: .done),
-        JobStep(title: "Uploaded", value: "1.2 MB", state: .done),
-        JobStep(title: "Reading back", value: "2 of 3", state: .running(0.66)),
-        JobStep(title: "Link into the note", value: nil, state: .waiting),
-      ])
-  }
-
-  private func healthScreen() -> [HealthRow] {
-    [
-      HealthRow(
-        .account, value: "nail@example.com", glyph: .check, tone: .ok,
-        action: IconAction(.signout, tip: "Sign out")),
-      HealthRow(.network, value: "Google not reachable", glyph: .exclamation, tone: .bad),
-      HealthRow(
-        .gdoc, value: "v2.12.0 · v2.13.0 available", glyph: .check, tone: .ok,
-        action: IconAction(.down, tip: "Update to v2.13.0")),
-      HealthRow(
-        .desktop, value: "not installed", glyph: .empty,
-        action: IconAction(.down, tip: "Install extension")),
-      HealthRow(.mark, value: "⁘"),
-      HealthRow(.launchAtLogin, value: "", isOn: true),
-      HealthRow(.quit, value: HealthRows.quitShortcut),
-    ]
+  private func job() throws -> JobCardModel {
+    try SheetPieces.job()
   }
 
   private func note() -> IconAction {

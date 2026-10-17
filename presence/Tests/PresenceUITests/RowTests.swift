@@ -152,14 +152,18 @@ final class RowTests: XCTestCase {
     // Four 24 pt icons and three 4 pt gaps are 108 pt, which is the number.
     XCTAssertEqual(4 * Grid.actionSize + 3 * Grid.actionGap, 108)
 
+    // The row is scene e6's own, so the words under the measurement are
+    // words the panel draws: a count beside a verb is one of the things
+    // gdoc never writes down.
+    let drawn = try SheetPieces.documentRows()[0]
     let row = RowView(
-      .doc, glyph: .check, tone: .ok, title: sixty, sub: "Proposed 2 · verified",
+      .doc, glyph: drawn.glyph, tone: drawn.tone, title: drawn.title, sub: drawn.sub,
       trailing: {
         HStack(spacing: Grid.actionGap) {
-          ActionButton(.gdocs, tip: "Open in Google Docs")
-          ActionButton(.md, tip: "Open md in Obsidian")
-          ActionButton(.branch, tip: "Continue with Claude")
-          ActionButton(.link, tip: "Copy link")
+          ActionButton(.gdocs, tip: Tips.openDoc)
+          ActionButton(.md, tip: Tips.openNote)
+          ActionButton(.branch, tip: Tips.openChat)
+          ActionButton(.link, tip: Tips.copyLink)
         }
       })
     let measured = try probes(row, scheme: .dark)
@@ -168,8 +172,8 @@ final class RowTests: XCTestCase {
     // `.row.is-busy .acts{display:none}`: a busy row carries no action at
     // all, so the column goes with them.
     let busy = RowView(
-      .doc, glyph: .plain, tone: .quiet, title: sixty, sub: "Publishing", busy: true,
-      trailing: { ActionButton(.gdocs, tip: "Open in Google Docs") })
+      .doc, glyph: .plain, tone: .quiet, title: drawn.title, sub: drawn.sub, busy: true,
+      trailing: { ActionButton(.gdocs, tip: Tips.openDoc) })
     let busyMeasured = try probes(busy, scheme: .dark)
     XCTAssertNil(busyMeasured["row.trailing"], "a busy row draws no action column")
   }
@@ -272,31 +276,45 @@ final class RowTests: XCTestCase {
 
   /// The sheet: the five shapes, a section, a header and a quiet line, in
   /// both appearances, so the layout is looked at once.
+  ///
+  /// Every word on it is a scene's, through `SheetPieces`: the sheet is the
+  /// one page with no record behind it, and a string written by hand here
+  /// is a string Nail reads as the app's own.
   func testTheRowSheetRenders() throws {
     let shots = try shotsDirectory()
+    let labels = try SheetPieces.sectionLabels()
+    let live = try SheetPieces.live()
+    let log = try SheetPieces.logRow()
+    let documents = try SheetPieces.documents()
+    let rows = try SheetPieces.documentRows()
+    let mark = try XCTUnwrap(
+      SheetPieces.health().first { $0.kind == .mark }, "no scene drew the mark row")
+    let quiet = try SheetPieces.quiet()
+
     for scheme in [ColorScheme.dark, .light] {
       let palette = Palette.of(scheme)
       let sheet = VStack(alignment: .leading, spacing: 0) {
-        PanelHeader(mark: "⁘", account: "nail@example.com")
-        SectionView("Now", isFirst: true) {
-          RowView(.two, glyph: .dot, tone: .live, title: forty, sub: "Watching · from Claude Code")
-          RowView(.plain, glyph: .check, tone: .ok, title: twenty, value: "09:05")
-          RowView(.compact, glyph: .blank, title: "Mark", value: "⁘")
+        PanelHeader(mark: mark.value, account: Scenes.account)
+        SectionView(labels.now, isFirst: true) {
+          RowView(.two, glyph: .dot, tone: .live, title: live.title, sub: live.sub)
+          RowView(.plain, glyph: .check, tone: .ok, title: log.title, value: log.value)
+          RowView(.compact, glyph: .blank, title: mark.kind.label, value: mark.value)
         }
-        SectionView("Documents", count: "14 days · 11") {
-          RowView(
-            .doc, glyph: .check, tone: .ok, title: eighty, sub: "Proposed 2 · verified",
-            trailing: {
-              HStack(spacing: Grid.actionGap) {
-                ActionButton(.gdocs, tip: "Open in Google Docs")
-                ActionButton(.md, tip: "Open md in Obsidian")
-                ActionButton(.branch, tip: "Continue with Claude")
-                ActionButton(.link, tip: "Copy link")
-              }
-            })
-          RowView(.doc, glyph: .empty, tone: .dim, title: sixty, sub: "In the trash", gone: true)
-          ChevronRow("Show 6 more", isOpen: false)
-          QuietLine("Nothing since 09:05.")
+        SectionView(labels.documents, count: documents.count) {
+          ForEach(rows) { row in
+            RowView(
+              .doc, glyph: row.glyph, tone: row.tone, title: row.title, sub: row.sub,
+              gone: row.gone,
+              trailing: {
+                HStack(spacing: Grid.actionGap) {
+                  ForEach(row.actions) { action in
+                    ActionButton(action.icon, tip: action.tip, state: action.state)
+                  }
+                }
+              })
+          }
+          ChevronRow(documents.more, isOpen: false)
+          QuietLine(quiet)
         }
       }
       .frame(width: Grid.panelWidth)

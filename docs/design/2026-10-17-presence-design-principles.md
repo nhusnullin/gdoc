@@ -18,9 +18,11 @@ any screen is drawn and before any screen is shown.
 3. **Actions are icons; questions are words.** A row's actions are 16 px line
    icons at its trailing edge, always visible, tertiary grey, tooltips after
    half a second. A text button appears only where the panel asks a question
-   with a consequence: a hold (Open chat, Release), an inline confirmation
-   (Release? Sign out?), and nothing else. Update, Sign in, Install, Stop,
-   Cancel, Copy, Show more and Quit are icons or plain rows, never pills.
+   with a consequence: the hold card's Open chat and Dismiss, and the two
+   inline confirms the panel has, "Dismiss this card?" and "Sign out?", each
+   answered by one loud word and Keep. Nothing else. Update, Sign in,
+   Install, Stop, Cancel, Copy, Show more and Quit are icons or plain rows,
+   never pills.
 4. **Dead controls are not shown as live.** An icon with nothing to open is
    dimmed with a tooltip that says why. A card never carries an icon that
    would do nothing.
@@ -153,6 +155,68 @@ Left as they are, with the reason:
 - **The menu bar shows the exclamation in scene e3.** The priority is stuck,
   hold, job, live, idle, and the specification's table wins over the file's
   own drawing of that scene.
+
+## Amendments, 2026-10-17, after the second reviewer's pass
+
+A second reviewer who drew nothing read the renders of commit 47034ad
+against the checklist above and wrote thirty-three findings: three blocking,
+fifteen to fix, fifteen notes. The report itself is not in the tree, so the
+findings are named here rather than lettered. Four tasks closed them. These
+are the lines the pass changed.
+
+The three blocking ones, and where they were closed:
+
+- **The fixtures told one story each, not one story.** The stopped publish
+  was named on the first screen and nameless on the five after it, one run
+  changed its source in the middle of the day, and one approved write drew
+  two rows. A reviewer reading the day as a day read every one of them as a
+  bug in the panel. Closed in Task 1, in the records under
+  `Tests/PresenceUITests/Scenes`.
+- **A watch whose sign-in expired is stopped, not paused.** "Paused" is the
+  panel saying it will carry on, which is a forecast, and nobody has
+  measured whether gdoc resumes from the same cursor after a sign-in. Scene
+  e9 says "stopped 15:29 · sign-in expired", draws no Stop icon, and its
+  caption says the resume is unmeasured. Closed in Task 2.
+- **The index page names what is still Nail's call.** A reviewer reads a
+  render as the specification drawn and rates a product choice as a bug. The
+  page now opens with six lines, each a choice the render makes against a
+  rule or a decision: the idle bar's dim mark, Launch at login on by
+  default, a publish kept out of DOCUMENTS until it has an id, a trashed
+  document's row unstruck, the sign-in countdown, and the DOCUMENTS header.
+  Closed in Task 4.
+
+The rules that moved with them:
+
+- **Principle 3 names the confirms that exist.** "Release?" was never a
+  string in this build and "Dismiss this hold?" never was either: the card
+  asks "Dismiss this card?", because dismissing clears the card and leaves
+  the hold in the chat. The other confirm is "Sign out?". Both are answered
+  by one loud word and Keep.
+- **The DOCUMENTS header has two forms and not three.** "N today" where
+  every row listed is from today, "14 days · N" otherwise, and N counts the
+  rows behind Show more. The old rule wrote "1 today" over four rows from
+  three days.
+- **A held write is named by its heading.** "Proposal held by rule Unread
+  target", never the record's own `propose`. The panel has one word per
+  write and a raw command name is a second vocabulary for one thing.
+- **A sub-line wraps before it truncates**, which is the rule the document
+  rows already followed, and a card's title drops its tail rather than its
+  head. A line nobody can read is worse than a row 12 pt taller.
+- **HEALTH's row rule is said once, on the index page.** It is the one
+  section whose length changes screen to screen, so a reviewer comparing two
+  screens reads a missing row as a bug: Account first, Quit last, Network
+  and Claude Desktop only where a fact carries them, and no Skills row at
+  all.
+- **A sheet draws no word of its own.** The two component sheets are the
+  pages with no record behind them, so every string on them now comes out of
+  a scene through `SheetPieces`, and a test holds it:
+  `testEverySheetWordIsAWordAPanelDraws`. The first draft of them had
+  invented "Watching", "In the trash", "Proposed 2 · verified" and
+  "Nothing since 09:05.", none of which gdoc can write.
+
+Left to Nail, on the index page rather than in a task: the six lines of
+"Still your call". A reviewer who rates one of them blocking is rating a
+decision, not a drawing.
 
 ## The render for review
 

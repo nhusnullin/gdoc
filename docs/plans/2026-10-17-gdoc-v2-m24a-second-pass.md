@@ -157,7 +157,7 @@ branch.
 - Modify: `presence/Tests/PresenceUITests/Scenes.swift`, `Shots.swift`
   (the sheets), `docs/design/2026-10-17-presence-design-principles.md`
 
-- [ ] the index page opens with a list titled "Still your call", one line
+- [x] the index page opens with a list titled "Still your call", one line
       each, naming where the render may go: the idle bar's dim mark against
       no mark (principle 1, mockup r9); Launch at login on by default,
       against product decision 32; a publish with no document yet kept out
@@ -165,19 +165,19 @@ branch.
       dimmed row); a trashed document's row unstruck (e6); the e8 countdown
       (decision 39 against principle 5); and the DOCUMENTS header rule of
       Task 2
-- [ ] the e8 caption says the render stacks two moments (waiting for Google
+- [x] the e8 caption says the render stacks two moments (waiting for Google
       and just signed in) on one panel, as the mockup did
-- [ ] the HEALTH row rule is said once in the index: Account first, Quit
+- [x] the HEALTH row rule is said once in the index: Account first, Quit
       last, and Skills, Claude Desktop and Network drawn only when the record
       or the check carries the fact
-- [ ] the sheets use the scenes' words and nothing else: no "Watching", no
+- [x] the sheets use the scenes' words and nothing else: no "Watching", no
       bare "Mark", no "In the trash" with a struck title, no "Proposed 2", no
       "Nothing since", no "14 days · 3 today"; a test asserts every string on
       a sheet is in the vocabulary list
-- [ ] principle 3 names the one inline confirm that exists, "Dismiss this
+- [x] principle 3 names the one inline confirm that exists, "Dismiss this
       hold?" with Dismiss and Keep, and the amendments section gets a dated
       entry for this pass, the findings listed by their letters
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 5: the reviewer's pass, second round
 

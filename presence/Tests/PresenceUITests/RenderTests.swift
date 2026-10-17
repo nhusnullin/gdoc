@@ -330,6 +330,111 @@ final class RenderTests: XCTestCase {
     return head + (split.tail ?? "")
   }
 
+  /// Scene e8 is two moments on one panel, which the mockup drew that way
+  /// to save a scene: the sign-in still waiting at the top, and the five
+  /// seconds after one at the bottom. A caption that said neither would let
+  /// a reviewer read the panel as one moment that cannot happen.
+  func testTheE8CaptionSaysItStacksTwoMoments() throws {
+    let scene = try XCTUnwrap(Scenes.all.first { $0.id == "e8" })
+    XCTAssertTrue(
+      scene.caption.contains("two moments"),
+      "e8's caption does not say the render stacks two moments: \(scene.caption)")
+    XCTAssertTrue(
+      scene.caption.contains("as the mockup did"),
+      "and does not say where the stacking comes from")
+  }
+
+  /// The two sheets are the one page in the package with no record behind
+  /// it: a component after a component, with its words written by hand. A
+  /// string invented there is a string Nail reads as the app's own, so the
+  /// sheets say what the scenes say and the six the first draft invented
+  /// are gone from the source itself.
+  func testTheSheetsSayNothingNoSceneSays() throws {
+    let invented = [
+      "Watching", "\"Mark\"", "In the trash", "Proposed 2", "Nothing since",
+      "14 days · 3 today",
+    ]
+    for file in ["RowTests.swift", "CardTests.swift"] {
+      let source = try testSource(file)
+      for word in invented {
+        XCTAssertFalse(
+          source.contains(word), "\(file) still draws \(word), which no scene says")
+      }
+    }
+  }
+
+  /// One test file's own text, read from this file's path.
+  private func testSource(_ name: String) throws -> String {
+    let file =
+      presencePackageRoot()
+      .appendingPathComponent("Tests/PresenceUITests/\(name)")
+    return try String(contentsOf: file, encoding: .utf8)
+  }
+
+  /// The index page opens with what nobody has agreed to yet.
+  ///
+  /// A reviewer who reads a render as the specification drawn rates a
+  /// product choice as a bug, and a choice Nail has not made is not a bug.
+  /// The six are on the page, above every screen, and each names the rule
+  /// or the decision it goes against.
+  func testTheIndexOpensWithWhatIsStillYourCall() throws {
+    XCTAssertEqual(Scenes.stillYourCall.count, 6, "the pass left six choices to Nail")
+
+    let page = html(["<section>a screen</section>"])
+    let heading = try XCTUnwrap(page.range(of: "Still your call"), "the page does not open with it")
+    let first = try XCTUnwrap(page.range(of: "<section>a screen</section>"))
+    XCTAssertLessThan(
+      heading.lowerBound, first.lowerBound, "the list is under the screens instead of over them")
+
+    for line in Scenes.stillYourCall {
+      XCTAssertTrue(page.contains(escaped(line)), "the page does not carry: \(line)")
+    }
+
+    // What each of the six is about, so a line that is quietly dropped is a
+    // failure rather than a shorter page.
+    let subjects = [
+      "45 percent", "decision 32", "decision 10", "trash", "decision 39", "14 days · N",
+    ]
+    for subject in subjects {
+      XCTAssertTrue(
+        Scenes.stillYourCall.contains { $0.contains(subject) },
+        "no line is about \(subject)")
+    }
+  }
+
+  /// HEALTH is the one section whose length changes screen to screen, so
+  /// the rule is on the page once and no reviewer reads a missing row as a
+  /// bug. It is said once, because a rule in two places is two rules.
+  func testTheHealthRowRuleIsSaidOnceOnTheIndex() throws {
+    let page = html([])
+    let said = page.components(separatedBy: escaped(Scenes.healthRowRule)).count - 1
+    XCTAssertEqual(said, 1, "the HEALTH rule is on the page \(said) times")
+
+    for part in ["Account first", "Quit last", "no Skills row"] {
+      XCTAssertTrue(Scenes.healthRowRule.contains(part), "the rule does not say \(part)")
+    }
+  }
+
+  /// Every word on either sheet is a word the panel draws.
+  ///
+  /// The two sheets are the pages with no record behind them: a component
+  /// after a component, with their words handed in. The vocabulary is every
+  /// string the scenes draw, plus the few that belong to no row at all, so
+  /// a sentence somebody typed onto a sheet fails here rather than reaching
+  /// Nail as the app's own.
+  func testEverySheetWordIsAWordAPanelDraws() throws {
+    let vocabulary = try panelVocabulary()
+    XCTAssertGreaterThan(vocabulary.count, 100, "the scenes drew almost nothing")
+
+    let words = try SheetPieces.words()
+    XCTAssertGreaterThan(words.count, 30, "the sheets drew almost nothing")
+    for word in words {
+      XCTAssertTrue(
+        vocabulary.contains(word),
+        "a sheet draws “\(word)”, which no scene says and no row of the panel has")
+    }
+  }
+
   // MARK: the index page
 
   private func entry(for scene: Scene, bar: BarState) -> String {
@@ -367,8 +472,20 @@ final class RenderTests: XCTestCase {
       .pair{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
       figure{margin:0} figcaption{font-size:11px;color:#ebebf566;padding-top:4px}
       img{border-radius:12px;display:block}
+      .calls{max-width:760px;margin:0 0 40px}
+      .calls ul{margin:0 0 12px;padding-left:20px} .calls li{margin:0 0 6px}
     </style>
     <h1>gdoc presence: every screen, both appearances</h1>
+    <section class="calls">
+      <h2>Still your call</h2>
+      <ul>
+    \(Scenes.stillYourCall.map { "    <li>\(escaped($0))</li>" }.joined(separator: "\n"))
+      </ul>
+      <p>Each line is a choice the render makes against a rule or a
+      decision. Nothing else on this page is open: the rest is the
+      specification drawn.</p>
+      <p>\(escaped(Scenes.healthRowRule))</p>
+    </section>
     <p>Drawn from the records under Tests/PresenceUITests/Scenes at 2x. The
     first pair of each row is the panel as the person opens it, capped at
     600 pt with the rest under a scroll. The second pair is the same panel
