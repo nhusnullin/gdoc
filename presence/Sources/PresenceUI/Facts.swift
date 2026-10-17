@@ -183,6 +183,12 @@ public struct Facts: Sendable, Equatable {
     Facts(auth: .ok, versions: Versions(app: appVersion))
   }
 
+  /// Whether gdoc itself was there to be asked. It is the HEALTH row's own
+  /// question and the menu bar's: an app that cannot find the binary can do
+  /// nothing at all, which is one of the three things that are stuck without
+  /// a line in the record.
+  public var gdocFound: Bool { versions.gdoc != nil && gdocPath != nil }
+
   /// The note paired with a document, as a path inside the hub.
   public func note(for doc: String?) -> String? {
     guard let doc else { return nil }

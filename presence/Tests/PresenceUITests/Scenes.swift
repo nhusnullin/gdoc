@@ -288,6 +288,27 @@ extension Scene {
       alive: { alive.contains($0) })
   }
 
+  /// What the menu bar shows at this moment.
+  ///
+  /// Out of the same two folds the panel is built from, and the check out of
+  /// the record's own last verified write: a still is a picture of a running
+  /// app, so a line in its record is a line that arrived live, and the five
+  /// seconds decide. That is why r3 and r7 draw the exclamation and the pause
+  /// where the screens file drew a check: both stills are half a minute after
+  /// the write they are about, and the check is five seconds long.
+  @MainActor
+  func bar() throws -> BarState {
+    let alive = self.alive
+    let at = try now()
+    let events = try self.events()
+    let fold = Now.fold(events, now: at, dismissed: ui.dismissed, alive: { alive.contains($0) })
+    var check = BarCheck()
+    check.saw(fold.lastVerified, live: true, at: fold.lastVerified?.ended ?? at)
+    return BarImage.state(
+      now: fold, sessions: Live.sessions(events, now: at), facts: facts,
+      checkShowing: check.isShowing(now: at))
+  }
+
   /// This scene as a view, in the mode the renderer needs.
   @MainActor
   func view() throws -> some View {

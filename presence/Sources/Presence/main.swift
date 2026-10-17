@@ -49,7 +49,7 @@ final class Shell: NSObject, NSApplicationDelegate {
   /// is open.
   private func changed() {
     guard let state else { return }
-    item?.show(state.glyph)
+    item?.show(state.bar)
     panel.refresh(view(of: state))
   }
 

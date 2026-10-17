@@ -29,14 +29,24 @@ final class RenderTests: XCTestCase {
 
     for scene in Scenes.all {
       let view = try scene.view()
+      let bar = try scene.bar()
       for scheme in [ColorScheme.dark, .light] {
-        let name = "\(scene.id)-\(scheme == .dark ? "dark" : "light").png"
+        let suffix = scheme == .dark ? "dark" : "light"
+        let name = "\(scene.id)-\(suffix).png"
         let data = try png(view, scheme: scheme)
         try data.write(to: shots.appendingPathComponent(name))
         XCTAssertGreaterThan(
           data.count, 2_000, "\(name) is too small to be a panel")
+
+        // The menu bar the panel hangs from, in the same appearance. It is
+        // one picture of the template image macOS tints, so a reviewer sees
+        // the state the caption names.
+        let barName = "\(scene.id)-bar-\(suffix).png"
+        let barData = try png(BarPreview(state: bar), scheme: scheme)
+        try barData.write(to: shots.appendingPathComponent(barName))
+        XCTAssertGreaterThan(barData.count, 200, "\(barName) is too small to be a menu bar")
       }
-      page.append(entry(for: scene))
+      page.append(entry(for: scene, bar: bar))
     }
 
     let index = shots.appendingPathComponent("index.html")
@@ -149,12 +159,16 @@ final class RenderTests: XCTestCase {
 
   // MARK: the index page
 
-  private func entry(for scene: Scene) -> String {
+  private func entry(for scene: Scene, bar: BarState) -> String {
     let appearance = scene.appearance == .light ? "light" : "dark"
     return """
       <section>
         <h2>\(scene.id) · \(escaped(scene.title))</h2>
         <p>\(escaped(scene.caption))</p>
+        <div class="pair">
+          <figure><img src="\(scene.id)-bar-dark.png" width="140"><figcaption>the bar: \(bar.rawValue)</figcaption></figure>
+          <figure><img src="\(scene.id)-bar-light.png" width="140"><figcaption>light</figcaption></figure>
+        </div>
         <div class="pair">
           <figure><img src="\(scene.id)-dark.png" width="320"><figcaption>dark</figcaption></figure>
           <figure><img src="\(scene.id)-light.png" width="320"><figcaption>light</figcaption></figure>
@@ -189,89 +203,5 @@ final class RenderTests: XCTestCase {
     text.replacingOccurrences(of: "&", with: "&amp;")
       .replacingOccurrences(of: "<", with: "&lt;")
       .replacingOccurrences(of: ">", with: "&gt;")
-  }
-}
-
-/// What the menu bar shows, which is still M23's glyph until Task 14
-/// replaces it with the composed bar image.
-@MainActor
-final class GlyphStateTests: XCTestCase {
-  func testTheGlyphIsOneOfFourStatesByPriority() throws {
-    let waiting = try event(.held, at: "2026-10-17T11:00:00Z", pid: 11, run: "r1", hold: "h_1")
-    let running = try event(.start, at: "2026-10-17T11:01:00Z", pid: 12, run: "r2", command: "read")
-    let watching = try event(
-      .start, at: "2026-10-17T11:02:00Z", pid: 13, run: "r3", command: "comments", wait: true)
-    let stopped = try event(
-      .start, at: "2026-10-17T11:03:00Z", pid: 99, run: "r4", command: "publish")
-    let alive: (Int32) -> Bool = { $0 != 99 }
-
-    XCTAssertEqual(
-      Glyph.state(for: try fold([waiting, running, watching], alive: alive)), .hold,
-      "a hold is the one row waiting for the person, so it is over everything")
-    XCTAssertEqual(
-      Glyph.state(for: try fold([running, watching], alive: alive)), .running,
-      "a finite job is over a watch that may sit there all day")
-    XCTAssertEqual(Glyph.state(for: try fold([watching], alive: alive)), .watching)
-    XCTAssertEqual(Glyph.state(for: try fold([], alive: alive)), .idle)
-    XCTAssertEqual(
-      Glyph.state(for: try fold([stopped], alive: alive)), .idle,
-      "a start whose pid is gone is a row in the panel and never a glyph in the menu bar")
-
-    for state in [GlyphState.hold, .running, .watching] {
-      let image = try XCTUnwrap(Glyph.image(for: state), "\(state) has no glyph")
-      XCTAssertTrue(
-        image.isTemplate, "the menu bar is monochrome, so \(state) must be a template image")
-      XCTAssertFalse(Glyph.tooltip(for: state).isEmpty)
-    }
-    XCTAssertNil(Glyph.image(for: .idle), "idle shows nothing at all")
-  }
-
-  /// A hold leaves the menu bar when its life has run out, the way a start
-  /// leaves it when its pid is gone. The row stays in the panel, because
-  /// what happened is still worth reading.
-  func testAHoldThatRanOutLeavesTheMenuBar() throws {
-    let waiting = try event(
-      .held, at: "2026-10-17T11:50:00Z", pid: 11, run: "r1", hold: "h_1",
-      until: "2026-10-17T12:20:00Z")
-    let ranOut = try event(
-      .held, at: "2026-10-17T11:00:00Z", pid: 12, run: "r2", hold: "h_2",
-      until: "2026-10-17T11:30:00Z")
-    let alive: (Int32) -> Bool = { _ in true }
-
-    XCTAssertEqual(Glyph.state(for: try fold([waiting], alive: alive)), .hold)
-    XCTAssertEqual(
-      Glyph.state(for: try fold([ranOut], alive: alive)), .idle,
-      "a hold past its until is waiting for nobody, so the menu bar says nothing")
-    XCTAssertEqual(
-      Glyph.state(for: try fold([waiting, ranOut], alive: alive)), .hold,
-      "one hold that ran out does not take the glyph off a hold that has not")
-  }
-
-  private func fold(_ events: [Event], alive: (Int32) -> Bool) throws -> Glance {
-    var calendar = Calendar(identifier: .gregorian)
-    calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "Europe/Amsterdam"))
-    calendar.locale = Locale(identifier: "en_US_POSIX")
-    let formatter = ISO8601DateFormatter()
-    formatter.formatOptions = [.withInternetDateTime]
-    let now = try XCTUnwrap(formatter.date(from: "2026-10-17T12:00:00Z"))
-    return Fold.glance(events, now: now, calendar: calendar, alive: alive)
-  }
-
-  /// One event, written as a line and decoded, so a test states the record
-  /// and never the struct the record happens to decode into.
-  private func event(
-    _ kind: EventKind, at: String, pid: Int32, run: String, call: Int64? = 1,
-    command: String? = nil, wait: Bool = false, hold: String? = nil, until: String? = nil
-  ) throws -> Event {
-    var fields: [String] = [
-      "\"v\":1", "\"at\":\"\(at)\"", "\"pid\":\(pid)", "\"run\":\"\(run)\"",
-      "\"event\":\"\(kind.rawValue)\"",
-    ]
-    if let call { fields.append("\"call\":\(call)") }
-    if let command { fields.append("\"command\":\"\(command)\"") }
-    if wait { fields.append("\"wait\":true") }
-    if let hold { fields.append("\"hold\":\"\(hold)\"") }
-    if let until { fields.append("\"until\":\"\(until)\"") }
-    return try Event.decode("{" + fields.joined(separator: ",") + "}")
   }
 }

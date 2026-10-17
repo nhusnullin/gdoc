@@ -50,6 +50,13 @@ final class AppState {
   private var ticker: Timer?
   private var onChange: () -> Void = {}
 
+  /// The menu bar's check, and whether what the tail has delivered so far is
+  /// the file as it stood at launch. Every line in it is a replay, and a
+  /// replay flashes no check.
+  private var check = BarCheck()
+  private var replayed = false
+  private var checkTimer: Timer?
+
   init(directory: URL, version: String, bundle bundlePath: URL?) {
     self.version = version
     self.calendar = Calendar.current
@@ -77,17 +84,31 @@ final class AppState {
     ticker = Timer.scheduledTimer(withTimeInterval: refoldEvery, repeats: true) { _ in
       Task { @MainActor [weak self] in self?.refold() }
     }
+    // The tail's first pass ran inside start, so its batch is already on this
+    // actor's queue ahead of this one: everything delivered after it arrived
+    // while the app was running.
+    Task { @MainActor [weak self] in self?.replayed = true }
   }
 
   func stop() {
     ticker?.invalidate()
     ticker = nil
+    checkTimer?.invalidate()
+    checkTimer = nil
     tail.stop()
     watcher?.stop()
   }
 
-  /// What the menu bar shows.
-  var glyph: GlyphState { Glyph.state(for: glance) }
+  /// What the menu bar shows, out of the same two folds the panel is built
+  /// from, so the item and an open panel never say different things.
+  var bar: BarState {
+    let moment = Date()
+    return BarImage.state(
+      now: Now.fold(events, now: moment, alive: Liveness.isAlive),
+      sessions: Live.sessions(events, now: moment),
+      facts: facts,
+      checkShowing: check.isShowing(now: moment))
+  }
 
   /// What the panel draws.
   ///
@@ -120,7 +141,23 @@ final class AppState {
         events.removeFirst(events.count - eventCeiling)
       }
     }
+    if noticedAWrite() { said = true }
     if refolded() || said { onChange() }
+  }
+
+  /// A write that read itself back starts the menu bar's check, for five
+  /// seconds, and only where its line arrived live. The one-shot timer is
+  /// what takes the check off again: the five-second refold would not,
+  /// because a glance that did not change redraws nothing.
+  private func noticedAWrite() -> Bool {
+    let moment = Date()
+    let fold = Now.fold(events, now: moment, alive: Liveness.isAlive)
+    guard check.saw(fold.lastVerified, live: replayed, at: moment) else { return false }
+    checkTimer?.invalidate()
+    checkTimer = Timer.scheduledTimer(withTimeInterval: BarCheck.lasts, repeats: false) { _ in
+      Task { @MainActor [weak self] in self?.onChange() }
+    }
+    return true
   }
 
   private func refold() {

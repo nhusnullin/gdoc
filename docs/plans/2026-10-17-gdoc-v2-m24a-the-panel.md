@@ -324,15 +324,15 @@ every box is ticked and its commit is on the branch.
 - Modify: `presence/Tests/PresenceUITests/RenderTests.swift` (the bar per scene)
 - Create: `presence/Tests/PresenceUITests/BarTests.swift`
 
-- [ ] `testOneTemplateImagePerState` (live, stuck, hold, job, check, idle at
+- [x] `testOneTemplateImagePerState` (live, stuck, hold, job, check, idle at
       0.45), `testEveryBarPixelIsMonochrome`, `testThePriorityIsStuckHoldJobLiveIdle`,
       `testNotSignedInExpiredAndGdocNotFoundAreStuck`,
       `testNetworkTroubleDoesNotChangeTheIcon`,
       `testTheCheckLastsFiveSecondsAfterALiveVerifiedEndAndNeverForAReplay`,
       `testTheTooltipNamesTheStateAndNoDocument`, and the render test writes
       `<id>-bar-dark.png` and `<id>-bar-light.png` per scene
-- [ ] `variableLength`, the composed images, the five-second timer
-- [ ] `make app-lint`, `make app-test`, `make app`
+- [x] `variableLength`, the composed images, the five-second timer
+- [x] `make app-lint`, `make app-test`, `make app`
 
 ### Task 15: the app library and the runner
 

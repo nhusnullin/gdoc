@@ -621,7 +621,7 @@ extension PanelModel {
   }
 
   private static func gdoc(facts: Facts) -> HealthRowModel {
-    guard let version = facts.versions.gdoc, facts.gdocPath != nil else {
+    guard facts.gdocFound, let version = facts.versions.gdoc else {
       return HealthRowModel(
         .gdoc, value: "not found", glyph: .exclamation, tone: .bad,
         quiet: "looked for it at \(facts.gdocPathTried)")
