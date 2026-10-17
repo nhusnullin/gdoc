@@ -14,13 +14,16 @@ import Foundation
 /// matters nowhere.
 let builtPid: Int32 = 6000
 
-/// A start, with no end.
+/// A start, with no end. It carries a title where gdoc read the note before
+/// it began, which is what a publish does: it is handed no document, so its
+/// own lines are the only name it has.
 func start(
   at text: String, command: String, run: String, doc: String?, call: Int64 = 1,
-  via: String = "terminal", wait: Bool = false
+  via: String = "terminal", wait: Bool = false, title: String? = nil
 ) -> Event {
   built(
-    at: text, kind: .start, command: command, run: run, call: call, via: via, doc: doc, wait: wait)
+    at: text, kind: .start, command: command, run: run, call: call, via: via, doc: doc,
+    wait: wait, title: title)
 }
 
 /// An end, with the facts an end carries: how it went, what a publish

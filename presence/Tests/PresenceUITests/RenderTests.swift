@@ -244,6 +244,53 @@ final class RenderTests: XCTestCase {
       "the block's shadow fell on the plate, so the stack was not composited")
   }
 
+  /// Scene e1's list: six names that are still six names once the middle is
+  /// cut out of them.
+  ///
+  /// A row draws the head with an ellipsis after it and the tail whole, so
+  /// two titles that differ only in the middle are one string on the screen
+  /// and the list reads as the same document six times. The fixture's six
+  /// differ at the head and at the tail, and this counts the strings the
+  /// rows draw rather than the titles they came from.
+  func testTheSixWorkingNotesOfE1DrawSixDifferentRows() throws {
+    let scene = try XCTUnwrap(Scenes.all.first { $0.id == "e1" })
+    let rows = try XCTUnwrap(scene.model().documents).rows
+    let notes = rows.filter { $0.title.contains("note") }
+    XCTAssertEqual(notes.count, 6, "e1 is six working notes under the day's own documents")
+
+    let drawn = notes.map { drawnTitle($0.title) }
+    XCTAssertEqual(
+      Set(drawn).count, 6,
+      "the rows draw \(Set(drawn).count) different strings: \(drawn)")
+  }
+
+  /// Scene r7's one row: the hold the person approved in the chat and the
+  /// reply it approved are one thing that happened.
+  func testTheApprovedHoldOfR7IsOneRow() throws {
+    let scene = try XCTUnwrap(Scenes.all.first { $0.id == "r7" })
+    let rows = try XCTUnwrap(scene.model().today).rows
+    let approved = rows.filter { $0.sub?.contains("approved by you in chat") == true }
+    XCTAssertEqual(approved.count, 1, "one row and not a Hold closed beside it")
+    XCTAssertEqual(approved.first?.title, "Reply · Altery Group Channel Management Policy")
+    XCTAssertEqual(approved.first?.value, "16:41")
+    XCTAssertEqual(approved.first?.sub, "approved by you in chat · verified")
+    XCTAssertFalse(
+      rows.contains { $0.title.hasPrefix("Hold closed") }, "the write carries the ending")
+  }
+
+  /// One title as a row draws it: the head cut to what the column shows,
+  /// the ellipsis where it was cut, and the tail whole. `MiddleTitle` draws
+  /// exactly this, and a test that compared the titles themselves would
+  /// pass on six rows that read the same.
+  private func drawnTitle(_ title: String) -> String {
+    let split = MiddleTitle.fitted(title)
+    let shown = MiddleTitle.headCharacters(title)
+    let head =
+      shown < split.head.count
+      ? String(split.head.prefix(shown)) + MiddleTitle.ellipsis : split.head
+    return head + (split.tail ?? "")
+  }
+
   // MARK: the index page
 
   private func entry(for scene: Scene, bar: BarState) -> String {

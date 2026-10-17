@@ -149,7 +149,9 @@ public enum Days {
   ) -> DaysFold {
     let ordered = Fold.inOrder(events)
     let titles = Fold.latestTitles(ordered)
-    let rows = every(ordered, now: now, titles: titles, carded: carded, alive: alive)
+    let calls = Fold.latestCallTitles(ordered)
+    let rows = every(
+      ordered, now: now, titles: titles, calls: calls, carded: carded, alive: alive)
 
     let yesterday = calendar.date(byAdding: .day, value: -1, to: now)
 
@@ -164,24 +166,30 @@ public enum Days {
   /// Every row the record holds, newest first. The index breaks a tie, so two
   /// rows at the same moment keep the order the record had them in.
   private static func every(
-    _ ordered: [Event], now: Date, titles: [String: String], carded: Set<String>,
-    alive: (Int32) -> Bool
+    _ ordered: [Event], now: Date, titles: [String: String], calls: [String: String],
+    carded: Set<String>, alive: (Int32) -> Bool
   ) -> [DayRow] {
     var rows: [DayRow] = []
     var ended: Set<String> = []
     var held: [String: Event] = [:]
+    let landed = landings(ordered)
 
     for event in ordered {
       if event.kind == .end {
         ended.insert(event.pairing)
         guard !event.wait, Now.stuckCommands.contains(event.command ?? "") else { continue }
-        rows.append(action(event, titles: titles))
+        rows.append(
+          action(event, titles: titles, calls: calls, ending: landed.byWrite[event.pairing]))
       } else if event.kind == .held {
         held[event.hold ?? ""] = event
-        rows.append(raised(event, titles: titles))
+        rows.append(raised(event, titles: titles, calls: calls))
       } else if let ending = HoldEnding(event.kind) {
+        // The write this one approved carries it, so the closing line is
+        // not a second row: scene r7 draws one Reply and no Hold closed.
+        guard !landed.absorbed.contains(event.hold ?? "") else { continue }
         rows.append(
-          closed(event, held: held[event.hold ?? ""], ending: ending, titles: titles))
+          closed(
+            event, held: held[event.hold ?? ""], ending: ending, titles: titles, calls: calls))
       }
     }
 
@@ -190,7 +198,7 @@ public enum Days {
         Now.stuckCommands.contains(event.command ?? ""), !ended.contains(event.pairing),
         !carded.contains(event.pairing), !alive(event.pid)
       else { continue }
-      rows.append(lost(event, titles: titles))
+      rows.append(lost(event, titles: titles, calls: calls))
     }
 
     for session in Live.sessions(ordered, now: now, alive: alive) {
@@ -206,18 +214,75 @@ public enum Days {
       .map(\.element)
   }
 
-  private static func action(_ event: Event, titles: [String: String]) -> DayRow {
+  /// A hold the person approved, joined to the write it approved: that
+  /// write's own pairing, and the hold ids whose closing line is then not a
+  /// row of its own.
+  private struct Landings {
+    var byWrite: [String: HoldEnding] = [:]
+    var absorbed: Set<String> = []
+  }
+
+  /// Which write each approved hold was the hold for.
+  ///
+  /// The record writes three lines for one thing that happened: the chat
+  /// held the write, the write went out, and the hold landed. The ending
+  /// carries the hold's id and nothing else, so what joins it to the write
+  /// is the held line's own command and document inside the window between
+  /// the two lines: `cmd/gdoc` writes the landed line straight after the
+  /// end of the call that wrote it.
+  ///
+  /// A landing whose write is in no part of the record this app read joins
+  /// nothing, and its closing line stays a row of its own.
+  private static func landings(_ ordered: [Event]) -> Landings {
+    var held: [String: Event] = [:]
+    var found = Landings()
+
+    for event in ordered {
+      let id = event.hold ?? ""
+      if event.kind == .held {
+        held[id] = event
+        continue
+      }
+      guard HoldEnding(event.kind) != nil else { continue }
+      let opened = held.removeValue(forKey: id)
+      guard event.kind == .landed, let opened,
+        let write = wrote(opened, by: event.at, in: ordered)
+      else { continue }
+      found.byWrite[write] = .landed
+      found.absorbed.insert(id)
+    }
+    return found
+  }
+
+  /// The end of the write a hold was holding: the latest end of the held
+  /// line's own command on the held line's own document, between the hold
+  /// and its landing.
+  private static func wrote(_ held: Event, by landed: Date, in ordered: [Event]) -> String? {
+    ordered.last { event in
+      event.kind == .end && !event.wait && event.command == held.command
+        && Fold.subject(event) == Fold.subject(held)
+        && event.at >= held.at && event.at <= landed
+    }?.pairing
+  }
+
+  private static func action(
+    _ event: Event, titles: [String: String], calls: [String: String], ending: HoldEnding?
+  ) -> DayRow {
     row(
-      .action, event, titles: titles, ok: event.ok ?? false, verified: event.verified,
-      ms: event.ms, stop: event.stop, line: event.line)
+      .action, event, titles: titles, calls: calls, ok: event.ok ?? false,
+      verified: event.verified, ms: event.ms, ending: ending, stop: event.stop, line: event.line)
   }
 
-  private static func lost(_ event: Event, titles: [String: String]) -> DayRow {
-    row(.outcomeUnknown, event, titles: titles)
+  private static func lost(
+    _ event: Event, titles: [String: String], calls: [String: String]
+  ) -> DayRow {
+    row(.outcomeUnknown, event, titles: titles, calls: calls)
   }
 
-  private static func raised(_ event: Event, titles: [String: String]) -> DayRow {
-    row(.holdRaised, event, titles: titles, rule: event.rule)
+  private static func raised(
+    _ event: Event, titles: [String: String], calls: [String: String]
+  ) -> DayRow {
+    row(.holdRaised, event, titles: titles, calls: calls, rule: event.rule)
   }
 
   /// A hold that stopped waiting, with the held line's own words on it.
@@ -232,15 +297,17 @@ public enum Days {
   /// A held line this app never saw, because it is in a month the tail does
   /// not read, leaves the row as bare as the ending that closed it.
   private static func closed(
-    _ event: Event, held: Event?, ending: HoldEnding, titles: [String: String]
+    _ event: Event, held: Event?, ending: HoldEnding, titles: [String: String],
+    calls: [String: String]
   ) -> DayRow {
     guard let held else {
-      return row(.holdClosed, event, titles: titles, rule: event.rule, ending: ending)
+      return row(
+        .holdClosed, event, titles: titles, calls: calls, rule: event.rule, ending: ending)
     }
     return DayRow(
       kind: .holdClosed, at: event.at, command: held.command, via: held.via,
-      doc: Fold.subject(held), title: title(held, titles), ok: nil, verified: nil, ms: nil,
-      rule: held.rule, ending: ending, totals: nil, stop: nil, line: nil)
+      doc: Fold.subject(held), title: title(held, titles, calls), ok: nil, verified: nil,
+      ms: nil, rule: held.rule, ending: ending, totals: nil, stop: nil, line: nil)
   }
 
   private static func began(_ session: LiveSession) -> DayRow {
@@ -261,20 +328,25 @@ public enum Days {
   }
 
   private static func row(
-    _ kind: DayKind, _ event: Event, titles: [String: String], ok: Bool? = nil,
-    verified: Bool? = nil, ms: Int64? = nil, rule: String? = nil, ending: HoldEnding? = nil,
-    stop: String? = nil, line: Int? = nil
+    _ kind: DayKind, _ event: Event, titles: [String: String], calls: [String: String],
+    ok: Bool? = nil, verified: Bool? = nil, ms: Int64? = nil, rule: String? = nil,
+    ending: HoldEnding? = nil, stop: String? = nil, line: Int? = nil
   ) -> DayRow {
     DayRow(
       kind: kind, at: event.at, command: event.command, via: event.via,
-      doc: Fold.subject(event), title: title(event, titles), ok: ok, verified: verified, ms: ms,
-      rule: rule, ending: ending, totals: nil, stop: stop, line: line)
+      doc: Fold.subject(event), title: title(event, titles, calls), ok: ok,
+      verified: verified, ms: ms, rule: rule, ending: ending, totals: nil, stop: stop,
+      line: line)
   }
 
-  /// The document's latest title, and the line's own only where the record
-  /// never named one for that document.
-  private static func title(_ event: Event, _ titles: [String: String]) -> String? {
-    guard let doc = Fold.subject(event), let latest = titles[doc] else { return event.title }
-    return latest
+  /// The document's latest title, the call's own where the record named no
+  /// document, and the line's own where it named neither. A publish is
+  /// handed no document, so its row is named from its own lines: Now's
+  /// `title` is the same rule and the card and the row read the same.
+  private static func title(
+    _ event: Event, _ titles: [String: String], _ calls: [String: String]
+  ) -> String? {
+    if let doc = Fold.subject(event), let latest = titles[doc] { return latest }
+    return calls[event.pairing] ?? event.title
   }
 }

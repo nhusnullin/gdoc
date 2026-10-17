@@ -79,3 +79,30 @@ extension Fold {
     return titles
   }
 }
+
+extension Fold {
+  /// Every call's latest title, by the run and the call its events pair on.
+  ///
+  /// A publish is handed no document, so nothing `latestTitles` holds names
+  /// one: the name on the cover arrives on a step line, or on the end that
+  /// says what it made, and the start carries it where gdoc read the note
+  /// first. A call is named here from whichever of its own lines carried a
+  /// title, the latest winning, so a card and a row read the same whichever
+  /// of those lines the record still holds.
+  ///
+  /// The key is the pairing and not the run alone, because the record stamps
+  /// one run on every event of a process: a chat session is one run and a
+  /// dozen calls, and the title of one of its writes is not the name of
+  /// another.
+  public static func latestCallTitles(_ events: [Event]) -> [String: String] {
+    var titles: [String: String] = [:]
+    var when: [String: Date] = [:]
+    for event in events {
+      guard let title = event.title, !title.isEmpty else { continue }
+      if let had = when[event.pairing], had > event.at { continue }
+      titles[event.pairing] = title
+      when[event.pairing] = event.at
+    }
+    return titles
+  }
+}

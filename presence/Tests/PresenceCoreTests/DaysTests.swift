@@ -139,6 +139,62 @@ final class DaysTests: XCTestCase {
   /// fold's, so it is folded first and hands over the keys of the cards it
   /// is keeping. What is left here is the row a card leaves behind when it
   /// clears or is dismissed.
+  /// Scene r2's row: a publish that stopped is named in TODAY out of the one
+  /// line of its own that carried a name. It is handed no document, so the
+  /// document's own title names nothing here.
+  func testAStoppedPublishIsNamedInItsRow() throws {
+    let fold = Days.fold(
+      [
+        start(
+          at: "2026-10-17T09:03:10Z", command: "publish", run: "aaaa", doc: nil,
+          title: "Chapter 4"),
+        end(
+          at: "2026-10-17T09:05:00Z", command: "publish", run: "aaaa", doc: nil, ok: false,
+          stop: "svg_picture", line: 41),
+      ], now: try seventeenTwenty(), calendar: try amsterdam(), alive: { _ in false })
+
+    XCTAssertEqual(fold.today.map(\.kind), [.action])
+    XCTAssertEqual(fold.today.first?.title, "Chapter 4", "the name its start carried")
+    XCTAssertEqual(fold.today.first?.stop, "svg_picture")
+  }
+
+  /// Scene r7: the hold the person approved and the write it approved are one
+  /// thing that happened, so TODAY draws one row for them, and that row says
+  /// the person approved it rather than where it came from.
+  func testAnApprovedHoldIsTheRowOfTheWriteItApproved() throws {
+    let raised = hold(at: "2026-10-17T14:20:00Z", run: "chat", doc: policy, id: "h_1")
+    let wrote = [
+      start(
+        at: "2026-10-17T14:40:55Z", command: "reply", run: "chat", doc: policy, call: 2,
+        via: "chat"),
+      end(
+        at: "2026-10-17T14:41:00Z", command: "reply", run: "chat", doc: policy, call: 2,
+        via: "chat", ok: true, verified: true, title: "Group Channel Policy"),
+    ]
+    let landed = holdEnd(
+      at: "2026-10-17T14:41:00Z", kind: .landed, run: "chat", doc: nil, id: "h_1")
+
+    let fold = Days.fold(
+      [raised] + wrote + [landed], now: try seventeenTwenty(), calendar: try amsterdam(),
+      alive: { _ in false })
+    XCTAssertEqual(
+      fold.today.map(\.kind), [.action, .holdRaised],
+      "one row for the write, and the hold it waited under")
+
+    let row = try XCTUnwrap(fold.today.first)
+    XCTAssertEqual(row.ending, .landed, "the person said yes in the chat")
+    XCTAssertEqual(row.verified, true, "and the write read itself back")
+    XCTAssertEqual(row.at, try moment("2026-10-17T14:41:00Z"))
+
+    // A landing whose write is in no part of the record this app read joins
+    // nothing, and its closing line stays a row of its own.
+    let alone = Days.fold(
+      [raised, landed], now: try seventeenTwenty(), calendar: try amsterdam(),
+      alive: { _ in false })
+    XCTAssertEqual(alone.today.map(\.kind), [.holdClosed, .holdRaised])
+    XCTAssertEqual(alone.today.first?.ending, .landed)
+  }
+
   func testAWriteNowIsCardingIsNotAlsoARowInToday() throws {
     let lost = start(at: "2026-10-17T12:00:00Z", command: "restyle", run: "aaaa", doc: docA)
     let at = try seventeenTwenty()

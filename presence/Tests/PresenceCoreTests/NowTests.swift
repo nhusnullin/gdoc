@@ -244,6 +244,53 @@ final class NowTests: XCTestCase {
   private let docB = "1BbbAaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp"
 
   /// The four classes of NOW, as numbers, so one assertion states the order.
+  /// A publish is handed no document, so nothing the record says about a
+  /// document names it: the only name it has is the one its own lines
+  /// carried. Scene r2's card reads "Publish stopped · Chapter 4" off a run
+  /// whose end names nothing at all.
+  func testACallIsNamedFromItsOwnLinesTheLatestWinning() throws {
+    let named = try folded(
+      [
+        start(
+          at: "2026-10-17T09:03:10Z", command: "publish", run: "aaaa", doc: nil,
+          title: "Chapter 4"),
+        end(at: "2026-10-17T09:05:00Z", command: "publish", run: "aaaa", doc: nil, ok: false),
+      ], alive: { _ in false })
+    XCTAssertEqual(
+      named.stuck.map(\.title), ["Chapter 4"],
+      "the name gdoc read off the note before the run began")
+
+    // The latest line wins, because that is the name on the cover.
+    let renamed = try folded(
+      [
+        start(
+          at: "2026-10-17T09:03:10Z", command: "publish", run: "bbbb", doc: nil,
+          title: "Chapter 4"),
+        end(
+          at: "2026-10-17T09:05:00Z", command: "publish", run: "bbbb", doc: nil, ok: false,
+          title: "Chapter 4, draft v2"),
+      ], alive: { _ in false })
+    XCTAssertEqual(renamed.stuck.map(\.title), ["Chapter 4, draft v2"])
+
+    // The record stamps one run on every line a process writes, so a chat
+    // session is one run and a dozen calls. The name of one of its writes
+    // is not the name of another.
+    let session = try folded(
+      [
+        start(
+          at: "2026-10-17T14:20:00Z", command: "reply", run: "cccc", doc: docA, call: 1),
+        end(
+          at: "2026-10-17T14:20:10Z", command: "reply", run: "cccc", doc: docA, ok: true,
+          call: 1, verified: true, title: "Group Channel Policy"),
+        start(at: "2026-10-17T14:30:00Z", command: "publish", run: "cccc", doc: nil, call: 2),
+        end(
+          at: "2026-10-17T14:31:00Z", command: "publish", run: "cccc", doc: nil, ok: false,
+          call: 2),
+      ], alive: { _ in false })
+    XCTAssertEqual(session.stuck.map(\.command), ["publish"], "the read-back reply is not stuck")
+    XCTAssertNil(session.stuck.first?.title, "no line of that call named anything")
+  }
+
   private func band(_ entry: NowEntry) -> Int {
     switch entry {
     case .hold: return 0
@@ -260,31 +307,34 @@ final class NowTests: XCTestCase {
   }
 
   private func start(
-    at text: String, command: String, run: String, doc: String?, wait: Bool = false
+    at text: String, command: String, run: String, doc: String?, call: Int64 = 1,
+    wait: Bool = false, title: String? = nil
   ) -> Event {
-    event(at: text, kind: .start, command: command, run: run, doc: doc, wait: wait)
+    event(
+      at: text, kind: .start, command: command, run: run, doc: doc, call: call, wait: wait,
+      title: title)
   }
 
   private func end(
-    at text: String, command: String, run: String, doc: String?, ok: Bool, verified: Bool? = nil,
-    title: String? = nil, made: String? = nil
+    at text: String, command: String, run: String, doc: String?, ok: Bool, call: Int64 = 1,
+    verified: Bool? = nil, title: String? = nil, made: String? = nil
   ) -> Event {
     event(
-      at: text, kind: .end, command: command, run: run, doc: doc, ok: ok, verified: verified,
-      title: title, made: made)
+      at: text, kind: .end, command: command, run: run, doc: doc, call: call, ok: ok,
+      verified: verified, title: title, made: made)
   }
 
   private func event(
     at text: String, kind: EventKind, command: String, run: String, doc: String?,
-    wait: Bool = false, ok: Bool? = nil, verified: Bool? = nil, title: String? = nil,
-    made: String? = nil
+    call: Int64 = 1, wait: Bool = false, ok: Bool? = nil, verified: Bool? = nil,
+    title: String? = nil, made: String? = nil
   ) -> Event {
     let formatter = ISO8601DateFormatter()
     formatter.formatOptions = [.withInternetDateTime]
     return Event(
       schema: 1, at: formatter.date(from: text) ?? Date(), gdoc: "v2.14.0", pid: 6000, run: run,
-      call: 1, kind: kind, command: command, via: "terminal", doc: doc, wait: wait, title: title,
-      made: made, ok: ok, verified: verified, ms: ok == nil ? nil : 1200, hold: nil, rule: nil,
-      until: nil)
+      call: call, kind: kind, command: command, via: "terminal", doc: doc, wait: wait,
+      title: title, made: made, ok: ok, verified: verified, ms: ok == nil ? nil : 1200,
+      hold: nil, rule: nil, until: nil)
   }
 }

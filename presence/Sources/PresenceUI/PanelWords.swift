@@ -235,6 +235,9 @@ struct Phrases {
     switch row.kind {
     case .action:
       let ok = row.ok ?? false
+      // A write the person approved in the chat says that instead of where
+      // it came from: "approved by you in chat" already names the place,
+      // and the row is one line. Scene r7 is that row.
       return LogRowModel(
         key: "\(index)",
         glyph: ok ? .check : .exclamation,
@@ -242,7 +245,7 @@ struct Phrases {
         title: sentence([what, title]),
         value: clock(row.at),
         sub: sentence([
-          Words.via(row.via), Words.verified(row.verified),
+          ending(row.ending) ?? Words.via(row.via), Words.verified(row.verified),
           ok ? nil : (Words.cause(row.stop, line: row.line) ?? "stopped"),
         ]))
     case .outcomeUnknown:

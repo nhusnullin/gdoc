@@ -197,6 +197,7 @@ public enum Now {
   ) -> NowFold {
     let ordered = Fold.inOrder(events)
     let titles = Fold.latestTitles(ordered)
+    let calls = Fold.latestCallTitles(ordered)
 
     var starts: [String: Event] = [:]
     var steps: [String: Event] = [:]
@@ -215,9 +216,11 @@ public enum Now {
         // whose rollback failed answers `ok: false` with the read-back it
         // did manage still in it, and a green check over a run that NOW
         // holds a stuck card for says two things at once.
-        if event.ok == true, event.verified == true { verified = check(event, titles: titles) }
+        if event.ok == true, event.verified == true {
+          verified = check(event, titles: titles, calls: calls)
+        }
         if event.ok == false, stuckCommands.contains(event.command ?? "") {
-          failures.append(stuck(event, at: event.at, cause: .failed, titles: titles))
+          failures.append(stuck(event, at: event.at, cause: .failed, titles: titles, calls: calls))
         }
       case .held:
         held[event.hold ?? ""] = event
@@ -242,15 +245,15 @@ public enum Now {
     for (pairing, start) in starts
     where !ended.contains(pairing) && !holding.contains(start.run) {
       if alive(start.pid) {
-        let row = run(start, step: steps[pairing], titles: titles)
+        let row = run(start, step: steps[pairing], titles: titles, calls: calls)
         if row.isWait { watches.append(row) } else { jobs.append(row) }
         continue
       }
       let write = stuckCommands.contains(start.command ?? "")
       if write, start.at >= now.addingTimeInterval(-horizon) {
-        failures.append(stuck(start, at: start.at, cause: .stopped, titles: titles))
+        failures.append(stuck(start, at: start.at, cause: .stopped, titles: titles, calls: calls))
       } else {
-        unknown.append(outcome(start, titles: titles))
+        unknown.append(outcome(start, titles: titles, calls: calls))
       }
     }
 
@@ -263,14 +266,14 @@ public enum Now {
     // already.
     for write in answered where write.cause == .stopped {
       if let start = starts["\(write.run)|\(write.call)"] {
-        unknown.append(outcome(start, titles: titles))
+        unknown.append(outcome(start, titles: titles, calls: calls))
       }
     }
 
     let cards =
       held.values
       .filter { !dismissed.contains($0.hold ?? "") }
-      .map { hold($0, now: now, titles: titles) }
+      .map { hold($0, now: now, titles: titles, calls: calls) }
       .sorted { $0.held < $1.held }
 
     var entries = cards.map(NowEntry.hold)
@@ -301,42 +304,52 @@ public enum Now {
   }
 
   private static func stuck(
-    _ event: Event, at: Date, cause: StuckCause, titles: [String: String]
+    _ event: Event, at: Date, cause: StuckCause, titles: [String: String],
+    calls: [String: String]
   ) -> StuckWrite {
     StuckWrite(
       run: event.run, call: event.call ?? 0, command: event.command ?? "",
-      doc: Fold.subject(event), handed: handed(event), title: title(event, titles),
+      doc: Fold.subject(event), handed: handed(event), title: title(event, titles, calls),
       via: event.via, at: at, cause: cause, stop: event.stop, line: event.line)
   }
 
-  /// One running command, with the part it is on where the record names one
-  /// and the title that part carried: a publish is handed no title, so the
-  /// only name it has is the one the render put on the cover.
-  private static func run(_ event: Event, step: Event?, titles: [String: String]) -> NowRun {
+  /// One running command, with the part it is on where the record names one.
+  /// A publish is handed no document, so its name is whichever of its own
+  /// lines carried one: the start, a step, or nothing yet.
+  private static func run(
+    _ event: Event, step: Event?, titles: [String: String], calls: [String: String]
+  ) -> NowRun {
     NowRun(
       run: event.run, call: event.call ?? 0, pid: event.pid, command: event.command ?? "",
       via: event.via, doc: Fold.subject(event),
-      title: step?.title ?? title(event, titles), started: event.at,
+      title: title(event, titles, calls), started: event.at,
       isWait: event.wait, step: step?.step, index: step?.index, count: step?.count)
   }
 
-  private static func outcome(_ event: Event, titles: [String: String]) -> UnknownOutcome {
+  private static func outcome(
+    _ event: Event, titles: [String: String], calls: [String: String]
+  ) -> UnknownOutcome {
     UnknownOutcome(
       run: event.run, call: event.call ?? 0, command: event.command ?? "", via: event.via,
-      doc: Fold.subject(event), title: title(event, titles), started: event.at)
+      doc: Fold.subject(event), title: title(event, titles, calls), started: event.at)
   }
 
-  private static func hold(_ event: Event, now: Date, titles: [String: String]) -> HoldCard {
+  private static func hold(
+    _ event: Event, now: Date, titles: [String: String], calls: [String: String]
+  ) -> HoldCard {
     HoldCard(
       id: event.hold ?? "", run: event.run, command: event.command, via: event.via,
-      doc: Fold.subject(event), title: title(event, titles), rule: event.rule, held: event.at,
+      doc: Fold.subject(event), title: title(event, titles, calls), rule: event.rule,
+      held: event.at,
       until: event.until, ranOut: event.until.map { $0 < now } ?? false)
   }
 
-  private static func check(_ event: Event, titles: [String: String]) -> VerifiedWrite {
+  private static func check(
+    _ event: Event, titles: [String: String], calls: [String: String]
+  ) -> VerifiedWrite {
     VerifiedWrite(
       run: event.run, call: event.call ?? 0, command: event.command ?? "",
-      doc: Fold.subject(event), title: title(event, titles), ended: event.at)
+      doc: Fold.subject(event), title: title(event, titles, calls), ended: event.at)
   }
 
   /// The document the line was handed, which is nothing where the field is
@@ -347,10 +360,18 @@ public enum Now {
     return doc
   }
 
-  /// The document's latest title, and the line's own only where the record
-  /// never named one for that document.
-  private static func title(_ event: Event, _ titles: [String: String]) -> String? {
-    guard let doc = Fold.subject(event), let latest = titles[doc] else { return event.title }
-    return latest
+  /// The document's latest title, the call's own where the record named no
+  /// document, and the line's own where it named neither.
+  ///
+  /// A publish is handed no document, so until it has made one the only name
+  /// it has is the one its own lines carried: the start gdoc read the note
+  /// for, or a step line, or the end that says what it created. That is why
+  /// scene r2's card reads "Publish stopped · Chapter 4" from a run whose
+  /// end named nothing at all.
+  private static func title(
+    _ event: Event, _ titles: [String: String], _ calls: [String: String]
+  ) -> String? {
+    if let doc = Fold.subject(event), let latest = titles[doc] { return latest }
+    return calls[event.pairing] ?? event.title
   }
 }

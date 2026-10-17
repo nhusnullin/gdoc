@@ -76,26 +76,26 @@ branch.
   folded), `presence/Tests/PresenceCoreTests/*Tests.swift`,
   `presence/Tests/PresenceUITests/RenderTests.swift`
 
-- [ ] a test that a run whose `start` carries a title, or whose any event
+- [x] a test that a run whose `start` carries a title, or whose any event
       carries one, is named in the stuck card and in its TODAY row; the fold
       keeps the title from any event of the run, the latest one winning
-- [ ] `r2.jsonl` to `r6.jsonl` carry the stopped publish's title the same
+- [x] `r2.jsonl` to `r6.jsonl` carry the stopped publish's title the same
       way `r1.jsonl` does, so the card reads "Publish stopped · Chapter 4"
       and the TODAY row "Publish · Chapter 4"; `e3.jsonl`'s running publish
       carries its title too (its step line has none)
-- [ ] run `3000000000000003` is `via: code` in every fixture of that day
+- [x] run `3000000000000003` is `via: code` in every fixture of that day
       (r3 to r9, e3, e6, e9, e10), one run, one source
-- [ ] `r7.jsonl`, `r8.jsonl`, `r9.jsonl`: the approved hold is one write.
+- [x] `r7.jsonl`, `r8.jsonl`, `r9.jsonl`: the approved hold is one write.
       The reply that landed is the chat's own run (`via: chat`, the chat pid)
       and there is no second terminal run; TODAY shows "Reply · approved by
       you in chat · verified" as one row, as the mockup draws it
-- [ ] `e1.jsonl`: six titles that survive the middle ellipsis at the row's
+- [x] `e1.jsonl`: six titles that survive the middle ellipsis at the row's
       width (they differ at the head or the tail, not only in a number in
       the middle); a render test asserts the six rows render as six
       different strings
-- [ ] the 13:10 reply in r4 to r9 moves to a minute of its own, so the TODAY
+- [x] the 13:10 reply in r4 to r9 moves to a minute of its own, so the TODAY
       pair no longer reads as a duplicate
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 2: the words say what the record says
 

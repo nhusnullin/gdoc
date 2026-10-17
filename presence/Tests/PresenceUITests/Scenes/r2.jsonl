@@ -1,2 +1,2 @@
-{"v":1,"at":"2026-10-17T09:03:10Z","gdoc":"v2.14.0","pid":7101,"run":"3000000000000001","call":1,"event":"start","command":"publish","via":"terminal"}
+{"v":1,"at":"2026-10-17T09:03:10Z","gdoc":"v2.14.0","pid":7101,"run":"3000000000000001","call":1,"event":"start","command":"publish","via":"terminal","title":"Chapter 4"}
 {"v":1,"at":"2026-10-17T09:05:00Z","gdoc":"v2.14.0","pid":7101,"run":"3000000000000001","call":1,"event":"end","command":"publish","via":"terminal","ok":false,"stop":"svg_picture","line":41,"ms":110000}
