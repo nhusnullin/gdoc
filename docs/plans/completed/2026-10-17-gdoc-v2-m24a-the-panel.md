@@ -105,16 +105,16 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Sources/PresenceUI/Theme/Palette.swift`, `Typography.swift`, `Grid.swift`, `Timing.swift`
 - Create: `presence/Tests/PresenceUITests/ThemeTests.swift`
 
-- [ ] `testTheDarkPaletteIsTheScreensFileLiterals` and
+- [x] `testTheDarkPaletteIsTheScreensFileLiterals` and
       `testTheLightPaletteIsTheScreensFileLiterals`: every colour of the spec's
       token sheet as a literal hex and alpha, read from the CSS by hand into
       the test; `testTheGridIsTheScreens` (320, 8, 12, 600, 36, 28, 32, 44, 28,
       108, 16, 24, 6); `testTheTimingsAreTheDecisions` (0.5, 1, 3, 5, 180, 600)
-- [ ] `Palette.dark` and `Palette.light` with the fields the blueprint lists,
+- [x] `Palette.dark` and `Palette.light` with the fields the blueprint lists,
       chosen by the SwiftUI colour scheme and never by a setting; `Typography`
       with the twelve roles; `Grid` (named so because `Metrics` already exists
       in `PanelView.swift` until Task 13); `Timing`
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 2: the status glyph and the ring
 
@@ -122,13 +122,13 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Sources/PresenceUI/Components/StatusGlyph.swift`, `RingView.swift`
 - Create: `presence/Tests/PresenceUITests/GlyphTests.swift`
 
-- [ ] `testEveryGlyphKindAndToneRenders` (seven kinds by six tones, 16 px,
+- [x] `testEveryGlyphKindAndToneRenders` (seven kinds by six tones, 16 px,
       stroke 1.25 dark and 1.5 light, a PNG sheet under `PRESENCE_SHOTS`),
       `testTheHollowCheckIsNeutral`, `testTheRingIsTwoSizes` (16 at 1.5, 28 at
       2), `testAnIndeterminateRingIsStaticUnderReduceMotionAndInRenderMode`
-- [ ] the views drawn with `Path`, the geometry from the CSS; the M23
+- [x] the views drawn with `Path`, the geometry from the CSS; the M23
       `Glyph.swift` stays untouched until Task 14
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 3: the action icons
 
@@ -136,13 +136,14 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Sources/PresenceUI/Components/IconShapes.swift`, `ActionButton.swift`
 - Create: `presence/Tests/PresenceUITests/IconTests.swift`
 
-- [ ] `testTheIconSheetRenders` (gdocs, md, branch, link, done, stop, down,
-      signin, signout, x, xmark, chevron at 16 px, stroke 1.25, round caps),
-      `testAnOffIconIsDimmedWithItsOwnTooltip` (0.38),
+- [x] `testTheIconSheetRenders` (gdocs, md, branch, link, done, stop, down,
+      signin, signout, x, xmark, chevron at 16 px, stroke 1.25, round caps;
+      the chevron is 12, which is `.row-chevron svg` and the screens file
+      winning on a pixel), `testAnOffIconIsDimmedWithItsOwnTooltip` (0.38),
       `testADoneIconIsGreenForOneSecondThenReturns`
-- [ ] `IconShape` as `Path` ports of the `IC` SVG paths; `ActionButton` 24 px,
+- [x] `IconShape` as `Path` ports of the `IC` SVG paths; `ActionButton` 24 px,
       radius 6, states live, off(tip), done
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 4: rows, sections, header, titles
 
@@ -151,7 +152,7 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Sources/PresenceCore/Titles.swift`
 - Create: `presence/Tests/PresenceCoreTests/TitlesTests.swift`, `presence/Tests/PresenceUITests/RowTests.swift`
 
-- [ ] `testTheSplitIsTheScreensRule` (26 whole, a tail of 14 or fewer with its
+- [x] `testTheSplitIsTheScreensRule` (26 whole, a tail of 14 or fewer with its
       space, `TT()` ported case by case over invented titles of 20, 40, 60 and
       80 characters), `testNoHeadUnderEightCharactersAtPanelWidth`,
       `testRowHeightsAreTheGrid` (32, 44, 28 by preference key),
@@ -159,8 +160,8 @@ every box is ticked and its commit is on the branch.
       `testASectionLabelIs28AndUppercaseWithTheCount`,
       `testTheHeaderIs36WithTheMarkTheNameAndTheAccount`,
       `testAGoneTitleIsStruckThrough`
-- [ ] the views in the five layouts, hover fill, busy hides icons
-- [ ] `make app-lint`, `make app-test`
+- [x] the views in the five layouts, hover fill, busy hides icons
+- [x] `make app-lint`, `make app-test`
 
 ### Task 5: tooltip, switch, confirm, buttons
 
@@ -168,13 +169,13 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Sources/PresenceUI/Components/TooltipLayer.swift`, `SwitchView.swift`, `ConfirmRow.swift`, `ButtonStyles.swift`
 - Create: `presence/Tests/PresenceUITests/ControlTests.swift`
 
-- [ ] `testATooltipAppearsAfterHalfASecondAndFlipsInsideThePanel`,
+- [x] `testATooltipAppearsAfterHalfASecondAndFlipsInsideThePanel`,
       `testATooltipCanBeForcedForARender`, `testTheSwitchIsDrawnNotToggle`,
       `testAConfirmRowRevertsAfterThreeSeconds`,
       `testTheOnlyTextButtonsAreOpenChatAndTheConfirmPair` (a scan over the
       component sources for `Button(` with a text label)
-- [ ] the views; the tooltip anchored by `anchorPreference`
-- [ ] `make app-lint`, `make app-test`
+- [x] the views; the tooltip anchored by `anchorPreference`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 6: the cards and the small pieces
 
@@ -182,7 +183,7 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Sources/PresenceUI/Components/HoldCard.swift`, `StuckCard.swift`, `LiveRow.swift`, `JobCard.swift`, `EmptyState.swift`, `SignedInBanner.swift`, `URLLine.swift`, `IconStrip.swift`, `HealthRows.swift`
 - Create: `presence/Tests/PresenceUITests/CardTests.swift`
 
-- [ ] `testTheHoldCardSaysOpenChatAndDismissAndNeverRelease`,
+- [x] `testTheHoldCardSaysOpenChatAndDismissAndNeverRelease`,
       `testTheStuckCardReasonFitsTwoLinesUnderEightyCharacters`,
       `testTheStuckCardDismissIsTheLastIcon`,
       `testTheLiveRowHasOneStopIconThatBecomesARingWhilePending`,
@@ -190,9 +191,9 @@ every box is ticked and its commit is on the branch.
       `testTheEmptyStateIsTheFirstRunText`, `testTheBannerLivesFiveSeconds`,
       `testTheStripLabelsAreDocNoteChatLink`,
       `testHealthRowsKeepTheirOrderOnEveryScreen`
-- [ ] the views as the blueprint draws them, each driven by a plain model
+- [x] the views as the blueprint draws them, each driven by a plain model
       struct and closures, no process and no file behind any of them
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 7: the scroll box
 
@@ -201,11 +202,11 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Tests/PresenceUITests/ScrollTests.swift`
 - Modify: `docs/v2/MEASURED.md`
 
-- [ ] measure first and write it into MEASURED.md: whether `ImageRenderer`
+- [x] measure first and write it into MEASURED.md: whether `ImageRenderer`
       draws a SwiftUI `ScrollView`; the render mode clips a plain stack if not
-- [ ] `testTheBoxCapsItsHeightAndScrollsInsideWithTheThumbAndTheFade` (over
+- [x] `testTheBoxCapsItsHeightAndScrollsInsideWithTheThumbAndTheFade` (over
       forty plain rows, by preference key), `testShowMoreAndShowLessToggleTheList`
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 8: the process check
 
@@ -213,12 +214,12 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Sources/PresenceCore/ProcessCheck.swift`
 - Create: `presence/Tests/PresenceCoreTests/ProcessCheckTests.swift`
 
-- [ ] `testAWaitIsStoppableOnlyWhenEveryCheckHolds`: a table over path not
+- [x] `testAWaitIsStoppableOnlyWhenEveryCheckHolds`: a table over path not
       gdoc, another uid, start time outside ten seconds before the event, a
       dead pid, an end already written, `via: chat`;
       `testPreviousCountsAsGdocAndPathsAreResolvedBeforeComparing`
-- [ ] the pure compare over injected facts (resolved path, uid, start time)
-- [ ] `make app-test`
+- [x] the pure compare over injected facts (resolved path, uid, start time)
+- [x] `make app-test`
 
 ### Task 9: the fold, NOW
 
@@ -228,7 +229,7 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Tests/PresenceCoreTests/NowTests.swift`, `Fixtures/now-order.jsonl`
 - Delete: `docs/backlog/now-keeps-a-dead-run-for-two-months.md`
 
-- [ ] `testNowOrdersHoldsStuckJobsThenWatchesOldestFirst` (scene e3),
+- [x] `testNowOrdersHoldsStuckJobsThenWatchesOldestFirst` (scene e3),
       `testAFailedWriteIsStuckUntilItsKeyClearsOrIsDismissed` (per document
       for the commands that name one; a failed publish clears when any later
       publish starts), `testAFailedReadIsNotStuck`, `testVerifiedFalseIsNeverStuck`,
@@ -236,9 +237,9 @@ every box is ticked and its commit is on the branch.
       `testAHoldCardTakesTheDocumentsLatestTitle`,
       `testDismissalsAreAnInputAndTheRowStays`,
       `testTheLastVerifiedWriteIsReportedForTheCheck`
-- [ ] the fold with dismissals and the clock injected; the stuck set is the
+- [x] the fold with dismissals and the clock injected; the stuck set is the
       literal list reply, propose, withdraw, annotate, publish, restyle, export
-- [ ] `make app-test`
+- [x] `make app-test`
 
 ### Task 10: the fold, live sessions
 
@@ -246,13 +247,13 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Sources/PresenceCore/LiveSession.swift`
 - Create: `presence/Tests/PresenceCoreTests/LiveSessionTests.swift`, `Fixtures/live-day.jsonl`
 
-- [ ] `testWaitsWithinThreeMinutesAreOneSession`,
+- [x] `testWaitsWithinThreeMinutesAreOneSession`,
       `testRepliedAndProposedCountTheDocumentsOkEnds`,
       `testTheLastWriteTimeIsTheQuietAnchor`, `testAFailedPollIsAFact`,
       `testTheSessionKeepsPidRunAndCallForStop`,
       `testNoSessionSaysWaitingForTheAuthor` (a scan over the words)
-- [ ] the session fold
-- [ ] `make app-test`
+- [x] the session fold
+- [x] `make app-test`
 
 ### Task 11: the fold, DOCUMENTS, TODAY, Yesterday
 
@@ -260,7 +261,7 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Sources/PresenceCore/Documents.swift`, `Days.swift`
 - Create: `presence/Tests/PresenceCoreTests/DocumentsTests.swift`, `DaysTests.swift`, `Fixtures/fourteen-days.jsonl`
 
-- [ ] `testDocumentsGroupByIdInsideFourteenDaysNewestFirst`,
+- [x] `testDocumentsGroupByIdInsideFourteenDaysNewestFirst`,
       `testAReadAloneMakesNoRow`, `testTheLabelCountsTheHorizonAndToday`,
       `testTheDefaultIsFiveWithShowMore`,
       `testTodayIsTheLocalDayNewestFirstDefaultEight`,
@@ -268,8 +269,8 @@ every box is ticked and its commit is on the branch.
       started, live stopped with its totals), `testReadsAreLeftOutOfToday`,
       `testYesterdayIsOneSummaryThatOpensInline`, `testNothingOlderAppears`,
       `testAMonthBoundaryIsNotADayBoundary`
-- [ ] the two folds
-- [ ] `make app-test`
+- [x] the two folds
+- [x] `make app-test`
 
 ### Task 12: the words
 
@@ -277,12 +278,12 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Sources/PresenceUI/Words.swift`
 - Create: `presence/Tests/PresenceUITests/WordsTests.swift`
 
-- [ ] `testTheVerbsAreTheSevenWords`, `testTimesAreClockYesterdayWeekdayThenDate`,
+- [x] `testTheVerbsAreTheSevenWords`, `testTimesAreClockYesterdayWeekdayThenDate`,
       `testDurationsAreMinutesAndHours`,
       `testViaIsFromTheTerminalOrFromDesktopChat`,
       `testVerifiedIsVerifiedOrNotReadBack`, `testNothingPredictsATime`
-- [ ] the functions; `Rows.swift` and its `PanelModel` stay until Task 13
-- [ ] `make app-lint`, `make app-test`
+- [x] the functions; `Rows.swift` and its `PanelModel` stay until Task 13
+- [x] `make app-lint`, `make app-test`
 
 ### Task 13: the panel model, the panel view, the scenes
 
@@ -292,14 +293,14 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Tests/PresenceUITests/Scenes/*.jsonl`, `Scenes.swift`
 - Modify: `presence/Tests/PresenceUITests/RenderTests.swift`
 
-- [ ] `UIState` and `Facts` are plain injected data covering every state a
+- [x] `UIState` and `Facts` are plain injected data covering every state a
       later task will produce: health facts (account, auth word, versions,
       mark, gdoc path found or not, hub set or not, extension), the sign-in
       phase with its URL and countdown, the pairing map, a pending stop, the
       remembered account, expanded sections, a forced tooltip, a copied icon,
       a confirm row, the strip seen, the banner. Tasks 16 to 24 only produce
       these values and never edit `PanelView`
-- [ ] one fixture per scene the v1 record can draw: r3, r3l, r4, r5, r6, r7,
+- [x] one fixture per scene the v1 record can draw: r3, r3l, r4, r5, r6, r7,
       r9, e1, e2, e3, e5, e8, e10; and the stated fallbacks: r1 draws an
       indeterminate ring and "Publishing" with no title, r2 draws the reason
       "Stopped at 09:05. The terminal that ran it has the reason.", r8 draws
@@ -307,13 +308,13 @@ every box is ticked and its commit is on the branch.
       strike-through, e9 draws from auth facts alone; r3's "from Claude Code"
       and r9's "stopped by you" draw their fallbacks ("from the terminal",
       "stopped") until Task 26; e4 is not built and the test says so
-- [ ] `testEveryScreenRendersInBothAppearances`: `<id>-dark.png`,
+- [x] `testEveryScreenRendersInBothAppearances`: `<id>-dark.png`,
       `<id>-light.png` at 2x plus `index.html` with each scene's title and
       caption under `PRESENCE_SHOTS`; `testTheMetricProbesHoldOnEveryScene`;
       `testThePanelNeverPassesSixHundred` (e1, e3);
       `testEveryReasonLineIsUnderEightyCharacters`; `testNowIsHiddenWhenEmpty`;
       `testHealthIsPinnedFirstWhenSignedOut`
-- [ ] `make app-lint`, `make app-test`, `make app`
+- [x] `make app-lint`, `make app-test`, `make app`
 
 ### Task 14: the menu bar image
 
@@ -323,15 +324,15 @@ every box is ticked and its commit is on the branch.
 - Modify: `presence/Tests/PresenceUITests/RenderTests.swift` (the bar per scene)
 - Create: `presence/Tests/PresenceUITests/BarTests.swift`
 
-- [ ] `testOneTemplateImagePerState` (live, stuck, hold, job, check, idle at
+- [x] `testOneTemplateImagePerState` (live, stuck, hold, job, check, idle at
       0.45), `testEveryBarPixelIsMonochrome`, `testThePriorityIsStuckHoldJobLiveIdle`,
       `testNotSignedInExpiredAndGdocNotFoundAreStuck`,
       `testNetworkTroubleDoesNotChangeTheIcon`,
       `testTheCheckLastsFiveSecondsAfterALiveVerifiedEndAndNeverForAReplay`,
       `testTheTooltipNamesTheStateAndNoDocument`, and the render test writes
       `<id>-bar-dark.png` and `<id>-bar-light.png` per scene
-- [ ] `variableLength`, the composed images, the five-second timer
-- [ ] `make app-lint`, `make app-test`, `make app`
+- [x] `variableLength`, the composed images, the five-second timer
+- [x] `make app-lint`, `make app-test`, `make app`
 
 ### Task 15: the app library and the runner
 
@@ -341,14 +342,14 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Tests/PresenceAppTests/RunnerTests.swift`, `Fixtures/fake-gdoc.sh` (mode 755)
 - Modify: `presence/Tests/PresenceCoreTests/SourceRulesTests.swift` (`Process` only in `Runner.swift`, the argv enum closed at six)
 
-- [ ] `testGdocIsResolvedAtLocalBinThenBesideTheBundleNeverFromPATH`,
+- [x] `testGdocIsResolvedAtLocalBinThenBesideTheBundleNeverFromPATH`,
       `testTheArgvSetIsExactlyTheSix`, `testTheChildEnvironmentIsTheFourVariables`
       (with `GDOC_CONFIG_DIR` set in the test's own environment and absent in
       the child's), `testStdinIsTheNullDevice`, `testOneChildPerKindAtATime`,
       `testTheEnvelopeIsDecodedStrictly`, `testATimeoutTerminatesTheChild`,
       over `fake-gdoc.sh`; `testProcessAppearsOnlyInTheRunner`
-- [ ] the runner; the "gdoc not found" fact with the path tried, for HEALTH
-- [ ] `make app-lint`, `make app-test`, `make app`
+- [x] the runner; the "gdoc not found" fact with the path tried, for HEALTH
+- [x] `make app-lint`, `make app-test`, `make app`
 
 ### Task 16: health facts and the polls
 
@@ -356,16 +357,16 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Sources/PresenceCore/HealthFacts.swift`, `presence/Sources/PresenceApp/HealthPoller.swift`
 - Create: `presence/Tests/PresenceCoreTests/HealthFactsTests.swift`, `presence/Tests/PresenceAppTests/HealthPollerTests.swift`
 
-- [ ] `testHelpJSONGivesTheMarkTheVersionAndTheLatest`,
+- [x] `testHelpJSONGivesTheMarkTheVersionAndTheLatest`,
       `testAuthStatusGivesTheThreeWordsAndTheEmail`,
       `testATokenWithNoAccountReadsSignedInAccountNotRead`,
       `testTheExpectedDomainIsAHintThatBlocksNothing`,
       `testAccountChangedIsTheAppsOwnMemory`,
       `testThePollIsOnOpenAtMostOnceAMinuteAndEveryTenMinutesWhileLive`,
       `testHelpIsAskedOnOpenAndNeverOnATimer`
-- [ ] the parsers in core, the schedule in the app library, the facts fed
+- [x] the parsers in core, the schedule in the app library, the facts fed
       into `Facts`
-- [ ] `make app-test`
+- [x] `make app-test`
 
 ### Task 17: the opener, the hub index, sign in
 
@@ -375,7 +376,7 @@ every box is ticked and its commit is on the branch.
 - Modify: `presence/Tests/PresenceCoreTests/SourceRulesTests.swift` (`NSWorkspace` and `NSPasteboard` only in `Opener.swift`, schemes https and obsidian, hosts docs.google.com and accounts.google.com)
 - Modify: `docs/v2/MEASURED.md`
 
-- [ ] `testTheDocsURLIsBuiltFromAValidIdOnly`, `testCopyLinkIsThePlainURL`,
+- [x] `testTheDocsURLIsBuiltFromAValidIdOnly`, `testCopyLinkIsThePlainURL`,
       `testNoTitleEverReachesAURLOrThePasteboard`,
       `testTheHubIndexReadsOnlyTheFrontMattersGdocBlock`,
       `testTheIndexRescansOnAFileEvent`,
@@ -389,12 +390,12 @@ every box is ticked and its commit is on the branch.
       from `login.go:25`; http, a lookalike host, userinfo, `javascript:` and
       the `/v2/` path each refused), `testTheCountdownIs180Seconds`,
       `testCancelTerminatesTheChild`, `testTheBannerFollowsAnOkEnvelope`
-- [ ] the opener, the index with FSEvents and a debounce, the Obsidian URL,
+- [x] the opener, the index with FSEvents and a debounce, the Obsidian URL,
       the sign-in flow; measured and written into MEASURED.md: whether
       LaunchServices lists a `claude://` handler on this machine (read with
       `lsregister -dump`, no launch), so Continue with Claude's prefill stays
       out until it does
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 18: stop live
 
@@ -404,13 +405,13 @@ every box is ticked and its commit is on the branch.
 - Modify: `presence/Tests/PresenceCoreTests/SourceRulesTests.swift` (`kill(` with a signal only in `Stopper.swift`; `Liveness.swift`'s `kill(pid, 0)` exempt by its zero)
 - Modify: `docs/v2/MEASURED.md`
 
-- [ ] `testStopSendsOneSIGINTOnlyAfterTheProcessCheck` (a fake signaller),
+- [x] `testStopSendsOneSIGINTOnlyAfterTheProcessCheck` (a fake signaller),
       `testStopNeverSendsAnotherSignal`, `testAFailedCheckGreysStopWithItsTooltip`,
       `testTheCardShowsARingUntilTheEndArrives`
-- [ ] measured and written into MEASURED.md: what `proc_pidpath` returns for
+- [x] measured and written into MEASURED.md: what `proc_pidpath` returns for
       a running `sleep` started from a file that is then renamed to
       `.previous`, as `gdoc update` renames the binary
-- [ ] `make app-test`
+- [x] `make app-test`
 
 ### Task 19: the dismissals store and the update action
 
@@ -418,13 +419,13 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Sources/PresenceApp/Preferences.swift`, `UpdateAction.swift`
 - Create: `presence/Tests/PresenceAppTests/PreferencesTests.swift`, `UpdateActionTests.swift`
 
-- [ ] `testDismissalsAreKeyedByRunAndCallOrHoldId`,
+- [x] `testDismissalsAreKeyedByRunAndCallOrHoldId`,
       `testDismissalsArePrunedPastSixtyTwoDays`,
       `testOnlyTheSixKeysPersist` (dismissed, hubPath, stripSeen,
       loginItem.choice, relaunch, lastAccount); `testUpdateNeverPassesAFlag`,
       `testTheGdocRowShowsTheRingUntilTheEndThenTheNewVersion`,
       `testInstallExtensionIsUpdateDesktop`
-- [ ] `make app-test`
+- [x] `make app-test`
 
 ### Task 20: the relaunch
 
@@ -433,15 +434,15 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Tests/PresenceCoreTests/RelaunchPolicyTests.swift`
 - Modify: `presence/Tests/PresenceCoreTests/SourceRulesTests.swift` (`openApplication` only in `Relauncher.swift`)
 
-- [ ] `testRelaunchHappensOncePerOnDiskVersionInTenMinutes`,
+- [x] `testRelaunchHappensOncePerOnDiskVersionInTenMinutes`,
       `testNoRelaunchWhileAnUpdateRunsOrAChildLives`,
       `testNoRelaunchIntoAnotherIdentifierOrAnInvalidSignature`,
       `testGoneNeverRelaunches`, `testAFailedOpenLeavesTheReopenRow`,
       `testANewInstanceWaitsForItsLauncherThenASecondInstanceQuits`
-- [ ] the policy as a pure function, the executor with
+- [x] the policy as a pure function, the executor with
       `createsNewApplicationInstance`, `activates = false`, the
       `--relaunched-by` argument, the three guards
-- [ ] `make app-lint`, `make app-test`, `make app`
+- [x] `make app-lint`, `make app-test`, `make app`
 
 ### Task 21: launch at login
 
@@ -450,73 +451,85 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Tests/PresenceAppTests/LoginItemTests.swift`
 - Modify: `presence/Tests/PresenceCoreTests/SourceRulesTests.swift` (`SMAppService` only in `LoginItem.swift`)
 
-- [ ] `testTheFirstEverRunRegistersOnceAndRecordsOn`,
+- [x] `testTheFirstEverRunRegistersOnceAndRecordsOn`,
       `testAPersonsOffIsNeverOverridden`, `testARelaunchNeverRegisters`,
       `testRequiresApprovalShowsTheRowAndIsNotRetried`, over an injected
       service
-- [ ] `make app-lint`, `make app-test`, `make app`
+- [x] `make app-lint`, `make app-test`, `make app`
 
 ### Task 22: wiring the shell
 
 **Files:**
-- Modify: `presence/Sources/Presence/main.swift`, `AppState.swift`, `StatusItem.swift`, `Panel.swift`
+- Modify: `presence/Sources/Presence/main.swift`, `Package.swift`,
+  `presence/Sources/PresenceApp/HealthPoller.swift`
+- Create: `presence/Sources/PresenceApp/Session.swift`, `SessionActions.swift`,
+  `Places.swift`, `BundleWatch.swift`,
+  `presence/Tests/PresenceAppTests/SessionTests.swift`
+- Delete: `presence/Sources/Presence/AppState.swift`, whose holding moved into
+  the session, where a test can reach it. `StatusItem.swift` and `Panel.swift`
+  needed no change: both were already wiring.
 
-- [ ] `testTheShellOnlyWiresAndHoldsNoLogic` (a scan: the executable target's
+- [x] `testTheShellOnlyWiresAndHoldsNoLogic` (a scan: the executable target's
       files import `PresenceApp` and `PresenceUI` and define no function over
       events, processes or URLs)
-- [ ] the shell feeds `Facts` and `UIState` from the pollers, the tail, the
+- [x] the shell feeds `Facts` and `UIState` from the pollers, the tail, the
       stores and the actions, and nothing else
-- [ ] `make app-lint`, `make app-test`, `make app`
+- [x] `make app-lint`, `make app-test`, `make app`
 
 ### Task 23: the reviewer's pass, first round
 
 **Files:**
 - Modify: whatever the findings name under `presence/`
 
-- [ ] render every scene (`PRESENCE_SHOTS=... make app-test`), then run the
+- [x] render every scene (`PRESENCE_SHOTS=... make app-test`), then run the
       design principles' checklist over `index.html` as a reviewer who drew
       nothing (a subagent), and fix every finding in this task before anything
       is shown; the findings and fixes are listed in the commit message
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 24: the words
 
 **Files:**
 - Modify: `docs/guide/presence.md`, `CLAUDE.md`
 
-- [ ] `docs/guide/presence.md` gains the panel: each section, each action,
+- [x] `docs/guide/presence.md` gains the panel: each section, each action,
       Sign in and Sign out, Launch at login, the six argv lists the app runs
       and what it never does, that `help --json` on open is the daily check
       gdoc already makes, the hub folder, the dismissal, what Stop live can
       and cannot stop; CLAUDE.md's presence invariant names the six argv lists
       and the hold's sign-in rule in place of words cut elsewhere, the file at
       or under 300; `TestTheTaskMapNamesFilesThatExist` green
-- [ ] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`
+- [x] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`
 
 ### Task 25: after M24b merged, the fields reach the scenes
 
 **Files:**
 - Modify: `presence/Sources/PresenceCore/Fold.swift`, `Now.swift`, `LiveSession.swift`, `presence/Sources/PresenceUI/Words.swift`, `JobCard.swift`, `StuckCard.swift`, `PanelModel.swift`, the scene fixtures, `RenderTests.swift`
 
-- [ ] this task starts only after `main` with M24b is merged into this branch
+- [x] this task starts only after `main` with M24b is merged into this branch
       and `make app-test` is green on the merge; it says so in its commit
-- [ ] `testADroppedHoldEndsTheCard`, `testAPublishedRowTakesItsIdFromMade`,
+- [x] `testADroppedHoldEndsTheCard`, `testAPublishedRowTakesItsIdFromMade`,
       `testTheStuckReasonIsTheCodesWordsAndTheLine`,
       `testStepEventsDriveTheJobCardAndTheBarRing`,
       `testViaCodeReadsFromClaudeCode`, `testAnInterruptedWaitIsLiveStoppedByYou`;
       scenes r1, r2, r3, r8, r9, e6 and e9 re-fixtured on the new fields and
       re-rendered; the reviewer's pass run again over the changed scenes
-- [ ] `make app-lint`, `make app-test`, `make app`
+- [x] `make app-lint`, `make app-test`, `make app`
 
 ### Task 26: the acceptance rows and the close
 
 **Files:**
 - Modify: `docs/plans/2026-10-17-gdoc-v2-m24-the-panel-spec.md`, `docs/v2/PLAN.md`
 
-- [ ] the Swift rows of the spec's acceptance table under a heading "M24a",
+- [x] the Swift rows of the spec's acceptance table under a heading "M24a",
       pass or the test that says otherwise
-- [ ] the M24a half of the M24 row in `docs/v2/PLAN.md`'s Done table
-- [ ] this plan and the spec move to `docs/plans/completed/`
+- [x] the M24a half of the M24 row in `docs/v2/PLAN.md`'s Done table
+- [x] this plan and the spec move to `docs/plans/completed/`
+
+One row was added to those acceptance rows afterwards, on the evening of
+2026-10-17: the reviewer's pass ran once more over the renders of the finished
+branch, and the three findings it rated blocking are closed by Tasks 1, 2 and 4
+of `docs/plans/completed/2026-10-17-gdoc-v2-m24a-second-pass.md`.
 
 ## Post-completion
 

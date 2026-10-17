@@ -4,9 +4,11 @@
 // same action, because there is one surface: a right-click opens the same
 // panel a left-click does, and there is no second menu anywhere.
 //
-// An idle app still keeps its item, with no image and the mark's own width,
-// so the panel stays reachable when nothing is happening. The item is the
-// only thing the app shows when it is not open.
+// The item is of a variable length, because the image is not square: four of
+// the six states are the mark with a badge beside it. An idle app still keeps
+// its item, with the mark at 0.45, so the panel stays reachable when nothing
+// is happening. The item is the only thing the app shows when it is not
+// open.
 
 import AppKit
 import PresenceUI
@@ -17,7 +19,7 @@ final class StatusItem: NSObject {
   private let onClick: () -> Void
 
   init(onClick: @escaping () -> Void) {
-    self.item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+    self.item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     self.onClick = onClick
     super.init()
 
@@ -31,13 +33,13 @@ final class StatusItem: NSObject {
   /// Where the panel hangs from.
   var button: NSStatusBarButton? { item.button }
 
-  /// The glyph for a state, and the tooltip under it.
-  func show(_ state: GlyphState) {
+  /// The image for a state, and the tooltip under it. The dimming of idle is
+  /// inside the image, so nothing here touches the button's own opacity. A
+  /// job's ring is drawn at the step the run is on, where it says one.
+  func show(_ state: BarState, progress: Double? = nil) {
     guard let button = item.button else { return }
-    button.image = Glyph.image(for: state)
-    button.title = Glyph.image(for: state) == nil ? Glyph.mark : ""
-    button.alphaValue = state == .idle ? 0.45 : 1
-    button.toolTip = Glyph.tooltip(for: state)
+    button.image = BarImage.image(for: state, progress: progress)
+    button.toolTip = BarImage.tooltip(for: state)
   }
 
   @objc private func clicked() {

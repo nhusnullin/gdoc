@@ -1,188 +1,298 @@
 // The panel, drawn.
 //
-// Plain native presentation in this milestone: the system's own background,
-// the system's own text colours, one accent nowhere. The two palettes as
-// drawn in the design files are M24, after Nail has used this one.
+// `.panel` in docs/design/2026-10-17-presence-screens-v3.html: 320 pt wide,
+// 8 pt of padding, a 12 pt corner, a half-pixel edge and two shadows. Inside
+// it the header, then the sections in the order the model put them in.
 //
-// It draws the model and decides nothing. Every word it shows came out of
-// PanelModel, so a row that reads wrong is a failing test in RenderTests and
-// never a screenshot somebody has to squint at.
+// It draws the model and decides nothing. Every word on the screen came out
+// of PanelModel and every press leaves through PanelActions, so a row that
+// reads wrong is a failing test over a value and never a screenshot somebody
+// has to squint at. That is also why Tasks 16 to 24 add no code here: they
+// produce facts and perform actions, and this file already draws both.
+//
+// The panel never grows past 600 pt. A section a person opens scrolls
+// inside itself, which is the decision table's rule, and everything under
+// the header sits in a box of the same kind: four sections of an ordinary
+// day are taller than 600 pt, and a panel that clipped them would lose
+// HEALTH with nothing saying so. The box draws its thumb and its fade only
+// when there is more under them.
+//
+// RenderTests draws every scene of the screens file through this view, in
+// both appearances, and reads its sizes back through the metric probes.
 
 import SwiftUI
 
-/// The sizes the panel is laid out on: the 4/8 pt grid of the design
-/// principles, written out once so no view holds a number of its own.
-enum Metrics {
-  static let width: CGFloat = 320
-  static let inset: CGFloat = 8
-  static let radius: CGFloat = 12
-  static let row: CGFloat = 44
-  static let thinRow: CGFloat = 28
-  static let label: CGFloat = 11
-}
-
-/// NOW, TODAY, the versions and Quit.
+/// The whole panel.
 public struct PanelView: View {
-  private let model: PanelModel
-  private let onQuit: (() -> Void)?
+  public let model: PanelModel
+  public let actions: PanelActions
 
-  public init(model: PanelModel, onQuit: (() -> Void)? = nil) {
+  @Environment(\.colorScheme) private var scheme
+  @Environment(\.renderMode) private var renderMode
+
+  public init(model: PanelModel, actions: PanelActions = PanelActions()) {
     self.model = model
-    self.onQuit = onQuit
+    self.actions = actions
+  }
+
+  /// What is left for the sections once the header, the gap under it and
+  /// the panel's own padding have taken theirs.
+  ///
+  /// Every part of the panel is in this sum, because the cap is a frame with
+  /// a clip under it: a body that left the header's gap out would read 600
+  /// on the probe and lose 4 pt of the bottom edge, its corner and the
+  /// scroll fade off the screen.
+  public static var bodyHeight: CGFloat {
+    Grid.panelMaxHeight - Grid.headerHeight - Grid.headerGap - 2 * Grid.unit
   }
 
   public var body: some View {
-    VStack(alignment: .leading, spacing: Metrics.inset) {
-      header
+    let palette = Palette.of(scheme)
+    return VStack(alignment: .leading, spacing: 0) {
+      PanelHeader(mark: model.mark, account: model.account)
 
-      if let notice = model.notice {
-        RowView(row: notice)
-      }
-
-      if model.showsNow {
-        RowSection(label: "NOW", rows: model.now)
-      }
-
-      if model.today.isEmpty {
-        Text("Nothing ran today.")
-          .font(.system(size: 12))
-          .foregroundStyle(.secondary)
-      } else {
-        RowSection(label: "TODAY", rows: model.today)
-      }
-
-      Divider()
-
-      VStack(alignment: .leading, spacing: 0) {
-        ForEach(Array(model.versions.enumerated()), id: \.offset) { _, row in
-          RowView(row: row)
+      ScrollBox(height: Self.bodyHeight) {
+        VStack(alignment: .leading, spacing: 0) {
+          if let notice = model.notice {
+            RowView(.plain, glyph: .exclamation, tone: .hold, title: notice)
+              .metricProbe("notice")
+          }
+          if let empty = model.empty {
+            EmptyState(mark: model.mark, words: empty)
+          }
+          ForEach(Array(model.sections.enumerated()), id: \.element.id) { index, section in
+            SectionView(section.label, count: count(of: section), isFirst: isFirst(index)) {
+              body(of: section)
+            }
+          }
         }
-      }
-
-      if let onQuit {
-        Divider()
-        Button(action: onQuit) {
-          Text("Quit")
-            .font(.system(size: 12))
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .frame(height: Metrics.thinRow)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
       }
     }
-    .padding(Metrics.inset)
-    .frame(width: Metrics.width, alignment: .leading)
-    .background(Color(nsColor: .windowBackgroundColor))
+    .padding(Grid.unit)
+    .frame(width: Grid.panelWidth, alignment: .leading)
+    .background(
+      RoundedRectangle(cornerRadius: Grid.panelRadius, style: .continuous)
+        .fill(palette.surface.color)
+    )
+    .overlay(
+      RoundedRectangle(cornerRadius: Grid.panelRadius, style: .continuous)
+        .strokeBorder(palette.panelEdge.color, lineWidth: Grid.hairline)
+    )
+    .shadows(palette.panelShadows)
+    // A whole render is the reviewer's copy, where nothing may be hidden.
+    // Every other drawing is capped, which is what the person sees.
+    .frame(
+      maxHeight: renderMode == .whole ? .infinity : Grid.panelMaxHeight, alignment: .top
+    )
+    .clipped()
+    .tooltipLayer()
+    .metricProbe("panel")
   }
 
-  private var header: some View {
-    HStack(spacing: 6) {
-      Text("gdoc")
-        .font(.system(size: 13, weight: .semibold))
-      Spacer()
+  /// `.section:first-of-type`: the one under the header carries no hairline.
+  /// The notice and the empty state stand above every section, so a panel
+  /// with either of them has no first section at all.
+  private func isFirst(_ index: Int) -> Bool {
+    index == 0 && model.notice == nil && model.empty == nil
+  }
+
+  private func count(of section: PanelSection) -> String? {
+    if case .documents(let documents) = section { return documents.count }
+    return nil
+  }
+
+  @ViewBuilder
+  private func body(of section: PanelSection) -> some View {
+    switch section {
+    case .now(let items):
+      NowList(items: items, forced: model.forcedTooltip, actions: actions)
+    case .documents(let documents):
+      DocumentsList(model: documents, forced: model.forcedTooltip, actions: actions)
+    case .today(let log):
+      LogList(model: log, list: .today, actions: actions)
+    case .yesterday(let yesterday):
+      YesterdayList(model: yesterday, actions: actions)
+    case .health(let rows):
+      HealthList(rows: rows, url: model.signInURL, forced: model.forcedTooltip, actions: actions)
+    case .signedIn(let banner):
+      SignedInBanner(account: banner.account) { actions.perform(.signOut, nil) }
     }
-    .frame(height: Metrics.thinRow)
   }
 }
 
-/// One section: its label, then its rows.
-private struct RowSection: View {
-  let label: String
-  let rows: [Row]
+/// NOW: the cards and the live rows, in the order the fold put them in.
+struct NowList: View {
+  let items: [NowItem]
+  let forced: String?
+  let actions: PanelActions
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 2) {
-      Text(label)
-        .font(.system(size: Metrics.label, weight: .semibold))
-        .foregroundStyle(.tertiary)
-      ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-        RowView(row: row)
-      }
-    }
-  }
-}
-
-/// What a NOW row is, in the same four shapes the menu bar uses, so the panel
-/// and the glyph never say different things about the same run. The other
-/// sections keep the space and draw nothing in it, so every leading word in
-/// the panel starts at the same place.
-private struct KindGlyph: View {
-  let kind: RowKind
-
-  var body: some View {
-    Group {
-      switch kind {
-      case .hold: Image(systemName: "pause.circle")
-      case .running: Image(systemName: "circle.dotted")
-      case .watching: Text(Glyph.mark)
-      case .stopped: Image(systemName: "circle.slash")
-      case .done, .version, .notice: Color.clear
-      }
-    }
-    .font(.system(size: 11))
-    .foregroundStyle(.secondary)
-    .frame(width: 13, alignment: .leading)
-  }
-}
-
-/// One row: a leading word, a sentence under it, a value on the right, and
-/// the one symbol a finished row carries.
-private struct RowView: View {
-  let row: Row
-
-  var body: some View {
-    HStack(alignment: .firstTextBaseline, spacing: 6) {
-      KindGlyph(kind: row.kind)
-      VStack(alignment: .leading, spacing: 1) {
-        Text(row.leading)
-          .font(.system(size: 12, weight: weight))
-          .foregroundStyle(.primary)
-          .lineLimit(1)
-          .truncationMode(.middle)
-        if let detail = row.detail {
-          Text(detail)
-            .font(.system(size: 11))
-            .foregroundStyle(.secondary)
-            .lineLimit(1)
-            .truncationMode(.middle)
+    VStack(alignment: .leading, spacing: 0) {
+      ForEach(items) { item in
+        switch item {
+        case .hold(let id, let card, let asking):
+          HoldCard(
+            model: card, asking: asking,
+            onOpenChat: { actions.perform(.openChat, id) },
+            onDismiss: { actions.perform(.dismiss, id) },
+            onConfirm: { actions.perform(.dismiss, id) },
+            onKeep: { actions.perform(.keep, id) })
+        case .stuck(_, let card, let icons):
+          StuckCard(model: card, actions: icons.map { $0.icon(forced: forced, actions) })
+        case .job(_, let card):
+          JobCard(model: card)
+        case .live(_, let row, let stop, let pending):
+          LiveRow(
+            model: row, stop: stop?.state, pending: pending,
+            onStop: { actions.perform(.stopLive, stop?.target) })
         }
       }
-      Spacer(minLength: 6)
-      if let symbol {
-        Image(systemName: symbol)
-          .font(.system(size: 11))
-          .foregroundStyle(.secondary)
-      }
-      if let value = row.value {
-        Text(value)
-          .font(.system(size: 11).monospacedDigit())
-          .foregroundStyle(.secondary)
-      }
-    }
-    .frame(minHeight: height, alignment: .leading)
-  }
-
-  private var weight: Font.Weight {
-    switch row.kind {
-    case .hold, .notice: return .semibold
-    default: return .regular
     }
   }
+}
 
-  private var height: CGFloat {
-    row.detail == nil ? Metrics.thinRow : Metrics.row * 0.7
+/// DOCUMENTS: the rows, the strip under the first of them, and Show more.
+struct DocumentsList: View {
+  let model: DocumentsSectionModel
+  let forced: String?
+  let actions: PanelActions
+
+  var body: some View {
+    if let empty = model.empty {
+      QuietLine(empty)
+    } else {
+      ShowMoreList(
+        model.rows, collapsed: model.collapsed, isOpen: model.isOpen,
+        toggle: { actions.toggle(.documents) }
+      ) { row in
+        VStack(alignment: .leading, spacing: 0) {
+          RowView(
+            .doc, glyph: row.glyph, tone: row.tone, title: row.title, sub: row.sub,
+            gone: row.gone,
+            trailing: {
+              HStack(spacing: Grid.actionGap) {
+                ForEach(row.actions) { action in
+                  ActionButton(
+                    action.icon, tip: action.tip, state: action.state,
+                    forcedTooltip: action.forcedTooltip || forced == action.id,
+                    action: { actions.perform(action.kind, action.target) })
+                }
+              }
+            })
+          if model.showsStrip, row.id == model.rows.first?.id {
+            IconStrip()
+          }
+        }
+      }
+    }
+  }
+}
+
+/// TODAY: the log, newest first, with the rest behind Show more.
+struct LogList: View {
+  let model: LogSectionModel
+  let list: PanelList
+  let actions: PanelActions
+
+  var body: some View {
+    if let empty = model.empty {
+      QuietLine(empty)
+    } else {
+      ShowMoreList(
+        model.rows, collapsed: model.collapsed, isOpen: model.isOpen,
+        toggle: { actions.toggle(list) }
+      ) { row in
+        RowView(
+          row.sub == nil ? .plain : .two, glyph: row.glyph, tone: row.tone, title: row.title,
+          value: row.value, sub: row.sub)
+      }
+    }
+  }
+}
+
+/// Yesterday: one chevron row that opens in place.
+struct YesterdayList: View {
+  let model: YesterdayModel
+  let actions: PanelActions
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      ChevronRow(model.summary, isOpen: model.isOpen) { actions.toggle(.yesterday) }
+      if model.isOpen {
+        ForEach(model.rows) { row in
+          RowView(
+            row.sub == nil ? .plain : .two, glyph: row.glyph, tone: row.tone,
+            title: row.title, value: row.value, sub: row.sub)
+        }
+      }
+    }
+  }
+}
+
+/// HEALTH: the rows in their one order, and the sign-in line under the
+/// Account row while a sign-in is in flight.
+struct HealthList: View {
+  let rows: [HealthRowModel]
+  let url: String?
+  let forced: String?
+  let actions: PanelActions
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      ForEach(rows) { row in
+        if let question = row.question {
+          // The consequence is a line of its own rather than the row's
+          // sub-line: the pair of buttons takes the right-hand column, and
+          // a sentence squeezed into what is left reads as half a sentence.
+          ConfirmRow(
+            title: question.title, danger: question.danger,
+            onConfirm: { actions.perform(.signOut, nil) },
+            onKeep: { actions.perform(.keep, nil) })
+          QuietLine(question.consequence)
+          if let quiet = row.quiet { QuietLine(quiet) }
+        } else {
+          HealthRows(rows: [health(row)])
+        }
+        if row.kind == .account, let url {
+          URLLine(url: url)
+        }
+      }
+    }
   }
 
-  /// The symbols, from the facts the record carried. A hollow check is
-  /// `verified: false`, which the design principles say is not a failure.
-  private var symbol: String? {
-    switch row.mark {
-    case .none: return nil
-    case .ok: return "checkmark"
-    case .failed: return "exclamationmark.triangle"
-    case .verified: return "checkmark.seal.fill"
-    case .unverified: return "checkmark.seal"
+  private func health(_ row: HealthRowModel) -> HealthRow {
+    HealthRow(
+      row.kind, value: row.value, glyph: row.glyph, tone: row.tone, waiting: row.waiting,
+      quiet: row.quiet, actions: row.actions.map { $0.icon(forced: forced, actions) },
+      isOn: row.isOn,
+      onToggle: { actions.perform(.toggleLoginItem, nil) },
+      onSelect: row.select.map { kind in { actions.perform(kind, nil) } })
+  }
+}
+
+extension ActionModel {
+  /// The same action with its closure, which is the one thing the model
+  /// cannot carry.
+  func icon(forced: String?, _ actions: PanelActions) -> IconAction {
+    IconAction(
+      icon, tip: tip, state: state, forcedTooltip: forcedTooltip || forced == id,
+      perform: { actions.perform(kind, target) })
+  }
+}
+
+extension View {
+  /// A CSS shadow stack, in the order the stylesheet writes it.
+  ///
+  /// The tree is flattened first. SwiftUI's `shadow` is not a box-shadow: it
+  /// reaches every layer under it, so a panel that asked for its two shadows
+  /// without compositing drew one under every row, every glyph and every
+  /// line of text, which on white is a grey smear around each word. The
+  /// screens file puts no shadow inside `.panel`.
+  func shadows(_ stack: [Shadow]) -> some View {
+    stack.reduce(AnyView(self.compositingGroup())) { view, shadow in
+      AnyView(
+        view.shadow(
+          color: shadow.swatch.color, radius: shadow.radius, x: shadow.x, y: shadow.y))
     }
   }
 }

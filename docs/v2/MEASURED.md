@@ -990,6 +990,141 @@ Claude Code release that stops setting the variable makes every run a terminal
 run again, which is the state before M24b and costs the panel one word, not a
 wrong one. Nothing gdoc does depends on the answer: the variable decides one
 field of one line of a file the binary never reads back.
+## What ImageRenderer draws for a SwiftUI ScrollView
+
+Measured 2026-10-17 while building the panel's scroll box (M24a Task 7). The
+panel is capped at 600 pt and an opened section scrolls inside itself, so the
+box is a `ScrollView`; the panel's tests and its scene renders all go through
+`ImageRenderer`. The question is whether a rendered panel shows the rows inside
+such a box at all.
+
+How it was taken. A throwaway `XCTestCase` in `presence/Tests/PresenceUITests`
+built forty rows of `Text` in a `VStack`, each 200 by 20 pt over a red
+background, and drew them four ways through `ImageRenderer` at scale 1 in the
+dark appearance: in a `ScrollView` with no height given, in a plain stack with
+no height given, in a `ScrollView` framed at 200 by 236, and in a plain stack
+framed at 200 by 236 with `.clipped()`. A fifth draw put a single row in the
+framed `ScrollView`. Each image was read back as an `NSBitmapImageRep` and its
+pixels with an alpha over 0.05 counted. The file was deleted after the reading.
+
+| What was drawn | Image | Inked pixels |
+|---|---|---|
+| `ScrollView` of forty rows, width 200, no height | 200x1600 | 0 |
+| the same forty rows in a plain `VStack` | 200x1600 | 160,000, which is every pixel of the window counted |
+| `ScrollView` of forty rows, framed 200x236 | 200x236 | 0 |
+| `ScrollView` of one row, framed 200x236 | 200x236 | 0 |
+| forty rows framed 200x236 and clipped | 200x236 | 47,200, which is every pixel |
+
+At scale 2 the same two 236 pt boxes came back as a 23,910-byte PNG for the
+stack and a 3,467-byte PNG for the scroller.
+
+**`ImageRenderer` lays a `ScrollView` out and draws it empty.** The box takes
+the size it should, and its content takes the content's size, so every
+measurement through a preference key still holds; nothing inside it reaches the
+canvas. One row is as empty as forty, so this is not clipping or a scroll
+offset: the renderer does not draw the scroller's content at all.
+
+So the scroll box carries a drawn mode. `ScrollBox` reads
+`\.isRendering` from the environment, and with it on it clips a plain stack
+with `.fixedSize` instead of scrolling. The scenes and every render test turn
+it on with one `rendering()` at the top of the tree; the app never does, so
+what a person sees is a real scroller. `ScrollTests`
+`testTheBoxCapsItsHeightAndScrollsInsideWithTheThumbAndTheFade` asserts the
+ScrollView's ink is zero, so the day the renderer learns to draw one, that test
+says so and the drawn mode can go.
+
+Recheck on a macOS or Xcode upgrade, by that one assertion: it fails when the
+answer changes.
+
+## What LaunchServices says about a `claude://` handler
+
+2026-10-17, M24a Task 17. The panel's "Continue with Claude" is one
+activation of Claude Desktop and no URL, because the spec holds the prefill
+back until a scheme is measured. This is the measurement, taken by reading the
+LaunchServices database and launching nothing:
+
+```
+/System/Library/Frameworks/CoreServices.framework/Frameworks/\
+LaunchServices.framework/Support/lsregister -dump
+```
+
+macOS 26.3.1 (25D771280a), Claude 2.42304.0 at `/Applications/Claude.app`,
+bundle identifier `com.anthropic.claudefordesktop`.
+
+| What | Answer |
+|---|---|
+| Is a `claude:` scheme claimed? | yes, by Claude.app: `claimed schemes: claude:, msauth.com.anthropic.claudefordesktop:` |
+| Its rank and role | `rank: Default`, `roles: Viewer (0000000000000002)`, `flags: url-type` |
+| Its bindings | one, `claude:` |
+| What the bundle's own plist says | `CFBundleURLTypes` holds two entries, `Claude` with scheme `claude` and `MSAL` with scheme `msauth.com.anthropic.claudefordesktop` |
+| Does anything say what a `claude:` URL means? | no: the plist names the scheme and nothing else, and no host, path or parameter of it is documented |
+
+**A handler exists and a grammar does not.** The scheme is registered, so a
+`claude://...` URL would reach Claude Desktop rather than nothing. What it
+would then do is unknown: nothing in the bundle, and nothing published, says
+which host or path opens a chat, let alone one with text already in it. A URL
+built on a guess is a URL that may do something else on the next release.
+
+So "Continue with Claude" stays one activation: `NSRunningApplication.activate`
+where it is up, and `NSWorkspace.open` on its bundle where it is not, in
+`presence/Sources/PresenceApp/Opener.swift`, with no argument, no file and no
+URL. `OpenerTests.testContinueWithClaudeOnlyActivatesTheApp` holds that, and
+`SourceRulesTests.testTheOnlySchemesAndHostsAreGooglesAndTheVaults` holds that
+`claude` is not one of the two schemes the sources may name.
+
+Recheck when Anthropic documents the scheme, or when a release note names a
+URL that opens a chat. The prefill is then one decision entry and one line in
+the opener, and the scheme becomes the third the source scan admits.
+
+## What proc_pidpath says after the binary is renamed
+
+Measured 2026-10-17 while building the panel's Stop (M24a Task 18). Stop may
+signal a pid only when the kernel says that pid is running the gdoc the app
+knows, and `gdoc update` renames the running binary to `gdoc.previous` before
+it writes the new one. So the question is what `proc_pidpath` answers for a
+process whose own file was renamed under it: the old name, the new one, or
+nothing.
+
+How it was taken. A throwaway Swift script outside the repository, run with
+`swift measure2.swift`, compiled a four-line C program that sleeps thirty
+seconds, started it with `posix_spawn` from
+`/tmp/pidpath-measure/room2/waiter`, waited 400 ms, read `proc_pidpath` and
+`proc_pidinfo(PROC_PIDTBSDINFO)`, renamed the file to `waiter.previous`, and
+read both again at once and two seconds later. The subject is ad-hoc
+linker-signed (`codesign -dv`: `flags=0x20002(adhoc,linker-signed)`), which is
+what `~/.local/bin/gdoc` is too. macOS 26.3.1 (25D771280a), arm64. The script
+and its directory were deleted after the reading.
+
+| When | `kill(pid, 0)` | `proc_pidpath` |
+|---|---|---|
+| before the rename | alive | 41 bytes, `/private/tmp/pidpath-measure/room2/waiter` |
+| 400 ms after the rename | alive | 50 bytes, `/private/tmp/pidpath-measure/room2/waiter.previous` |
+| two seconds after the rename | alive | the same 50 bytes |
+
+**The kernel answers the file's name now, not the name it was started from.**
+The process keeps running, and `proc_pidinfo` keeps answering uid 501 and the
+same start time. So a wait that began before an update reads as
+`<path>/gdoc.previous`, which is exactly the one extra name
+`ProcessCheck.previousSuffix` admits, and nothing wider is needed: the suffix
+is compared whole, so `gdoc.previously` is still refused
+(`ProcessCheckTests.testPreviousCountsAsGdocAndPathsAreResolvedBeforeComparing`).
+
+Two things fell out of the same run and are written down because the check
+rests on them:
+
+- A copy of `/bin/sleep` cannot be the subject. `posix_spawn` of a copied
+  platform binary returned 0 and the process was then killed by the kernel
+  with signal 9, so the first reading of it came back `ESRCH`. That is why the
+  measurement compiles its own binary.
+- A process that has died and not been reaped still answers `kill(pid, 0)`
+  with yes while `proc_pidpath` answers `ESRCH`. The check reads an absent
+  path as `pathUnknown` and refuses, so a zombie is never signalled; the
+  waits the panel sees are never this app's children, so their own parent
+  reaps them.
+
+Recheck on a macOS upgrade, or if `gdoc update` ever stops renaming the
+running binary. `StopperTests` holds the reading that depends on this: the
+kernel's path is compared, never the record's `gdoc` field.
 
 ## Not measured yet
 

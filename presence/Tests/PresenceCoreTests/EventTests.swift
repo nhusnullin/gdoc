@@ -96,10 +96,10 @@ final class EventTests: XCTestCase {
     // And it closes the hold it names, the way a release does.
     let held = try Event.decode(try Fixture.lines("events-v1")[4])
     let renamed = line.replacingOccurrences(of: "h_gh78", with: "h_ab12")
-    let glance = Fold.glance(
+    let fold = Now.fold(
       [held, try Event.decode(renamed)], now: try moment("2026-10-17T09:20:00Z"),
-      calendar: Calendar(identifier: .gregorian), alive: { _ in true })
-    XCTAssertTrue(glance.now.isEmpty, "the dropped card is gone from NOW")
+      alive: { _ in true })
+    XCTAssertTrue(fold.holds.isEmpty, "the dropped card is gone from NOW")
   }
 
   // A run that failed says why in one of gdoc's seven words, and the picture

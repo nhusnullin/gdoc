@@ -16,33 +16,22 @@ final class LivenessTests: XCTestCase {
     let mine = ProcessInfo.processInfo.processIdentifier
     XCTAssertTrue(Liveness.isAlive(mine), "this very process is alive")
 
-    let glance = Fold.glance(
-      [start(pid: mine)],
-      now: try moment("2026-10-17T12:00:00Z"),
-      calendar: try amsterdam(),
-      alive: Liveness.isAlive
-    )
-    guard case .running(let run) = glance.now.first else {
-      return XCTFail("a live start is running, and this fold said \(glance.now)")
-    }
+    let fold = Now.fold(
+      [start(pid: mine)], now: try moment("2026-10-17T12:00:00Z"), alive: Liveness.isAlive)
+    let run = try XCTUnwrap(fold.jobs.first, "a live start is a job, and NOW held \(fold.entries)")
     XCTAssertEqual(run.pid, mine)
     XCTAssertEqual(run.command, "propose")
-    XCTAssertTrue(glance.stopped.isEmpty)
+    XCTAssertTrue(fold.stuck.isEmpty, "nothing is stuck while the process is there")
   }
 
   func testAStartWithNoEndFromADeadPidIsOutcomeUnknown() throws {
-    let glance = Fold.glance(
-      [start(pid: 4299)],
-      now: try moment("2026-10-17T12:00:00Z"),
-      calendar: try amsterdam(),
-      alive: { _ in false }
-    )
-    guard case .stopped(let run) = glance.now.first else {
-      return XCTFail("a dead start stopped, and this fold said \(glance.now)")
-    }
-    XCTAssertEqual(run.pid, 4299)
-    XCTAssertEqual(glance.stopped.map(\.pid), [4299])
-    XCTAssertTrue(glance.today.isEmpty, "a run with no end is nothing that finished")
+    let fold = Now.fold(
+      [start(pid: 4299)], now: try moment("2026-10-17T12:00:00Z"), alive: { _ in false })
+    let write = try XCTUnwrap(
+      fold.stuck.first, "a dead write is stuck, and NOW held \(fold.entries)")
+    XCTAssertEqual(write.cause, .stopped, "the process went away, and nothing wrote an end")
+    XCTAssertEqual(write.command, "propose")
+    XCTAssertTrue(fold.jobs.isEmpty, "a run whose process is gone is running nothing")
   }
 
   private func start(pid: Int32) -> Event {

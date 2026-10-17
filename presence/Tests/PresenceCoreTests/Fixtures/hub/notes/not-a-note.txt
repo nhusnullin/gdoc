@@ -1,0 +1,5 @@
+---
+gdoc:
+  schema: 1
+  document_id: 6FgHiJkLmNoPqRsTuVwXyZaBcD0123456789fabc
+---

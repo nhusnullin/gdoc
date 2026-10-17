@@ -5274,8 +5274,8 @@ like the design discussed the evening before, run the next milestone now,
 and make the app start by itself. The M23 scoping that deferred the drawn
 panel was the project manager's, and this entry undoes it in one milestone
 run as two halves, the Swift panel and what the binary adds for it. The
-rules are in `docs/plans/2026-10-17-gdoc-v2-m24-the-panel-spec.md`; the
-visual source is `docs/design/2026-10-17-presence-screens-v3.html`, the
+rules are in `docs/plans/completed/2026-10-17-gdoc-v2-m24-the-panel-spec.md`;
+the visual source is `docs/design/2026-10-17-presence-screens-v3.html`, the
 third version of the screens Nail reviewed. Serves principle 4, the screens
 are the reader's own choice, and principle 3 in three places named below.
 Strains 1 and 2 no further than the M23 entry; one M23 sentence is reversed
