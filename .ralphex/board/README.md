@@ -25,7 +25,14 @@ the logs and the page. `SCRATCH` below is that directory.
    `main`. ralphex creates the branch from `main`, and the reviewer must not see
    its own scripts as new code.
 
-2. **Start the task phase, detached.** ralphex refuses to start inside a Claude
+2. **Make the worktree with its branch**, so the board's `git log main..<branch>`
+   and the push both find it: `git worktree add -b <branch> ../gdoc-mNN main`.
+   A worktree made with `--detach` works too since 2026-10-17 (the board falls
+   back to HEAD), but the push then needs `git checkout -b <branch>` first.
+   Launch scripts append to their log (`>>`): a relaunch after a Claude CLI
+   sign-in expiry keeps the earlier iterations, which the board pairs tasks with.
+
+4. **Start the task phase, detached.** ralphex refuses to start inside a Claude
    Code session unless the session variables are stripped:
 
    ```bash
@@ -34,7 +41,7 @@ the logs and the page. `SCRATCH` below is that directory.
    echo $!
    ```
 
-3. **Create the page once.** A `warns.json` is a list of
+4. **Create the page once.** A `warns.json` is a list of
    `{"m": "⚠", "b": "bold lead", "d": "one sentence"}`; put the milestone's
    decisions and out-of-scope notes there. A `tasks.json` of
    `{"1": {"what": "...", "pkg": "..."}}` replaces the plan-derived one-liners
@@ -60,7 +67,7 @@ the logs and the page. `SCRATCH` below is that directory.
    one-sentence description. Every later publish uses the same file path so the
    URL stays.
 
-4. **Arm a Monitor on the log** (persistent), with a filter that emits one line
+5. **Arm a Monitor on the log** (persistent), with a filter that emits one line
    per event and covers failure as well as progress:
 
    ```
@@ -69,11 +76,11 @@ the logs and the page. `SCRATCH` below is that directory.
 
    plus a loop that waits on the pid and prints `PROCESS EXITED` when it goes.
 
-5. **Loop.** `/loop` in dynamic mode with a 1800 s fallback heartbeat. On each
+6. **Loop.** `/loop` in dynamic mode with a 1800 s fallback heartbeat. On each
    Monitor event: run `refresh_board.py --html ... --pid <pid>`, republish the
    page with the label the script printed, one short line in chat, reschedule.
 
-6. **When the tasks finish** (`ALL_TASKS_DONE`, process exited), start the
+7. **When the tasks finish** (`ALL_TASKS_DONE`, process exited), start the
    review the same way and re-arm a Monitor on its log:
 
    ```bash
@@ -87,7 +94,7 @@ the logs and the page. `SCRATCH` below is that directory.
    ^--- (custom|codex|claude) review|^--- claude evaluating|── complete ──|findings: |NO ISSUES FOUND|TASK_FAILED|^error:|session limit|^completed in
    ```
 
-7. **When the review exits** (`completed in`): `make test`, `make vet`,
+8. **When the review exits** (`completed in`): `make test`, `make vet`,
    `make build`, the milestone's live tests, commit any uncommitted review fixes
    (the external loop leaves each round's fixes in the working tree until it
    ends), push, open the PR, wait for CI, refresh the board once more, stop the
