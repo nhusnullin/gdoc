@@ -33,7 +33,8 @@ type workflowFile struct {
 	Name string `yaml:"name"`
 	On   struct {
 		Push struct {
-			Tags []string `yaml:"tags"`
+			Tags     []string `yaml:"tags"`
+			Branches []string `yaml:"branches"`
 		} `yaml:"push"`
 		Schedule []struct {
 			Cron string `yaml:"cron"`
@@ -60,11 +61,13 @@ type workflowSecret struct {
 }
 
 type workflowJobFields struct {
-	Uses    string            `yaml:"uses"`
-	With    map[string]string `yaml:"with"`
-	Secrets string            `yaml:"secrets"`
-	Needs   string            `yaml:"needs"`
-	Steps   []workflowStep    `yaml:"steps"`
+	Uses        string            `yaml:"uses"`
+	With        map[string]string `yaml:"with"`
+	Secrets     string            `yaml:"secrets"`
+	Needs       string            `yaml:"needs"`
+	RunsOn      string            `yaml:"runs-on"`
+	Permissions map[string]string `yaml:"permissions"`
+	Steps       []workflowStep    `yaml:"steps"`
 }
 
 type workflowStep struct {
@@ -249,7 +252,7 @@ func TestTheZipCarriesWhatTheInstallerLooksFor(t *testing.T) {
 	if !strings.Contains(script, "/gdoc") {
 		t.Error("release.yml never writes the binary into the zip as gdoc; install.sh looks for that name and nothing else")
 	}
-	if !strings.Contains(script, "gh release create") {
+	if !strings.Contains(script, releaseCreate) {
 		t.Error("release.yml never creates the release; the zips would be built and left on the runner")
 	}
 	// Windows is the one platform whose name inside the zip is different, and
@@ -260,6 +263,188 @@ func TestTheZipCarriesWhatTheInstallerLooksFor(t *testing.T) {
 		t.Error(`release.yml never packs the binary as gdoc.exe for windows-*; that is the name zipBinaryName tells the updater to look for`)
 	}
 }
+
+// TestTheReleaseWaitsForThePresenceBuild holds the two jobs apart and in
+// order.
+//
+// The app is built on macOS, because codesign, lipo and plutil are there and
+// the publishing job is ubuntu. So the release is two jobs, and the one that
+// publishes waits: a publish that started before the bundle was built would
+// upload a darwin zip with no app in it, and nothing downstream would notice,
+// because `gdoc update` treats a missing bundle as a release that carries
+// none. The building job writes nothing to this repository and never
+// publishes: one job creates the release, and a second job that could would be
+// two releases racing for one tag.
+func TestTheReleaseWaitsForThePresenceBuild(t *testing.T) {
+	w := readWorkflow(t, "release.yml")
+	name, publisher := releasePublisher(t, w)
+
+	if publisher.Needs != presenceJobName {
+		t.Errorf("release.yml's %s job needs %q; it needs %q, or the zips are packed before the bundle they carry exists",
+			name, publisher.Needs, presenceJobName)
+	}
+	if !jobUses(publisher, "actions/download-artifact") {
+		t.Errorf("release.yml's %s job downloads no artifact; the bundle is built in another job and reaches this one no other way", name)
+	}
+
+	job := presenceJob(t, "release.yml")
+	if !strings.HasPrefix(job.RunsOn, "macos-") {
+		t.Errorf("release.yml's %s job runs on %q; codesign, lipo and plutil are macOS, and a Swift app bundle is built nowhere else", presenceJobName, job.RunsOn)
+	}
+	if !jobUses(job, "actions/upload-artifact") {
+		t.Errorf("release.yml's %s job uploads no artifact; the bundle would be built and left on the runner", presenceJobName)
+	}
+	if script := jobScript(job); strings.Contains(script, releaseCreate) {
+		t.Errorf("release.yml's %s job runs %q; one job publishes a tag, and two of them racing for one tag is a release nobody can read", presenceJobName, releaseCreate)
+	}
+	if got := job.Permissions["contents"]; got != "read" {
+		t.Errorf("release.yml's %s job has contents permission %q; it builds and uploads and writes nothing to this repository, so it asks for read", presenceJobName, got)
+	}
+}
+
+// TestTheZipCarriesThePresenceForDarwinOnly holds the app inside the two zips
+// that can run it, and out of every other one.
+//
+// A darwin zip without the bundle is a colleague whose `gdoc update` reports a
+// release that carries no app, quietly, for as long as nobody looks. A linux
+// or Windows zip with it is a universal Mach-O binary on a machine that cannot
+// execute a byte of it. Neither is visible on the runner, so the zips are
+// listed and read back before the release is created rather than after.
+func TestTheZipCarriesThePresenceForDarwinOnly(t *testing.T) {
+	steps := releaseSteps(t)
+
+	pack := stepSaying(steps, stagePresence)
+	if pack < 0 {
+		t.Fatalf("release.yml's pack step never copies the bundle into %s; the zips would carry no app", stagePresence)
+	}
+	arm, ok := caseArm(steps[pack].Run, darwinArm)
+	if !ok {
+		t.Fatalf("release.yml's pack step opens no %s arm; the copy would reach every platform's zip", darwinArm)
+	}
+	if !strings.Contains(arm, stagePresence) {
+		t.Errorf("release.yml copies the bundle into %s outside the %s arm; only a Mac can run it", stagePresence, darwinArm)
+	}
+
+	list := -1
+	for i, step := range steps {
+		if i == pack {
+			continue
+		}
+		if strings.Contains(step.Run, "presence/") && strings.Contains(step.Run, "exit 1") {
+			list = i
+			break
+		}
+	}
+	if list < 0 {
+		t.Fatal("release.yml never lists the zips and fails on what they hold; a zip packed wrong reaches a colleague before anybody looks")
+	}
+	publish := stepSaying(steps, releaseCreate)
+	if publish < 0 {
+		t.Fatalf("release.yml never runs %q", releaseCreate)
+	}
+	if list > publish {
+		t.Error("release.yml lists the zips after it publishes them; a listing that runs after the release is a report about a release that is already out")
+	}
+}
+
+// TestThePresenceIsStampedWithTheTag holds the version the app shows against
+// the release it came out of.
+//
+// The updater compares the plist inside the installed bundle with the release
+// it is about to install, and installs nothing when the two agree. A bundle
+// stamped 0.0.0, which is what a checkout build carries, would therefore be
+// re-installed on every single `gdoc update` on every machine. The plist is
+// read back with plutil rather than trusted, because bundle.sh fills it with
+// sed and a sed that matched nothing exits 0.
+func TestThePresenceIsStampedWithTheTag(t *testing.T) {
+	job := presenceJob(t, "release.yml")
+	at := -1
+	for i, step := range job.Steps {
+		if strings.Contains(step.Run, "plutil") {
+			at = i
+			break
+		}
+	}
+	if at < 0 {
+		t.Fatalf("release.yml's %s job never runs plutil; nothing would hold the bundle's version against the tag", presenceJobName)
+	}
+	run := job.Steps[at].Run
+	for _, want := range []string{plistVersionKey, "$TAG", "exit 1"} {
+		if !strings.Contains(run, want) {
+			t.Errorf("release.yml's plutil step never says %q; the stamp is the tag without its v, read back and refused when it is anything else", want)
+		}
+	}
+}
+
+// TestThePresenceJobProvesTheZipRoundTripKeepsTheSignature holds the one claim
+// the publishing job cannot check for itself.
+//
+// The bundle is signed ad-hoc on macOS, then unzipped, copied and zipped again
+// by an ubuntu runner that has no codesign at all, and a colleague's machine
+// is where an invalid signature would first be noticed, as an app that will
+// not open. So the macOS job does the round trip itself, with the same zip the
+// pack step uses, and verifies the signature on the other side of it.
+func TestThePresenceJobProvesTheZipRoundTripKeepsTheSignature(t *testing.T) {
+	for _, file := range []string{"release.yml", "go.yml"} {
+		script := jobScript(presenceJob(t, file))
+		zipped := strings.Index(script, packZip)
+		if zipped < 0 {
+			t.Errorf(".github/workflows/%s's %s job never zips the bundle with %q; the round trip the pack step does would go unmeasured", file, presenceJobName, packZip)
+			continue
+		}
+		if !strings.Contains(script, "unzip") {
+			t.Errorf(".github/workflows/%s's %s job zips the bundle and never unzips it; half a round trip proves nothing", file, presenceJobName)
+		}
+		verified := strings.Index(script, verifySignature)
+		if verified < 0 {
+			t.Errorf(".github/workflows/%s's %s job never runs %q", file, presenceJobName, verifySignature)
+			continue
+		}
+		if verified < zipped {
+			t.Errorf(".github/workflows/%s's %s job verifies the signature before the round trip; bundle.sh already did that, and what is in question is the signature afterwards", file, presenceJobName)
+		}
+	}
+}
+
+// TestTheCIBuildsThePresenceOnEveryPush: release.yml runs on tags, and a tag
+// is pushed by a person or at 02:00 UTC by the nightly. A Swift file that does
+// not compile would therefore be found by a release, which is the one build
+// nobody is watching. go.yml runs on every push, so the same job lives there
+// too, without the upload, because nothing downloads it.
+func TestTheCIBuildsThePresenceOnEveryPush(t *testing.T) {
+	w := readWorkflow(t, "go.yml")
+	if len(w.On.Push.Branches) == 0 {
+		t.Error("go.yml runs on no push branches; the Swift build would wait for a tag like everything in release.yml")
+	}
+
+	job := presenceJob(t, "go.yml")
+	if !strings.HasPrefix(job.RunsOn, "macos-") {
+		t.Errorf("go.yml's %s job runs on %q; a Swift app bundle is built on macOS", presenceJobName, job.RunsOn)
+	}
+	script := jobScript(job)
+	for _, want := range []string{"make app-lint", "make app-test", "presence/bundle.sh"} {
+		if !strings.Contains(script, want) {
+			t.Errorf("go.yml's %s job never runs %q; the push build is the release's build or it guards nothing", presenceJobName, want)
+		}
+	}
+	if jobUses(job, "actions/upload-artifact") {
+		t.Errorf("go.yml's %s job uploads an artifact; nothing downloads it, and a push is not a release", presenceJobName)
+	}
+}
+
+// stagePresence is the folder inside the zip the bundle is copied into, and
+// darwinArm the one case arm that copy is allowed to sit in. packZip and
+// verifySignature are the two lines the round trip is made of, and
+// plistVersionKey the key the stamp is read back from. Every one of them is a
+// literal, because a test that reads the thing it checks follows it wherever
+// somebody moves it.
+const (
+	stagePresence   = `$stage/presence/`
+	darwinArm       = "darwin-*)"
+	packZip         = "zip -qr"
+	verifySignature = "codesign --verify --deep --strict"
+	plistVersionKey = "CFBundleShortVersionString"
+)
 
 // TestTheNightlyCutsThePatchAndOnlyWhenMainMoved holds the one thing about
 // the nightly that matters to a person who is asleep: it is quiet. A night
@@ -352,21 +537,91 @@ func readWorkflow(t *testing.T, name string) workflowFile {
 	return w
 }
 
-// releaseSteps is the steps of the one job in release.yml, in order, so a test
-// can ask what comes before what.
+// releaseCreate is the one line that publishes. It is what tells the jobs in
+// release.yml apart: the job that says it is the release, and every other job
+// is something the release waits for.
+const releaseCreate = "gh release create"
+
+// releasePublisher is the name of the job in release.yml that publishes, and
+// its fields. release.yml held one job until the presence app arrived, which is
+// built on macOS because codesign and lipo live there; the publishing job is
+// found by what it does rather than by what it is called.
+func releasePublisher(t *testing.T, w workflowFile) (string, workflowJobFields) {
+	t.Helper()
+	for name, job := range w.Jobs {
+		for _, step := range job.Steps {
+			if strings.Contains(step.Run, releaseCreate) {
+				return name, job
+			}
+		}
+	}
+	t.Fatalf("no job in release.yml runs %q; the zips would be built and left on the runner", releaseCreate)
+	return "", workflowJobFields{}
+}
+
+// releaseSteps is the steps of the publishing job in release.yml, in order, so
+// a test can ask what comes before what.
 func releaseSteps(t *testing.T) []workflowStep {
 	t.Helper()
-	w := readWorkflow(t, "release.yml")
-	if len(w.Jobs) != 1 {
-		t.Fatalf("release.yml holds %d jobs; it is one build that packs and publishes what it built", len(w.Jobs))
+	name, job := releasePublisher(t, readWorkflow(t, "release.yml"))
+	if len(job.Steps) == 0 {
+		t.Fatalf("release.yml's %s job holds no step", name)
 	}
-	for _, job := range w.Jobs {
-		if len(job.Steps) == 0 {
-			t.Fatal("release.yml's job holds no step")
+	return job.Steps
+}
+
+// presenceJobName is the job that builds the app, in both workflows, written
+// out because the publishing job names it in needs and a rename in one place
+// is a release that waits for a job nobody runs.
+const presenceJobName = "presence"
+
+// presenceJob is that job in one workflow.
+func presenceJob(t *testing.T, file string) workflowJobFields {
+	t.Helper()
+	w := readWorkflow(t, file)
+	job, ok := w.Jobs[presenceJobName]
+	if !ok {
+		t.Fatalf(".github/workflows/%s holds no %s job; nothing would build the app", file, presenceJobName)
+	}
+	if len(job.Steps) == 0 {
+		t.Fatalf(".github/workflows/%s's %s job holds no step", file, presenceJobName)
+	}
+	return job
+}
+
+// jobScript is every line of shell in one job, joined in step order.
+func jobScript(job workflowJobFields) string {
+	var runs []string
+	for _, step := range job.Steps {
+		runs = append(runs, step.Run)
+	}
+	return strings.Join(runs, "\n")
+}
+
+// jobUses answers whether a job has a step using an action, by prefix, so a
+// version bump is not a failure.
+func jobUses(job workflowJobFields, action string) bool {
+	for _, step := range job.Steps {
+		if strings.HasPrefix(step.Uses, action) {
+			return true
 		}
-		return job.Steps
 	}
-	return nil
+	return false
+}
+
+// caseArm is the text of one arm of a shell case statement: from the pattern
+// to the ;; that closes it. A test reads it to ask what a platform-specific
+// step does for that platform and not for the others.
+func caseArm(script, pattern string) (string, bool) {
+	at := strings.Index(script, pattern)
+	if at < 0 {
+		return "", false
+	}
+	rest := script[at+len(pattern):]
+	if end := strings.Index(rest, ";;"); end >= 0 {
+		return rest[:end], true
+	}
+	return rest, true
 }
 
 // releaseScript is every line of shell in release.yml, joined.

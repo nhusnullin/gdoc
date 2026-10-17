@@ -155,3 +155,20 @@ func AssetPath(id string) (string, error) {
 func AssetStampPath(id string) (string, error) {
 	return assetFile(id, ".json")
 }
+
+// PresenceDir is where the presence record lives: a presence directory in the
+// config dir, holding one append-only JSONL file per month in the shape
+// internal/presence writes. It is a directory rather than a file because the
+// record is kept by month and the oldest months are removed.
+//
+// It sits beside the token because it is per-user state this machine keeps,
+// like update-check.json and login-pending.json, and never beside the hub:
+// nothing lives hidden next to somebody's notes. gdoc never reads it; the one
+// reader is the presence app.
+func PresenceDir() (string, error) {
+	d, err := Dir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(d, "presence"), nil
+}

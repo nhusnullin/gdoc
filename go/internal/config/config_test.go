@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -212,5 +213,33 @@ func TestTheAssetPathsFailWhenTheDirectoryCannotBeNamed(t *testing.T) {
 	}
 	if p, err := AssetStampPath("1J3uh6poVAneP_V_Pc5FuNI4-Gahlab0s"); err == nil || p != "" {
 		t.Errorf("AssetStampPath() = %q, %v, want the failure Dir gave and no path", p, err)
+	}
+}
+
+func TestPresenceDirIsInTheConfigFolder(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("GDOC_CONFIG_DIR", dir)
+	p, err := PresenceDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p != filepath.Join(dir, "presence") {
+		t.Errorf("PresenceDir() = %q, want presence in the config folder", p)
+	}
+	// Naming the directory creates nothing: the first event is what makes it,
+	// and a command with the flag off names it never.
+	if _, err := os.Stat(p); !os.IsNotExist(err) {
+		t.Errorf("PresenceDir() made the directory: %v", err)
+	}
+}
+
+func TestPresenceDirFailsWhenTheDirectoryCannotBeNamed(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("%AppData% is the Windows branch and TestDirForEachCase holds it")
+	}
+	t.Setenv("GDOC_CONFIG_DIR", "")
+	t.Setenv("HOME", "")
+	if _, err := PresenceDir(); err == nil {
+		t.Error("PresenceDir() guessed a path with no home to put it under")
 	}
 }

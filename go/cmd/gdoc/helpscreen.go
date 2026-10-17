@@ -256,14 +256,15 @@ func commandScreen(p panel.Panel, style tty.Style, c command, line string, warns
 	return append(p.WithFooter("Example").Box(c.name, gdocLabel(), rows), c.example)
 }
 
-// settingRows is the section the two setting flags are drawn in, which both
-// screens carry: the grouped table once, and each command's own box, because a
-// box is the whole page for that command. The heading is what keeps them from
-// reading as the command's own, and it is the same words the plain text uses:
+// settingRows is the section the two offered setting flags are drawn in, which
+// both screens carry: the grouped table once, and each command's own box,
+// because a box is the whole page for that command. The experimental third is
+// in no screen. The heading is what keeps them from reading as the command's
+// own, and it is the same words the plain text uses:
 // TestEverySettingFlagIsInHelpAndInBothScripts.
 func settingRows(p panel.Panel, style tty.Style) []panel.Row {
 	rows := []panel.Row{panel.Section(settingSection)}
-	for _, f := range settingFlags() {
+	for _, f := range shownSettingFlags() {
 		rows = append(rows, pairRows(p, style.Key(flagWords(f)), f.summary)...)
 	}
 	return rows
@@ -333,7 +334,7 @@ func commandColumn(groups []commandGroup) int {
 // flag, which is what internal/panel would choose itself. It is named here
 // because the summaries are wrapped to the cell before the box is drawn.
 //
-// The two setting flags are measured with them, because they are rows of the
+// The two offered setting flags are measured with them, because they are rows of the
 // same box and a column that cleared only the command's own flags would be
 // drawn through the longer of these two.
 func flagColumn(c command) int {
@@ -344,15 +345,15 @@ func flagColumn(c command) int {
 	return widest
 }
 
-// settingColumn is how much room the two setting flags need, which every box
-// has to clear because every box lists them: the longer of the two flags, and
+// settingColumn is how much room the offered setting flags need, which every box
+// has to clear because every box lists them: the longer of the two, and
 // the heading of the rule they are drawn under. The heading is measured for
 // the reason every group name is: a name that reaches the column takes the
 // joint's own cell, and that one rule would lose the joint the rules above it
 // have.
 func settingColumn() int {
 	widest := len(settingSection) + rulePadding
-	for _, f := range settingFlags() {
+	for _, f := range shownSettingFlags() {
 		widest = max(widest, len(flagWords(f))+cellPadding)
 	}
 	return widest

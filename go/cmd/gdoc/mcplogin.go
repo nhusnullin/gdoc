@@ -265,20 +265,22 @@ func (m *mcpLogin) wait(ctx context.Context, trip loginTrip) {
 
 // finish is the one end of a sign-in, however it ended: the port freed, the
 // record taken away, and the state a later login call reports.
+//
+// The record goes before the state, and both under the one lock. The state is
+// what a later login call reads, and a call that reads "expired" may go
+// looking for the record next: a record still on disk for a sign-in that has
+// ended is a dead link somebody is handed. Removing it is idempotent, so a
+// close that got there first costs nothing.
 func (m *mcpLogin) finish(trip loginTrip, err error) {
 	trip.Close()
 	m.mu.Lock()
-	ours := m.trip == trip
-	if ours {
+	if m.trip == trip {
+		if rerr := auth.RemoveLoginLock(); rerr != nil {
+			m.logf("gdoc mcp: the finished sign-in's record could not be removed: %v", rerr)
+		}
 		m.done, m.err = true, err
 	}
 	m.mu.Unlock()
-	if !ours {
-		return // close has already taken this one down, record and all
-	}
-	if rerr := auth.RemoveLoginLock(); rerr != nil {
-		m.logf("gdoc mcp: the finished sign-in's record could not be removed: %v", rerr)
-	}
 }
 
 // close ends a sign-in this session is still waiting on. stdin closing is

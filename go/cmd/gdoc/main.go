@@ -19,6 +19,7 @@ import (
 	"gdoc/internal/emit"
 	"gdoc/internal/gapi"
 	"gdoc/internal/panel"
+	"gdoc/internal/presence"
 	"gdoc/internal/settings"
 	"gdoc/internal/tty"
 )
@@ -96,7 +97,7 @@ func main() {
 // --help prints the usage line rather than starting a server that waits on a
 // pipe nobody is going to fill. TestMcpIsRoutedBeforeRun is the pin.
 //
-// The two setting flags come off the line here, before the word mcp is looked
+// The three setting flags come off the line here, before the word mcp is looked
 // for and before --help is, so one reading of them serves every command and
 // the session alike. What is left is the line as it always was, and the
 // settings go down beside it. settings.go holds the reading, and the refusal
@@ -168,6 +169,10 @@ const jsonHint = "Add --json to print the JSON object a skill reads."
 // TestAScreenWhoseWordsWentToAFileKeepsItsObject and
 // TestNoEscapeByteReachesAPipe.
 func run(ctx context.Context, args []string, out, errOut io.Writer, set settings.InEffect) int {
+	// The run's own line and the run's own sweep, which is one of each per
+	// process in production and one of each per call here, so no test inherits
+	// what another said: internal/presence's Fresh.
+	presence.Fresh()
 	return printResult(safeDispatch(ctx, args, errOut, set), out, errOut)
 }
 
@@ -241,7 +246,12 @@ var dispatching = dispatch
 // set is what this run writes, resolved in route before the line was read.
 // Every command is handed it on its args, so a command that writes into a
 // thread asks the value rather than a constant of its own.
-func dispatch(ctx context.Context, args []string, errOut io.Writer, set settings.InEffect) emit.Result {
+//
+// The result is named for the presence hook alone: the end of a run is written
+// in a deferred call, so a command that panicked still ends its run, with the
+// zero result's ok: false, before safeDispatch above turns the panic into the
+// envelope: TestAPanicInACommandStillWritesAnEndWithOkFalse.
+func dispatch(ctx context.Context, args []string, errOut io.Writer, set settings.InEffect) (r emit.Result) {
 	// Bare gdoc named no command, so there is nothing to quote back: `unknown
 	// command ""` names nothing and reads like a fault in the tool. The run did
 	// no work, so it still fails and still exits 1. What is new is that the
@@ -277,7 +287,39 @@ func dispatch(ctx context.Context, args []string, errOut io.Writer, set settings
 		return emit.Result{OK: false, Error: err.Error()}
 	}
 	a.set = set
+	// And the record, after the parse and before the work: a line that was
+	// refused is no run, so nothing is written for it, and the document the
+	// event names is the one the parsed line named. The two calls are the same
+	// two lines whether the flag is on or off, because Begin answers nil where
+	// it is off and every method on a nil run is a no-op:
+	// TestTheFlagChangesNoByteOfTheObject.
+	rec := presence.Begin(ctx, set.Presence && c.report, releaseVersion(),
+		c.name, presenceDoc(*c, a), a.has("--wait"), c.readsBack, errOut)
+	defer func() { rec.End(r) }()
 	return c.run(ctx, a, errOut)
+}
+
+// presenceDoc is the document an event names: the id the first word of the line
+// resolved to, for the commands whose first word is a document, and nothing for
+// the rest.
+//
+// The first word is compared with the literal the table writes, as read.go
+// asks for "--wait" by its own, because the word is what a reader sees in the
+// usage line and not a name this file owns.
+//
+// A word that is no document at all answers the empty string rather than a
+// refusal, because the refusal is the command's own to give: the parse has
+// happened and the command has not run yet, so nothing here may decide what the
+// caller is told. TestAnUpdateAndALoginWriteNoDoc.
+func presenceDoc(c command, a *args) string {
+	if len(c.words) == 0 || c.words[0] != "<url>" {
+		return ""
+	}
+	id, err := documentID(a.target())
+	if err != nil {
+		return ""
+	}
+	return id
 }
 
 // statusData is the auth report with the version beside it, and the account

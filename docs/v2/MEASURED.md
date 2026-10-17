@@ -662,6 +662,204 @@ reader.
 Recheck when Google's docx import changes, or before anything downstream of
 `read` is asked about a page break.
 
+## The presence app built, rendered and unzipped, the prototype's three numbers
+
+Measured 2026-10-17 on Nail's machine: macOS 26.3.1 (build 25D771280a),
+Xcode 26.6 (17F113), Apple Swift 6.3.3, no signing identity. These are the
+three numbers the design record of the same night
+(`docs/design/2026-10-17-presence-mechanism.md`, item 10) claimed from a
+prototype, taken again from the committed package. Not Google: this file holds
+what a platform does when it accepts, and macOS is the platform here.
+
+**A universal bundle builds in 14 seconds from a clean clone, with no Xcode
+project.** Taken as `rm -rf presence/.build bin/GdocPresence.app` and then
+`time make app`, which runs `presence/bundle.sh dev bin/GdocPresence.app`,
+which runs `swift build -c release --arch arm64 --arch x86_64`. The answer was
+14.286 seconds wall, 22.47 user and 8.53 system, at 216% CPU. The prototype
+said 13 seconds. The bundle that came out is `x86_64 arm64` by `lipo -archs`
+and `version 0.0.0`, which is what a build from no release stamps.
+
+**The panel renders to PNG headless, in both schemes, from `swift test`.**
+Taken as `PRESENCE_SHOTS=/tmp/m23-shots swift test --filter PresenceUITests`
+in a non-interactive session with no window server session of its own. Five
+tests, 0 failures, 0.111 seconds. Two files came out, `panel-light.png` 84,460
+bytes and `panel-dark.png` 85,771 bytes, both `PNG image data, 640 x 937,
+8-bit/color RGBA, non-interlaced` by `file -b`. No Screen Recording permission
+was asked for and none is held: the render goes through an off-screen bitmap
+and never reads the screen.
+
+**The binary `gdoc update` installed carries one attribute, and it is not
+quarantine.** Taken as `xattr -l ~/.local/bin/gdoc` on the v2.12.1 release
+binary that `gdoc update` put there on 2026-10-16. The answer is
+`com.apple.provenance` and nothing else. The bundle half of the same question
+is the section below.
+
+Recheck when the Swift toolchain or the macOS major version changes, or when a
+signing identity appears on the machine, because that is what M17 would change.
+
+## What Gatekeeper says about a bundle gdoc's own code unzipped
+
+Measured 2026-10-17, on a bundle built here, zipped the way the release zips it
+and unzipped by `internal/update`'s own `ApplyBundle` rather than by `unzip` or
+by Archive Utility. The point of the measurement is the route: quarantine is
+set by the program that downloads, and the program that downloads here is Go.
+
+How it was taken, in four steps:
+
+1. `presence/bundle.sh v9.9.9 /tmp/m23-measure/stage/presence/GdocPresence.app`,
+   so the plist version is the tag the asset name will carry.
+2. `ditto -c -k --norsrc --noextattr --keepParent presence
+   /tmp/m23-measure/gdoc-v9.9.9-darwin-arm64.zip`, the release job's own
+   command, and `shasum -a 256` into a `SHA256SUMS` line beside it.
+3. `ApplyBundle(archive, sums, "gdoc-v9.9.9-darwin-arm64.zip",
+   "presence/GdocPresence.app", dest)` from a throwaway test in
+   `go/internal/update`, with `dest` in a temp folder. It answered
+   `version=9.9.9`, `previous=""` and
+   `treesum=fe811d76e61109db26c951790fd7315da076d0b97dd0a8ce63711f3b19ef5138`.
+4. `xattr -lr`, `codesign --verify --deep --strict -vv`, `codesign -dvv`,
+   `spctl -a -t exec -vv` and `lipo -archs` on what landed.
+
+| Command | Answer |
+|---|---|
+| `find` | seven paths: the bundle, `Contents`, `Contents/Info.plist`, `Contents/MacOS`, the executable, `Contents/_CodeSignature` and its `CodeResources`. Nothing else |
+| `xattr -lr` | `com.apple.provenance` on every one of the seven, with an empty value, and **no `com.apple.quarantine` anywhere** |
+| `codesign --verify --deep --strict -vv` | `valid on disk`, `satisfies its Designated Requirement` |
+| `codesign -dvv` | `Identifier=com.altery.gdoc.presence`, `Signature=adhoc`, `flags=0x2(adhoc)`, `TeamIdentifier=not set`, `app bundle with Mach-O universal (x86_64 arm64)` |
+| `spctl -a -t exec -vv` | `rejected` |
+| `lipo -archs` | `x86_64 arm64` |
+| `ls -l` on the two files | the executable `0755`, 1,150,096 bytes; the plist `0644`, 765 bytes. The modes came off the zip |
+
+**`spctl` rejects every ad-hoc bundle, and that is not the verdict on whether
+the app opens.** `spctl -a` asks what Gatekeeper would say about an assessment,
+and an assessment is only made on a file carrying `com.apple.quarantine`. The
+bundle above carries none, so nothing assesses it, and the `rejected` line is
+`spctl` answering a question nobody asked it. The control was run as well: the
+same bundle copied with `ditto` and given
+`xattr -w -r com.apple.quarantine "0083;68f1c0a0;Safari;"` still verifies under
+`codesign` and still says `rejected` under `spctl`, so the two answers do not
+tell the two bundles apart. Only a launch does.
+
+**The launch is Nail's step, and so is the negative control.** Nothing here
+opens a GUI app. His two commands, in this order:
+
+```sh
+# The positive case: the bundle gdoc update wrote, no quarantine, ad-hoc signed.
+open ~/Applications/GdocPresence.app          # expected: the glyph appears
+
+# The negative control: the same bundle with a download's attribute on it.
+ditto ~/Applications/GdocPresence.app /tmp/quarantined/GdocPresence.app
+xattr -w -r com.apple.quarantine "0083;00000000;Safari;" /tmp/quarantined/GdocPresence.app
+open /tmp/quarantined/GdocPresence.app        # expected: macOS blocks it
+```
+
+If the first one is blocked, the ad-hoc signature is not enough on this macOS
+and M17 moves up: that would be a new section here, not an edit to this one.
+If the second one opens, quarantine is not what blocks, and the reasoning above
+is wrong in a way worth a section of its own.
+
+Recheck on every macOS major version, on the first CI-built bundle, which is
+signed by the same `codesign -s -` on a different machine, and on the day a
+Developer ID appears.
+
+## Twenty thousand presence lines from two binaries into one file
+
+Measured 2026-10-17. The channel's one promise is that two gdoc processes may
+append to the same file with no lock and no torn line. The suite holds that
+with 16 writers in one process (`TestTwoWritersNeverTearALine`); this is the
+same question asked of separate binaries, separate processes and 20,000 lines.
+
+How it was taken:
+
+```sh
+cd go && go build -o /tmp/m23-run/gdoc-a ./cmd/gdoc
+cd go && go build -o /tmp/m23-run/gdoc-b ./cmd/gdoc
+printf 'presence: true\n' > /tmp/m23-cfg/settings.yaml
+# loop.sh runs $1 $2 times: GDOC_CONFIG_DIR=/tmp/m23-cfg "$1" read <id>
+(./loop.sh /tmp/m23-run/gdoc-a 5000 & ./loop.sh /tmp/m23-run/gdoc-b 5000 & wait)
+```
+
+The command is `read` against a document id with no token in that config
+directory, so each run fails at the token, reaches no network, and writes its
+two lines: a `start` from the hook in `dispatch` and an `end` from the same
+hook on the way out. 5,000 runs is 10,000 lines per binary and 20,000 in the
+one file. The wall time was 155 seconds, so about 15.5 milliseconds per
+process, both loops running at once.
+
+| What was asked | Command | Answer |
+|---|---|---|
+| how many lines | `wc -l` | 20,000 |
+| how many bytes | `wc -c` | 3,860,000 |
+| is every line one object | `grep -c '^{"v":1,'` and `cut -c1 \| sort -u` | 20,000, and the only character a line starts with is `{` |
+| how long is a line | `awk` over the file | min 184, max 200, mean 192.0 bytes |
+| does the reader read them all | `Event.scan` from `presence/Sources/PresenceCore`, the app's own reader, over the whole file | `events=20000 skipped=0 newerSchema=false` |
+| do the pairs survive | the same scan | 10,000 `start`, 10,000 `end`, 10,000 distinct `run` ids, 10,000 distinct `pid`s, 10,000 distinct `run|call` pairings |
+
+**Not one line of 20,000 was torn, and the app's own decoder skipped none.**
+The longest line is 200 bytes, well under the 512 bytes of `PIPE_BUF` that the
+atomicity of a single `write` to an `O_APPEND` file descriptor rests on, which
+is why one open, one write and one close is the whole of the writer.
+
+Two things the numbers say in passing. One run id and one pid per process, with
+`call` counting inside the process, is what tells 10,000 runs apart: nothing in
+the file is a sequence number across processes. And the events were written at
+`2026-10-16T23:59Z` and later while the machine's local date was 2026-10-17, so
+the file they landed in is `2026-10.jsonl` by the event's UTC month, as the
+package says.
+
+Recheck when the writer stops being one open and one write, or when a line can
+grow past 512 bytes, which the 200-rune title cap is what holds today. A config
+directory on a network or a synced volume is out of scope: the local
+filesystem's promise is the only one measured.
+
+## The bundle swapped under a process running out of it
+
+Measured 2026-10-17. After `gdoc update` replaces the app, the app on disk is
+a different bundle from the one the person is looking at, and the design has it
+notice and reopen itself. This measures the half that can be measured with no
+GUI app: that the swap does not kill a process running out of the old bundle,
+and that the plist at the destination names the new version afterwards.
+
+How it was taken. A bundle-shaped folder was made at
+`/tmp/m23-swap/Applications/GdocPresence.app`: `Contents/MacOS/GdocPresence` a
+Go program whose whole body is `time.Sleep(900 * time.Second)`, ad-hoc signed,
+and a `Contents/Info.plist` naming `com.altery.gdoc.presence` at `9.9.9`. It
+was started with `nohup`, confirmed alive with `kill -0` and confirmed by `ps`
+to be running from that path. Then `ApplyBundle` was called from a throwaway
+test in `go/internal/update` with a real `v9.9.10` zip, built by `bundle.sh`
+and packed by `ditto`, at the same destination.
+
+| What was asked | Answer |
+|---|---|
+| the version before | `9.9.9`, read by `BundleVersion`, which reads the plist |
+| the version after | `9.9.10` |
+| what was kept | `GdocPresence.app.previous`, whose plist reads `9.9.9` |
+| is the process alive | `kill -0` yes, and `ps -o comm=` names the same path it was started from |
+| which file is the process actually running | `lsof -p <pid>` `txt` line: `/private/tmp/m23-swap/Applications/GdocPresence.app.previous/Contents/MacOS/GdocPresence`, 1,893,936 bytes |
+| what is at the live path now | the release's executable, a different sha256 from the running one |
+
+**The swap keeps the process running, and the kernel follows it into
+`.previous`.** The running executable is an open file, and renaming a folder it
+sits in does not touch the open file. So the app that is running after an
+update is the previous bundle's binary, reachable only through `.previous`,
+which is exactly why it has to notice and reopen its own path rather than
+re-exec the file it came from.
+
+**One thing worth writing down: a bundle already carrying a plist refused to be
+written into.** `touch`, `cp` and `go build -o` into
+`GdocPresence.app/Contents/MacOS/` all failed with `Operation not permitted`
+once the folder held an `Info.plist`, from this session, while the same writes
+into the same folder before the plist existed succeeded. The cause was not
+isolated here: it is either macOS App Management protection over a folder it
+reads as an app, or this session's own sandbox. It does not reach the updater's
+route either way, which never writes into an existing bundle: it writes
+`<dest>.new`, a folder that is not an app, reads it back, sums it, and swaps by
+rename. Both the rename sequence and the `.previous` rename worked in the
+measurement above.
+
+Recheck the live half, which is not measured and is Nail's: with the app
+running, `gdoc update` into a newer release, then watch for the reopen row and
+a single instance afterwards. If the app does not reopen itself, the swap is
+still safe and the person restarts it by hand, and the self-relaunch is M24's.
 ## Drive's import of a heading's bookmark
 
 Measured 2026-10-16 by hand, from one probe note of three headings, one `#`

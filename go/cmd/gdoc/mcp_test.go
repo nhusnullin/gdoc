@@ -82,7 +82,21 @@ func TestMcpIsRoutedBeforeRun(t *testing.T) {
 // The session here is the whole handshake a client makes, through serveMCP
 // itself rather than through a server a test built, so the wiring is what is
 // measured. Later tasks add their tools to it.
+//
+// It runs twice, because the presence record is written from inside a session
+// and the stream it is written to is not this one: a record that reached
+// stdout would be a stray line in the middle of somebody's protocol.
 func TestStdoutCarriesOnlyJSONRPC(t *testing.T) {
+	for _, set := range []settings.InEffect{defaultsInEffect(), presenceOn()} {
+		t.Run(map[bool]string{false: "the presence off", true: "the presence on"}[set.Presence], func(t *testing.T) {
+			stdoutIsOnlyJSONRPC(t, set)
+		})
+	}
+}
+
+// stdoutIsOnlyJSONRPC is that session under one set of settings.
+func stdoutIsOnlyJSONRPC(t *testing.T, set settings.InEffect) {
+	t.Helper()
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 
 	in := strings.Join([]string{
@@ -96,7 +110,7 @@ func TestStdoutCarriesOnlyJSONRPC(t *testing.T) {
 	}, "\n")
 
 	var out, errOut bytes.Buffer
-	if code := serveMCP(context.Background(), strings.NewReader(in), &out, &errOut, nil, defaultsInEffect()); code != 0 {
+	if code := serveMCP(context.Background(), strings.NewReader(in), &out, &errOut, nil, set); code != 0 {
 		t.Fatalf("stdin closing ends the session: exit %d, stderr %q", code, errOut.String())
 	}
 

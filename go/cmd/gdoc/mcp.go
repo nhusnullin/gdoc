@@ -19,10 +19,11 @@ import (
 	"gdoc/internal/chat"
 	"gdoc/internal/emit"
 	"gdoc/internal/mcp"
+	"gdoc/internal/presence"
 	"gdoc/internal/settings"
 )
 
-// checkMCPArgs refuses anything after the word mcp. The two setting flags are
+// checkMCPArgs refuses anything after the word mcp. The three setting flags are
 // off the line before mcp is routed, so what reaches here is what is left:
 // the Claude Desktop extension passes neither of them and sends the word
 // alone, and whatever else arrives is named back rather than ignored.
@@ -55,6 +56,11 @@ var serveMCP = func(ctx context.Context, in io.Reader, out, errOut io.Writer, ar
 	// sign-in listener, so it is wrapped once here and every one of them is
 	// handed the wrapper: TestOneLogWriterTakesOneLineAtATime.
 	errOut = lockedLog(errOut)
+	// The session's context is marked once, here, so every command a tool call
+	// dispatches under it records via: chat. internal/mcp builds each call's
+	// context from this one, and no other room in the binary marks it, so
+	// every other run is a terminal: TestAChatCallSaysViaChat.
+	ctx = presence.WithChat(ctx)
 	// A directory left by a process that died is taken away before this
 	// session makes its own. Nothing here fails a start.
 	sweepCallDirs(os.TempDir(), time.Now())
@@ -70,7 +76,7 @@ var serveMCP = func(ctx context.Context, in io.Reader, out, errOut io.Writer, ar
 	// out under. A session that could not make a code is a session where every
 	// tool but guide and login refuses, so it is said here rather than call by
 	// call.
-	ch, err := newMCPChat(set)
+	ch, err := newMCPChat(set, errOut)
 	if err != nil {
 		fmt.Fprintln(errOut, err)
 		return 1

@@ -166,6 +166,25 @@
 // TestTheCommentsExampleShowsTheCursorItsWaitNeeds holds the one rule the
 // table cannot see, that cmdComments refuses --wait without --since.
 //
+// Two columns of the table are not about the call at all. report says a run
+// of this command reaches the presence record, and readsBack says the command
+// reads its own write back. Both are read by dispatch and by nothing else:
+// dispatch calls presence.Begin after the parse and defers its end, so a
+// command that is added is recorded without its author writing a line of
+// recording, and a panic safeDispatch recovers still closes the run it opened.
+// report is on for the twelve that read or write a document, replace this
+// binary, or make a browser trip, and off for `auth status`, probe, build,
+// help, completion and mcp, because a question about the token, a page of
+// help and one local file are not a run anybody is waiting on, and mcp is the
+// session every other event is reported under:
+// TestAReportingCommandWritesAStartAndAnEnd, TestAnAuthStatusRunWritesNoEvent,
+// TestAHelpRunWritesNoEvent and TestAnUpdateAndALoginWriteNoDoc. readsBack is
+// on for the five writers that confirm their own write, reply, propose,
+// withdraw, annotate and publish, and it is the only thing that lets a
+// verified reach the record, because update and restyle print verified: false
+// to mean no write happened and that must never be kept as a failed read-back:
+// TestOnlyTheReadBackWritersCarryVerified.
+//
 // The table is a function and not a variable, and that is Go and not taste.
 // help is an entry in it and reads it, so a variable would refer to itself
 // through a function, which is an initialization cycle the compiler refuses.
@@ -690,6 +709,57 @@
 // chat sets it in settings.yaml, which the session reads at its start like any
 // other run.
 //
+// # The presence app is installed beside the binary, and never started
+//
+// With the presence on, `gdoc update` installs the menu bar app too, out of
+// the same verified zip the binary came from: the darwin zips carry it at
+// presence/GdocPresence.app and it lands at ~/Applications/GdocPresence.app,
+// with the app that was there kept as GdocPresence.app.previous. The paths are
+// behind two variables for the reason executable is, so no test touches the
+// ~/Applications of the machine it runs on. The whole of the extraction is
+// internal/update's ApplyBundle, and the rules it refuses by are its doc.go's.
+//
+// Off the flag nothing of this happens. The object a caller reads is the
+// object it always was, the steps on stderr are the steps they always were,
+// and no app is installed, refreshed or uninstalled:
+// TestWithThePresenceOffAnUpdateIsTodaysUpdate, which also states the two
+// step lists the recorded screens are drawn from as literals.
+//
+// Every app failure is a warning naming both paths, never a refusal. The
+// binary has landed by the time the app is touched, and gdoc does not take a
+// binary back because a folder beside it did not arrive, so the two may sit
+// at different versions until a later run and the app is what says so:
+// TestAPresenceFailureIsAWarningNamingBothPathsAndTheBinaryIsUpdated. That
+// holds for a run that came only for the app too, where the release itself
+// could not be read: nobody typed anything about an app on that line and the
+// binary here needed nothing, so the run answers with a warning naming both
+// paths: TestAnAppOnlyRefreshThatCannotReadTheReleaseIsAWarning. With
+// --desktop the extension is what the person asked for, so a release that
+// cannot be read is still a refusal. The four fields it reports, `presence`,
+// `presence_version`, `presence_sha256` and `presence_previous`, are all
+// omitempty, so a run that reached no app says nothing about one.
+//
+// A run with nothing newer still installs the app, out of the release the
+// binary here came from, where the app is missing or at another version. It is
+// how a person who has just turned the flag on gets the app without waiting
+// for the next release, and it costs one download rather than a second one:
+// TestAnUpToDateRunWithThePresenceOnInstallsItFromTheReleaseHere. --check
+// installs nothing, the app included: TestCheckNeverInstallsTheApp. A platform
+// with no app gets one warning naming itself:
+// TestThePresenceOffMacOSWritesNothingAndNamesThePlatform.
+//
+// --rollback swaps the app after the binary, each swap its own involution, and
+// a machine with no earlier app keeps the one it has and is told so:
+// TestRollbackWithThePresenceOnSwapsBoth and
+// TestRollbackWithNoPreviousAppWarnsAndKeepsIt.
+//
+// gdoc never launches the app. The first launch is the person, so a first
+// install says `open ~/Applications/GdocPresence.app` on its step line and a
+// refresh says nothing of the sort, because the app that is running shows its
+// own row about having been updated: TestTheResultSaysToOpenTheAppOnce.
+// withExtension stays the one caller of runProgram, which go/boundary's
+// TestTheOneProgramOpensOnlyTheExtension holds by reading the syntax tree.
+//
 // # The update draws its steps on stderr
 //
 // A person who types `gdoc update` sees what it is doing while it does it: a
@@ -763,13 +833,13 @@
 // on stdout, and exits 2, which is the one shape no caller can read.
 // TestAPanicIsStillOneEnvelope is the pin.
 //
-// # Two setting flags, taken off the line first
+// # Three setting flags, taken off the line first, one of them experimental
 //
-// --config and --mark belong to no command, because they belong to all of
-// them. They are lifted off the line in route, before the word mcp is looked
-// for and before --help is, so one reading of them serves every command, the
-// session and the help alike. What is left is the line as every parser already
-// read it, and nothing below route sees either flag:
+// --config, --mark and --presence belong to no command, because they belong
+// to all of them. They are lifted off the line in route, before the word mcp
+// is looked for and before --help is, so one reading of them serves every
+// command, the session and the help alike. What is left is the line as every
+// parser already read it, and nothing below route sees any of the three:
 // TestEveryCommandTakesTheSettingFlags and
 // TestTheSettingFlagsAreTakenAnywhereOnTheLine.
 //
@@ -813,6 +883,24 @@
 // TestEverySettingFlagIsInHelpAndInBothScripts. The --mark sentence says what
 // the empty mark costs, because turning the mark off turns off the only record
 // of authorship a thread has: TestTheMarkFlagSaysWhatAnEmptyMarkCosts.
+//
+// --presence is the third, and the one the table marks experimental. It takes
+// true or false and it is off unless somebody says otherwise, and what it
+// turns on is the record internal/presence appends for the menu bar app: a
+// start and an end for every command whose table entry reports, and a line
+// for each way a chat hold begins and leaves. It is a setting rather than a
+// command of its own because a person turns it on once for their machine and
+// forgets it, and an account check would be a wire call for a question about
+// this computer. An experimental flag is in the table with its sentence and
+// in no screen and no script, so one person trying it out changes no word of
+// the help every colleague reads: the fifteen screens and both completion
+// scripts are the same bytes with it on the line as without it, which
+// TestAnExperimentalFlagIsInTheTableAndInNoScreen measures. It is not hidden.
+// `gdoc help --json` carries presence and presence_from where it is on, which
+// is the one place a caller already using it looks, and both fields are
+// absent where it is off, so no skill reading the object learns a word about
+// a flag that is not for it. No skill passes it either, and go/boundary's
+// TestNoSkillPassesThePresenceFlag is where that is held.
 //
 // What they resolved to is one field of the help object, settings, which
 // carries the mark in effect and which of the three sources it came from. A

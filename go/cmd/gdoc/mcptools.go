@@ -115,12 +115,16 @@ func (ch *mcpChat) lastCall() time.Time {
 
 // newMCPChat is one session's own. The error is the random source failing,
 // which a session cannot start without.
-func newMCPChat(set settings.InEffect) (*mcpChat, error) {
+//
+// errOut is the session's log, and the holds are the one thing here that
+// reaches it: a hold that leaves writes a line into the presence record, and a
+// record that cannot be written says so there once.
+func newMCPChat(set settings.InEffect, errOut io.Writer) (*mcpChat, error) {
 	code, err := chat.NewCode()
 	if err != nil {
 		return nil, err
 	}
-	return &mcpChat{code: code, ledger: chat.NewLedger(), holds: newMCPHolds(),
+	return &mcpChat{code: code, ledger: chat.NewLedger(), holds: newMCPHolds(set.Presence, errOut),
 		memory: chat.NewMemory[mcp.Result](), set: set}, nil
 }
 
@@ -462,7 +466,7 @@ func mcpSend(ctx context.Context, c mcpCommand, args json.RawMessage, errOut io.
 	// is not sent: nothing below this line runs for it, so the wire sees
 	// nothing. mcphold.go holds what the answer carries.
 	if judge && target != nil {
-		if res, stop := mcpJudge(c, args, *target, ch); stop {
+		if res, stop := mcpJudge(ctx, c, args, *target, ch); stop {
 			return res
 		}
 	}

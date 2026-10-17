@@ -11,6 +11,12 @@
 # suite runs before the binaries, so a release is never cut from code that does
 # not pass. The zips are checksummed before the release is created, so there is
 # no window where a colleague can download an asset nothing can verify.
+#
+# Two jobs. The presence app is Swift in an app bundle, and codesign, lipo and
+# plutil are macOS, so it is built on a Mac and handed to the ubuntu job as an
+# artifact. That job waits for it, copies it into the two darwin zips, and
+# lists every zip before it publishes, because neither a darwin zip with no app
+# in it nor a linux zip with one would be visible on the runner.
 name: Release
 
 on:
@@ -31,8 +37,90 @@ permissions:
   contents: write
 
 jobs:
+  # The app. It is built from the tag like everything else here, lint and tests
+  # first, because a release is the one build nobody is watching.
+  #
+  # macos-26 carries Xcode 26.6 as its default, which is the version `swift
+  # format lint` was written against; the path is selected by name anyway, so
+  # the day the image's default moves is a failure here rather than a reformat
+  # of somebody's pull request. The label and the Xcode were read off GitHub's
+  # runner-images list on 2026-10-17.
+  #
+  # It writes nothing to this repository, so it asks for read.
+  presence:
+    runs-on: macos-26
+    permissions:
+      contents: read
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      # No history. The app is built from the tree at the tag and carries no
+      # `git describe` version: its version is the tag, written into the plist.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+
+      - name: the toolchain
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          swift --version
+
+      - name: lint
+        run: make app-lint
+
+      - name: test
+        run: make app-test
+
+      # bundle.sh builds universal, fills the plist, signs ad-hoc, verifies the
+      # signature and refuses a bundle with a symlink in it. The out path is
+      # absolute because the script builds from its own directory, which is why
+      # the Makefile passes one too.
+      - name: the bundle
+        run: presence/bundle.sh "$TAG" "$GITHUB_WORKSPACE/build/presence/GdocPresence.app"
+
+      # The plist is filled with sed, and a sed that matched nothing exits 0.
+      # The updater installs nothing when the plist it finds already says what
+      # the release says, so a bundle stamped 0.0.0 would be re-installed on
+      # every `gdoc update` on every machine, for ever.
+      - name: the stamp is the tag
+        run: |
+          want="${TAG#v}"
+          got="$(plutil -extract CFBundleShortVersionString raw -o - build/presence/GdocPresence.app/Contents/Info.plist)"
+          if [ "$got" != "$want" ]; then
+            echo "The bundle says CFBundleShortVersionString $got and the tag is $TAG." >&2
+            echo "The updater compares the plist with the release, so a stamp that is not the tag is a bundle it installs for ever or never." >&2
+            exit 1
+          fi
+          echo "the bundle carries $got"
+
+      # The round trip the pack step does, done here, because the ubuntu runner
+      # that packs has no codesign and a colleague's Mac is the next machine
+      # that would notice. Same zip, unzipped, signature verified on the other
+      # side of it.
+      - name: the zip round trip keeps the signature
+        run: |
+          ( cd build/presence && zip -qr "$GITHUB_WORKSPACE/build/round-trip.zip" GdocPresence.app )
+          mkdir -p build/round-trip
+          unzip -q build/round-trip.zip -d build/round-trip
+          codesign --verify --deep --strict build/round-trip/GdocPresence.app
+          echo "the signature survives a zip and an unzip"
+
+      # ditto rather than zip for what travels between jobs: it is the one
+      # archiver on a Mac that writes a bundle's permissions back exactly, and
+      # --keepParent is what keeps the .app folder itself.
+      - name: the artifact
+        run: ditto -c -k --norsrc --noextattr --keepParent build/presence/GdocPresence.app build/GdocPresence.app.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: presence
+          path: build/GdocPresence.app.zip
+          if-no-files-found: error
+          retention-days: 7
+
   release:
     runs-on: ubuntu-latest
+    needs: presence
     env:
       TAG: ${{ inputs.tag || github.ref_name }}
     steps:
@@ -70,6 +158,18 @@ jobs:
 
       - name: test
         run: cd go && go test -race ./...
+
+      # The bundle the macOS job built and verified. Actions wraps an artifact
+      # in a zip of its own, so what lands here is the ditto archive, and the
+      # unzip is what turns it back into a bundle the pack step can copy.
+      - uses: actions/download-artifact@v4
+        with:
+          name: presence
+          path: build
+      - name: the presence app
+        run: |
+          unzip -q build/GdocPresence.app.zip -d build/presence
+          ls -l build/presence/GdocPresence.app/Contents/MacOS
 
       # The client secret is linked in rather than committed. A build without
       # it produces a gdoc that reads with a token it already holds and cannot
@@ -125,6 +225,15 @@ jobs:
             # read this repository than it can read release/platforms.
             mkdir -p "$stage/mcpb"
             cp release/mcpb/manifest.json "$stage/mcpb/manifest.json"
+            # The presence app, on the two platforms that can run it. It is a
+            # second program, installed by `gdoc update` and by no installer,
+            # so it sits in a folder of its own and install.sh never sees it.
+            case "$platform" in
+              darwin-*)
+                mkdir -p "$stage/presence"
+                cp -R build/presence/GdocPresence.app "$stage/presence/"
+                ;;
+            esac
 
             asset="gdoc-$TAG-$platform.zip"
             ( cd "$stage" && zip -qr "$GITHUB_WORKSPACE/dist/$asset" . )
@@ -151,6 +260,42 @@ jobs:
           fi
           printf '\n' >> dist/notes.md
           cat dist/notes.md
+
+      # What the zips hold, read back. A darwin zip with no app in it is a
+      # `gdoc update` that reports a release carrying none, quietly; any other
+      # zip with one is a universal Mach-O on a machine that cannot run a byte
+      # of it. Neither shows on the runner, so the listing is a step with an
+      # exit in it rather than a line in the log.
+      - name: the listing
+        run: |
+          while read -r platform || [ -n "$platform" ]; do
+            case "$platform" in ''|'#'*) continue ;; esac
+
+            asset="dist/gdoc-$TAG-$platform.zip"
+            listing="$(unzip -Z1 "$asset")"
+            printf '%s\n' "$asset"
+            printf '%s\n' "$listing" | sed 's/^/  /'
+
+            case "$platform" in
+              darwin-*)
+                case "$listing" in
+                  *"presence/GdocPresence.app/Contents/MacOS/GdocPresence"*) ;;
+                  *)
+                    echo "$asset carries no presence/GdocPresence.app, and a Mac is where the app runs." >&2
+                    exit 1
+                    ;;
+                esac
+                ;;
+              *)
+                case "$listing" in
+                  *presence/*)
+                    echo "$asset carries presence/, and $platform cannot run a macOS app bundle." >&2
+                    exit 1
+                    ;;
+                esac
+                ;;
+            esac
+          done < release/platforms
 
       - name: publish
         env:

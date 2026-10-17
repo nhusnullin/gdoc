@@ -32,6 +32,7 @@ Two rules about the documents themselves:
 | `go/internal/auth/loopback/` | the one-shot localhost listener the browser redirect lands on |
 | `go/internal/config/` | where the per-user files live, per platform |
 | `go/internal/settings/` | `settings.yaml`, the arguments over it, and the mark in effect |
+| `go/internal/presence/` | the record of what gdoc is doing: the event, the month's file, the one append |
 | `go/internal/gapi/` | the authenticated session. The one room that builds a request |
 | `go/internal/docs/` | the Docs read: tabs, the document tree, suggestion ids, comment ranges |
 | `go/internal/view/` | the document as the text `read` prints, and as the tree `--structure` prints |
@@ -62,6 +63,7 @@ Two rules about the documents themselves:
 | `go/internal/lastcheck/` | the stamp beside the token: when gdoc last asked GitHub what is published, and what it heard |
 | `go/internal/live/` | the opt-in end-to-end tests. Tests only, no production code |
 | `go/boundary/` | the allowlist tests over the wire, the dependencies and these documents |
+| `presence/` | the menu bar app, a Swift package of its own. The core that reads the record, the glyph, the panel, and the script that builds the bundle |
 | `skills/` | `gdoc-review`, `gdoc-publish`, `gdoc-restyle`, `gdoc-export`, `gdoc-align`. Symlinked into `~/.claude/skills/`, so edits are live |
 | `.claude-plugin/` | the plugin manifest and the marketplace entry, so this repository is how a colleague's Claude Code gets `skills/` |
 | `release/` | what a colleague gets: the one-line installer, the example note, the Claude Desktop extension template under `mcpb/`, and the platform list a release walks. The README in the zip is this repository's `README.md` |
@@ -153,7 +155,9 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
   on macOS, from `desktop.go` alone. That is why the login prints a URL instead
   of opening a browser: `TestNothingRunsAnExternalProgram` and
   `TestOnlyDesktopRunsAProgram`, which reads that file's syntax tree and its
-  argument list.
+  argument list. The menu bar app is never started by gdoc either, so its first
+  launch is the person's: `withExtension` stays the one caller of `runProgram`,
+  which `TestTheOneProgramOpensOnlyTheExtension` holds.
 - **Nothing runs git.** No command and no skill runs it, to commit, to ask
   whether the tree is a repository, or to ask whether a file is dirty. Only
   `install.sh`, the Makefile's version stamp, `make tag` and the workflows read
@@ -180,20 +184,20 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
   because the mark is the only record of authorship there is. The mark is a
   setting, ⁘ by default, and may be empty; 🤖, ⁘ and ∴ stay known marks
   (DECISIONS.md, 2026-10-04): `TestMarkdownNamesWhatDocsWouldRenderLiterally`.
+- **The presence file is the one file gdoc appends to, and gdoc never reads
+  it.** `presence/<yyyy>-<mm>.jsonl` in the config directory is written only
+  under the `presence` setting, carries the listed fields and no document word
+  but the title, and nothing gdoc decides depends on a line in it:
+  `TestOnlyPresenceAppends`, `TestPresenceExportsNoReader`,
+  `TestTheEventCarriesOnlyItsListedFields` and `TestOffTouchesNothing`.
 - **Identity is never a gate.** Whose account wrote a comment decides nothing.
   The marker decides.
-- **Skills are linked, not copied.** The five folders under `skills/`,
-  `gdoc-align`, `gdoc-export`, `gdoc-publish`, `gdoc-restyle` and `gdoc-review`,
-  are symlinked into `~/.claude/skills/`, so an edit is live the moment it is
-  saved and before it is committed. `./install.sh` prints
-  `+ uncommitted changes` on a dirty tree, refuses to replace a real directory
-  whose contents differ, and is safe to re-run after any move. A colleague gets
-  the same five through the plugin in `.claude-plugin/`, which the hub's
-  committed `.claude/settings.json` declares as a marketplace with auto-update
-  on, and the one route that copies a folder is `release/install.sh --skills`,
-  which marks what it wrote. Nothing in the binary copies a skill. The one
-  committed copy is `skills/gdoc-review/review.md`, which the binary embeds for
-  chat and a test pins byte for byte: `TestTheEmbeddedCoreIsTheSkillsCore`.
+- **Skills are linked, not copied.** The five folders under `skills/` are
+  symlinked into `~/.claude/skills/` by `./install.sh`, so an edit is live
+  before it is committed; a colleague gets the same five through the plugin in
+  `.claude-plugin/`, and `release/install.sh --skills` is the one route that
+  copies one. The one committed copy is `skills/gdoc-review/review.md`, which
+  the binary embeds for chat: `TestTheEmbeddedCoreIsTheSkillsCore`.
 - **A house-style test states its value as a literal**, never reading the
   constant it checks, because a test that reads the constant follows it wherever
   somebody moves it: `TestHeadingNumberingIsTheLiteralFormat`.
@@ -233,6 +237,8 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
 | chat: the protocol, a tool, the code, a label, a fact, a hold, a card | `go/internal/mcp/doc.go`, `go/internal/chat/doc.go` |
 | the Claude Desktop extension, either `--desktop` | `go/cmd/gdoc/desktop.go`, `release/mcpb/manifest.json` |
 | a document written back into the hub | `go/internal/export/doc.go`, `go/internal/markers/markers.go` |
+| the presence record: the event, the file, what is never in it | `go/internal/presence/doc.go` |
+| the menu bar app: the glyph, the panel, the bundle | `presence/Sources/`, `presence/bundle.sh`, `docs/guide/presence.md` |
 | what a colleague installs, and how | `README.md`, `release/install.sh`, `.claude-plugin/` |
 | a guard over the wire, the modules or these documents | `go/boundary/doc.go` |
 | what a skill tells a session to run, the review session included | `skills/`, `skills/gdoc-review/SKILL.md`, and `gdoc help <command>` |
@@ -252,10 +258,14 @@ TDD. Write the failing test first.
 | `make vet` | `go vet ./...` and the gofmt check |
 | `make build` | `bin/gdoc`, for this machine |
 | `make dist` | the three platform binaries, static, CGO off |
+| `make app` | `bin/GdocPresence.app`, universal and signed ad-hoc. `make app-test` and `make app-lint` are the Swift halves of `make test` and `make vet` |
 | `make tag` | `VERSION=vX.Y.0` into `plugin.json`, committed, tagged and pushed. CI does the rest |
 
-`~/.local/bin/gdoc` links to this repo's `bin/gdoc`, so `make build` refreshes
-what a person typing `gdoc` gets, with no reinstall.
+`~/.local/bin/gdoc` is one of two things. From a checkout it is a link to this
+repo's `bin/gdoc`, so `make build` refreshes what a person typing `gdoc` gets,
+with no reinstall. Where `gdoc update` has installed, it is that release's
+binary with `gdoc.previous` beside it, and `make build` changes nothing a
+person types. Nail's machine is the second one.
 
 The live tests are opt-in and each needs its own variable, because a live read
 is somebody's document and a live write is a document that did not exist a
@@ -266,23 +276,10 @@ CI runs gofmt, vet, the raced suite and `make dist` on every push.
 
 ## Running a milestone
 
-A milestone is a plan under `docs/plans/`, executed by ralphex and reviewed by
-revmux. The plan and the `.ralphex/` configuration are committed on `main`
-first, because ralphex branches from `main` and the reviewer would otherwise see
-its own scripts as new code. Review is revmux only.
-
-```bash
-ralphex --tasks-only docs/plans/<plan>.md
-ralphex --external-only
-```
-
-The first runs the tasks, one commit each. The second runs revmux until a clean
-round or `review_patience` unchanged rounds. Both run from a normal terminal,
-not from inside a Claude Code session. The plan moves to
-`docs/plans/completed/` when the run finishes, by hand if the run was cut short.
-Nail follows a run on the HTML board, not on status lines in chat. Read
-`.ralphex/board/README.md` before starting one: it holds the launch line, the
-refresh script and how to resume a run that died on a session limit.
+A milestone is a plan under `docs/plans/`, run by ralphex and reviewed by
+revmux, from a normal terminal and never from a Claude Code session. Read
+`.ralphex/board/README.md` first: the two launch lines, what `main` carries
+before a run, the board Nail watches it on, and how to resume one that died.
 
 ## Never
 

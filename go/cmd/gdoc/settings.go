@@ -1,4 +1,4 @@
-// The two setting flags, taken off the line before anything else reads it.
+// The three setting flags, taken off the line before anything else reads it.
 //
 // This file is the reading, and internal/settings is the deciding: what the
 // order is, what a mark may be, and what the file may hold are its rules. What
@@ -15,8 +15,11 @@ import (
 	"gdoc/internal/settings"
 )
 
-// takeSettings lifts the two setting flags off the line, wherever they stand,
-// and answers what is left beside what they said.
+// takeSettings lifts the three setting flags off the line, wherever they
+// stand, and answers what is left beside what they said. One of the three,
+// --presence, is experimental, and nothing about the reading of it is: a flag
+// in no screen is still a flag the line may carry, and a line that carried it
+// and was read as a document id would be worse than one that refused it.
 //
 // Wherever they stand, and before anything else reads the line, because every
 // other reading of it would otherwise have to know them: `gdoc --mark ∴ help`
@@ -62,7 +65,7 @@ func takeSettings(args []string) ([]string, settings.Given, error) {
 	}
 	for i := 0; i < len(args); i++ {
 		name, value, joined := strings.Cut(args[i], "=")
-		if name != configFlag && name != markFlag {
+		if !isSettingFlag(name) {
 			rest = append(rest, args[i])
 			continue
 		}
@@ -71,20 +74,25 @@ func takeSettings(args []string) ([]string, settings.Given, error) {
 				refuse(fmt.Errorf("%s needs a value, and none follows it", name))
 				continue
 			}
-			if next := args[i+1]; next == configFlag || next == markFlag {
+			if next := args[i+1]; isSettingFlag(next) {
 				refuse(fmt.Errorf("%s needs a value, and %q is another flag", name, next))
 				continue
 			}
 			i++
 			value = args[i]
 		}
-		held := &given.Mark
-		if name == configFlag {
+		var held **string
+		switch name {
+		case configFlag:
 			if value == "" {
 				refuse(fmt.Errorf("%s was given an empty value", name))
 				continue
 			}
 			held = &given.Config
+		case markFlag:
+			held = &given.Mark
+		case presenceFlag:
+			held = &given.Presence
 		}
 		if *held != nil {
 			refuse(fmt.Errorf("%s is given twice, and which one counts is not decided here", name))
@@ -96,6 +104,14 @@ func takeSettings(args []string) ([]string, settings.Given, error) {
 		return rest, settings.Given{}, refusal
 	}
 	return rest, given, nil
+}
+
+// isSettingFlag answers whether this word is one of the three, by the one
+// spelling each has. It is asked twice in the reading, once for the word under
+// the cursor and once for the word a flag would otherwise take as its value,
+// and both questions have to move together when a fourth flag arrives.
+func isSettingFlag(name string) bool {
+	return name == configFlag || name == markFlag || name == presenceFlag
 }
 
 // resolveSettings is what this run writes: the file in use with the line laid

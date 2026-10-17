@@ -1,0 +1,3 @@
+{"v":1,"at":"2026-10-17T09:15:00Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","call":1,"event":"start","command":"comments","via":"terminal","doc":"1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789","wait":true}
+{"v":2,"at":"2026-10-17T09:15:01Z","gdoc":"v2.14.0","pid":4242,"run":"9f1cb3a7d2e45608","call":1,"event":"start","command":"comments","via":"terminal","doc":"1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789","shape":"something this app has never heard of"}
+{"v":1,"at":"2026-10-17T09:15:02Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","call":2,"event":"start","command":"reply","via":"chat","doc":"1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789"}

@@ -230,6 +230,17 @@
 // becomes one tool with one name, and where a released call goes out as the
 // arguments the hold kept.
 //
+// Under the presence setting a held write puts one line into the record
+// internal/presence appends, and one more line for the way it leaves:
+// released, expired, or landed because a later send took it away. The line
+// carries the hold's id, the rule's name, the tool, the document id and when
+// the hold runs out, and nothing else of this package reaches it. No ledger
+// word travels: not a comment, not a quote, not a title the ledger saw, not
+// the hold's value, its reason or the text it is holding, and not the card's
+// words. The record says that a write of this kind is waiting for a person,
+// which is what the menu bar glyph needs, and a person who wants to know
+// which words are waiting reads the card in the chat where the hold lives.
+//
 // # The same write twice
 //
 // Memory keeps the answer each write of this session gave for ten minutes,

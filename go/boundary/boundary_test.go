@@ -662,6 +662,58 @@ func TestOnlyDesktopRunsAProgram(t *testing.T) {
 	}
 }
 
+// TestTheOneProgramOpensOnlyTheExtension holds the other half of that
+// narrowness: the seam the one program goes through has one caller, and it is
+// the step that hands the Claude Desktop extension to Claude Desktop.
+//
+// It is the pin the presence is installed under. `gdoc update` now writes a
+// folder into ~/Applications as well as a binary, and the spec's rule is that
+// gdoc never launches the app: the first launch is the person. A route that
+// opened what it had just installed would be a second caller here, so this
+// test is what refuses it.
+//
+// Test files are skipped. A test replaces runProgram with a recorder rather
+// than calling it, and an assignment is not a call.
+func TestTheOneProgramOpensOnlyTheExtension(t *testing.T) {
+	const seam, caller = "runProgram", "withExtension"
+	callers := map[string]int{}
+	err := walkGo("..", func(rel, path string, f *ast.File) error {
+		if strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		where := filepath.ToSlash(filepath.Join(rel, filepath.Base(path)))
+		for _, decl := range f.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok {
+				continue
+			}
+			ast.Inspect(fn, func(n ast.Node) bool {
+				call, ok := n.(*ast.CallExpr)
+				if !ok {
+					return true
+				}
+				if id, ok := call.Fun.(*ast.Ident); ok && id.Name == seam {
+					callers[where+" "+fn.Name.Name]++
+				}
+				return true
+			})
+		}
+		return nil
+	}, parser.AllErrors)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "cmd/gdoc/update.go " + caller
+	if got := callers[want]; got != 1 {
+		t.Errorf("%s calls %s %d times; it is the one caller and it calls it once", want, seam, got)
+	}
+	for where, calls := range callers {
+		if where != want {
+			t.Errorf("%s calls %s %d times; %s is the only place gdoc may start a program from", where, seam, calls, want)
+		}
+	}
+}
+
 // stringConsts is the file's own string constants, so a call that names one can
 // be read back to the value it holds. The test states the value as a literal and
 // the code keeps its constant.

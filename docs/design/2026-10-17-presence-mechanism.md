@@ -1,9 +1,10 @@
 # The presence: the mechanism, decided by the team
 
 This file is the record of a design night, kept as it was argued. The rules
-that bind are in `docs/plans/2026-10-17-gdoc-v2-m23-the-presence-spec.md`;
-where this file and the spec differ, the spec holds, and the section at the
-end says what Codex and the plan review changed.
+that bind are in
+`docs/plans/completed/2026-10-17-gdoc-v2-m23-the-presence-spec.md`; where this
+file and the spec differ, the spec holds, and the section at the end says what
+Codex and the plan review changed.
 
 2026-10-17, night. Nail's brief, in meaning: gdoc itself must not change in
 kind. It may report what it is doing in real time, "through a pipe or some

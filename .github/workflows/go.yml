@@ -1,5 +1,10 @@
 # The Go suite is where the guard's guarantees live, so it runs on every push
 # rather than when somebody remembers to run make test.
+#
+# The presence app is here too, built and never uploaded. release.yml runs on
+# tags, and a tag is pushed by a person or at 02:00 UTC by the nightly, so a
+# Swift file that does not compile would otherwise be found by the one build
+# nobody is watching.
 name: Go
 
 on:
@@ -32,3 +37,58 @@ jobs:
       # failure on the commit that caused it.
       - name: dist
         run: make dist
+
+  # The app, built the way the release builds it, minus the upload: nothing
+  # downloads a push. The version is dev, which bundle.sh stamps 0.0.0, because
+  # a push comes from no release and a plist that named one would be a bundle
+  # the updater thinks it already installed.
+  #
+  # macos-26 carries Xcode 26.6 as its default, which is the version `swift
+  # format lint` was written against; the path is selected by name anyway, so
+  # the day the image's default moves is a failure here rather than a reformat
+  # of somebody's pull request. The label and the Xcode were read off GitHub's
+  # runner-images list on 2026-10-17.
+  presence:
+    runs-on: macos-26
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: the toolchain
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          swift --version
+
+      - name: lint
+        run: make app-lint
+
+      - name: test
+        run: make app-test
+
+      # The out path is absolute because bundle.sh builds from its own
+      # directory, which is why the Makefile passes one too.
+      - name: the bundle
+        run: presence/bundle.sh dev "$GITHUB_WORKSPACE/build/presence/GdocPresence.app"
+
+      # A checkout build carries no release's version, and the one value that
+      # says so is 0.0.0. bundle.sh fills the plist with sed, and a sed that
+      # matched nothing exits 0, so the stamp is read back here as well.
+      - name: the stamp is a checkout build
+        run: |
+          got="$(plutil -extract CFBundleShortVersionString raw -o - build/presence/GdocPresence.app/Contents/Info.plist)"
+          if [ "$got" != "0.0.0" ]; then
+            echo "A build from no release says CFBundleShortVersionString $got, and 0.0.0 is what no release means." >&2
+            exit 1
+          fi
+          echo "the bundle carries $got"
+
+      # The round trip the release's pack step does. It is proved on a Mac
+      # because the ubuntu job that packs has no codesign at all.
+      - name: the zip round trip keeps the signature
+        run: |
+          ( cd build/presence && zip -qr "$GITHUB_WORKSPACE/build/round-trip.zip" GdocPresence.app )
+          mkdir -p build/round-trip
+          unzip -q build/round-trip.zip -d build/round-trip
+          codesign --verify --deep --strict build/round-trip/GdocPresence.app
+          echo "the signature survives a zip and an unzip"

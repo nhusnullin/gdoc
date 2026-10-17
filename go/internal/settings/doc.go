@@ -60,6 +60,43 @@
 // has to go and change:
 // TestABadMarkIsRefusedNamingWhereItCameFrom.
 //
+// # presence: true is the one experimental setting, and it is a setting
+//
+// The presence is whether this run writes a line into the presence file in the
+// config directory, for the menu bar application to read. It is off unless the
+// file or the line says otherwise, and the two sources are laid over each other
+// in the same order the mark is:
+// TestPresenceIsOffByDefault, TestTheFileTurnsPresenceOn,
+// TestThePresenceArgumentOverridesTheFile and
+// TestPresenceFromSaysWhichSourceWon.
+//
+// It is a setting and never a check of who is signed in. A flag that asked
+// whose account this is would decide what gdoc writes from the token, and the
+// token is not a setting, for the reason the section below gives. It would also
+// be a decision no colleague could see, change or turn off, and the whole of
+// what the presence is for is that one person can try it on one machine and
+// everybody else's gdoc is the gdoc they had. A line in a file they own is how
+// they say so.
+//
+// The argument takes the two words "true" and "false" and nothing else, while
+// the file takes whatever YAML reads as a boolean, `True` among them. That is
+// not an oversight: a line somebody typed once is a line they can retype, and a
+// file is a line they keep, so the file is forgiving where the argument is
+// exact. Everything else is refused in gdoc's own words, naming the key or the
+// flag, because go-yaml names the Go field it was decoding into and that is no
+// line a colleague can go and change:
+// TestABadPresenceValueIsRefusedNamingWhereItCameFrom.
+//
+// `presence:` with nothing behind it is a line somebody did not finish, refused
+// the way `mark:` is and for the same reason, with the way to finish it:
+// TestAPresenceKeyWithNoValueIsRefused.
+//
+// PresenceFrom is the empty string whenever the presence is off, including
+// where a file or an argument said so in as many words. While nothing is in
+// effect there is no source to name, and help --json leaves both fields out, so
+// the help object every other colleague reads is the object it was before this
+// flag existed: TestPresenceFromIsSetOnlyWhenTheFlagIsOn.
+//
 // # The token is not a setting
 //
 // Neither the token, nor its path, nor the update stamp. They are a credential

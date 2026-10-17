@@ -1,8 +1,9 @@
 # gdoc v2 Milestone 23: the presence. The channel, the flag, the delivery, the first glance. Plan
 
 2026-10-17. The task list for the specification beside it,
-`docs/plans/2026-10-17-gdoc-v2-m23-the-presence-spec.md`, whose six brief
-rules are Nail's and whose design rules are listed there for him to strike.
+`docs/plans/completed/2026-10-17-gdoc-v2-m23-the-presence-spec.md`, whose six
+brief rules are Nail's and whose design rules are listed there for him to
+strike.
 One commit per task. The spec holds the rules. This plan repeats none of them.
 Where the code, the spec or this plan disagree, the task stops and says so
 rather than choosing. The design record
@@ -17,9 +18,11 @@ Serves 4 and 3, strains 2 and 1, as the spec says.
 
 ## Context (from discovery)
 
-Every reference below was read on 2026-10-17 before M21 and M22 merged, so
-the first task re-checks `update.go` and `main.go` line numbers before it
-starts and corrects this list in its commit.
+Every reference below was read on 2026-10-17 before M21 and M22 merged. Task 1
+re-checked every line number in this list against `main` as it stands and
+corrected the five that had moved: `present()`, both SPEC.md sentences, the
+CLAUDE.md ceiling test and the README's `gdoc update` paragraph. `update.go`
+and `main.go` had not moved at all.
 
 - `go/cmd/gdoc/main.go:244` `dispatch`: matches the table entry `c`, parses
   `a`, sets `a.set`, returns `c.run(ctx, a, errOut)` at `:280`. `:179`
@@ -39,11 +42,13 @@ starts and corrects this list in its commit.
   `TestEverySettingFlagIsInHelpAndInBothScripts`, `completion_test.go:480`,
   `help_test.go:436`. The help screens are the 15 bare goldens among the 23
   files under `cmd/gdoc/testdata/screens/`, through `helpscreen_test.go`.
-  There is no `help --json` golden: Task 1 captures that object with the flag
-  off before its change and compares after.
+  There is no `help --json` golden under `testdata/screens/`, but
+  `testdata/pipe/help.stdout.golden` is the same object frozen read-only, so
+  Task 1 captured `help --json` with the flag off before its change as a
+  sha256 and a length, both literals, rather than as 8,921 bytes inline.
 - `go/internal/settings/settings.go`: `key = "mark"`, `Given{Config, Mark}`,
   `InEffect{Mark, MarkFrom, File}`, `file{Mark *string}`, `Resolve` lays the
-  argument over the file over the default; `:107` `present()` tells a key
+  argument over the file over the default; `:117` `present()` tells a key
   with no value from a key nobody wrote. `doc.go` holds the rules and
   `TestAnUnknownKeyIsRefusedByName`, `TestTheTokenIsNotASetting`. Measured
   with goccy/go-yaml v1.19.2: `yes`, `1` and `""` into a `*bool` are refused
@@ -76,16 +81,18 @@ starts and corrects this list in its commit.
   `TestTheReleaseWalksThePlatformsFileRatherThanASecondList` refuses a
   platform named in `release.yml`. A failed release is re-run from the
   Actions page; the nightly is not touched.
-- `docs/v2/SPEC.md:719` "A zip carries six things"; `:743` "the one program
+- `docs/v2/SPEC.md:730` "A zip carries six things"; `:754` "the one program
   gdoc runs is `/usr/bin/open`". `docs/v2/PLAN.md:33` the Done table.
 - `CLAUDE.md` is 300 lines and `TestCLAUDEmdIsUnderTheCeiling`
-  (`go/boundary/docs_test.go:40`) allows 300; M22 adds rows first. `:257`
+  (`go/boundary/docs_test.go:42`) allows 300; M22 adds rows first. `:257`
   says `~/.local/bin/gdoc` links to `bin/gdoc`: true for the checkout route
   (`docs/guide/from-a-checkout.md:19`, `install.sh:20`), false on Nail's
   machine, where it is the v2.12.1 release binary with `gdoc.previous`
   beside it. `README.md` is 200 lines and `releaseREADMECeiling` is 200
   (`go/boundary/release_test.go:258`). `docs/guide/` has no page for
-  `gdoc update`; the README holds it at `:169`.
+  `gdoc update`; the README holds it at `:171`.
+  `TestAccountOfHasTwoCallers`, which Task 4 puts its own pin beside, is in
+  `go/boundary/account_test.go:52` and not in `boundary_test.go`.
 - Toolchain on Nail's machine, measured 2026-10-17: Xcode 26.6 selected,
   Swift 6.3.3, `swift format` 6.3.0, `xctest` present, no signing identity.
   A tools-6.0 package with `.copy("Fixtures")` and `Bundle.module` passes
@@ -134,11 +141,12 @@ every box in it is ticked and its commit is on the branch.
 - Modify: `go/cmd/gdoc/commands.go`, `go/cmd/gdoc/settings.go`, `go/cmd/gdoc/help.go`
 - Modify: `go/cmd/gdoc/settings_test.go`, `go/cmd/gdoc/completion_test.go`, `go/cmd/gdoc/help_test.go`
 
-- [ ] re-check the line numbers in Context against `main` as it stands and
+- [x] re-check the line numbers in Context against `main` as it stands and
       correct this plan where they moved
-- [ ] capture `gdoc help --json` with the flag off before any change, into
-      the test as a literal, for the byte compare below
-- [ ] `TestPresenceIsOffByDefault`, `TestTheFileTurnsPresenceOn`,
+- [x] capture `gdoc help --json` with the flag off before any change, into
+      the test as a literal, for the byte compare below (8,921 bytes,
+      sha256 `40a28f2a…`, in `cmd/gdoc/presenceflag_test.go`)
+- [x] `TestPresenceIsOffByDefault`, `TestTheFileTurnsPresenceOn`,
       `TestThePresenceArgumentOverridesTheFile`,
       `TestABadPresenceValueIsRefusedNamingWhereItCameFrom` (`yes`, `1`, an
       empty value and `True` on the argument, each naming the file and key
@@ -147,21 +155,21 @@ every box in it is ticked and its commit is on the branch.
       `TestPresenceFromIsSetOnlyWhenTheFlagIsOn`,
       `TestPresenceFromSaysWhichSourceWon`; `TestAnUnknownKeyIsRefusedByName`
       and `TestTheTokenIsNotASetting` unchanged
-- [ ] `file` gains `Presence *bool` under `presence`, `Given` gains
+- [x] `file` gains `Presence *bool` under `presence`, `Given` gains
       `Presence *string` taking `true` or `false` only, `InEffect` gains
       `Presence bool` and `PresenceFrom`; `Resolve` lays them in the same
       order as the mark
-- [ ] `settingFlags()` gains the entry with its sentence and an
+- [x] `settingFlags()` gains the entry with its sentence and an
       `experimental` bit; `takeSettings` takes it with the same refusals as
       `--mark`; `checkMCPArgs` still admits setting flags only;
       `helpSettings` gains `presence` and `presence_from`, both `omitempty`,
       set only when on
-- [ ] `TestAnExperimentalFlagIsInTheTableAndInNoScreen`: the 15 help screens,
+- [x] `TestAnExperimentalFlagIsInTheTableAndInNoScreen`: the 15 help screens,
       both completion scripts and the captured `help --json` with the flag
       off are byte for byte as before; `TestEverySettingFlagIsInHelpAndInBothScripts`
       skips experimental flags, and the "two setting flags" comments say
       three, one experimental. No golden moves
-- [ ] `settings/doc.go` gains the rule and why the flag is a setting and not
+- [x] `settings/doc.go` gains the rule and why the flag is a setting and not
       an account check; `make test`
 
 ### Task 2: the event, the file and the writer, `internal/presence`
@@ -170,7 +178,7 @@ every box in it is ticked and its commit is on the branch.
 - Create: `go/internal/presence/doc.go`, `event.go`, `append.go`, `presence_test.go`, `testdata/events-v1.jsonl`
 - Modify: `go/internal/config/config.go`, `go/internal/config/config_test.go`
 
-- [ ] `TestOffTouchesNothing` (`GDOC_CONFIG_DIR` under a 0500 directory, no
+- [x] `TestOffTouchesNothing` (`GDOC_CONFIG_DIR` under a 0500 directory, no
       `presence/` appears, no error), `TestTheEventCarriesOnlyItsListedFields`
       (json tags against the spec's literal list, `gdoc` and `run` among them),
       `TestAnEventCarriesNoWordOfTheEnvelopeButTheTitle` (canaries in data
@@ -192,8 +200,8 @@ every box in it is ticked and its commit is on the branch.
       scripted run against `events-v1.jsonl`, byte for byte, with a fixed
       clock, pid, run id and version; the script covers every event kind and
       every optional field at least once, chat and terminal both)
-- [ ] `config.PresenceDir()` beside the other paths, with its test
-- [ ] `Event` as the spec lists it; `Begin(ctx, on bool, version, command,
+- [x] `config.PresenceDir()` beside the other paths, with its test
+- [x] `Event` as the spec lists it; `Begin(ctx, on bool, version, command,
       doc string, wait, readsBack bool, errOut) *Run`, `(*Run).End(emit.Result)`,
       `Held`, `Released`, `Expired`, `Landed`, `WithChat(ctx) context.Context`
       and its reader, every one safe on nil and on off; the writer is one
@@ -202,7 +210,7 @@ every box in it is ticked and its commit is on the branch.
       eight random bytes as hex taken once per process; the clock, the pid,
       the run id and the monotonic source behind variables for the fixture
       test
-- [ ] `doc.go` holds the rules with the test for each, and why the binary
+- [x] `doc.go` holds the rules with the test for each, and why the binary
       never reads the file
 
 ### Task 3: the hook in `dispatch` and in the holds
@@ -212,7 +220,7 @@ every box in it is ticked and its commit is on the branch.
 - Create: `go/cmd/gdoc/presence_test.go`
 - Modify: `go/cmd/gdoc/mcphold_test.go`
 
-- [ ] `TestTheFlagChangesNoByteOfTheObject`: read, comments --wait with a done
+- [x] `TestTheFlagChangesNoByteOfTheObject`: read, comments --wait with a done
       context, reply and publish over the stubbed session, stdout, stderr and
       exit code equal with the flag off and on, the only difference the file;
       `TestAnUnwritableLogChangesNoByteOfTheObject` (the presence path is a
@@ -229,7 +237,7 @@ every box in it is ticked and its commit is on the branch.
       `TestAHeldWriteRecordsTheRuleAndNoneOfItsWords`,
       `TestEveryWayAHoldLeavesIsExactlyOneLine` (released, expired, landed);
       `TestStdoutCarriesOnlyJSONRPC` run again with the flag on
-- [ ] the table entry gains `report bool` and `readsBack bool`: `report` true
+- [x] the table entry gains `report bool` and `readsBack bool`: `report` true
       for read, comments, suggestions, export, restyle, reply, propose,
       withdraw, annotate, publish, update, auth login; `readsBack` true for
       reply, propose, withdraw, annotate, publish; `dispatch` calls `Begin`
@@ -238,7 +246,7 @@ every box in it is ticked and its commit is on the branch.
       session context with `presence.WithChat`; `mcpHolds.keep`, the release
       path, the expiry branch of `sweep` and `landed` each write their event
       once
-- [ ] `make test`; the canary test and the held-write test are the guards
+- [x] `make test`; the canary test and the held-write test are the guards
       over the ledger, since `TestTheLedgerIsPerProcessAndWritesNothingToDisk`
       reads only `ledger.go`'s imports
 
@@ -248,13 +256,13 @@ every box in it is ticked and its commit is on the branch.
 - Create: `go/boundary/presence_test.go`
 - Modify: `go/internal/comments/doc.go`, `go/internal/chat/doc.go`, `go/cmd/gdoc/doc.go`
 
-- [ ] `TestOnlyPresenceAppends` (`O_APPEND` outside `_test.go` only in
+- [x] `TestOnlyPresenceAppends` (`O_APPEND` outside `_test.go` only in
       `internal/presence`), `TestPresenceOpensNoWireAndRunsNothing` (no `net`,
       `net/http`, `os/exec`, `internal/chat`, `internal/gapi`),
       `TestPresenceExportsNoReader` (no exported `Read*` or `Open*`, no
       `os.Open` or `os.ReadFile` outside `_test.go`), `TestBeginHasOneCaller`
       (after `TestAccountOfHasTwoCallers`), `TestNoSkillPassesThePresenceFlag`
-- [ ] `comments/doc.go`'s "Nothing is kept. The wait writes no file of its
+- [x] `comments/doc.go`'s "Nothing is kept. The wait writes no file of its
       own" gains the sentence that `dispatch` writes a start and an end for it
       under the setting, and why that is a record for another program and not
       session state; `chat/doc.go` says the hold event carries no ledger word;
@@ -267,7 +275,7 @@ every box in it is ticked and its commit is on the branch.
 - Create: `go/internal/update/bundle.go`, `go/internal/update/bundle_test.go`, `go/internal/update/testdata/bundle.zip`
 - Modify: `go/internal/update/doc.go`
 
-- [ ] `TestABundleIsTakenOutOfTheVerifiedZipOnly` (a zip failing `Verify`
+- [x] `TestABundleIsTakenOutOfTheVerifiedZipOnly` (a zip failing `Verify`
       extracts nothing), `TestOnlyEntriesUnderTheBundlePathAreTaken`,
       `TestAPathOutsideTheBundleASymlinkAndAnAppleDoubleEntryAreRefusedByName`
       (`..`, an absolute path, a symlink entry, `__MACOSX/`, `._x`, a duplicate
@@ -282,13 +290,13 @@ every box in it is ticked and its commit is on the branch.
       `TestRollbackOfTheBundleRunTwiceIsWhereItStarted`,
       `TestADestinationThatIsASymlinkAFileOrAnotherAppMovesNothing`,
       `TestAMissingApplicationsFolderIsMade`
-- [ ] `ApplyBundle(archive, sums, asset, inZip, dest) (BundleResult, error)`
+- [x] `ApplyBundle(archive, sums, asset, inZip, dest) (BundleResult, error)`
       and `RollbackBundle(dest)`; the stage is `<dest>.new`, removed first if
       stale, the previous `<dest>.previous`, `RemoveAll` on the stale
       previous because rename will not replace a folder, every rename after
       the first undone on failure; `BundleResult` carries `Version`,
       `TreeSum`, `Previous`
-- [ ] `update/doc.go` gains the section and amends its "one named file"
+- [x] `update/doc.go` gains the section and amends its "one named file"
       sentence, with the tests by name
 
 ### Task 6: `gdoc update` installs, refreshes and rolls back the app under the flag
@@ -297,11 +305,11 @@ every box in it is ticked and its commit is on the branch.
 - Modify: `go/cmd/gdoc/update.go`, `go/cmd/gdoc/update_test.go`, `go/cmd/gdoc/updatescreen_test.go`
 - Modify: `go/boundary/boundary_test.go`
 
-- [ ] pins, passing before and after: `TestWithThePresenceOffAnUpdateIsTodaysUpdate`
+- [x] pins, passing before and after: `TestWithThePresenceOffAnUpdateIsTodaysUpdate`
       (envelope, stderr, the screen goldens, and the disk, byte for byte),
       `TestTheOneProgramOpensOnlyTheExtension` in `go/boundary`
       (`withExtension` is the only caller of `runProgram`)
-- [ ] failing first: `TestAPresenceFailureIsAWarningNamingBothPathsAndTheBinaryIsUpdated`,
+- [x] failing first: `TestAPresenceFailureIsAWarningNamingBothPathsAndTheBinaryIsUpdated`,
       `TestAnUpToDateRunWithThePresenceOnInstallsItFromTheReleaseHere`,
       `TestRollbackWithThePresenceOnSwapsBoth`,
       `TestRollbackWithNoPreviousAppWarnsAndKeepsIt`,
@@ -309,7 +317,7 @@ every box in it is ticked and its commit is on the branch.
       `TestCheckNeverInstallsTheApp`, `TestTheResultSaysToOpenTheAppOnce`
       (the step line names `open ~/Applications/GdocPresence.app` on a first
       install only)
-- [ ] `updateData` gains `presence`, `presence_version`, `presence_sha256`,
+- [x] `updateData` gains `presence`, `presence_version`, `presence_sha256`,
       `presence_previous`, all omitempty; the bundle path in the zip and the
       destination behind variables like `executable`; the install runs the
       binary's `Apply`, then `ApplyBundle`, and a bundle failure is a warning
@@ -317,7 +325,7 @@ every box in it is ticked and its commit is on the branch.
       the installed binary is that release, the app is missing or at another
       version, and `--check` was not given; `runRollback` swaps the bundle
       after the binary when a previous exists and warns otherwise
-- [ ] `make test`, with every update golden unchanged
+- [x] `make test`, with every update golden unchanged
 
 ### Task 7: the Swift package: the core, the fold, the tail, the shared fixture
 
@@ -328,9 +336,9 @@ every box in it is ticked and its commit is on the branch.
 - Create: `presence/Tests/PresenceCoreTests/Fixtures/{events-v1,day,torn,malformed,future}.jsonl`
 - Modify: `Makefile`, `.gitignore`, `go/boundary/presence_test.go`
 
-- [ ] `TestTheSwiftFixtureIsTheGoFixture` in `go/boundary`: the two
+- [x] `TestTheSwiftFixtureIsTheGoFixture` in `go/boundary`: the two
       `events-v1.jsonl` are byte for byte one file
-- [ ] Swift tests, written first: `testAVersionOneLineDecodesAndAnUnknownFieldIsIgnored`,
+- [x] Swift tests, written first: `testAVersionOneLineDecodesAndAnUnknownFieldIsIgnored`,
       `testAnUnknownVersionIsRefusedAsNewer` (`future.jsonl`),
       `testAnUndecodableRecordIsSkippedAndTailingGoesOn` (`malformed.jsonl`),
       `testOnlyNewlineTerminatedRecordsAreParsedAndTheTailIsBounded`
@@ -350,14 +358,14 @@ every box in it is ticked and its commit is on the branch.
       `gone`), `testNoSourceFileImportsNetworkOrLaunchesAProcess` (the whole
       package: `URLSession`, `import Network`, and `Process` as a word, not
       `ProcessInfo`)
-- [ ] `Package.swift`: tools 6.0, `.macOS(.v14)`, targets `PresenceCore` and
+- [x] `Package.swift`: tools 6.0, `.macOS(.v14)`, targets `PresenceCore` and
       `PresenceCoreTests` only (the executable and the UI targets are declared
       in Task 8, because a declared target with no source fails a clean
       clone), fixtures as `.copy("Fixtures")`; Makefile targets `app-test`
       (`cd presence && swift test`) and `app-lint`
       (`swift format lint --strict -r Sources Tests`); `.gitignore` gains
       `presence/.build/` and `presence/.swiftpm/`
-- [ ] `make app-test`, `make app-lint`, `make test`
+- [x] `make app-test`, `make app-lint`, `make test`
 
 ### Task 8: the app: the glyph, the panel, the reopen row
 
@@ -366,14 +374,14 @@ every box in it is ticked and its commit is on the branch.
 - Create: `presence/Sources/PresenceUI/{Glyph,PanelView,Rows}.swift`, `presence/Sources/Presence/{main,StatusItem,Panel,AppState}.swift`
 - Create: `presence/Tests/PresenceUITests/RenderTests.swift`, `presence/Info.plist`, `presence/bundle.sh`
 
-- [ ] `testTheGlyphIsOneOfFourStatesByPriority` (hold over running over watch
+- [x] `testTheGlyphIsOneOfFourStatesByPriority` (hold over running over watch
       over idle, monochrome template images),
       `testThePanelRendersNowAndTodayInLightAndDark` (PNGs written under
       `PRESENCE_SHOTS`, a directory outside the repository, from `day.jsonl`,
       both appearances, 2x), `testAStoppedRunWithUnknownOutcomeIsItsOwnRow`,
       `testTheVersionRowsNameTheAppAndTheLastGdoc`,
       `testTheReopenRowAppearsWhenThePlistVersionDiffers`
-- [ ] `Package.swift` gains `PresenceUI`, `Presence` and `PresenceUITests`;
+- [x] `Package.swift` gains `PresenceUI`, `Presence` and `PresenceUITests`;
       the shell: `NSStatusItem` with `sendAction(on: [.leftMouseUp,
       .rightMouseUp])`, a borderless key-capable `NSPanel` under the button
       with an `NSHostingView`, closed on resign key and on Esc; NOW and TODAY
@@ -383,14 +391,14 @@ every box in it is ticked and its commit is on the branch.
       the "Updated to X. Quit and reopen" row on a difference and "gdoc
       presence was removed" when the bundle is gone; no process is launched;
       nothing is persisted
-- [ ] `presence/Info.plist` as XML with `@VERSION@`, `LSUIElement`,
+- [x] `presence/Info.plist` as XML with `@VERSION@`, `LSUIElement`,
       `CFBundleIdentifier com.altery.gdoc.presence`,
       `LSMinimumSystemVersion 14.0`; `bundle.sh <version> <out>` builds
       universal with `swift build -c release --arch arm64 --arch x86_64`,
       fills the plist (`0.0.0` for `dev`), signs ad-hoc, verifies with
       `codesign --verify --deep --strict` and `lipo -archs`; Makefile `app`
       writes `bin/GdocPresence.app` from `$(VERSION)`
-- [ ] `make app`, `make app-test`, `make app-lint`; the PNGs looked at
+- [x] `make app`, `make app-test`, `make app-lint`; the PNGs looked at
 
 ### Task 9: the release builds the app and the zips carry it
 
@@ -398,7 +406,7 @@ every box in it is ticked and its commit is on the branch.
 - Modify: `.github/workflows/release.yml`, `.github/workflows/go.yml`
 - Modify: `go/boundary/workflows_test.go`, `go/boundary/release_test.go`, `go/boundary/presence_test.go`
 
-- [ ] `releaseSteps` judges the job that runs `gh release create` instead of
+- [x] `releaseSteps` judges the job that runs `gh release create` instead of
       failing on two jobs; `TestTheReleaseWaitsForThePresenceBuild` (the
       publishing job needs `presence`; the presence job never runs `gh
       release` and has `contents: read`), `TestTheZipCarriesThePresenceForDarwinOnly`
@@ -414,7 +422,7 @@ every box in it is ticked and its commit is on the branch.
       `TestTheReleaseInstallerLeavesThePresenceAlone`,
       `TestTheCIBuildsThePresenceOnEveryPush` (the job is in `go.yml`,
       because `release.yml` runs on tags only)
-- [ ] `release.yml` gains job `presence` on the macOS image whose Xcode is
+- [x] `release.yml` gains job `presence` on the macOS image whose Xcode is
       26 (the label checked against GitHub's runner list at run time and
       recorded in the task log, with `sudo xcode-select -s` to that Xcode so
       `swift format` is the version lint was written against): check out the
@@ -424,8 +432,8 @@ every box in it is ticked and its commit is on the branch.
       `actions/upload-artifact`; job `release` gains `needs: presence`, a
       download and unzip, the `darwin-*)` copy into `$stage/presence/`, and
       the listing step before publish
-- [ ] `go.yml` gains the same `presence` job without the upload
-- [ ] `make test`; `TestTheReleaseWalksThePlatformsFileRatherThanASecondList`
+- [x] `go.yml` gains the same `presence` job without the upload
+- [x] `make test`; `TestTheReleaseWalksThePlatformsFileRatherThanASecondList`
       and the nightly tests unchanged
 
 ### Task 10: the words: CLAUDE.md, the guide, SPEC.md's two sentences
@@ -434,7 +442,7 @@ every box in it is ticked and its commit is on the branch.
 - Modify: `CLAUDE.md`, `docs/v2/SPEC.md`
 - Create: `docs/guide/presence.md`
 
-- [ ] `CLAUDE.md`: `presence/` and `go/internal/presence/` in the table, one
+- [x] `CLAUDE.md`: `presence/` and `go/internal/presence/` in the table, one
       new invariant (the presence file is the one file gdoc appends to,
       written only under the setting, never read by the binary, carrying only
       the listed fields), the existing "nothing runs an external program"
@@ -447,35 +455,35 @@ every box in it is ticked and its commit is on the branch.
       `.ralphex/board/README.md`, and the "Skills are linked" invariant to
       five. The file stays at or under 300; `TestTheTaskMapNamesFilesThatExist`
       green
-- [ ] `docs/v2/SPEC.md:719` says the zip carries seven things on darwin, the
+- [x] `docs/v2/SPEC.md:719` says the zip carries seven things on darwin, the
       app the seventh; `:743` says the app is never one of them, gdoc runs
       the one program on the extension and nothing else
-- [ ] `docs/guide/presence.md`: what the glyph means, the setting, the
+- [x] `docs/guide/presence.md`: what the glyph means, the setting, the
       argument, the first `open`, the file and what is never in it, local
       disk only, the bootstrap order (update to the release that knows the
       flag, set it, run `gdoc update` again) and the rollback trap, what
       `spctl` says about an ad-hoc bundle and why that is expected, in reader
       words. No README line: the flag is experimental and the README is at
       its ceiling
-- [ ] `make test`, because `go/boundary` reads these documents
+- [x] `make test`, because `go/boundary` reads these documents
 
 ### Task 11: the measurements
 
 **Files:**
 - Modify: `docs/v2/MEASURED.md`
 
-- [ ] the prototype measurements of 2026-10-17 (the universal build time, the
+- [x] the prototype measurements of 2026-10-17 (the universal build time, the
       Go-unzipped bundle's attributes and signature, the headless render)
       written down with how each was taken
-- [ ] two built binaries, a shell loop, 10,000 lines each into one file, a
+- [x] two built binaries, a shell loop, 10,000 lines each into one file, a
       strict decode of all 20,000: the command, the result and the date
-- [ ] the Go route on a locally built bundle, unzipped by the updater's own
+- [x] the Go route on a locally built bundle, unzipped by the updater's own
       code into a temp directory: `xattr -lr`, `codesign --verify --deep
       --strict -vv`, `spctl -a -t exec -vv` recorded, with the note that
       `spctl` rejects every ad-hoc bundle and that is not the verdict; the
       launch itself is Nail's step and the section says so, with the negative
       control written out for him
-- [ ] the swap while running, as far as it can be measured without launching
+- [x] the swap while running, as far as it can be measured without launching
       a GUI app here: the rename sequence over a running `sleep` inside a
       bundle-shaped folder keeps the process alive, and the plist read after
       the swap names the new version; the live half, the reopen row appearing
@@ -484,12 +492,12 @@ every box in it is ticked and its commit is on the branch.
 ### Task 12: the acceptance table and the close
 
 **Files:**
-- Modify: `docs/plans/2026-10-17-gdoc-v2-m23-the-presence-spec.md`, `docs/v2/PLAN.md`
+- Modify: `docs/plans/completed/2026-10-17-gdoc-v2-m23-the-presence-spec.md`, `docs/v2/PLAN.md`
 
-- [ ] one row per rule in the spec, pass or the test that says otherwise,
+- [x] one row per rule in the spec, pass or the test that says otherwise,
       written into the spec's Acceptance section
-- [ ] the M23 row in `docs/v2/PLAN.md`'s Done table, in the shape of M19's
-- [ ] both plan files move to `docs/plans/completed/`
+- [x] the M23 row in `docs/v2/PLAN.md`'s Done table, in the shape of M19's
+- [x] both plan files move to `docs/plans/completed/`
 
 ## Post-completion
 

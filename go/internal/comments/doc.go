@@ -287,4 +287,15 @@
 // and which sets that tool's own timeout to ten minutes: its default is two,
 // and a wait cut short at two is either an unmatched timeout or a signal the
 // answer reports as interrupted.
+//
+// Under the presence setting cmd/gdoc's dispatch writes a start line when a
+// listing begins and an end line when it returns, the start carrying wait so a
+// reader can tell a nine-minute poll from a read that hung. That is not this
+// package keeping anything. The lines go into an append-only file for another
+// program, the menu bar app, which is the one thing that reads them; nothing
+// in the binary does, and a comments call asks the file no question. So a
+// record somebody deleted, a record nobody turned on, or a record half written
+// changes no byte of what a wait returns and no byte of the cursor the next
+// call is handed. Session state is state the next call reads, and there is
+// still none of that here.
 package comments

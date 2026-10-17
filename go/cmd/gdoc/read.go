@@ -178,7 +178,7 @@ func (fs flagSet) names() string {
 // writes.
 //
 // set is on every command's args rather than on the few that write into a
-// thread, because the two setting flags are off the line before the parser
+// thread, because the three setting flags are off the line before the parser
 // runs and dispatch is the one place that could put them back. A command that
 // has nothing to do with the mark simply never asks.
 type args struct {
