@@ -8,6 +8,8 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="0" w:name="_h_rendering_conformance_note"/>
+    <w:bookmarkEnd w:id="0"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
@@ -23,6 +25,8 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="1" w:name="_h_purpose"/>
+    <w:bookmarkEnd w:id="1"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
@@ -378,6 +382,8 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="2" w:name="_h_lists"/>
+    <w:bookmarkEnd w:id="2"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
@@ -393,6 +399,8 @@
         <w:color w:val="549f99"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="3" w:name="_h_bulleted_three_deep"/>
+    <w:bookmarkEnd w:id="3"/>
     <w:r>
       <w:rPr>
         <w:color w:val="549f99"/>
@@ -555,6 +563,8 @@
         <w:color w:val="549f99"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="4" w:name="_h_numbered_restarting"/>
+    <w:bookmarkEnd w:id="4"/>
     <w:r>
       <w:rPr>
         <w:color w:val="549f99"/>
@@ -741,6 +751,8 @@
         <w:color w:val="549f99"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="5" w:name="_h_a_list_starting_at_seven"/>
+    <w:bookmarkEnd w:id="5"/>
     <w:r>
       <w:rPr>
         <w:color w:val="549f99"/>
@@ -800,6 +812,8 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="6" w:name="_h_tables"/>
+    <w:bookmarkEnd w:id="6"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
@@ -815,6 +829,8 @@
         <w:color w:val="549f99"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="7" w:name="_h_a_narrow_table_with_a_date_column"/>
+    <w:bookmarkEnd w:id="7"/>
     <w:r>
       <w:rPr>
         <w:color w:val="549f99"/>
@@ -1437,6 +1453,8 @@
         <w:color w:val="549f99"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="8" w:name="_h_a_table_with_one_wide_column"/>
+    <w:bookmarkEnd w:id="8"/>
     <w:r>
       <w:rPr>
         <w:color w:val="549f99"/>
@@ -1774,6 +1792,8 @@
         <w:color w:val="549f99"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="9" w:name="_h_a_table_carrying_marks_and_a_link"/>
+    <w:bookmarkEnd w:id="9"/>
     <w:r>
       <w:rPr>
         <w:color w:val="549f99"/>
@@ -2156,6 +2176,8 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="10" w:name="_h_quoted_and_preformatted"/>
+    <w:bookmarkEnd w:id="10"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
@@ -2195,6 +2217,8 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="11" w:name="_h_deep_headings"/>
+    <w:bookmarkEnd w:id="11"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
@@ -2210,6 +2234,8 @@
         <w:color w:val="000000"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="12" w:name="_h_a_fourth_level_heading"/>
+    <w:bookmarkEnd w:id="12"/>
     <w:r>
       <w:rPr>
         <w:color w:val="000000"/>
@@ -2242,6 +2268,8 @@
         <w:color w:val="000000"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="13" w:name="_h_a_fifth_level_heading"/>
+    <w:bookmarkEnd w:id="13"/>
     <w:r>
       <w:rPr>
         <w:color w:val="000000"/>
@@ -2274,6 +2302,8 @@
         <w:color w:val="000000"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="14" w:name="_h_a_sixth_level_heading"/>
+    <w:bookmarkEnd w:id="14"/>
     <w:r>
       <w:rPr>
         <w:color w:val="000000"/>
@@ -2306,6 +2336,8 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="15" w:name="_h_7_a_heading_that_numbers_itself"/>
+    <w:bookmarkEnd w:id="15"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
@@ -2338,6 +2370,8 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="16" w:name="_h_a_heading_after_the_authored_one"/>
+    <w:bookmarkEnd w:id="16"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
@@ -2370,6 +2404,8 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="17" w:name="_h_appendix_a_things_that_are_ne_3840771"/>
+    <w:bookmarkEnd w:id="17"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>

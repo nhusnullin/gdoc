@@ -97,9 +97,12 @@ such heading `#heading-1`. Two headings with the same words give the second one
 `-1` too. A `#` link that names no heading in the note is printed as the words
 you wrote, with a warning naming the line and the destination you asked for. A
 heading that is nothing but a picture is a figure rather than a heading, so it
-is nothing to jump to and a link naming it warns the same way. Only a heading a
-`#` link names carries the jump's landing mark, because Google Docs shows that
-mark as a flag on the heading.
+is nothing to jump to and a link naming it warns the same way. Every heading
+carries the jump's landing mark, whether a link names it or not. The mark is
+hidden: its name opens with an underscore, so Word keeps it out of its bookmark
+list and Google Docs shows no flag beside the heading. It is there because
+Drive's import turns it into the heading's own id, which is what a contents
+entry needs to open that heading.
 
 A link to another note or a folder, such as `[bybit](bybit-card.md)` in a
 Related section, is printed as its words with no link. That file is not in
@@ -156,7 +159,13 @@ opening it, in Word or in Drive, and not by the binary.
 The contents list is a Word field, which is what the master template carries
 too. Word fills it in when the document is opened and refreshed, and Google Docs
 turns it into a live contents list on import. Until then it shows the one line
-Word writes into an unrefreshed field.
+Word writes into an unrefreshed field. After the refresh each entry opens the
+heading it names: the hover card says that heading and a click lands on it,
+rather than on the first page. That works because every heading carries the
+hidden mark above, which Drive's import turns into the heading's id. Whether
+the import kept them is one number on the publish read-back,
+`headings_without_id`, and 0 is the answer that says the contents list will
+work.
 
 There is one test that keeps this honest on every commit. It builds a document
 from the embedded style, opens the Word master the style was extracted from, and
@@ -305,6 +314,15 @@ Fewer than three is still `ok: true` with the check that did not hold named,
 because a document that exists is a document that exists, and being told the run
 failed is what makes somebody upload a second one.
 
+`headings_without_id` is a fact beside those three rather than one of them. It
+counts the headings the read-back came back with no id on. Zero is what you
+want, and it means the contents list will open its sections once somebody
+refreshes it. Any other number comes with a warning saying what it costs, and
+the publish is still `ok` and still `verified`: the document is in the folder
+and its words are right. No Docs request can give a published document the ids
+it came back without, so the way to a document whose contents list works is a
+fresh publish from the note, not a repair of that one.
+
 If the upload worked but your note could not be written, the document goes back:
 it is trashed and the trash is confirmed, and the output says `rolled_back:
 true` with no document id. Only if that also fails do you get the live id and
@@ -324,6 +342,7 @@ at is one the next publish makes a second of.
     "tabs": 1,
     "verified": true,
     "checks": {"read_back": true, "one_tab": true, "docx_export": true},
+    "headings_without_id": 0,
     "files_changed": ["/Users/you/notes/supplier-register-policy.md"],
     "body": {"paragraphs": 41, "headings": 9, "lists": 3, "tables": 2, "images": 1,
              "footnotes": 2,

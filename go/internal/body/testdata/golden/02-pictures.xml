@@ -8,6 +8,8 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="0" w:name="_h_pictures_and_links_report"/>
+    <w:bookmarkEnd w:id="0"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
@@ -23,6 +25,8 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="1" w:name="_h_a_picture_on_its_own_line"/>
+    <w:bookmarkEnd w:id="1"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
@@ -120,6 +124,8 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="2" w:name="_h_a_picture_drive_exported_as_a_heading"/>
+    <w:bookmarkEnd w:id="2"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
@@ -211,6 +217,8 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="3" w:name="_h_a_picture_inside_a_paragraph"/>
+    <w:bookmarkEnd w:id="3"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
@@ -390,6 +398,8 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="4" w:name="_h_a_picture_too_wide_for_the_column"/>
+    <w:bookmarkEnd w:id="4"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
@@ -487,6 +497,8 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="5" w:name="_h_links_in_running_text"/>
+    <w:bookmarkEnd w:id="5"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>
@@ -625,6 +637,8 @@
         <w:color w:val="22265f"/>
       </w:rPr>
     </w:pPr>
+    <w:bookmarkStart w:id="6" w:name="_h_a_table_of_links"/>
+    <w:bookmarkEnd w:id="6"/>
     <w:r>
       <w:rPr>
         <w:color w:val="22265f"/>

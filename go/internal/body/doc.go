@@ -557,36 +557,46 @@
 // matter. TestARelativeLinkIsItsWordsAndNoHyperlink is the pin, and
 // TestALinkWithASchemeOrAnAnchorIsStillALink holds the other side of it.
 //
-// # An anchor link is a jump to a bookmark on the heading it names
+// # Every heading carries a hidden bookmark, and a "#" link anchors at it
 //
 // A destination opening with "#" is a place in this document, not an address.
 // Written as a relationship, which is what every other link is, Word resolves
 // it against the document's own location, so "[see below](#scope)" published
 // as a link that opens nothing and said nothing about it. The OOXML form for
 // a jump is w:hyperlink w:anchor with no relationship at all, and it lands on
-// a w:bookmarkStart/w:bookmarkEnd pair, so the bookmarks come first. Only a
-// heading some "#" link in the note names carries one. Google Docs keeps a
-// bookmark on import and shows it as a flag on the heading, so a bookmark on
-// every heading is a flag on every heading for nothing, and a later edit to
-// the note goes out through a fresh publish, which writes the bookmarks from
-// the note as it then stands. Nail's call of 2026-09-19. There is no way to
-// keep a jump and hide the one flag it lands on.
+// a w:bookmarkStart/w:bookmarkEnd pair, so the bookmarks come first.
+//
+// Every heading carries one, whether a "#" link names it or not, as an empty
+// pair before the heading's first run. Drive's import mints a Google heading
+// id for a heading paragraph only when that paragraph carries a bookmark
+// whose name opens with an underscore, which is the convention Google's own
+// docx export uses. A contents entry is a link to a heading by that id, so a
+// document whose headings carry no bookmark gets a contents list where every
+// entry resolves to the start of the tab. Measured on 2026-10-16 across every
+// document gdoc had published: 0 heading ids in all of them. Word treats a
+// name opening with an underscore as hidden, so it shows in no bookmark list
+// there, and Docs mints the id instead of keeping the bookmark, so no flag
+// sits beside any heading either. That retires the 2026-09-19 call, that only
+// a linked heading carries one to keep the flags down: the flag was the cost
+// of a visible name, and there is none here.
+// TestEveryHeadingCarriesAHiddenBookmark is the pin on the pair and its
+// place before the runs.
 //
 // The name is goldmark's own auto heading id, which parser.WithAutoHeadingID
 // already computes and keeps unique across the file, rewritten by bookmarkName
 // into what Word takes: letters, digits and underscores, opening with a
-// letter, at most 40 characters. The leading "h_" is what makes a heading
-// called "1.1 Purpose" open with a letter; every character outside
-// [A-Za-z0-9_] becomes an underscore, which is wider than the lower-case
-// letters, digits and hyphens goldmark emits, on purpose, because the ids are
-// the generator's and this package does not get to notice when it widens; and
-// a name over the ceiling keeps its first 32 characters, so it reads in Word's
-// bookmark list, and takes seven hex digits of the FNV-1a hash of the id as it
-// arrived, so two long headings sharing a prefix keep two names.
-// TestBookmarkNameIsWordSafe pins all four cases,
-// TestOnlyALinkedHeadingCarriesABookmark pins the pair around the runs and
-// its absence on a heading nothing names, and
-// TestANoteWithNoAnchorLinkCarriesNoBookmark is the common case.
+// letter, at most 40 characters. The leading "_h_" is the underscore the
+// import reads, and the "h_" after it is what makes a heading called
+// "1.1 Purpose" open with a letter once Word strips the underscore; every
+// character outside [A-Za-z0-9_] becomes an underscore, which is wider than
+// the lower-case letters, digits and hyphens goldmark emits, on purpose,
+// because the ids are the generator's and this package does not get to notice
+// when it widens; and a name over the ceiling keeps its first 32 characters,
+// so it reads where a name is read at all, and takes seven hex digits of the
+// FNV-1a hash of the id as it arrived, so two long headings sharing a prefix
+// keep two names. TestBookmarkNameIsWordSafe pins all four cases, and
+// TestAnAnchorLinkIsAJumpAndNotARelationship pins that a "#" link anchors at
+// the name bookmarkName gave that heading.
 //
 // A "#" naming no heading in the note is warned about by line and its words
 // are printed as plain text, which is how a code block is already refused: a

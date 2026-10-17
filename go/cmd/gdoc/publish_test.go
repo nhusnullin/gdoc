@@ -627,3 +627,70 @@ func TestPublishReportsTheHouseFileItWasGiven(t *testing.T) {
 		t.Errorf("published.house records the style the document was built from: %+v", e)
 	}
 }
+
+// headingIDInFixture is the heading id a read-back carries once Drive's import
+// has minted one. The fixture's one heading paragraph carries none, which is
+// what every document gdoc published before 2026-10-16 came back as, so the
+// case where the import worked is the fixture with this id written into it.
+const headingIDInFixture = `"paragraphStyle": {"namedStyleType": "HEADING_1", "headingId": "h.supplier"}`
+
+// headingIDFixtureStyle is the paragraph style the fixture's heading really
+// carries, and the string the case above replaces.
+const headingIDFixtureStyle = `"paragraphStyle": {"namedStyleType": "HEADING_1"}`
+
+// The count is a fact on the envelope, so it reaches stdout at zero as well.
+// internal/publish counts the headings of the read-back and the headings with
+// no id, and a command that kept the number to itself would leave the skill
+// nothing to read: headings_without_id is what gdoc-publish stops on, and the
+// warning beside it is what says why.
+//
+// Zero prints too, which is the whole point of the field: a reader of the
+// envelope learns that the import kept the ids rather than learning nothing.
+func TestPublishPrintsTheHeadingsThatCameBackWithNoId(t *testing.T) {
+	t.Run("a heading with no id is counted and warned about", func(t *testing.T) {
+		stubWire(t, &fakeWire{answers: publishAnswers(t)})
+		_, md := buildNote(t)
+
+		got, code := runJSON(t, "publish", "--md", md, "--folder-id", testFolderID)
+		if code != 0 || got["ok"] != true {
+			t.Fatalf("a document that exists is a document that exists: %v (exit %d)", got, code)
+		}
+		data, _ := got["data"].(map[string]any)
+		if data["headings_without_id"] != float64(1) {
+			t.Errorf("headings_without_id = %v, want 1: the fixture's one heading carries no id", data["headings_without_id"])
+		}
+		if data["verified"] != true {
+			t.Errorf("verified = %v: a heading with no id is a fact beside the three routes, not one of them", data["verified"])
+		}
+		if warns := warningText(got); !strings.Contains(warns, "no heading id") {
+			t.Errorf("the warnings must say what a contents entry loses: %q", warns)
+		}
+	})
+
+	t.Run("every heading carrying an id reports zero and warns about none", func(t *testing.T) {
+		answers := publishAnswers(t)
+		read := readFixture(t, "publish-read-back.json")
+		with := strings.Replace(read, headingIDFixtureStyle, headingIDInFixture, 1)
+		if with == read {
+			t.Fatalf("the fixture no longer holds %s, so this case measures nothing", headingIDFixtureStyle)
+		}
+		answers[1] = &answer{method: "GET", match: publishDocID + "?includeTabsContent", json: with}
+		stubWire(t, &fakeWire{answers: answers})
+		_, md := buildNote(t)
+
+		got, code := runJSON(t, "publish", "--md", md, "--folder-id", testFolderID)
+		if code != 0 || got["ok"] != true {
+			t.Fatalf("publish: %v (exit %d)", got, code)
+		}
+		data, _ := got["data"].(map[string]any)
+		if _, said := data["headings_without_id"]; !said {
+			t.Fatalf("the envelope leaves the count out at zero, and zero is the answer worth printing: %v", data)
+		}
+		if data["headings_without_id"] != float64(0) {
+			t.Errorf("headings_without_id = %v, want 0: the read-back's heading carries an id", data["headings_without_id"])
+		}
+		if warns := warningText(got); strings.Contains(warns, "heading id") {
+			t.Errorf("a document whose headings all carry an id is warned about by nothing: %q", warns)
+		}
+	})
+}

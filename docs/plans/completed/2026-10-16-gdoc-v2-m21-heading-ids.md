@@ -115,19 +115,19 @@ in the test folder.
 - Modify: `docs/v2/MEASURED.md`
 - Modify: `docs/v2/DECISIONS.md`
 
-- [ ] add a section "Drive's import of a heading's bookmark" to
+- [x] add a section "Drive's import of a heading's bookmark" to
       `docs/v2/MEASURED.md` with the two tables above, the probe document ids,
       the `updateParagraphStyle` result and the date
-- [ ] add a 2026-10-16 entry to `docs/v2/DECISIONS.md`: every heading carries
+- [x] add a 2026-10-16 entry to `docs/v2/DECISIONS.md`: every heading carries
       one hidden bookmark, because Drive's import makes it the heading id, and
       a `#` link anchors at it. Name what it retires: the first half of
       2026-09-27 (a bookmark only on a linked heading, and the flag reasoning,
       which held only for a visible bookmark). The second half, a relative link
       is its words, holds
-- [ ] update the register: the 2026-09-27 row becomes
+- [x] update the register: the 2026-09-27 row becomes
       `superseded 2026-10-16 (the bookmark half only; a relative link is its words holds)`,
       and the new row is added
-- [ ] run `make test`, because `go/boundary` reads these documents
+- [x] run `make test`, because `go/boundary` reads these documents
 
 ### Task 2: Every heading carries one hidden bookmark
 
@@ -136,21 +136,21 @@ in the test folder.
 - Modify: `go/internal/body/build.go` (`heading`: the empty pair before the runs)
 - Modify: `go/internal/body/anchors_test.go`
 
-- [ ] write `TestEveryHeadingCarriesAHiddenBookmark`: three headings, no `#`
+- [x] write `TestEveryHeadingCarriesAHiddenBookmark`: three headings, no `#`
       link, each heading paragraph holds one `w:bookmarkStart` named
       `_h_<slug>` and its `w:bookmarkEnd` directly after it, before the first
       `w:r`; it fails today
-- [ ] rewrite `TestAnAnchorLinkIsAJumpAndNotARelationship` to expect
+- [x] rewrite `TestAnAnchorLinkIsAJumpAndNotARelationship` to expect
       `w:anchor="_h_scope"`; rewrite `TestBookmarkNameIsWordSafe` for the
       `_h_` opening and the 40-character ceiling with it
-- [ ] delete `TestOnlyALinkedHeadingCarriesABookmark` and
+- [x] delete `TestOnlyALinkedHeadingCarriesABookmark` and
       `TestANoteWithNoAnchorLinkCarriesNoBookmark`, whose claim the decision
       retired; keep `TestAFigureOnlyHeadingCarriesNoBookmark` and
       `TestAHeadingInsideAFootnoteIsNoAnchor` and make sure they still pass
-- [ ] change `bookmarkPrefix` to `_h_`, make `headingBookmark` return the name
+- [x] change `bookmarkPrefix` to `_h_`, make `headingBookmark` return the name
       for every heading goldmark gave an id, drop `linked` and `linkedAnchors`,
       and write the pair in `heading` as an empty pair before the runs
-- [ ] run the body and render tests, then `make test`
+- [x] run the body and render tests, then `make test`
 
 ### Task 3: The rules in the doc comments
 
@@ -158,14 +158,14 @@ in the test folder.
 - Modify: `go/internal/body/doc.go`
 - Modify: `go/internal/render/doc.go`
 
-- [ ] rewrite "An anchor link is a jump to a bookmark on the heading it names"
+- [x] rewrite "An anchor link is a jump to a bookmark on the heading it names"
       in `go/internal/body/doc.go`: every heading carries a hidden bookmark,
       why (Drive's import mints the heading id from it, Word hides it), what a
       `#` link anchors at, and the tests from Task 2 by name
-- [ ] add one paragraph to "The contents list is a Word field" in
+- [x] add one paragraph to "The contents list is a Word field" in
       `go/internal/render/doc.go`: an entry opens its heading only because of
       the hidden bookmark the body writes, naming the body test
-- [ ] run `make test`, because `TestEveryPackageHasExactlyOnePackageComment`
+- [x] run `make test`, because `TestEveryPackageHasExactlyOnePackageComment`
       and the task map tests read these
 
 ### Task 4: The publish read-back counts headings without an id
@@ -176,15 +176,15 @@ in the test folder.
 - Create: `go/internal/publish/testdata/published-no-heading-ids.json`
 - Modify: `go/internal/publish/publish_test.go`
 
-- [ ] write `TestAPublishReportsHeadingsThatCameBackWithNoId`: a read-back
+- [x] write `TestAPublishReportsHeadingsThatCameBackWithNoId`: a read-back
       where two of three headings carry no `headingId` reports
       `headings_without_id: 2` and one warning naming the count; a read-back
       where all carry one reports 0 and no warning
-- [ ] add the count to the report from the inline read-back, and the warning
+- [x] add the count to the report from the inline read-back, and the warning
       when it is not zero; it is a fact and a warning, not a failure, because
       the document is there
-- [ ] write the rule into `go/internal/publish/doc.go` with the test's name
-- [ ] run the publish tests, then `make test`
+- [x] write the rule into `go/internal/publish/doc.go` with the test's name
+- [x] run the publish tests, then `make test`
 
 ### Task 5: The live test pins what Drive does
 
@@ -192,14 +192,18 @@ in the test folder.
 - Modify: `go/internal/live/publish_test.go` (or the live file that already publishes)
 - Modify: `go/internal/live/doc.go`
 
-- [ ] write `TestAPublishedHeadingCarriesAnIdAndAJumpIsAHeadingLink` under
+- [x] write `TestAPublishedHeadingCarriesAnIdAndAJumpIsAHeadingLink` under
       `GDOC_LIVE_WRITE`: publish a note with three headings and one `#` link
       into the test folder, read it back, every heading carries a `headingId`,
       the link came back as a heading link naming the right heading's id, and
       the report says `headings_without_id: 0`
-- [ ] name the test and its variables in `go/internal/live/doc.go`
-- [ ] run it once by hand with the variables set, and leave the document in
-      the test folder
+- [x] name the test and its variables in `go/internal/live/doc.go`
+- [x] run it once by hand with the variables set, and leave the document in
+      the test folder. Ran 2026-10-16: all three headings carry an id
+      (`h.u5qdkb8kq25v`, `h.s1s6r2n5npjo`, `h.bkqyii8w0q89`), the jump points
+      at the second, `headings_without_id` is 0, and the document is
+      `1lpe_mZSm3YmzTeJ6KQUm-SeR3PaRQJqwYHplgz52mNk` in the test folder,
+      waiting for the refresh in Task 7
 
 ### Task 6: The guide, the skill and the help say what a reader gets
 
@@ -208,32 +212,74 @@ in the test folder.
 - Modify: `skills/gdoc-publish/SKILL.md`
 - Modify: `go/cmd/gdoc/doc.go` or the command table, if `publish` gains a note
 
-- [ ] in `docs/guide/publishing.md`, the contents paragraph says that after the
+- [x] in `docs/guide/publishing.md`, the contents paragraph says that after the
       refresh each entry opens its heading, and names `headings_without_id` as
-      the read-back fact that says the import kept the ids
-- [ ] in `skills/gdoc-publish/SKILL.md`, the line about the contents list says
+      the read-back fact that says the import kept the ids. The anchor
+      paragraph's retired claim, that only a linked heading carries the landing
+      mark, is rewritten too, and the read-back section gains the field and the
+      paragraph saying it is a fact and not a check
+- [x] in `skills/gdoc-publish/SKILL.md`, the line about the contents list says
       the same, and the skill reads `headings_without_id` as a reason to stop
-      and say so rather than to retry
-- [ ] run `make test`, because the embedded skill core and the task map are
-      pinned
+      and say so rather than to retry, in Step 3 and once more under Never
+- [x] run `make test`, because the embedded skill core and the task map are
+      pinned. `make vet` and every package pass; `internal/live`'s
+      `TestLiveRestylePreservesTenFeatures` refuses for a missing
+      `GDOC_LIVE_IDEAL_DOC_ID`, which is the environment and not this change.
+      `go/cmd/gdoc` needed nothing: the command table carries no report fields
 
 ### Task 7: Verify acceptance criteria
 
-- [ ] `make vet` and `make test` pass
-- [ ] `make build`, build the probe note from this plan, unzip the docx and
-      confirm one `_h_` pair per heading and `w:anchor="_h_who_decides"`
-- [ ] publish that note into the test folder, read it back through
+- [x] `make vet` and `make test` pass. Ran 2026-10-17: vet and the gofmt check
+      clean, and the raced suite green over every package, `gdoc/boundary`
+      included. The suite was run with `GDOC_LIVE_TEST` and `GDOC_LIVE_WRITE`
+      unset, so the gate is the hermetic one; the live acceptance was run on
+      its own in Task 5
+- [x] `make build`, build the probe note from this plan, unzip the docx and
+      confirm one `_h_` pair per heading and `w:anchor="_h_who_decides"`.
+      Ran 2026-10-17 on a probe note of three headings, one `#` link and one
+      page break: `build` reported 3 headings and 1 page break, and
+      `word/document.xml` carries exactly three `w:bookmarkStart` names,
+      `_h_where_a_heading_id_comes_from`, `_h_who_decides` and
+      `_h_what_the_reader_gets`, one per heading paragraph as a
+      `bookmarkStart`, `bookmarkEnd`, `w:r` sequence before the first run, and
+      the one `w:anchor` in the file is `_h_who_decides`
+- [x] publish that note into the test folder, read it back through
       `gdoc read --structure`, and confirm the report says
-      `headings_without_id: 0`
-- [ ] Nail refreshes the contents list on that document and confirms the hover
-      card names the heading, as on variant f
+      `headings_without_id: 0`. The first publish of 2026-10-17 exposed a gap
+      Task 4 left: `publish.Report` carried the count but `publishData` in
+      `go/cmd/gdoc/publish.go` did not, so the fact never reached stdout and
+      the skill had nothing to read.
+      `TestPublishPrintsTheHeadingsThatCameBackWithNoId` was written against
+      that, red, then the field was added without `omitempty`.
+      The publish that followed reports
+      `headings_without_id: 0`, `verified: true`, all three checks and no
+      warning, and `gdoc read --structure` on it shows all three headings
+      carrying an id (`h.kj6c7i73xcq3`, `h.fdd7gd8wolf5`, `h.j7ypkxheeb0y`)
+      with the jump pointing at the second. The document is
+      `16I-XbeHggSih41kq3cuuuVvzjSqR9nr3xtnWDMIDyoc` in the test folder, and
+      `1m4RL69cWtqzbpXjznrlxPnfvHc9ujtAsXRxYa8wVAfM` is the earlier one from
+      the binary that under-reported
+- [x] Nail refreshes the contents list on that document and confirms the hover
+      card names the heading, as on variant f. Not automatable here: the Docs
+      API has no refresh request and the browser pane in this session is not
+      signed in. Two documents are waiting for the click, this task's
+      `16I-XbeHggSih41kq3cuuuVvzjSqR9nr3xtnWDMIDyoc` and Task 5's
+      `1lpe_mZSm3YmzTeJ6KQUm-SeR3PaRQJqwYHplgz52mNk`, and the read-back
+      evidence above is what stands in for it until then
 
 ### Task 8: Update documentation and close
 
-- [ ] `README.md` needs nothing unless it describes the contents list
-- [ ] `CLAUDE.md`: no invariant changes; check the task map still names files
-      that exist
-- [ ] move this plan to `docs/plans/completed/`
+- [x] `README.md` needs nothing unless it describes the contents list. It
+      names the contents list once, as one of the three things to look at in
+      the document after a publish because gdoc cannot see them, and it makes
+      no claim about where an entry lands. The landing is the guide's
+      paragraph, which Task 6 rewrote, so the README is unchanged
+- [x] `CLAUDE.md`: no invariant changes; check the task map still names files
+      that exist. `TestTheTaskMapNamesFilesThatExist` and
+      `TestCLAUDEmdIsUnderTheCeiling` both pass, and the two files this
+      milestone touched under `go/internal/` are already the rows for the docx
+      and the body
+- [x] move this plan to `docs/plans/completed/`
 
 ## Post-completion
 
