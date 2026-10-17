@@ -102,6 +102,37 @@ func TestRefreshReportsTheEndpointError(t *testing.T) {
 	}
 }
 
+// The grant itself being refused is a value a caller can match, because a run
+// that met it needs a sign-in the way a run with no token at all does. A 400
+// and a 401 are the statuses an OAuth error answer comes in, and a 500 is the
+// endpoint being unwell: that one must not read as a sign-in to do again. The
+// sentence a person reads is the endpoint's own either way.
+func TestAGrantTheEndpointRefusedIsTyped(t *testing.T) {
+	for _, row := range []struct {
+		status  int
+		said    string
+		refused bool
+	}{
+		{status: 400, said: "invalid_grant", refused: true},
+		{status: 401, said: "invalid_client", refused: true},
+		{status: 500, said: "backend_error", refused: false},
+	} {
+		body := `{"error":"` + row.said + `"}`
+		writeFixture(t)
+		tok, _ := Load()
+		_, err := tok.Refresh(context.Background(), &http.Client{Transport: &formRT{status: row.status, body: body}})
+		if err == nil {
+			t.Fatalf("%d: the endpoint refused and the refresh answered no error", row.status)
+		}
+		if got := errors.Is(err, ErrGrantRefused); got != row.refused {
+			t.Errorf("%d: errors.Is says %t, want %t: %v", row.status, got, row.refused, err)
+		}
+		if !strings.Contains(err.Error(), "token refresh") || !strings.Contains(err.Error(), row.said) {
+			t.Errorf("%d: the sentence must stay the endpoint's own: %q", row.status, err)
+		}
+	}
+}
+
 func TestRefuse200WithNoAccessToken(t *testing.T) {
 	writeFixture(t)
 	tok, _ := Load()

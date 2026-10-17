@@ -759,6 +759,11 @@ func withExtension(template []byte, version string, data updateData, warns []str
 //
 // The zip itself is answered too, for the app that is installed out of it
 // after the binary landed.
+//
+// Every read here wraps what went wrong with %w, in readRelease as well as
+// here. The caller hands these failures to withStop, which reads the chain, so
+// a %v would make a deadline, a dial that failed and a guard refusal all one
+// word: other. The sentences are the same either way.
 func install(ctx context.Context, reach plain, rel update.Release, path string, desktop bool, pr *progress) (fetched, error) {
 	ctx, cancel := context.WithTimeout(ctx, downloadTimeout)
 	defer cancel()
@@ -772,14 +777,14 @@ func install(ctx context.Context, reach plain, rel update.Release, path string, 
 		{stepChecksums, sumsName, func() (string, error) {
 			var err error
 			if sums, err = reach.GetBytes(ctx, rel.ChecksumsURL, maxChecksums); err != nil {
-				return "", fmt.Errorf("the checksums of release %s could not be read, so nothing it holds could be verified: %v", rel.Tag, err)
+				return "", fmt.Errorf("the checksums of release %s could not be read, so nothing it holds could be verified: %w", rel.Tag, err)
 			}
 			return "", nil
 		}},
 		{stepDownload, joinDetail(rel.AssetName, humanSize(rel.AssetSize)), func() (string, error) {
 			var err error
 			if archive, err = reach.GetBytes(ctx, rel.AssetURL, maxArchive); err != nil {
-				return "", fmt.Errorf("%s could not be downloaded, so nothing was replaced: %v", rel.AssetName, err)
+				return "", fmt.Errorf("%s could not be downloaded, so nothing was replaced: %w", rel.AssetName, err)
 			}
 			return "", nil
 		}},
@@ -852,14 +857,14 @@ func readRelease(ctx context.Context, reach plain, rel update.Release, desktop b
 		{stepChecksums, sumsName, func() (string, error) {
 			var err error
 			if sums, err = reach.GetBytes(ctx, rel.ChecksumsURL, maxChecksums); err != nil {
-				return "", fmt.Errorf("the checksums of release %s could not be read, so nothing it holds could be verified: %v", rel.Tag, err)
+				return "", fmt.Errorf("the checksums of release %s could not be read, so nothing it holds could be verified: %w", rel.Tag, err)
 			}
 			return "", nil
 		}},
 		{stepDownload, joinDetail(rel.AssetName, humanSize(rel.AssetSize)), func() (string, error) {
 			var err error
 			if archive, err = reach.GetBytes(ctx, rel.AssetURL, maxArchive); err != nil {
-				return "", fmt.Errorf("%s could not be downloaded, so %s: %v", rel.AssetName, undone, err)
+				return "", fmt.Errorf("%s could not be downloaded, so %s: %w", rel.AssetName, undone, err)
 			}
 			return "", nil
 		}},

@@ -140,7 +140,7 @@ and an example; without `--json`, a help in a terminal draws a screen instead.
 
 | Command | Does |
 |---|---|
-| `auth status`, `auth login` | say whether gdoc has a token and what it may reach, or sign in |
+| `auth status`, `auth login`, `auth logout` | say whether gdoc has a token and what it may reach, sign in, or remove the token from this computer |
 | `read <url>` | print the document as text, with the ids a comment or suggestion is named by |
 | `comments <url>` | list the threads with their ranges, replies and the next cursor, or wait for new ones |
 | `suggestions <url>` | list the suggestions pending in the document |

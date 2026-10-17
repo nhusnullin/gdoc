@@ -22,11 +22,18 @@ const signInMarkDomain = "gdoc sign-in mark v1\x00"
 // SignInMark is which sign-in this token is, as a string that carries nothing
 // of it: the hex SHA-256 of a fixed prefix and the refresh token.
 //
-// The refresh token is what it reads, because that is the one field that
-// changes when somebody signs in as another account, and the one field an
-// ordinary access-token refresh leaves alone. internal/gapi already treats a
-// changed refresh token as a newer sign-in, so a hold borrowing this reading
-// cannot disagree with a session about which login is in the file.
+// The refresh token is what it reads, because that is the field that changes
+// when somebody signs in as another account, and the field an ordinary
+// access-token refresh usually leaves alone. internal/gapi reads the same
+// field to tell one login from the next.
+//
+// Usually, not always: Google sometimes hands back a new refresh token on a
+// refresh. gapi does not count its own rotation as another sign-in and a mark
+// taken either side of one does not match, so a hold raised before a rotation
+// is dropped and the person is asked again. That strain is written down in
+// cmd/gdoc's package comment and pinned by
+// TestARotatedRefreshTokenRefusesTheRelease. It fails towards nothing being
+// sent, which is the side to fail on.
 //
 // A token with no refresh token has no mark at all, and an empty mark is never
 // equal to a real one. So a hold that remembers no sign-in is a hold nothing

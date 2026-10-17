@@ -28,15 +28,16 @@ at all.
 
 ## What it does
 
-One static binary at `go/`, sixteen commands plus `help` and `completion`,
+One static binary at `go/`, seventeen commands plus `help` and `completion`,
 nothing to install beside it. Each command takes arguments, prints one JSON
-object and exits. The sixteenth is the exception: `gdoc mcp` is a session rather
-than an answer, which is how Claude Desktop reaches the same reads and writes,
-and [Chat](chat.md) holds it. It holds the credential, it reads a document, it writes
-suggestions, it leaves a comment on words a caller quotes, it builds a
-house-style document and publishes it, it surveys what a document holds before
-anything is done to it, it can give that document the house style where it
-stands, and it can write a document back into the hub as Markdown.
+object and exits. One of the seventeen is the exception: `gdoc mcp` is a
+session rather than an answer, which is how Claude Desktop reaches the same
+reads and writes, and [Chat](chat.md) holds it. It holds the credential, it
+reads a document, it writes suggestions, it leaves a comment on words a caller
+quotes, it builds a house-style document and publishes it, it surveys what a
+document holds before anything is done to it, it can give that document the
+house style where it stands, and it can write a document back into the hub as
+Markdown.
 
 That last one is the only command that writes more than one file at a time.
 `gdoc export` writes one Markdown file per tab and puts the document's pictures beside it as
@@ -47,7 +48,11 @@ no flag that could overwrite a file. [Exporting](exporting.md) holds the rest.
 ```bash
 gdoc auth status   # which token, where it is, whether it has expired
 gdoc auth login    # prints a sign-in link and waits for you to open it
+gdoc auth logout   # removes the token from this computer, and nothing else
 ```
+
+`auth logout` deletes that one file and tells Google nothing: the grant stays
+in your account settings until you take it away there.
 
 `auth status` answers when you are signed out too: no token is a fact it
 reports, not an error. A token file that is there and cannot be read is a

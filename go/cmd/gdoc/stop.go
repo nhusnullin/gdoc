@@ -23,7 +23,8 @@ import (
 	"gdoc/internal/propose"
 )
 
-// The three statuses a person meets, as literals. cmd/gdoc may not import
+// The three statuses a person meets, as literals, two of them a word of their
+// own and the third read and left as other. cmd/gdoc may not import
 // net/http, which is the guard's own room and four others':
 // boundary's TestNetHTTPStaysInItsRooms. internal/gapi puts the status on the
 // error it raises, and these are the numbers that answer which word it is.
@@ -72,7 +73,7 @@ func stopFor(err error) (emit.StopCode, int) {
 	if errors.Is(err, guard.ErrRefused) {
 		return emit.StopRefused, 0
 	}
-	if errors.Is(err, auth.ErrNoToken) {
+	if errors.Is(err, auth.ErrNoToken) || errors.Is(err, auth.ErrGrantRefused) {
 		return emit.StopAuth, 0
 	}
 	var status *gapi.StatusError
@@ -80,8 +81,16 @@ func stopFor(err error) (emit.StopCode, int) {
 		switch status.Status {
 		case statusNotFound:
 			return emit.StopNotFound, 0
-		case statusUnauthorized, statusForbidden:
+		case statusUnauthorized:
 			return emit.StopAuth, 0
+		case statusForbidden:
+			// A 403 is not the token. Google answers it for a document this
+			// account was never shared, for a comment Drive will not let even
+			// the owner delete, and GitHub answers it for the rate limit on a
+			// read that carries no credential at all. None of those is a
+			// sign-in to do again, and auth in the record would send a person
+			// to do one: TestAForbiddenIsNotTheTokenRefused.
+			return emit.StopOther, 0
 		}
 		// Every other status is Google answering something none of the six
 		// words name, and a guess here would be a word a reader of the record

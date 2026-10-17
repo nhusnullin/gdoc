@@ -76,7 +76,7 @@ const mcpHeldSentence = "Nothing was posted; tell the person this reason and end
 // resolves to taking a person's card away either.
 const (
 	mcpSignInChanged = "the sign-in on this computer is not the one gdoc held this write under, so nothing was sent and the card is gone. " +
-		"Tell the person the account changed, and make the original call again if they still want this write."
+		"Tell the person gdoc was signed in again since this write was held, and make the original call again if they still want this write."
 	mcpSignedOutSince = "nobody is signed in to Google on this computer any more, so nothing was sent and the card is gone. " +
 		"Tell the person they were signed out, and call the login tool before making the original call again."
 	mcpSignInUnread = "Nothing was sent and the card is still open."
@@ -311,11 +311,25 @@ func (h *mcpHolds) drop(ids []string) {
 	}
 	lister := h.lister
 	h.mu.Unlock()
+	h.left(gone, lister, presence.Dropped)
+}
+
+// left is the tail every way a hold leaves shares: the ids in one order, one
+// line each saying how they left, and their confirm tools off the list. The
+// caller has already taken them out of byID under the lock and handed in the
+// lister it read there, because what leaves is the caller's own question and
+// this is only what happens afterwards.
+//
+// say is the one thing that differs: presence.Dropped, Expired or Landed, all
+// three of one shape. It is a parameter rather than three copies of these
+// lines, so the order, the record and the list cannot be fixed in one place
+// and left wrong in the other two: TestEveryWayAHoldLeavesIsExactlyOneLine.
+func (h *mcpHolds) left(gone []string, lister mcpLister, say func(bool, string, string, io.Writer)) {
 	// Sorted, so two leaving together leave in the same order every run, in
 	// the record as well as on the list.
 	slices.Sort(gone)
 	for _, id := range gone {
-		presence.Dropped(h.on, releaseVersion(), id, h.errOut)
+		say(h.on, releaseVersion(), id, h.errOut)
 	}
 	if lister == nil {
 		return
@@ -329,6 +343,12 @@ func (h *mcpHolds) drop(ids []string) {
 // It runs at the start of every tool call and whenever a hold is looked up, so a
 // card nobody answered leaves the client in its own time rather than waiting for
 // somebody to press it: TestAHoldRegistersOneConfirmToolAndRemovesItOnRelease.
+//
+// It drops the holds whose sign-in changed too, through dropChangedSignIn,
+// which reads the token file once while this session keeps any hold at all and
+// nothing at all while it keeps none: TestTheSweepDropsAHoldWhoseSignInChanged.
+// So a card whose sign-in is no longer the one it was raised under leaves on
+// the next tool call rather than on the press.
 func (h *mcpHolds) sweep(now time.Time) {
 	defer h.dropChangedSignIn()
 	h.mu.Lock()
@@ -341,18 +361,7 @@ func (h *mcpHolds) sweep(now time.Time) {
 	}
 	lister := h.lister
 	h.mu.Unlock()
-	// Sorted, so two expiring together leave in the same order every run, in
-	// the record as well as on the list.
-	slices.Sort(gone)
-	for _, id := range gone {
-		presence.Expired(h.on, releaseVersion(), id, h.errOut)
-	}
-	if lister == nil {
-		return
-	}
-	for _, id := range gone {
-		lister.Remove(mcpConfirmPrefix + id)
-	}
+	h.left(gone, lister, presence.Expired)
 }
 
 // landed drops the hold for a write that reached the document another way, and
@@ -379,18 +388,7 @@ func (h *mcpHolds) landed(tool string, args json.RawMessage) {
 	}
 	lister := h.lister
 	h.mu.Unlock()
-	// Sorted, so two leaving together leave in the same order every run, in
-	// the record as well as on the list.
-	slices.Sort(gone)
-	for _, id := range gone {
-		presence.Landed(h.on, releaseVersion(), id, h.errOut)
-	}
-	if lister == nil {
-		return
-	}
-	for _, id := range gone {
-		lister.Remove(mcpConfirmPrefix + id)
-	}
+	h.left(gone, lister, presence.Landed)
 }
 
 // release takes one hold out and its tool off the list, which is what makes a

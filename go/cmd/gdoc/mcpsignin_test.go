@@ -346,6 +346,13 @@ func TestTheSignInMarkReachesNoAnswerNoToolAndNoLine(t *testing.T) {
 	held := heldInChat(t, ch)
 	id := held.Data.Held.ID
 	mark := markNow(t)
+	// The card's own tool, read while the hold is open: the release below
+	// takes it off the list, and a list read after that is an empty list,
+	// which carries no word of anything.
+	cards := w.confirms()
+	if len(cards) == 0 {
+		t.Fatal("the hold registered no confirm tool, and the tool is half of what a tools/list shows")
+	}
 
 	// Every answer the three routes give: the held one, a release under
 	// another sign-in, and the sweep's own line.
@@ -358,7 +365,7 @@ func TestTheSignInMarkReachesNoAnswerNoToolAndNoLine(t *testing.T) {
 
 	// And every word of every tool this session lists, which is what a
 	// tools/list puts in front of the model.
-	for _, tool := range append(mcpTools(nilWriter{}, newMCPLogin(nilWriter{}), ch), w.confirms()...) {
+	for _, tool := range append(mcpTools(nilWriter{}, newMCPLogin(nilWriter{}), ch), cards...) {
 		answers = append(answers, tool.Name, tool.Title, tool.Description, string(tool.Schema))
 	}
 

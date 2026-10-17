@@ -202,17 +202,94 @@ func TestANotFoundIsNotFound(t *testing.T) {
 	}
 }
 
+// A document with more than one tab is the word's own command refusing it.
+// `propose` reads the document itself before propose does, so the refusal that
+// reaches the record is the one this file builds, and it has to be the typed
+// one: a sentence built by hand here would be written down as other, for the
+// one failure multi_tab is named after.
+func TestAProposeIntoATabbedDocumentStopsAtMultiTab(t *testing.T) {
+	dir := recording(t)
+	f := stubWire(t, &fakeWire{answers: []*answer{
+		{method: "GET", match: proposeDocID + "?includeTabsContent", json: twoTabsOf(proposeDocID)},
+	}})
+	from := tempFile(t, "proposals.json", oneProposal)
+
+	got, code := runJSONSet(t, presenceOn(), "propose", proposeDocID, "--from", from)
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("a proposal into two tabs is refused: %v (exit %d)", got, code)
+	}
+	if sent := f.writes(); len(sent) != 0 {
+		t.Errorf("nothing is sent into a document with two tabs: %v", sent)
+	}
+	end := endOf(t, presenceEvents(t, dir))
+	if end.Stop != string(emit.StopMultiTab) {
+		t.Errorf("the end says stop %q, want %q", end.Stop, emit.StopMultiTab)
+	}
+}
+
+// A proposal the wire refused is the word the wire gave. The sentence a person
+// reads names the proposal by number, and the number is built here with
+// Sprintf, so the failure underneath has to be handed to the record separately
+// or a 404 halfway through a file of seven reads as other.
+func TestAProposalRefusedOnTheWireKeepsTheWordTheWireGave(t *testing.T) {
+	dir := recording(t)
+	stubWire(t, &fakeWire{answers: []*answer{
+		{method: "GET", match: proposeDocID + "?includeTabsContent",
+			json: readFixture(t, "propose-before.json"), once: true},
+		{method: "POST", match: proposeDocID + ":batchUpdate",
+			err: &gapi.StatusError{Status: statusNotFound}},
+	}})
+	from := tempFile(t, "proposals.json", oneProposal)
+
+	got, code := runJSONSet(t, presenceOn(), "propose", proposeDocID, "--from", from)
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("a proposal Drive refused must fail the run: %v (exit %d)", got, code)
+	}
+	if msg, _ := got["error"].(string); !strings.Contains(msg, "proposal 1") {
+		t.Errorf("error = %q, want the sentence that names the proposal", msg)
+	}
+	end := endOf(t, presenceEvents(t, dir))
+	if end.Stop != string(emit.StopNotFound) {
+		t.Errorf("the end says stop %q, want %q", end.Stop, emit.StopNotFound)
+	}
+}
+
+// twoTabsOf is the one shape every write that names a range refuses on sight,
+// under the id the caller named.
+func twoTabsOf(docID string) string {
+	return strings.Replace(twoTabDocument, fixtureDocID, docID, 1)
+}
+
 // The token refused and no token at all are the same answer to the person
-// reading the record: this run needed a sign-in it did not have.
+// reading the record: this run needed a sign-in it did not have. A grant the
+// token endpoint refused is the third way in, and it arrives wrapped in the
+// sentence internal/gapi puts in front of it.
 func TestAnAuthRefusalIsAuth(t *testing.T) {
 	for _, err := range []error{
 		&gapi.StatusError{Status: statusUnauthorized},
-		&gapi.StatusError{Status: statusForbidden},
 		auth.ErrNoToken,
 		fmt.Errorf("%w at /x. Run: gdoc auth login", auth.ErrNoToken),
+		auth.ErrGrantRefused,
+		fmt.Errorf("the access token could not be refreshed: %w", auth.ErrGrantRefused),
 	} {
 		if code, _ := stopFor(err); code != emit.StopAuth {
 			t.Errorf("%v answered %q, want %q", err, code, emit.StopAuth)
+		}
+	}
+}
+
+// A 403 is not the token. Google answers it for a document this account was
+// never shared and GitHub for the rate limit on a read that carries no
+// credential, so auth would send a person to sign in again over something a
+// sign-in cannot touch. Other is the honest word, and the command's own
+// sentence is where the reason is.
+func TestAForbiddenIsNotTheTokenRefused(t *testing.T) {
+	for _, err := range []error{
+		&gapi.StatusError{Status: statusForbidden},
+		fmt.Errorf("the read failed: %w", &gapi.StatusError{Status: statusForbidden}),
+	} {
+		if code, _ := stopFor(err); code != emit.StopOther {
+			t.Errorf("%v answered %q, want %q", err, code, emit.StopOther)
 		}
 	}
 }

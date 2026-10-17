@@ -25,8 +25,13 @@ const (
 	StopMultiTab StopCode = "multi_tab"
 	// StopNotFound is Drive or Docs answering 404 for the id a command named.
 	StopNotFound StopCode = "not_found"
-	// StopAuth is the token refused: no sign-in, an expired grant, or a scope
-	// the account does not hold.
+	// StopAuth is the token refused: no sign-in on this computer, a grant the
+	// token endpoint would not refresh, or an access token Google would not
+	// take twice over. It is the one word that means go and sign in again.
+	//
+	// A 403 is none of those and is other. Google answers 403 for a document
+	// the account cannot open and GitHub for a rate limit on a read that
+	// carries no credential, and a sign-in fixes neither.
 	StopAuth StopCode = "auth"
 	// StopNetwork is a request that never got an answer: a dial, a handshake
 	// or a deadline.

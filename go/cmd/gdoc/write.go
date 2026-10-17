@@ -309,8 +309,15 @@ func runPropose(ctx context.Context, r *reach, proposals []propose.Proposal, not
 	if d.MultiTab() {
 		// A proposal names one range, and a range means nothing without saying
 		// which tab it is in. Nothing is sent.
-		return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...),
-			Error: fmt.Sprintf("the document has %d tabs, and a proposal is written into a document with one", len(d.Tabs))}
+		//
+		// The refusal is propose's own typed one, built here because this read
+		// is the one that found the tabs: readOneTab would refuse the same
+		// document a moment later with the same words, and the record gets
+		// multi_tab from either. TestAProposeIntoATabbedDocumentStopsAtMultiTab
+		// is the pin.
+		err := propose.MoreThanOneTab("the document has %d tabs, and a proposal is written into a document with one", len(d.Tabs))
+		return withStop(emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...),
+			Error: err.Error()}, err)
 	}
 
 	// One proposal at a time, each after its own fresh read, because the first
@@ -361,8 +368,12 @@ func runPropose(ctx context.Context, r *reach, proposals []propose.Proposal, not
 			// names its entry: a caller with seven proposals out should not
 			// have to match the words back against the file.
 			// TestARunTimeRefusalNamesTheProposalByNumber is the pin.
-			return emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...),
-				Error: fmt.Sprintf("proposal %d (%q): %s", i+1, res.Quote(), err)}
+			//
+			// The sentence names the proposal and the failure underneath it
+			// goes to withStop, so a 404, a guard refusal or a wire that gave
+			// up halfway through a file is the word it was rather than other.
+			return withStop(emit.Result{OK: false, Data: data, Warnings: r.warnings(warns...),
+				Error: fmt.Sprintf("proposal %d (%q): %s", i+1, res.Quote(), err)}, err)
 		}
 		results = append(results, res)
 		data.Proposals[i] = sent(res)

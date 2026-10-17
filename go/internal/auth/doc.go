@@ -92,7 +92,11 @@
 //     every input gets, and here reaching nothing means the bytes stay where
 //     whoever reads the refusal can look at them.
 //     TestLogoutRefusesATokenItCannotParseAndLeavesIt.
-//   - A path this process cannot look at, which is the same not-knowing.
+//   - A path this process cannot look at, which is the same not-knowing. A
+//     config dir gdoc cannot read is refused at the first reading it cannot
+//     make, which is the waiting sign-in beside the token, and the Lstat below
+//     refuses the same way for a path that stops being readable between the
+//     two: TestLogoutRefusesAPathItCannotLookAtAndRemovesNothing.
 //
 // Load's own refusals are deliberately not borrowed. A token missing the
 // fields a refresh needs is exactly the file a person wants taken away, and
@@ -110,8 +114,15 @@
 // SignInMark is the hex SHA-256 of a fixed prefix and the refresh token, and
 // it answers one question: is this the same sign-in as that one. It reads the
 // refresh token because that is the field a sign-in as another account
-// changes and an ordinary access-token refresh leaves alone, which is the
-// reading internal/gapi's newerLogin already makes of the same file.
+// changes and an ordinary access-token refresh usually leaves alone, which is
+// the field internal/gapi's newerLogin reads too.
+//
+// The two readings part on one case. Google sometimes rotates the refresh
+// token on a refresh this process made itself: gapi does not count that as a
+// newer sign-in and a mark either side of it does not match, so a hold raised
+// before the rotation is dropped and the person is asked again. cmd/gdoc's
+// package comment holds that strain and
+// TestARotatedRefreshTokenRefusesTheRelease pins it.
 //
 // It carries nothing of the token, and no account or email is compared
 // anywhere: TestTheSignInMarkCarriesNoWordOfTheToken. A token with no refresh

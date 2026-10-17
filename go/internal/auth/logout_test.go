@@ -182,6 +182,40 @@ func TestLogoutRefusesWhileASignInIsWaiting(t *testing.T) {
 	}
 }
 
+// A path this process cannot look at is the same not-knowing as a file it
+// cannot parse: nothing is removed and the refusal names the file, so whoever
+// reads it can go and look. An unreadable config dir is refused at the first
+// reading gdoc cannot make, and the token is still there afterwards.
+func TestLogoutRefusesAPathItCannotLookAtAndRemovesNothing(t *testing.T) {
+	dir := configDir(t)
+	path := writeToken(t, dir)
+	if err := os.Chmod(dir, 0o000); err != nil {
+		t.Fatal(err)
+	}
+	// Put it back whatever happens, or the temp dir cannot be cleaned up.
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
+	if _, err := os.Lstat(path); err == nil {
+		t.Skip("this user can read inside a dir with no permissions, so there is no unreadable path to test with")
+	}
+
+	got, err := Logout()
+	if err == nil {
+		t.Fatal("a path gdoc cannot look at is refused")
+	}
+	if !strings.Contains(err.Error(), path) {
+		t.Errorf("the refusal must name the file: %q", err)
+	}
+	if got.Removed {
+		t.Errorf("the answer says removed %t after a refusal", got.Removed)
+	}
+	if err := os.Chmod(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Lstat(path); err != nil {
+		t.Errorf("the token is gone: %v", err)
+	}
+}
+
 // The one file, and no other. The config dir holds the settings, the release
 // stamp, the record and the waiting sign-in beside the token, and a sign-out
 // is about the credential alone.
