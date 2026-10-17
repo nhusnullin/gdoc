@@ -180,3 +180,42 @@ public enum Fold {
       ranOut: event.until.map { $0 < now } ?? false)
   }
 }
+
+// The two walks the sections beside NOW share. They are here rather than in
+// Now.swift because every fold wants them: the record is forgeable and
+// best-effort, so a line may be there twice and two month files may arrive in
+// either order.
+extension Fold {
+  /// The events once each, oldest first.
+  ///
+  /// A line the writer wrote twice, or a file a person concatenated, is one
+  /// event; the index breaks a tie, so two events at the same moment keep the
+  /// order the record had them in.
+  public static func inOrder(_ events: [Event]) -> [Event] {
+    var seen: Set<String> = []
+    let once = events.filter { seen.insert(key($0)).inserted }
+    return once.enumerated()
+      .sorted { left, right in
+        left.element.at == right.element.at
+          ? left.offset < right.offset : left.element.at < right.element.at
+      }
+      .map(\.element)
+  }
+
+  /// Every document's latest title, by document id.
+  ///
+  /// A start names no title and a held line names none either, so a card for
+  /// a document the record has read before takes the title from that read.
+  /// The latest wins, because that is the name the person sees in Drive.
+  public static func latestTitles(_ events: [Event]) -> [String: String] {
+    var titles: [String: String] = [:]
+    var when: [String: Date] = [:]
+    for event in events {
+      guard let doc = event.doc, let title = event.title, !title.isEmpty else { continue }
+      if let had = when[doc], had > event.at { continue }
+      titles[doc] = title
+      when[doc] = event.at
+    }
+    return titles
+  }
+}

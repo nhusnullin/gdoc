@@ -229,7 +229,7 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Tests/PresenceCoreTests/NowTests.swift`, `Fixtures/now-order.jsonl`
 - Delete: `docs/backlog/now-keeps-a-dead-run-for-two-months.md`
 
-- [ ] `testNowOrdersHoldsStuckJobsThenWatchesOldestFirst` (scene e3),
+- [x] `testNowOrdersHoldsStuckJobsThenWatchesOldestFirst` (scene e3),
       `testAFailedWriteIsStuckUntilItsKeyClearsOrIsDismissed` (per document
       for the commands that name one; a failed publish clears when any later
       publish starts), `testAFailedReadIsNotStuck`, `testVerifiedFalseIsNeverStuck`,
@@ -237,9 +237,9 @@ every box is ticked and its commit is on the branch.
       `testAHoldCardTakesTheDocumentsLatestTitle`,
       `testDismissalsAreAnInputAndTheRowStays`,
       `testTheLastVerifiedWriteIsReportedForTheCheck`
-- [ ] the fold with dismissals and the clock injected; the stuck set is the
+- [x] the fold with dismissals and the clock injected; the stuck set is the
       literal list reply, propose, withdraw, annotate, publish, restyle, export
-- [ ] `make app-test`
+- [x] `make app-test`
 
 ### Task 10: the fold, live sessions
 
