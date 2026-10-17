@@ -193,6 +193,15 @@
 // lays the document out, so no page number is known until something does.
 // TestTheContentsIsALiveWordField is the pin.
 //
+// An entry in that list opens the heading it names only because internal/body
+// writes one hidden bookmark into every heading paragraph. Drive's import
+// mints a heading id from such a bookmark and from nothing else, and a
+// contents entry is a link to a heading by that id, so a document whose
+// headings carry none gets a list where every entry lands on the start of the
+// tab. The field this package emits is the same either way, which is why the
+// failure was silent for a month. internal/body's
+// TestEveryHeadingCarriesAHiddenBookmark is the pin on the bookmark.
+//
 // # Points come in and the units go out here
 //
 // The style file stores every measurement in points, so twips, half-points,

@@ -13,12 +13,14 @@ import (
 
 // TestBookmarkNameIsWordSafe pins the rewrite, which is wider than anything
 // goldmark's own generator emits: Word takes letters, digits and underscores
-// only, opening with a letter, and at most 40 characters.
+// only, and at most 40 characters. The name opens with "_h_", because Drive's
+// import mints the heading id only from a bookmark whose name opens with an
+// underscore, and Word hides a bookmark that does.
 func TestBookmarkNameIsWordSafe(t *testing.T) {
 	for _, c := range []struct{ id, want string }{
-		{"purpose-and-scope", "h_purpose_and_scope"},
-		{"1-1-purpose", "h_1_1_purpose"},
-		{"a.b", "h_a_b"},
+		{"purpose-and-scope", "_h_purpose_and_scope"},
+		{"1-1-purpose", "_h_1_1_purpose"},
+		{"a.b", "_h_a_b"},
 	} {
 		if got := bookmarkName(c.id); got != c.want {
 			t.Errorf("bookmarkName(%q) is %q, want %q", c.id, got, c.want)
@@ -30,51 +32,79 @@ func TestBookmarkNameIsWordSafe(t *testing.T) {
 		t.Errorf("the long name is %d characters, want Word's ceiling of 40: %q",
 			len(long), long)
 	}
-	if prefix := "h_what_counts_as_outsourcing_and_"; !strings.HasPrefix(long, prefix) {
+	if prefix := "_h_what_counts_as_outsourcing_an"; !strings.HasPrefix(long, prefix) {
 		t.Errorf("the long name is %q, want it to open with %q", long, prefix)
 	}
-	if want := "h_what_counts_as_outsourcing_and_9cccf62"; long != want {
+	if want := "_h_what_counts_as_outsourcing_an_9cccf62"; long != want {
 		t.Errorf("the long name is %q, want %q", long, want)
 	}
 }
 
-// TestOnlyALinkedHeadingCarriesABookmark: the bookmark is what an anchor link
-// lands on, and Google Docs shows every bookmark as a flag on its heading, so
-// only a heading some "#" link in the note names carries one. The ids count
-// over the bookmarks written, not over the headings.
-func TestOnlyALinkedHeadingCarriesABookmark(t *testing.T) {
-	out := walk(t, "# Purpose and scope\n\nSee [scope](#scope).\n\n## Background\n\n## Scope\n")
+// TestEveryHeadingCarriesAHiddenBookmark is the heading id's whole cause.
+// Drive's docx import mints a Google heading id for a heading paragraph only
+// when the paragraph carries a bookmark whose name opens with an underscore,
+// and a contents entry is a link to a heading by that id. So every heading
+// gdoc writes carries one empty pair before its first run, whether anything
+// links to it or not, and Word hides such a bookmark from its own list.
+//
+// The pair is empty and sits before the runs, which is the shape Google's own
+// docx export writes and the shape measured to mint an id.
+func TestEveryHeadingCarriesAHiddenBookmark(t *testing.T) {
+	out := walk(t, "# Purpose and scope\n\n## Background\n\n## Scope\n")
 	got := serialise(t, out.Blocks)
 
 	for _, want := range []string{
-		`<w:bookmarkStart w:id="0" w:name="h_scope"/>`,
-		`<w:bookmarkEnd w:id="0"/>`,
+		"_h_purpose_and_scope", "_h_background", "_h_scope",
 	} {
-		if !strings.Contains(got, want) {
-			t.Errorf("the body carries no %s:\n%s", want, got)
-		}
-	}
-	for _, unlinked := range []string{"h_purpose_and_scope", "h_background"} {
-		if strings.Contains(got, `w:name="`+unlinked+`"`) {
-			t.Errorf("the unlinked heading %s carries a bookmark:\n%s", unlinked, got)
+		if !strings.Contains(got, `w:name="`+want+`"`) {
+			t.Errorf("no heading carries the bookmark %s:\n%s", want, got)
 		}
 	}
 
+	headings := 0
 	for i, block := range out.Blocks {
 		starts := findAll(block, "w:bookmarkStart")
-		ends := findAll(block, "w:bookmarkEnd")
-		if len(starts) != len(ends) {
-			t.Errorf("block %d opens %d bookmarks and closes %d", i, len(starts), len(ends))
+		if len(starts) == 0 {
+			continue
+		}
+		headings++
+		if len(starts) != 1 {
+			t.Errorf("block %d opens %d bookmarks, want one", i, len(starts))
+			continue
+		}
+		// The pair is this paragraph's own children, in order: the start,
+		// its end directly after it, and only then the words.
+		var tags []string
+		for _, child := range block.ChildElements() {
+			tags = append(tags, child.FullTag())
+		}
+		start, end, firstRun := -1, -1, -1
+		for at, tag := range tags {
+			switch tag {
+			case "w:bookmarkStart":
+				start = at
+			case "w:bookmarkEnd":
+				end = at
+			case "w:r":
+				if firstRun < 0 {
+					firstRun = at
+				}
+			}
+		}
+		if end != start+1 {
+			t.Errorf("block %d closes its bookmark at %d and opens it at %d, want the end directly after the start: %v",
+				i, end, start, tags)
+		}
+		if firstRun >= 0 && firstRun < end {
+			t.Errorf("block %d writes a run at %d before the bookmark's end at %d: %v",
+				i, firstRun, end, tags)
+		}
+		if id := attr(t, starts[0], "w:id"); id != attr(t, findAll(block, "w:bookmarkEnd")[0], "w:id") {
+			t.Errorf("block %d opens bookmark %s and closes another one", i, id)
 		}
 	}
-}
-
-// TestANoteWithNoAnchorLinkCarriesNoBookmark: the common case, a note with no
-// "#" link at all, publishes with no flag on any heading.
-func TestANoteWithNoAnchorLinkCarriesNoBookmark(t *testing.T) {
-	out := walk(t, "# Purpose\n\nSee [the policy](https://example.com/p).\n\n## Scope\n")
-	if got := serialise(t, out.Blocks); strings.Contains(got, "w:bookmarkStart") {
-		t.Errorf("a note with no anchor link carries a bookmark:\n%s", got)
+	if headings != 3 {
+		t.Errorf("%d of the three headings carry a bookmark", headings)
 	}
 }
 
@@ -85,7 +115,7 @@ func TestAnAnchorLinkIsAJumpAndNotARelationship(t *testing.T) {
 	out := walk(t, "See [below](#scope).\n\n## Scope\n")
 	got := serialise(t, out.Blocks)
 
-	if !strings.Contains(got, `<w:hyperlink w:anchor="h_scope">`) {
+	if !strings.Contains(got, `<w:hyperlink w:anchor="_h_scope">`) {
 		t.Errorf("the anchor link is no jump:\n%s", got)
 	}
 	if strings.Contains(got, "r:id=") {
@@ -265,7 +295,7 @@ func TestAHeadingInsideAFootnoteIsNoAnchor(t *testing.T) {
 	out := walk(t, "Body.[^1]\n\nSee [jump](#hidden-heading).\n\n[^1]: the detail\n\n    # Hidden heading\n")
 
 	body := serialise(t, out.Blocks)
-	if strings.Contains(body, `w:anchor="h_hidden_heading"`) {
+	if strings.Contains(body, `w:anchor="_h_hidden_heading"`) {
 		t.Errorf("the body carries a live anchor to a heading inside a footnote, which no bookmark marks:\n%s", body)
 	}
 	want := "line 3: the link to #hidden-heading names no heading in this note, so its words are printed as plain text"

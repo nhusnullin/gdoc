@@ -75,7 +75,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-09-19 | A heading link is goldmark's id. A file name is gdoc's own slug | holds |
 | 2026-09-19 | The projection is measured against goldmark: a sub-list's indent and a heading's anchor | holds |
 | 2026-09-27 | The skills keep to the Agent Skills specification: `needs` under `metadata`, a compatibility line, and a body budget | holds |
-| 2026-09-27 | A heading carries a bookmark only when a link names it, and a link to another note is its words | holds |
+| 2026-09-27 | A heading carries a bookmark only when a link names it, and a link to another note is its words | superseded 2026-10-16 (the bookmark half only; a relative link is its words holds) |
 | 2026-09-27 | `publish` marks its own cover, and a restyle never styles a marked span | holds |
 | 2026-09-28 | `propose` gains a second kind, a block of whole paragraphs | holds |
 | 2026-09-28 | A block refuses a renumbered list and a paragraph an object floats beside | holds |
@@ -93,6 +93,11 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-10-15 | What the M18 review closed: a label defined twice, a heading no line scan sees, a mark inside a footnote, and the two questions the parse answers rather than the line | superseded 2026-10-16 (the span paragraphs only: the attribute counted against the spans the parse formed, and the words a span cannot hold; everything else in the entry holds) |
 | 2026-10-16 | `---` is a page break | holds |
 | 2026-10-16 | Pencil is a comment: `<!-- words -->` or `%% words %%`, and the span goes | holds |
+| 2026-10-16 | What the M20 review closed: a comment with words after it on one line, two comments on one line, a comment the editor wrapped, the line a pencil's refusal names, an empty comment in a quote, and the four comments that are gdoc's own | holds |
+| 2026-10-16 | Every heading carries one hidden bookmark, because Drive's import makes it the heading id | holds |
+| 2026-10-17 | What the second M20 review closed: a comment the editor wrapped in Obsidian's spelling, a comment the note never closes, and the old span on the way home | holds |
+| 2026-10-17 | What the third M20 review closed: an opener with no closer inside a sentence, and the refusal that blamed an export the author never made | holds |
+| 2026-10-17 | What the fourth M20 review closed: an escaped opener refused as a comment the line never closes | holds |
 | 2026-10-17 | The logo lives in Drive, not in the tree | holds |
 | 2026-10-17 | The presence: gdoc appends one fact line per run to a file it never reads, and a separate menu bar app reads it | holds |
 
@@ -2743,6 +2748,11 @@ Tests: `TestOnlyALinkedHeadingCarriesABookmark`,
 `TestARelativeLinkIsItsWordsAndNoHyperlink` and
 `TestALinkWithASchemeOrAnAnchorIsStillALink`.
 
+*Superseded 2026-10-16 in its bookmark half: every heading carries one hidden
+bookmark, because Drive's import mints the heading id from it, and the flag
+reasoning above held only for a visible one. The first two tests go with it.
+The relative-link half holds. See that entry.*
+
 ## 2026-09-27. `publish` marks its own cover, and a restyle never styles a marked span.
 
 Found in real use on 2026-09-25. A note went out with `publish`, and later the
@@ -4706,6 +4716,329 @@ binary.
 `TestLiveRoundTrip`, whose pencil pair changes; and `go/boundary`'s
 `TestThePublishingPageSaysAPencilIsAComment`.
 
+*Status note, 2026-10-17.* The review widened `markers.Pairs` from two to
+four: `read` prints four of gdoc's own comments (tab, `image:`, `drawing:`,
+`object:`), where this entry and the spec say two. The rule is unchanged;
+the count is.
+
+## 2026-10-16. What the M20 review closed: a comment with words after it on one line, two comments on one line, a comment the editor wrapped, the line a pencil's refusal names, an empty comment in a quote, and the four comments that are gdoc's own.
+
+Six corrections to the entry above, found by the external review of the
+milestone the same day. Each is the rule that entry already states, applied
+where it was not. Nothing here changes what a pencil is.
+
+**A comment with the author's own words after it on one line is a pencil and
+that prose.** CommonMark opens a block of HTML on any line beginning `<!--`
+and gives the block the whole of the line holding the closer, so
+`<!-- todo --> We ship in May.` was one block of HTML: named by line and left
+out whole, with the sentence never reaching the document. Obsidian shows that
+line as the sentence with the aside hidden, and `export` writes exactly this
+shape whenever a paragraph opens with a grey run, so a document exported and
+published again lost the paragraph. `internal/body` claims the line in front
+of goldmark's own block parser and reads it as the paragraph it is: the
+comment is the pencil, the rest is markdown. A comment alone on its line is
+untouched and stays the second of the two shapes. The same line wrapped over
+two, where the closer is inside a block of HTML, is still left out, and the
+warning names it as a comment with words after its closer rather than as a
+block of HTML.
+
+**A pencil's line wraps the way any other paragraph's line wraps.** The claim
+above opens a paragraph, and the first reading of it shut that paragraph on
+every following line. goldmark treats an open paragraph as continuable, so it
+skips the parser's Continue and offers the next line only to the parsers that
+may interrupt a paragraph, and its own paragraph parser is not one of them:
+nothing opened, the line was advanced past, and it reached no node at all.
+`<!-- todo --> Revenue grew 10%.` with `Costs fell 5%.` under it published the
+first line and lost the second without a word, which is worse than the loss it
+was fixing, and a lazy line in a list item or a quote went the same way. The
+line now continues the paragraph, which is also the reading Obsidian shows and
+what lets a second comment the editor wrapped reach its closer.
+
+**Two comments on one line are two pencils.** The words of an HTML comment end
+at the first closer a reader meets, so a piece of text that opens with `<!--`,
+ends with `-->` and holds another closer between them is never one comment.
+Read as one, `<!-- first --> <!-- second -->` reached the document as the one
+grey paragraph `first --> <!-- second`, with both delimiters printed as words,
+and `<!-- a --> prose <!-- b -->` turned the author's black prose grey. The
+reading refuses that shape, and the line itself is now two pencils and the
+words between them, by the rule above. Obsidian's fence is not affected: it is
+delimited by whole lines, so `%%` inside it is words.
+
+**A comment the editor wrapped is one line in the document.** goldmark hands
+an inline comment that spans two lines back with the newline inside it, and a
+newline in a run is a hard line break in the published paragraph. The lines
+are joined by one space, which is what the block form already does and what a
+soft break in prose already means.
+
+**A pencil's refusal names the pencil's own line.** A comment is the one
+inline node that holds its characters as segments rather than as text
+children, so a heading whose whole content is one carries no text at all and
+the line lookup climbed past it to the first text in the note: `# <!-- tbd -->`
+on line 5 sent the author to line 1. The span this spelling replaced had text
+children and never showed it.
+
+**An empty comment inside a block quote is nothing.** "Empty is nothing" is
+checked where a paragraph is emitted, and a quote is the one path that emits
+one without going through that check, so `> %%%%` left an indented blank line
+the author never typed.
+
+**gdoc's own comments are four, not two.** `<!-- tab ` and `<!-- image: ` were
+named; the floating placeholder names the kind, so `<!-- drawing: ` and
+`<!-- object: ` are written by the same line of code and are the same sort of
+statement about a document. Left out of `markers.Pairs`, a drawing that floats
+beside the text came home in the file and the next build published the grey
+paragraph `drawing: floating, kix.p1` without a word. All four join the pairs,
+and `internal/view`'s own test holds the two lists in step, because a label
+this package does not know is a line the next build reads as the author's
+aside.
+
+**Two more on the way home, from the same reading.** A grey run whose words
+would be written home as one of those markers comes home as its words with the
+loss named, the way a mark that cannot carry its syntax already does. The
+question is asked of the comment as it will be written, not of its opening:
+`<!-- ` and the words `tab` give `<!-- tab`, which carries no marker, while
+the line gdoc writes is `<!-- tab -->`, which carries one, and a marker in the
+middle of the words is the same refused line. And the document's own `%%` is
+named where the next build reads it as syntax: `export` writes HTML's spelling
+and never Obsidian's, but the next build reads both, so `LIKE '%%abc%%'` came
+home with no warning and published again with the words between the pairs grey
+and the delimiters gone. Inside a pencil's own words it is not named, because
+nothing inside a comment is markdown and the characters come home as
+themselves. A footnote mark inside those words is still named: `build` refuses
+a mark naming no note off the source line, and an aside in the middle of a
+paragraph's line is on that line.
+
+**Where they are pinned.** `internal/body`'s
+`TestACommentWithProseAfterItIsAPencilAndThatProse`,
+`TestTwoCommentsOnOneLineAreTwoPencils`,
+`TestAWrappedCommentInsideASentenceIsOneLine`,
+`TestAPencilsRefusalNamesItsOwnLine`,
+`TestAnEmptyCommentInsideAQuoteIsLeftOut`,
+`TestAPencilsLineWrapsLikeAnyOtherParagraph` and
+`TestACommentsWordsCarryNoSpaceOnEitherEdge`; `internal/markers`'s
+`TestMarkersNamesEachOpener`, `TestFindNamesTheFirstMarkerOnTheLine` and
+`TestCommentReadsTheLineGdocIsAboutToWrite`;
+`internal/view`'s `TestEveryFloatingPlaceholderIsAMarker`; and
+`internal/export`'s `TestAPencilWhoseWordsWouldReadAsAMarkerComesHomeAsItsWords`,
+`TestWordsHoldingTheObsidianSpellingAreNamed` and
+`TestAGreyRunHoldingAFootnoteMarkIsStillNamed`.
+
+
+## 2026-10-16. Every heading carries one hidden bookmark, because Drive's import makes it the heading id.
+
+Found by Nail on 2026-10-16 in "Embedded retail card concept paper v0.9": after
+a refresh of the contents list in Google Docs, every entry's hover card said
+"Tab 1" and a click landed on the title page, not on the heading it names.
+Every document gdoc has published has it, and the measurement is MEASURED.md,
+2026-10-16, "Drive's import of a heading's bookmark". Serves principle 3,
+because the publish read-back gains a check that catches this class of silent
+failure, and principle 4, because a reader who clicks a contents entry should
+land on the section and not on the cover.
+
+**Every heading `render` writes carries one empty bookmark before its first
+run, named `_h_<slug>`.** A contents entry is a link to a heading by its id,
+and Drive's import mints that id for a heading paragraph only when the
+paragraph carries a bookmark whose name opens with `_`. That is Google's own
+docx export convention, and Word treats such a bookmark as hidden, so it shows
+in no bookmark list there and no flag sits beside the heading in Docs. The
+leading underscore is the whole trigger: the bookmark's range does not matter,
+and the name is not kept, because Google mints its own `h.` id from it.
+`bookmarkName` keeps its rule, letters, digits and underscores, at most 40
+characters with a seven-digit hash past the ceiling, and opens with `_h_`. A
+figure-only heading and a heading inside a footnote definition still carry
+none, because neither emits a heading paragraph.
+
+**A `#` link in the note anchors at that name**, so it comes back as a heading
+link naming the heading's id rather than as a bookmark link, which
+`internal/docs` already decodes and `internal/view` already prints as `#` and
+the heading's words. The `h_` bookmark that wrapped a linked heading's runs
+goes. The pre-walk still collects every heading id, so a dead `#` still warns
+by line; the set of linked headings stops deciding anything and goes with it.
+
+**`publish` counts what came back.** The read-back `publish` already makes
+gains one fact, `headings_without_id`, and a warning when the count is not
+zero. It is a fact and a warning rather than a failure, because the document is
+there. That is the check that would have caught this a month ago.
+
+**What this retires.** The first half of 2026-09-27, "a heading carries a
+bookmark only when a link names it", including its reasoning that a note with
+no internal link showed a flag on every heading for nothing: that held for a
+visible bookmark, and a hidden one shows no flag. Its second half, a relative
+link is its words, holds untouched. The 2026-09-18 entry, which the 2026-09-27
+one superseded on this point, had a bookmark on every heading for a different
+reason, that a note is edited after it is published; the reason here is the
+heading id and nothing else.
+
+**What was rejected.** Repairing a document already published: re-applying
+`namedStyleType: HEADING_1` through `updateParagraphStyle` mints no id, the id
+is minted at import and nowhere else, and the route for an existing document is
+a fresh publish from its note. Nail's call of 2026-10-16 is that the documents
+already out stay as they are. Refreshing the contents list from gdoc is not
+rejected but blocked: the Docs API has no request that builds or refreshes one,
+so the refresh stays a click in the UI, as the guide says.
+
+Nail's gate, passed on 2026-10-16 on the variant f probe document
+`118is97pMYpL14kgtolRM3JuBlFup5B8rTZD5Pr8Ah5s`: an entry names its heading and
+opens it, no bookmark flag sits beside any heading, and the `#` jump lands.
+
+Tests: `TestEveryHeadingCarriesAHiddenBookmark`,
+`TestAnAnchorLinkIsAJumpAndNotARelationship`, `TestBookmarkNameIsWordSafe`,
+`TestAFigureOnlyHeadingCarriesNoBookmark`,
+`TestAHeadingInsideAFootnoteIsNoAnchor`,
+`TestAPublishReportsHeadingsThatCameBackWithNoId`, and `internal/live`'s
+`TestAPublishedHeadingCarriesAnIdAndAJumpIsAHeadingLink` under
+`GDOC_LIVE_WRITE`. The plan is
+`docs/plans/2026-10-16-gdoc-v2-m21-heading-ids.md`.
+
+## 2026-10-17. What the second M20 review closed: a comment the editor wrapped in Obsidian's spelling, a comment the note never closes, and the old span on the way home.
+
+Three corrections to the two entries above, found by the second review of the
+milestone. Each is a rule those entries already state, applied where it was
+not. Nothing here changes what a pencil is.
+
+**A comment the author's editor wrapped is one pencil in both spellings.** The
+entry above says a wrapped comment is one line in the document, and the HTML
+spelling has always reached across the wrap because goldmark's own comment
+parser walks forward to its closer. Obsidian's parser shut on the opening
+line, so `%% an aside that` with `wraps over two lines %%` under it was
+claimed by neither parser and published as the words the author typed,
+delimiters and all, with the build saying ok. That is the one failure every
+line check in `internal/body` exists to prevent, in the spelling Obsidian
+hides while somebody reads the note, and "two parsers, one meaning" is the
+premise it broke. The inline parser now walks forward the way goldmark's does,
+over the lines of the paragraph in hand and no further, and puts the position
+back where it found it when there is no closer to reach. A single delimiter
+that closes nothing is still the character the author typed.
+
+**A comment the note never closes is named as a comment in both spellings.**
+The milestone named the unclosed fence and left the unclosed `<!--` as "a
+block of HTML", which is the spelling the guide teaches and the one `export`
+writes. An author told they wrote a block of HTML goes looking for a tag that
+is not in the note. Both spellings run to the end of the note, so the warning
+now names the comment and says the lines under it went with it. The same
+reading found the other half: Obsidian's opener is also its closer, and the
+block was read as closed whenever its last line happened to end in `%%`, so
+`%%` with `note 50%%` under it swallowed every line after it as one grey aside
+with nothing named. A fence shuts on a fence line and on nothing else, which is
+what `unclosedComment` now asks.
+
+**The old span is named on the way home.** `internal/body` refuses a line
+carrying `[words]{.pencil}` by name, and the projection stopped naming that
+shape when it took on the comment's opener. So a document whose own prose
+shows the retired spelling, a page about gdoc among them, came home with no
+warning and refused the next build by line, blaming the file rather than the
+export. It is the third shape `gdocShapes` asks for, with its own sentence,
+because the next build does not read those characters in place of the words:
+it refuses the file for them. The shape goes the day that refusal goes.
+
+**What was left.** A grey run's words are still written home through the
+projection's own escaping, so a pencil holding `[[`, `{+` or a backslash
+gains a character nobody typed. That is
+`docs/backlog/build-never-unescapes-a-backslash.md` and it is Nail's to settle,
+because unescaping inside a comment contradicts "nothing inside a comment is
+markdown". The old span inside a pencil's own words is refused by `build` and
+named by `export`, which is consistent but stricter than "nothing inside a
+comment is markdown" would have it; loosening a refusal is a decision rather
+than a review fix.
+
+**Where they are pinned.** `internal/body`'s
+`TestAWrappedObsidianCommentIsOnePencil`,
+`TestAnObsidianDelimiterWithNoCloserIsWords`,
+`TestAnUnclosedHTMLCommentIsNamedAsAComment`,
+`TestAnUnclosedFenceEndingInTheDelimiterIsStillUnclosed` and
+`TestABlockOfHTMLThatIsNoCommentIsStillNamedAsOne`; and `internal/export`'s
+`TestWordsHoldingTheOldPencilSpanAreNamed`.
+
+## 2026-10-17. What the third M20 review closed: an opener with no closer inside a sentence, and the refusal that blamed an export the author never made.
+
+Two corrections to the entries above, found by the third review of the
+milestone. Both are rules those entries already state, applied where they were
+not. Nothing here changes what a pencil is.
+
+**An opener with no closer inside a sentence is refused by line.** The entry
+above says a comment the note never closes runs to the end of the note and is
+named as the comment it is. That is true of an opener on a line of its own,
+which opens a block of HTML. An opener in the middle of a sentence opens
+nothing: goldmark reads raw HTML only once it has the closer, so
+`Some prose <!-- an aside with no closer` stayed one paragraph of prose, the
+aside reached the document black, and the typographer rewrote the two dashes
+of the opener into an en dash on the way. The build said ok. That is the one
+failure every line check in `internal/body` exists to prevent, and the words
+are an aside the author wrote for nobody, so it is a refusal rather than the
+warning the block gets. It is read off the lines every other line check is
+read off, and it counts the openers goldmark did read before it refuses: a
+comment the author's editor wrapped, an opener inside a comment's own words,
+and an opener inside backticks or a code block all refuse nothing. Only the
+HTML spelling is asked about, because a lone `%%` is two characters an author
+may well have typed for themselves.
+
+**A note refused for a comment of gdoc's own is told what to do about it.**
+The entry above made four of the eight markers a comment opening with an
+ordinary English word. The refusal they share was written when every marker
+was syntax nobody types by hand, so it says the note was exported out of a
+document and its suggestions have not been resolved. For
+`Text with <!-- tab order matters --> inside` that sentence is false: the
+author exported nothing, and it sends them looking for an export that never
+happened and names no way out. The refusal now has two halves.
+`internal/markers`' `IsComment` is which half a marker is in, there because
+that package owns the list. The markup half keeps the sentence it had. The
+comment half names the opener as gdoc's own and asks for the aside to be
+reworded. The refusal itself does not move: a comment opening with those words
+is read as gdoc's on every route back into a document, which is what makes it
+a marker.
+
+**What was left.** The two shapes the entry above left for Nail are still
+Nail's: the backslash a grey run's words gain on the way home, and the old
+span refused inside a pencil's own words. `internal/view` names a shape twice
+when a pencil's mark cannot be carried and a non-commented shape stands in the
+same run, and it says the next build "refuses the file for" the old span where
+a whole grey paragraph comes home as a block of HTML and the next build does
+not. Both are wording in a warning that is already raised, so neither puts a
+character into a document and neither is worth a change this late in the
+milestone.
+
+**Where they are pinned.** `internal/body`'s
+`TestAnUnclosedCommentInsideASentenceIsRefusedByLine`,
+`TestAnOpenerGoldmarkReadIsNotRefused`,
+`TestAnAsideOpeningLikeGdocsOwnCommentSaysSo` and
+`TestAMarkupMarkerStillNamesTheExport`.
+
+## 2026-10-17. What the fourth M20 review closed: an escaped opener refused as a comment the line never closes.
+
+One correction to the entry above, found by the fourth review of the
+milestone. It is a rule the entries above already state, applied where it was
+not.
+
+**An escaped opener refuses nothing.** The refusal the entry above added
+counts the comment openers on a line and compares that count with the openers
+goldmark read. It counted every `<!--` on the line, the escaped ones with the
+rest. A backslash makes the one character after it the author's own, which is
+the parity `internal/markers` holds for every route out of the hub and the
+parity `read` writes an author's own opener home with, so `\<!--` is four
+characters of prose: goldmark reads no raw HTML there, nothing is left
+unclosed, and the characters reach the page as the ones that were typed. The
+count said otherwise, so `An escaped opener \<!-- aside --> here.` was refused
+with a sentence saying the line never closes, which it does, and the way out
+it named was a closer the line already had.
+
+What that cost is the door the marker refusal leaves open. The entry above
+says an escaped marker is the author's own text and is left alone, so a note
+written about the markers themselves still publishes. Four of the eight
+markers are comments now, so for those four the marker refusal let the note
+through and this refusal stopped it: a note explaining
+`\<!-- image: picture.png -->`, which is the shape of `skills/gdoc-export/markers.md`,
+could not be published at all.
+
+Both counts are read through the parity now, the line's and the raw HTML's,
+because an opener escaped inside a comment's own words is that comment's words
+on both sides of the comparison. `internal/markers`' `escaped` is exported as
+`Escaped` for it, rather than copied, because that package is where the parity
+lives.
+
+**Where it is pinned.** `internal/body`'s `TestAnEscapedOpenerIsNotRefused`,
+`TestAnOpenerAfterAnEscapedBackslashIsStillRefused` and
+`TestBuildLeavesAnEscapedMarkerAlone`, which now asks its question of a
+comment marker as well as of the markup.
 ## 2026-10-17. The logo lives in Drive, not in the tree.
 
 Nail's decision, taken on 2026-10-16 in a brainstorm that put the question to

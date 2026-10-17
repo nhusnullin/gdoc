@@ -428,6 +428,42 @@ func TestABacktickSpanIsNotACodeFence(t *testing.T) {
 	}
 }
 
+// TestAWrappedCodeSpanIsStillCode: a code span whose backticks the author's
+// editor wrapped over two lines is code on both of them. One line cannot say
+// so: the opening run has no closer where it stands, while goldmark reads the
+// paragraph to its end and shuts the span on the line below. So every line
+// check read the words inside the span as the document's own and refused a
+// note for the one place nothing is markdown, and the refusal named a loss
+// that could not happen.
+//
+// All three checks, because the rule is one: a footnote mark naming no note,
+// the grey mark's old spelling and a comment opener nothing closes.
+func TestAWrappedCodeSpanIsStillCode(t *testing.T) {
+	for _, markdown := range []string{
+		"a `start [^nope]\nend` more\n",
+		"a `start ]{.pencil}\nend` more\n",
+		"a `start <!--\nend` more\n",
+	} {
+		out, err := Render(config(t), []byte(markdown), "testdata/docs", true)
+		if err != nil {
+			t.Errorf("%q was refused: %v", markdown, err)
+			continue
+		}
+		if len(out.Warnings) != 0 {
+			t.Errorf("%q raised %v, want nothing said about code", markdown, out.Warnings)
+		}
+	}
+
+	// The other half: a blank line shuts the paragraph, so the run below it
+	// closes no span and goldmark leaves the opener in the document's own
+	// words. The refusal is the right one there.
+	got := refused(t, "a `start <!--\n\nend` more\n")
+
+	if !strings.Contains(got, "line 1") || !strings.Contains(got, "never closes") {
+		t.Errorf("an opener a blank line cut off from its backticks raised: %s", got)
+	}
+}
+
 // TestALabelDefinedTwiceIsRefusedNamingBothLines: goldmark matches a mark
 // against the first definition of a label and its transformer removes the
 // rest, so the second note's words reach no page and the tree says nothing

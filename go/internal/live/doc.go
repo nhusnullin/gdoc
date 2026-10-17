@@ -298,12 +298,32 @@
 // cannot accept its own suggestion, so the probe leaves that document in the
 // folder and prints its URL.
 //
-// # Three tests leave their document behind, on purpose
+// # Four tests leave their document behind, on purpose
 //
 // The anchors test, the prelude acceptance and the named range probe's accept
 // row each leave a document in the folder with its URL in the log. The numbers
 // say the anchors survived and the suggestion ids are there; whether the cover
 // reads right is Nail's, in the document. Trash them once you have looked.
+//
+// TestAPublishedHeadingCarriesAnIdAndAJumpIsAHeadingLink is the fourth, M21's
+// acceptance, and it creates its document rather than copying one. It
+// publishes a note of three headings and one `#` link into the test folder,
+// reads the document back through the read every command makes, and asserts
+// three things: every heading came back carrying a heading id, the jump came
+// back as a link to a heading naming the right one's id, and the publish
+// report says headings_without_id is 0. That is the whole of what Drive's
+// import does with the hidden bookmark internal/body writes before every
+// heading's runs, and no fixture can answer it: the offline tests of that
+// package say the docx carries the pair, and whether Google still mints an id
+// from it is Google's answer on the day.
+//
+// The document stays in the folder because the one step no API can take is the
+// refresh of the contents list. The Docs API has no request that builds or
+// refreshes one, so an entry that opens its heading is a click in the UI and
+// Nail's eyes on the hover card, which is the gate the milestone's own
+// measurement passed on 2026-10-16. The URL is in the log. It names no
+// variable of its own: GDOC_LIVE_TEST, GDOC_LIVE_WRITE and GDOC_LIVE_FOLDER_ID
+// with its default are the whole of what it reads.
 //
 // # The export measurement asserts nothing
 //
@@ -318,13 +338,15 @@
 // asserted them would be deciding what it was sent to find out. What it reports
 // is written into MEASURED.md by hand.
 //
-// # Eight tests here ask for no network at all
+// # Nine tests here ask for no network at all
 //
 // TestTheLiveFixturesRenderWithNoNetwork runs in `make test`, with neither
-// variable set. Two of the live tests render a note before they reach Drive,
+// variable set. Three of the live tests render a note before they reach Drive,
 // so a note that stopped rendering or a fixture path that moved would
 // otherwise be found by Nail in the middle of a live run rather than by the
-// suite. It is the pin, and it is in publish_test.go beside the tests it
+// suite. It renders all three and holds the heading id note to its shape as
+// well, three headings and one `#` link, because the run above asserts those
+// counts. It is the pin, and it is in publish_test.go beside the tests it
 // covers.
 //
 // TestTheMeasurementReadsTheFixtureItPairsAgainst is the same pin for the
@@ -351,14 +373,29 @@
 //
 // TestTheRoundTripNoteCarriesAFootnoteAndEveryMark is the seventh, in
 // roundtrip_test.go. The round trip measures a footnote and a mark only if one
-// of the six notes it publishes still holds them, so the kitchen sink's seven
-// mark openers and its footnote are pinned as the literals an author types: a
-// note edited back to the shapes of M17 would otherwise leave the live run
-// green and the question unasked.
+// of the six notes it publishes still holds them, so the kitchen sink's six
+// highlight openers, both shapes of the pencil, a comment inside a sentence
+// and a comment on lines of its own, and its footnote are pinned as the
+// literals an author types: a note edited back to the shapes of M17 would
+// otherwise leave the live run green and the question unasked. Both pencil
+// shapes rather than the opener alone, because a note holding only the run
+// would leave the grey paragraph measured by no live run at all.
 //
 // TestThePageBreakNoteRendersWithNoNetwork is the eighth, in pagebreak_test.go,
 // and it is there for the same reason. The measurement's note is written in
 // that file rather than kept as a fixture, so it renders the note offline and
 // holds it to what it is for: one body break, one body heading, and the two
 // paragraphs the projection window is read around.
+//
+// TestTheComparisonLeavesAPencilsWordsAsTyped is the ninth, in
+// roundtrip_test.go, and it is the one rule of the comparison's own that a
+// pencil changed. The note side rewrites the middle of a line three ways
+// before it compares, the smart punctuation, the emphasis delimiters and the
+// link to a file in the hub, and the first of those read the "--" of "<!--"
+// as an en dash, so a pencil standing on a line that also carried a quote was
+// spelled the same way on both sides and still reported as a difference no
+// name covers. A pencil's words are not the typographer's business:
+// internal/body hands the comment through as the author typed it. So all
+// three rules go through outsideComments, which hands each of them the words
+// around every comment and leaves the comment alone, delimiters and all.
 package live

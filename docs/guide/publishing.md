@@ -107,9 +107,12 @@ such heading `#heading-1`. Two headings with the same words give the second one
 `-1` too. A `#` link that names no heading in the note is printed as the words
 you wrote, with a warning naming the line and the destination you asked for. A
 heading that is nothing but a picture is a figure rather than a heading, so it
-is nothing to jump to and a link naming it warns the same way. Only a heading a
-`#` link names carries the jump's landing mark, because Google Docs shows that
-mark as a flag on the heading.
+is nothing to jump to and a link naming it warns the same way. Every heading
+carries the jump's landing mark, whether a link names it or not. The mark is
+hidden: its name opens with an underscore, so Word keeps it out of its bookmark
+list and Google Docs shows no flag beside the heading. It is there because
+Drive's import turns it into the heading's own id, which is what a contents
+entry needs to open that heading.
 
 A link to another note or a folder, such as `[bybit](bybit-card.md)` in a
 Related section, is printed as its words with no link. That file is not in
@@ -166,7 +169,13 @@ opening it, in Word or in Drive, and not by the binary.
 The contents list is a Word field, which is what the master template carries
 too. Word fills it in when the document is opened and refreshed, and Google Docs
 turns it into a live contents list on import. Until then it shows the one line
-Word writes into an unrefreshed field.
+Word writes into an unrefreshed field. After the refresh each entry opens the
+heading it names: the hover card says that heading and a click lands on it,
+rather than on the first page. That works because every heading carries the
+hidden mark above, which Drive's import turns into the heading's id. Whether
+the import kept them is one number on the publish read-back,
+`headings_without_id`, and 0 is the answer that says the contents list will
+work.
 
 There is one test that keeps this honest on every commit. It builds a document
 from the embedded style, opens the Word master the style was extracted from, and
@@ -224,15 +233,33 @@ part of a docx names no addresses.
 
 **The seven marks** are a colour on a stretch of words. `==words==` is
 Obsidian's own highlight, and a colour emoji at the start of one picks another
-colour, which is Obsidian's rule rather than gdoc's. `[words]{.pencil}` is the
-one Pandoc span gdoc reads, and it writes grey text rather than a highlight:
+colour, which is Obsidian's rule rather than gdoc's. The seventh is the grey
+pencil, and a pencil is a comment: HTML's `<!-- words -->` or Obsidian's
+`%% words %%`, which writes grey text rather than a highlight:
 
 ```markdown
 A ==figure== to fill in, and ==🟡one more==.
 ==🟢Agreed with Mel==, ==🟣a question for Mel==, ==🔵an aside==,
 ==🔴wrong today== and ==🟠being rewritten==.
-[Not sure this clause is needed]{.pencil}
+A clause <!-- I am not sure this one is needed --> and the doubt beside it.
+
+%% A whole aside, on lines of its own. %%
 ```
+
+The two comment spellings are one mark, so write whichever your editor suits.
+Obsidian dims a comment while you edit and hides it while you read, so the
+words are an aside the note's reader never pays for and the document's reader
+gets in grey. A comment inside a sentence is a grey run where it stands. A
+comment on lines of its own is grey paragraphs of its own, the lines of each
+joined by one space, and a blank line inside it starts the next paragraph. A
+comment holding no words marks nothing and is left out in silence. A comment
+you never close on a line of its own runs to the end of the note, so it is
+left out with every line after it, and the warning names the line it opened
+on. A `<!--` you never close inside a sentence is refused by line instead,
+because that one opens nothing at all: the aside and the opener in front of it
+would reach the document as black words rather than grey. Nothing inside a
+comment is markdown, so `<!-- a ==b== c -->` carries the equals signs as
+characters, and a highlight inside a pencil is words.
 
 Run `gdoc help marks` for the seven with their colours. The binary prints them
 out of the house style, so what you read there is the colour the document
@@ -241,19 +268,19 @@ purple, because those are the marks that say a note is not finished. The other
 four are carried and not counted. Nothing in the binary says whether a note
 carrying one may be published: `/gdoc-publish` shows you the counts and asks.
 
-Six shapes are refused here too, each naming the line: a mark inside a mark,
-because one stretch of words carries one colour; an empty span; a span carrying
-any attribute other than `.pencil`; a span that does not open and close on one
-line, so a note you hard-wrap keeps each span on its own line; a mark inside a
-heading, for the reason a footnote mark in a heading is refused; and `{.pencil}`
-written where no span can open. The bracket in front of it has to be the span's
-own: a bracket after `!` is a picture's, a bracket holding a caret is a footnote
-mark's, and a bracket followed by a target or a reference is a link's. In each
-of those the attribute closes nothing and would reach the document as words, so
-write the words in a code span when you mean the syntax itself. An emoji
-anywhere but the start of a highlight is your own text, and so is a `[` that is
-not followed by `]{`, so a link stays a link. A bracket inside a code span is
-neither, because nothing inside backticks is read as syntax.
+Five shapes are refused here too, each naming the line: a mark inside a mark,
+because one stretch of words carries one colour, so a highlight whose words
+hold `<!--` is refused and a pencil's own words are asked nothing; a highlight
+holding its colour emoji and no words, which would be a colour on nothing with
+the emoji dropped; a mark inside a heading, for the reason a footnote mark in a
+heading is refused; a mark inside a picture's alt text, because the alt text
+becomes the caption and a caption carries no colour; and `[words]{.pencil}`,
+the Pandoc span the pencil was written as before milestone 20. Nothing parses
+that span now, so the brackets and the braces would reach the document as
+words, and the refusal names the comment to write instead. An emoji anywhere
+but the start of a highlight is your own text. Syntax inside a code span, a
+code block or a block of HTML is not syntax, so a note explaining the old
+spelling is not refused for explaining it.
 
 A mark reaches Word twice, as a character style and as the colour on the run
 itself. The style is how a reader finds every yellow with one search, and the
@@ -297,6 +324,15 @@ Fewer than three is still `ok: true` with the check that did not hold named,
 because a document that exists is a document that exists, and being told the run
 failed is what makes somebody upload a second one.
 
+`headings_without_id` is a fact beside those three rather than one of them. It
+counts the headings the read-back came back with no id on. Zero is what you
+want, and it means the contents list will open its sections once somebody
+refreshes it. Any other number comes with a warning saying what it costs, and
+the publish is still `ok` and still `verified`: the document is in the folder
+and its words are right. No Docs request can give a published document the ids
+it came back without, so the way to a document whose contents list works is a
+fresh publish from the note, not a repair of that one.
+
 If the upload worked but your note could not be written, the document goes back:
 it is trashed and the trash is confirmed, and the output says `rolled_back:
 true` with no document id. Only if that also fails do you get the live id and
@@ -316,6 +352,7 @@ at is one the next publish makes a second of.
     "tabs": 1,
     "verified": true,
     "checks": {"read_back": true, "one_tab": true, "docx_export": true},
+    "headings_without_id": 0,
     "files_changed": ["/Users/you/notes/supplier-register-policy.md"],
     "body": {"paragraphs": 41, "headings": 9, "lists": 3, "tables": 2, "images": 1,
              "footnotes": 2,

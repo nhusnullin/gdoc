@@ -4,18 +4,22 @@ import "testing"
 
 // TestMarkersNamesEachOpener is the list itself, written out as literals rather
 // than read off Pairs. A test that reads the constant follows it wherever
-// somebody moves it, and these eight strings are what `read` has already
-// written into every exported file: changing one of them without changing this
-// test is changing what a marker is.
+// somebody moves it, and these strings are what `read` has already written
+// into every exported file: changing one of them without changing this test is
+// changing what a marker is.
 func TestMarkersNamesEachOpener(t *testing.T) {
 	want := [][2]string{
 		{"{+", "+}"},
 		{"{-", "-}"},
 		{"[[c:", "[[/c]]"},
 		{"[s:", "]"},
+		{"<!-- tab ", "-->"},
+		{"<!-- image: ", "-->"},
+		{"<!-- drawing: ", "-->"},
+		{"<!-- object: ", "-->"},
 	}
 	if len(Pairs) != len(want) {
-		t.Fatalf("there are %d markers, and the four gdoc writes are %v", len(Pairs), want)
+		t.Fatalf("there are %d markers, and the eight gdoc writes are %v", len(Pairs), want)
 	}
 	for i, p := range Pairs {
 		if p.Open != want[i][0] || p.Shut != want[i][1] {
@@ -37,6 +41,14 @@ func TestFindNamesTheFirstMarkerOnTheLine(t *testing.T) {
 		{"the tail of an anchor [[/c]] and the rest", "[[/c]]"},
 		{"the words then [s:AAA] alone", "[s:"},
 		{"a sentence, then {+added+} and then [[c:AAA]]", "{+"},
+		{"<!-- tab t.0: Title -->", "<!-- tab "},
+		{"<!-- image: floating, kix.p1 -->", "<!-- image: "},
+		{"the paragraph, and then <!-- image: inline, kix.p2 -->", "<!-- image: "},
+		// A floating object is written with the kind's own label, and three
+		// kinds reach it: internal/view's placeholders for an image, a
+		// drawing and the object a read cannot name.
+		{"<!-- drawing: floating, kix.p3 -->", "<!-- drawing: "},
+		{"<!-- object: floating, kix.p4 -->", "<!-- object: "},
 	} {
 		got, ok := Find(c.line)
 		if !ok || got != c.want {
@@ -93,5 +105,59 @@ func TestLinesCountsFromOne(t *testing.T) {
 	}
 	if m, line := Lines("# Heading\n\nA plain note.\n"); m != "" || line != 0 {
 		t.Errorf(`Lines over a note with no marker = %q, %d, want "", 0`, m, line)
+	}
+}
+
+// TestAPencilIsNotAMarker is the line this package has to draw since the grey
+// mark became a comment. Four of gdoc's own comments are markers, because they
+// say a thing about a document that the document itself holds otherwise. Every
+// other comment is the author's own aside, and the only difference on the line
+// is the opener: the closer "-->" is the same one, so it is not looked for.
+func TestAPencilIsNotAMarker(t *testing.T) {
+	for _, line := range []string{
+		"<!-- check this figure before Friday -->",
+		"The team meets weekly <!-- was monthly --> in Q3.",
+		"<!-- tabs are not the tab marker -->",
+		"<!-- images in general -->",
+		"%% an Obsidian aside %%",
+		"the words then --> on their own",
+	} {
+		if got, ok := Find(line); ok {
+			t.Errorf("Find(%q) = %q, true, and a pencil is the author's own aside", line, got)
+		}
+	}
+}
+
+// TestCommentReadsTheLineGdocIsAboutToWrite. internal/view asks Comment of the
+// comment it is about to write around a document's own grey words, where Find
+// is asked of a line a file already holds. The opening is not the whole
+// question: a marker in the middle of the words is the same refused line, and
+// the words on their own are not the line, which is what made "<!-- tab -->"
+// pass a question asked of "<!-- tab".
+func TestCommentReadsTheLineGdocIsAboutToWrite(t *testing.T) {
+	for _, c := range []struct{ text, want string }{
+		{"<!-- tab -->", "<!-- tab "},
+		{"<!-- image: -->", "<!-- image: "},
+		{"<!-- see <!-- image: x -->", "<!-- image: "},
+		{"<!-- drawing: the chart -->", "<!-- drawing: "},
+		{"<!-- object: the sheet -->", "<!-- object: "},
+	} {
+		if got, ok := Comment(c.text); !ok || got != c.want {
+			t.Errorf("Comment(%q) = %q, %v, want %q, true", c.text, got, ok, c.want)
+		}
+	}
+
+	// An author's own aside is not one, and neither is the pair markup
+	// internal/view escapes inside a comment: an escaped marker is the
+	// author's own text by the time the line is read back.
+	for _, text := range []string{
+		"<!-- tabulate the rest -->",
+		"<!-- check this figure before Friday -->",
+		"<!-- the team {+meets weekly+} -->",
+		"%% an Obsidian aside %%",
+	} {
+		if got, ok := Comment(text); ok {
+			t.Errorf("Comment(%q) = %q, true, and the words are the author's own", text, got)
+		}
 	}
 }

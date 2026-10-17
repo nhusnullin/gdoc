@@ -45,7 +45,7 @@ Two rules about the documents themselves:
 | `go/internal/annotate/` | a comment on the words a caller quotes, anchored, and nothing else |
 | `go/internal/publish/` | the upload with conversion, and the three read-backs on what came out |
 | `go/internal/export/` | a Google Doc as Markdown in the hub: one file per tab, the house prelude taken out, the pictures beside it, and nothing replaced |
-| `go/internal/markers/` | the four openers gdoc writes into a file, so no route into a document carries one back |
+| `go/internal/markers/` | the eight openers gdoc writes into a file, so no route into a document carries one back |
 | `go/internal/restyle/` | the survey, and the house look applied where the document stands |
 | `go/internal/prelude/` | the house template as Docs requests, proposed rather than written, and the named range that marks it |
 | `go/internal/docsreq/` | the shapes a Docs request is made of: a measurement, a colour, an alignment, a length, a style object with its mask |

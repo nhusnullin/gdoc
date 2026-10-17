@@ -48,19 +48,26 @@ import (
 // about a rollback at all. false has to mean "it was tried and did not hold",
 // which is the run where the live id below it matters most.
 type publishData struct {
-	DocumentID   string         `json:"document_id,omitempty"`
-	FolderID     string         `json:"folder_id"`
-	URL          string         `json:"url,omitempty"`
-	Title        string         `json:"title,omitempty"`
-	House        string         `json:"house"`
-	Logo         logoData       `json:"logo"`
-	Bytes        int64          `json:"bytes"`
-	Tabs         int            `json:"tabs,omitempty"`
-	Verified     bool           `json:"verified"`
-	Checks       publish.Checks `json:"checks"`
-	RolledBack   *bool          `json:"rolled_back,omitempty"`
-	FilesChanged []string       `json:"files_changed,omitempty"`
-	Body         body.Counts    `json:"body"`
+	DocumentID string         `json:"document_id,omitempty"`
+	FolderID   string         `json:"folder_id"`
+	URL        string         `json:"url,omitempty"`
+	Title      string         `json:"title,omitempty"`
+	House      string         `json:"house"`
+	Logo       logoData       `json:"logo"`
+	Bytes      int64          `json:"bytes"`
+	Tabs       int            `json:"tabs,omitempty"`
+	Verified   bool           `json:"verified"`
+	Checks     publish.Checks `json:"checks"`
+	// HeadingsWithoutID is publish.Report's own count, printed at zero as
+	// well. A contents entry opens a heading by its id, so the number is what
+	// says whether Drive's import kept the ids the docx asked for, and zero is
+	// the answer a reader of this envelope learns the most from.
+	// TestPublishPrintsTheHeadingsThatCameBackWithNoId is the pin, over both
+	// numbers, and internal/publish/doc.go holds the rule itself.
+	HeadingsWithoutID int         `json:"headings_without_id"`
+	RolledBack        *bool       `json:"rolled_back,omitempty"`
+	FilesChanged      []string    `json:"files_changed,omitempty"`
+	Body              body.Counts `json:"body"`
 }
 
 func cmdPublish(ctx context.Context, a *args) emit.Result {
@@ -134,6 +141,7 @@ func runPublish(ctx context.Context, s session, md string, source []byte, folder
 	data.Tabs = rep.Tabs
 	data.Verified = rep.Verified
 	data.Checks = rep.Checks
+	data.HeadingsWithoutID = rep.HeadingsWithoutID
 	warns = append(warns, rep.Warnings...)
 	if err != nil {
 		// No id, so there is nothing to verify, to record or to take back. The

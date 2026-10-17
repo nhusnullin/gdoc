@@ -9,7 +9,7 @@
         "body": {"content": [
           {"startIndex": 0, "endIndex": 1, "sectionBreak": {"sectionStyle": {}}},
           {"startIndex": 1, "endIndex": 26, "paragraph": {
-            "paragraphStyle": {"namedStyleType": "HEADING_1"},
+            "paragraphStyle": {"namedStyleType": "HEADING_1", "headingId": "h.suppliers"},
             "elements": [{"startIndex": 1, "endIndex": 26, "textRun": {"content": "Supplier Register Policy\n", "textStyle": {}}}]}}
         ]}
       },
@@ -20,7 +20,7 @@
             "body": {"content": [
               {"startIndex": 0, "endIndex": 1, "sectionBreak": {"sectionStyle": {}}},
               {"startIndex": 1, "endIndex": 10, "paragraph": {
-                "paragraphStyle": {"namedStyleType": "HEADING_1"},
+                "paragraphStyle": {"namedStyleType": "HEADING_1", "headingId": "h.appendix"},
                 "elements": [{"startIndex": 1, "endIndex": 10, "textRun": {"content": "Appendix\n", "textStyle": {}}}]}}
             ]}
           }
