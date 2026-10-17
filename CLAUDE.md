@@ -55,12 +55,10 @@ Two rules about the documents themselves:
 | `go/internal/frontmatter/` | the `gdoc:` block in a note's YAML front matter, and nothing else in the file |
 | `go/internal/house/` | the Altery house style as a parsed file, embedded in the binary |
 | `go/internal/render/` | the docx itself: the thirteen parts and the logo, the cover, the tables, the header and footer, the contents field |
-| `go/internal/body/` | the note's markdown walked with goldmark into the house style's own paragraphs |
-| `go/internal/cover/` | the words that reach the cover and the running head |
+| `go/internal/body/`, `go/internal/cover/` | the note's markdown walked with goldmark into the house style's own paragraphs, and the words that reach the cover and the running head |
 | `go/internal/drift/` | the one list of measured values, read out of a docx and out of a Docs answer |
 | `go/internal/atomicfile/` | the temp-file-and-rename write. The one room that replaces a file's contents |
-| `go/internal/update/` | the releases GitHub lists, the version comparison, the channel policy, and this binary replaced from a zip it checked |
-| `go/internal/lastcheck/` | the stamp beside the token: when gdoc last asked GitHub what is published, and what it heard |
+| `go/internal/update/`, `go/internal/lastcheck/` | the releases GitHub lists, the version comparison, the channel policy, this binary replaced from a zip it checked, and the stamp beside the token of when gdoc last asked GitHub what is published |
 | `go/internal/live/` | the opt-in end-to-end tests. Tests only, no production code |
 | `go/boundary/` | the allowlist tests over the wire, the dependencies and these documents |
 | `presence/` | the menu bar app, a Swift package of its own. The core that reads the record, the glyph, the panel, and the script that builds the bundle |
@@ -78,9 +76,9 @@ Secrets live in `~/.config/gdoc-agent/`, never in this repo.
 ## The invariants
 
 Each is one sentence and names the test that holds it, except the two the
-binary cannot measure: identity, which is a rule about what no field means, and
-the skill links, which live in `install.sh`. Breaking one is a decision somebody
-writes into `docs/v2/DECISIONS.md`, not a refactor.
+binary cannot measure: identity, a rule about what no field means, and the skill
+links, which live in `install.sh`. Breaking one is a decision somebody writes
+into `docs/v2/DECISIONS.md`, not a refactor.
 
 - **The guard owns the wire.** `guard.NewClient` is the only place an
   `*http.Client` is made, so the first request in the program's history has
@@ -89,24 +87,19 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
 - **The one host that is not Google's is the fifth grant.** `AllowUpdateFrom`
   names one GitHub repository for one run and admits GET on its releases
   listing, its download path and the two asset hosts that redirect lands on,
-  with no credential on any of them, and it has three callers: `gdoc update`,
-  the daily check in `help`, and the same check in `gdoc mcp`, neither of which
-  installs anything: `TestWithoutTheUpdateGrantGitHubIsRefused`,
-  `TestTheUpdateGrantOpensNothingBesideThoseThreeReads`,
-  `TestAnUpdateRequestCarriesNoBearer`,
-  `TestTheHelpCheckOpensThePolicyTheUpdateOpens` and
-  `TestTheMcpCheckOpensThePolicyTheUpdateOpens`.
+  with no credential on any of them, and its three callers are `gdoc update`
+  and the daily check in `help` and in `gdoc mcp`, neither of which installs
+  anything: `TestWithoutTheUpdateGrantGitHubIsRefused`,
+  `TestTheUpdateGrantOpensNothingBesideThoseThreeReads` and
+  `TestAnUpdateRequestCarriesNoBearer`.
 - **Two commands ask unasked, `help` and `mcp`**, and no third: once in 24
-  hours from one stamp they share, under a two-second ceiling, and never from a
-  checkout build, which names no release. `mcp` asks once per process, whichever
-  tool is called first: `TestAStaleStampMakesHelpAskOnce`,
+  hours from one stamp they share, under a two-second ceiling, never from a
+  checkout build, and once per process in `mcp`: `TestAStaleStampMakesHelpAskOnce`,
   `TestAFreshStampMakesNoRequest`, `TestTheCheckIsBoundedByTwoSeconds`,
-  `TestACheckoutBuildNeverChecks`, `TestReadNeverReachesTheCheck`,
-  `TestAStaleStampAsksOnceAndTheFirstAnswerCarriesTheLine` and
-  `TestACheckoutBuildNeverAsksFromMcp`.
+  `TestACheckoutBuildNeverChecks` and `TestACheckoutBuildNeverAsksFromMcp`.
 - **The reachable set has three doors**, the ids a command was handed, the id a
   create the guard itself carried came back with, and the one id `AllowAsset`
-  admits one media read of, and naming a folder to create in opens no fourth:
+  admits one media read of; naming a folder to create in opens no fourth:
   `TestAllowCreateInDoesNotAdmitTheFolder`, `TestCreateTeachesThePolicy` and
   `TestTheAssetGrantAdmitsNoDocument`.
 - **Every change inside a handed-in document is a suggestion**, refused in the
@@ -123,8 +116,8 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
   `AllowAccountRead`, called by `gdoc mcp`'s `login` and `auth status`, and
   `GrantInPlace` are per-run, and nothing writes one down:
   `TestAGrantedRejectSuggestionCarriesAndNothingElseInTheFamilyDoes`,
-  `TestAGrantedMarkerCarriesAndNothingElseDoes`,
-  `TestTheAccountGrantDiesWithThePolicy` and `TestTheAssetGrantDiesWithThePolicy`.
+  `TestTheAccountGrantDiesWithThePolicy` and
+  `TestTheAssetGrantDiesWithThePolicy`.
 - **Nothing trusts a success.** Every write is read back through a route it did
   not go out on, and `verified: false` is reported rather than raised, because
   the write happened: `TestVerifyCatchesADirectEditWhoseReplacementCarriesTheQuote`.
@@ -134,35 +127,32 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
   `TestMatchGivesAnchoredDetachedAndUnmatched`. The exception is
   `internal/chat`'s hold list, which judges that a chat write is risky, because
   a model asked whether a comment is steering it is the thing being steered.
-  Nail accepted it in decision 16 of the M14 specification, and the list is
-  fixed and in Go: `TestTheFirstRuleThatTripsIsTheOneNamed` and
+  Nail accepted it in decision 16 of M14, and the list is fixed and in Go:
+  `TestTheFirstRuleThatTripsIsTheOneNamed` and
   `TestAuthorDomainChangesNoOutcome`.
 - **One JSON object reaches stdout**, always through `internal/emit`, except
   that `mcp` writes JSON-RPC lines there and a help screen on a terminal
   without `--json` writes nothing there, and the exit code is 0 if and only if
   that object says `ok`, or 0 for `help` and 1 for bare `gdoc` when the screen
   replaced it: `TestOnlyJSONObjectRefusesAnythingAfterTheObject`,
-  `TestLoginPrintsTheURLToStderrNotStdout`, `TestAPanicIsStillOneEnvelope`,
-  `TestStdoutCarriesOnlyJSONRPC`, `TestHelpOnATerminalWritesNothingToStdout`.
+  `TestAPanicIsStillOneEnvelope`, `TestStdoutCarriesOnlyJSONRPC` and
+  `TestHelpOnATerminalWritesNothingToStdout`.
 - **The binary never prompts, and every command but `mcp` leaves stdin alone.**
   `mcp` reads its protocol there, and only `main` names the real stdin and
-  stdout, so every other room is handed a reader and a writer:
-  `TestOnlyMainNamesStdinAndStdout`. It still refuses what it did not
-  understand rather than ignoring it: `TestTrailingArgumentsAreRefused` and
-  `TestUnknownCommandFailsAndNamesItself`.
+  stdout, so every other room is handed a reader and a writer. It still refuses
+  what it did not understand: `TestOnlyMainNamesStdinAndStdout`,
+  `TestTrailingArgumentsAreRefused` and `TestUnknownCommandFailsAndNamesItself`.
 - **Nothing under `go/` runs an external program, except one `open`**, which is
   `gdoc update --desktop` handing the extension it just wrote to Claude Desktop,
-  on macOS, from `desktop.go` alone. That is why the login prints a URL instead
-  of opening a browser: `TestNothingRunsAnExternalProgram` and
-  `TestOnlyDesktopRunsAProgram`, which reads that file's syntax tree and its
-  argument list. The menu bar app is never started by gdoc either, so its first
-  launch is the person's: `withExtension` stays the one caller of `runProgram`,
-  which `TestTheOneProgramOpensOnlyTheExtension` holds.
-- **Nothing runs git.** No command and no skill runs it, to commit, to ask
-  whether the tree is a repository, or to ask whether a file is dirty. Only
-  `install.sh`, the Makefile's version stamp, `make tag` and the workflows read
-  git, and that is about this repository rather than about somebody's
-  documents: `TestNothingRunsAnExternalProgram` holds the binary half.
+  on macOS, from `desktop.go` alone, which is why the login prints a URL instead
+  of opening a browser. The menu bar app is never started by gdoc either, so its
+  first launch is the person's: `TestNothingRunsAnExternalProgram`,
+  `TestOnlyDesktopRunsAProgram` and `TestTheOneProgramOpensOnlyTheExtension`.
+- **Nothing runs git.** No command and no skill runs it, to commit or to ask
+  whether a tree is a repository or a file dirty. Only `install.sh`, the
+  Makefile's version stamp, `make tag` and the workflows read git, which is
+  about this repository and not somebody's documents:
+  `TestNothingRunsAnExternalProgram` holds the binary half.
 - **Three modules, each named in `allowedModules` with its reason in the spec**,
   and both directions fail: `TestNoThirdPartyDependencies` and
   `TestAllowedModulesAreReallyRequired`.
@@ -190,23 +180,37 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
   but the title, and nothing gdoc decides depends on a line in it:
   `TestOnlyPresenceAppends`, `TestPresenceExportsNoReader`,
   `TestTheEventCarriesOnlyItsListedFields` and `TestOffTouchesNothing`.
+- **The menu bar app runs six argv lists and signals one wait.** `help --json`,
+  `auth status`, `auth login`, `auth logout`, `update` and `update --desktop`,
+  from `PresenceApp/Runner.swift` alone, at `~/.local/bin/gdoc` or beside the
+  bundle and never from PATH, with four variables and no stdin; the one signal
+  is a single SIGINT to a `comments --wait` the kernel agreed every claim about,
+  from `Stopper.swift` alone: `testTheArgvEnumIsClosedAtSix`,
+  `testGdocIsResolvedAtLocalBinThenBesideTheBundleNeverFromPATH`,
+  `testASignalIsSentOnlyByTheStopper` and
+  `testStopSendsOneSIGINTOnlyAfterTheProcessCheck`.
+- **A hold dies with the sign-in it was raised under.** `mcpHolds` keeps a hash
+  of the refresh token beside the hold and no email, and a release or a sweep
+  that finds another token or none drops the hold and sends nothing, while a
+  token nobody can read keeps it:
+  `TestAReleaseAfterTheSignInChangedSendsNothingAndDropsTheHold` and
+  `TestTheSweepDropsAHoldWhoseSignInChanged`.
 - **Identity is never a gate.** Whose account wrote a comment decides nothing.
   The marker decides.
 - **Skills are linked, not copied.** The five folders under `skills/` are
   symlinked into `~/.claude/skills/` by `./install.sh`, so an edit is live
   before it is committed; a colleague gets the same five through the plugin in
   `.claude-plugin/`, and `release/install.sh --skills` is the one route that
-  copies one. The one committed copy is `skills/gdoc-review/review.md`, which
-  the binary embeds for chat: `TestTheEmbeddedCoreIsTheSkillsCore`.
+  copies one. The one committed copy is `skills/gdoc-review/review.md`, embedded
+  for chat: `TestTheEmbeddedCoreIsTheSkillsCore`.
 - **A house-style test states its value as a literal**, never reading the
   constant it checks, because a test that reads the constant follows it wherever
   somebody moves it: `TestHeadingNumberingIsTheLiteralFormat`.
 - **Each package carries exactly one comment opening `Package <name>`**, or
-  `Command` for a main package, in a file `go doc` reads. A file may still open
-  with a paragraph saying what that file is for, but a blank line separates it
-  from the `package` clause, or `go doc` joins it into the package comment:
-  `TestEveryPackageHasExactlyOnePackageComment` and
-  `TestOnlyThePackageCommentReachesGoDoc`.
+  `Command` for a main package, in a file `go doc` reads. A file may open with a
+  paragraph about itself, but a blank line separates it from the `package`
+  clause, or `go doc` joins the two: `TestEveryPackageHasExactlyOnePackageComment`
+  and `TestOnlyThePackageCommentReachesGoDoc`.
 - **This file stays under 300 lines and its task map names files that exist**,
   because every session pays for it unasked: `TestCLAUDEmdIsUnderTheCeiling` and
   `TestTheTaskMapNamesFilesThatExist`.
@@ -262,24 +266,23 @@ TDD. Write the failing test first.
 | `make tag` | `VERSION=vX.Y.0` into `plugin.json`, committed, tagged and pushed. CI does the rest |
 
 `~/.local/bin/gdoc` is one of two things. From a checkout it is a link to this
-repo's `bin/gdoc`, so `make build` refreshes what a person typing `gdoc` gets,
-with no reinstall. Where `gdoc update` has installed, it is that release's
-binary with `gdoc.previous` beside it, and `make build` changes nothing a
-person types. Nail's machine is the second one.
+repo's `bin/gdoc`, so `make build` refreshes what a person typing `gdoc` gets.
+Where `gdoc update` has installed, it is that release's binary with
+`gdoc.previous` beside it, and `make build` changes nothing a person types.
+Nail's machine is the second one.
 
-The live tests are opt-in and each needs its own variable, because a live read
-is somebody's document and a live write is a document that did not exist a
-second ago. `GDOC_LIVE_TEST=1` with `GDOC_LIVE_DOC_ID` reads and creates
-nothing. Adding `GDOC_LIVE_WRITE=1` runs the writers, each in documents it makes
-or copies itself. `go/internal/live/doc.go` names every variable and every test.
-CI runs gofmt, vet, the raced suite and `make dist` on every push.
+The live tests are opt-in and each needs its own variable, because a live write
+is a document that did not exist a second ago. `GDOC_LIVE_TEST=1` with
+`GDOC_LIVE_DOC_ID` reads and creates nothing; adding `GDOC_LIVE_WRITE=1` runs the
+writers in documents it makes itself, and `go/internal/live/doc.go` names every
+variable. CI runs gofmt, vet, the raced suite and `make dist` on every push.
 
 ## Running a milestone
 
 A milestone is a plan under `docs/plans/`, run by ralphex and reviewed by
 revmux, from a normal terminal and never from a Claude Code session. Read
-`.ralphex/board/README.md` first: the two launch lines, what `main` carries
-before a run, the board Nail watches it on, and how to resume one that died.
+`.ralphex/board/README.md` first: the launch lines, what `main` carries before a
+run, the board, and how to resume a run that died.
 
 ## Never
 

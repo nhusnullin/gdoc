@@ -6,9 +6,11 @@ The presence answers two questions from the menu bar, without you asking
 anything: is it alive, and is it waiting on me.
 
 It is two halves. gdoc writes one line for each thing it starts and finishes.
-A small application called gdoc presence reads those lines and shows one glyph.
-Nothing goes over the network, nothing leaves your machine, and gdoc behaves
-the same whether the app is open, closed or never installed.
+A small application called gdoc presence reads those lines, shows one glyph,
+and opens one panel under it. The app opens no connection of its own: the only
+thing in it that reaches the network is gdoc, which the panel runs the way you
+would run it at a terminal. gdoc behaves the same whether the app is open,
+closed or never installed.
 
 This is experimental. It is off until you turn it on, and turning it on is one
 line in a file you own, so your colleagues keep the gdoc they had.
@@ -16,30 +18,277 @@ line in a file you own, so your colleagues keep the gdoc they had.
 ## What the glyph means
 
 The glyph sits in the menu bar, in the bar's own colour, and never in colour of
-its own. It has four states, and the one it shows is the first of these that is
-true:
+its own. It is the mark, with a small badge beside it. It has six states, and
+the one it shows is the first of these that is true:
 
 | Glyph | Means |
 |---|---|
-| A pause sign | A chat write is held, waiting for you to say yes or no |
-| A dotted ring | A command is running: a read, a publish, a proposal |
-| ⁘ | A live review is watching a document for new comments |
-| Nothing | Nothing is happening that the record knows about |
+| The mark with an exclamation | A write stopped, the sign-in does not work, or gdoc was not found |
+| The mark with a pause sign | A chat write is held, waiting for you to say yes or no |
+| The mark with a ring | A command is running: a read, a publish, a proposal |
+| The mark alone | A live review is watching a document for new comments |
+| The mark with a check | A write read itself back in the last five seconds |
+| The dim mark | Nothing is happening that the record knows about |
 
-A pause sign is the one state that is about you. The other three are about
-gdoc. Rest the pointer on the glyph and it says the state in a word.
+The check is about a moment rather than a state, and it is shown only for a
+write that finished while the app was running: a line already in the file when
+the app opened is a replay, and a check for last Tuesday's reply is a check
+nobody asked for. The dim mark is there so the panel stays reachable in a quiet
+hour.
 
-Click it and a panel opens under it. NOW is what is running this second, with
-the held writes first. TODAY is what ran since midnight, newest first, each row
-marked by what its end line said. Under them sit two version rows, the app's
-own and the gdoc that wrote the last line, and Quit. Press Escape or click
-elsewhere and the panel closes.
+The exclamation and the pause sign are the two states that are about you. The
+other four are about gdoc. Rest the pointer on the glyph and it says the state
+in a word.
 
-A run that stopped without an end line, because the terminal was closed or the
-machine slept, is shown as its own row with an unknown outcome. A held write
-whose thirty minutes passed with nobody answering it is shown as a row saying
-it ran out. Neither is ever a glyph: an icon that stays lit after the work
-stopped is an icon nobody believes.
+## The panel
+
+Click the glyph and the panel opens under it. It is 320 points wide and never
+taller than 600, with the long section scrolling inside. Press Escape or click
+elsewhere and it closes. Nothing in it is a window, there is no dock icon, and
+the only settings in it are the switch for launching at login and Quit.
+
+The sections are always in this order, except that Health comes first on the
+three screens where Health is the whole point: no token at all, a sign-in in
+flight, and the three seconds Sign out asks its question in.
+
+### Now
+
+What is happening this second, and nothing else. Holds first, then writes that
+stopped, then running jobs, then live watches, oldest first inside each group.
+A section with nothing in it is left out rather than labelled.
+
+- **A hold** is a chat write waiting for you. The card says how long it has
+  been waiting, which rule held it, where the words are, and who they would be
+  posted as. Its two buttons are Open chat and Dismiss. The panel never
+  approves a held write and has no button that pretends to: the yes or the no
+  is yours, in the chat, and the card says so.
+- **A write that stopped** is a reply, proposal, withdrawal, comment, publish,
+  restyle or export whose end said it failed, or whose process is gone. The
+  card names the document and the moment. It goes when the same command starts
+  again on that document, or when you dismiss it. A failed read is not one of
+  these, and `verified: false` is not either: a read-back that did not confirm
+  is a hollow check, not a failed write, and the row says "not read back".
+- **A running job** is a command with an end that has not arrived yet.
+- **A live watch** is the stretch of `gdoc comments --wait` runs on one
+  document, with gaps under three minutes counted as one watch. The row says
+  since when, how long it has been quiet, and how many replies and proposals
+  went out. It never says anybody is waiting for the author. Its one icon is
+  Stop.
+- **A sign-in that stopped working** raises its own card here, under the
+  holds. It is the one card in Now that comes from the machine and not from
+  the record, and it says how many watches are paused.
+
+### Documents
+
+Every document gdoc touched in the last fourteen days, newest action first,
+five rows with Show more under them. A read alone makes no row: reading is not
+something that happened to the document. Each row says what the last action
+was, when, and where the note paired with it is, or "not in the hub". The label
+counts what is off the screen.
+
+Four icons sit on the right of every document row, always visible:
+
+| Icon | Does |
+|---|---|
+| Google Docs | Opens `https://docs.google.com/document/d/<id>/edit` in your browser |
+| md | Opens the note paired with the document in Obsidian |
+| Branch | Brings Claude Desktop to the front |
+| Link | Copies the document's link, and turns into a green check for a second |
+
+An icon with nothing to do is greyed, and resting the pointer on it says why:
+"No Google Doc yet", "No note is paired with this document", "Note moved or
+deleted", "Install the Desktop extension in Health". The first time Documents
+has a row, four labels appear under it once, naming the icons, and they go the
+first time you click one.
+
+Continue with Claude activates Claude Desktop and nothing more: no argument, no
+file and no URL. Claude.app does claim a `claude:` scheme, which was measured,
+but nothing in the bundle and nothing published says what a URL under it means,
+so a URL built on a guess is one that may do something else on the next
+release. Until that is written down, the panel brings the app to the front and
+you type.
+
+### Today and Yesterday
+
+Today is the local day the calendar names, newest first, eight rows with Show
+more. Reads are left out. Besides the writes it carries four rows the record
+does not write as single lines: a hold raised, a hold closed, a live watch
+started and a live watch stopped, the last of those with what the watch came
+to. Yesterday is one row with the counts, and it opens in place. Nothing older
+than yesterday is in this list; Documents is where the fortnight is.
+
+### Health
+
+The last section, where you look for it. The rows are Account, Network, gdoc,
+Skills, Claude Desktop, Thread mark, Launch at login and Quit. When every fact
+is good the list is the short one: eight green rows on every screen is eight
+rows nobody reads. Quit is always there, and it is ⌘Q.
+
+The gdoc row carries the installed version, and the newer one beside it when
+gdoc's own daily check heard of one. Its button says Update and not Check for
+updates, because this app never asks GitHub anything: see what the app runs,
+below.
+
+## The actions, one by one
+
+Every action in the panel is something you could have done yourself: a link you
+could have opened, or a command you could have typed. The one exception is
+Dismiss, which hides a card the app itself drew and changes nothing else.
+
+### Dismiss
+
+Dismiss is on a hold card and on a card for a write that stopped. It hides the
+card and rewrites nothing. The row in Today stays. A dismissed hold goes on
+living in the chat until its thirty minutes run out, and the card says that
+before you press it. The app remembers the dismissal under the run and the call,
+or under the hold's own id, for sixty-two days, and never the document.
+
+### Stop live
+
+Stop sends one SIGINT to one `gdoc comments --wait`, which traps it and still
+writes its end. That is the whole reason Stop can exist. It is sent once, never
+twice, and never as SIGKILL: a second signal is a stop nobody trusts, and a
+stronger one takes the end away. Between two polls there is no process, so there
+is nothing to signal and the icon is off.
+
+Before it signals anything, the app asks the kernel about that pid and refuses
+unless every claim agrees: the start has no end, the process is alive, its
+executable is the gdoc the app itself resolved (or that binary's `.previous`),
+it belongs to you, and it started within ten seconds before the line that named
+it. Anything else greys the icon with one sentence, "This watch is not one gdoc
+presence can stop". A pid is a number out of a file anybody can write, so
+nothing here believes the file.
+
+What Stop cannot do: it cannot end a review session in Claude Code, only the
+wait that session is sitting in. The skill sees the interrupted wait, prints its
+totals and stops. It cannot stop a chat write, a publish, or anything that is
+not a wait. And it cannot stop a watch started by another user, by another gdoc,
+or before this app could see it.
+
+### Sign in
+
+Sign in runs `gdoc auth login` as the app's own child. That command prints one
+link to its standard error and waits three minutes for the browser to come back
+on its own loopback listener. The app takes the link from that child and from
+nowhere else, after the sentence the command prints before it, and then holds it
+to one scheme, one host and one path: `https://accounts.google.com/o/oauth2/auth`.
+A child that printed anything else opens nothing at all.
+
+The link is opened for you and also shown as a line you can copy, with the
+child's own countdown beside it and Cancel next to that. The countdown is the
+three minutes gdoc waits, not a guess at how long Google will take. Cancel
+terminates the child.
+
+### Sign out
+
+Sign out asks first, inline, for three seconds, and the question names what will
+stop: the live watches and the holds, counted, or "Nothing is running. Only the
+token goes." Say yes and the app stops those watches, runs `gdoc auth logout`,
+and asks `gdoc auth status` again. `auth logout` removes the token file and
+nothing else.
+
+Whose account it is decides nothing anywhere in gdoc, so the account row is a
+fact and not a gate. The one place the sign-in does decide something is a held
+chat write: a hold remembers the sign-in it was raised under, as a hash of the
+refresh token and never an email, and a hold whose sign-in changed is dropped
+rather than sent. Sign out, then sign in as somebody else, and the words you
+held yesterday are not posted under the new account.
+
+The app keeps room for one domain you expect, as a quiet line under the account
+row that blocks nothing, and it ships with none set. "Account changed" is the
+app's own memory of the addresses it has read, never a line in the record: the
+record carries no account, and a line in it would be forgeable.
+
+### Launch at login
+
+The first run ever registers the app with macOS as a login item and writes down
+that it did. From then on the choice is yours: the switch in Health records it,
+and an off is never turned back on, not by a later launch, not by a relaunch
+after an update, and not by the app noticing macOS dropped the item. A
+registration nobody asked for twice is a notice in somebody's menu bar twice.
+
+Where macOS wants you to allow it, the row says "macOS is waiting for you to
+allow it in Login Items" and offers to open that settings pane. It is not
+retried.
+
+### Update, and Install extension
+
+Update runs `gdoc update` with no flag at all: what you would have typed, and
+nothing the app chose on your behalf. While the child is up the gdoc row draws a
+ring and still names the version that is installed, because a row that said the
+new number before the bytes were in place would be a row that lied for a few
+seconds. Install extension is `gdoc update --desktop`, which writes the Claude
+Desktop extension and hands it to Desktop.
+
+## What the app runs, and what it never does
+
+The app runs six command lines and no seventh:
+
+| Run | When |
+|---|---|
+| `gdoc help --json` | On panel open, at most once a minute |
+| `gdoc auth status` | On panel open, at most once a minute, and every ten minutes while a live watch is open |
+| `gdoc auth login` | Sign in |
+| `gdoc auth logout` | Sign out |
+| `gdoc update` | Update |
+| `gdoc update --desktop` | Install extension |
+
+The set is a closed list in one file, and a test over the sources holds it at
+six. There is no flag in it the app invented, and no setting of its own.
+
+`help --json` is asked on panel open and never on a timer, because that command
+carries gdoc's own once-a-day check of what is published. A timer here would be
+this app asking GitHub on gdoc's behalf. The two questions are also asked again
+straight after the app signs in, signs out, or updates the binary, because the
+last answer is then known to be wrong.
+
+The binary is found at `~/.local/bin/gdoc` first and beside the app's own bundle
+second, resolved to an absolute path before anything runs, and never from PATH:
+a PATH is written by a shell, a launch agent or an installer, so a gdoc found
+through one is a program somebody else chose. A child gets the null device for
+standard input and four variables: HOME, PATH, LANG and NO_COLOR. Everything
+else is dropped, `GDOC_CONFIG_DIR` included, so the app asks about the token your
+own terminal uses. One child per kind at a time.
+
+What the app never does, and no button in it offers:
+
+- It opens no connection. Every byte that leaves this machine leaves it through
+  gdoc, under a command you can read above.
+- It writes nothing into the record, ever. The record is the binary's file.
+- It approves no held write, and it releases none.
+- It reads no document, answers no comment and proposes nothing.
+- It runs no program but those six, and signals nothing but one wait.
+- It never starts gdoc on a schedule of its own.
+
+What it remembers between launches is six things, in its own preferences: the
+cards you hid, the hub folder, whether the four icon labels have been read, your
+launch-at-login answer, its last self-relaunch, and the last address it saw
+signed in. Anything older than sixty-two days is dropped as it is read, because
+the app reads two month files and a key older than that is about a line it can
+no longer see. A seventh key is a decision somebody writes down, not a line
+somebody adds.
+
+## The note beside the document
+
+Open md needs no field in the record. What pairs a note with a document is the
+`gdoc:` block gdoc writes into that note's front matter, so the app reads that
+one block of every note in your hub, builds a map from document id to note path,
+and rebuilds it when files there change. Nothing else in a note ever reaches the
+app: the reading stops at the closing fence, a `gdoc:` block inside a fenced
+example pairs nothing, and every id is held to the Drive shape.
+
+The hub is a folder you name, and the app has no picker for it yet. Set it once
+from a terminal, then quit the app and open it again:
+
+```
+defaults write com.altery.gdoc.presence hubPath -string ~/path/to/hub
+```
+
+With no hub set, the md icon is greyed on every row. With one set, a note is
+opened through `obsidian://` with the vault and the relative path, after the app
+has proved the file is a regular `.md` file inside the folder you named. A
+symlink is not the note either: what is at the end of it is somewhere you did
+not choose. No line number is promised, because gdoc does not record one.
 
 ## Turning it on
 
@@ -58,11 +307,10 @@ before you write it into a file that gdoc reads.
 3. `gdoc update` again. With the flag on, this is the run that installs the app
    at `~/Applications/GdocPresence.app`, out of the same release zip the binary
    came from. It tells you the path and asks you to open it once.
-4. `open ~/Applications/GdocPresence.app`. The first launch is yours. gdoc
-   never starts the app, which is why it says the line instead.
-
-The app has no window, no dock icon and no settings. It is the glyph and the
-panel.
+4. `open ~/Applications/GdocPresence.app`. The first launch is yours. gdoc never
+   starts the app, which is why it says the line instead. That first run also
+   registers the app as a login item, so it is the only launch you have to
+   remember.
 
 For one run only, without writing anything down, pass the argument instead:
 
@@ -77,10 +325,15 @@ after it is refused, with the line to write instead.
 
 ## Keeping it updated, and taking it back
 
-Every later `gdoc update` refreshes the app along with the binary, out of the
-one zip it already verified. If the app is open while that happens, it notices
-and shows a row saying `Updated to <version>. Quit and reopen`. Quit it and
-open it again; nothing else is needed, and nothing is lost.
+Every later `gdoc update` refreshes the app along with the binary, out of the one
+zip it already verified. If the app is open while that happens, it notices the
+new bundle under itself and comes back on its own: it waits two seconds, checks
+the bundle on disk is the same app and still signed, opens that path as a new
+instance without bringing it to the front, and quits once the open succeeded. It
+does this at most once per version in ten minutes, and the second instance of a
+pair always quits, so you are left with exactly one app at the new version. If
+the open does not succeed, the panel keeps a row saying `Updated to <version>.
+Quit and reopen`, and quitting it and opening it again is all that is needed.
 
 If the app cannot be written, the update says so as a warning and names both
 paths. The binary is still updated. The two can sit at different versions until
@@ -163,9 +416,11 @@ colleague by AirDrop. They get it the same way you did: turn the flag on, run
 
 ## What it is not
 
-The app reads the file and draws the glyph. That is all it does. It runs no
-program, not gdoc and not anything else, it opens no connection, and it writes
-nothing down. It cannot read a document, answer a comment, accept a held write
-or stop a review, and there is no button in it that pretends otherwise. Those
-stay where they were: in Claude Code, in the chat, or in the terminal. The
-panel tells you a chat is waiting for you, and going to the chat is your step.
+The app reads the record, draws the glyph, and opens the panel. What it can do
+beyond that is the six command lines above, one SIGINT to one wait, and a link
+handed to your browser, to Obsidian or to Claude Desktop.
+
+It cannot read a document, answer a comment, propose a change or approve a held
+write, and there is no button in it that pretends otherwise. Those stay where
+they were: in Claude Code, in the chat, or in the terminal. The panel tells you
+a chat is waiting for you, and going to the chat is your step.

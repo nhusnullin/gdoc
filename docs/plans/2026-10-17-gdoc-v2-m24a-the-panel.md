@@ -492,14 +492,14 @@ every box is ticked and its commit is on the branch.
 **Files:**
 - Modify: `docs/guide/presence.md`, `CLAUDE.md`
 
-- [ ] `docs/guide/presence.md` gains the panel: each section, each action,
+- [x] `docs/guide/presence.md` gains the panel: each section, each action,
       Sign in and Sign out, Launch at login, the six argv lists the app runs
       and what it never does, that `help --json` on open is the daily check
       gdoc already makes, the hub folder, the dismissal, what Stop live can
       and cannot stop; CLAUDE.md's presence invariant names the six argv lists
       and the hold's sign-in rule in place of words cut elsewhere, the file at
       or under 300; `TestTheTaskMapNamesFilesThatExist` green
-- [ ] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`
+- [x] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`
 
 ### Task 25: after M24b merged, the fields reach the scenes
 
