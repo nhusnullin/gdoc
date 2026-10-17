@@ -60,12 +60,12 @@ final class ControlTests: XCTestCase {
     XCTAssertEqual(under.origin.y, middle.maxY + 6)
     XCTAssertFalse(under.above)
 
-    // `.acts [data-tip]::after{right:0}`: an action's tooltip hangs off the
-    // icon's own right edge, which is how four icons in 108 pt keep theirs
-    // inside the panel.
+    // `.acts [data-tip]::after{right:0}`: an action's tooltip ends on the
+    // panel's own right inset, which is how four icons in 108 pt keep their
+    // words inside the panel whichever of them the pointer is on.
     let action = CGRect(x: 280, y: 100, width: 24, height: 24)
     let trailing = Tooltip.place(anchor: action, size: bubble, in: panel, align: .trailing)
-    XCTAssertEqual(trailing.origin.x, action.maxX - bubble.width)
+    XCTAssertEqual(trailing.origin.x + bubble.width, panel.width - Tooltip.margin)
 
     // And when a centred bubble would hang out of the panel, it slides in:
     // the margin is the panel's own padding, so no tooltip touches its edge.
@@ -96,6 +96,41 @@ final class ControlTests: XCTestCase {
     XCTAssertNotEqual(
       try png(TooltipBubble("Open in Google Docs"), scheme: .dark),
       try png(TooltipBubble("Open in Google Docs"), scheme: .light))
+  }
+
+  // The third of four icons in a document row. Its words are drawn under
+  // the icon the pointer is on and end on the panel's right inset, so the
+  // bubble of the third icon is the bubble of the fourth one place up: a
+  // plate that hung off each icon's own edge stepped left across the row
+  // and read as four different things.
+  func testAnActionTooltipSitsUnderItsIconAndEndsOnThePanelsInset() throws {
+    // The document row's icons: 108 pt of column against the panel's right
+    // inset, four 24 pt icons with 4 pt between them.
+    let panel = CGSize(width: Grid.panelWidth, height: 420)
+    let columnEnd = Grid.panelWidth - Grid.unit - Grid.rowInset
+    let third = CGRect(
+      x: columnEnd - 2 * Grid.actionSize - Grid.actionGap, y: 180,
+      width: Grid.actionSize, height: Grid.actionSize)
+    let bubble = CGSize(width: 132, height: 20)
+
+    let placed = Tooltip.place(anchor: third, size: bubble, in: panel, align: .trailing)
+    XCTAssertEqual(
+      placed.origin.y, third.maxY + TooltipAlign.trailing.gap,
+      "the bubble hangs 6 pt under the icon the pointer is on")
+    XCTAssertFalse(placed.above, "there is room under it, so it is not flipped over the row")
+    XCTAssertEqual(
+      placed.origin.x + bubble.width, panel.width - Tooltip.margin,
+      "and ends on the panel's own inset rather than on the icon's edge")
+    XCTAssertGreaterThanOrEqual(placed.origin.x, Tooltip.margin)
+    XCTAssertGreaterThanOrEqual(
+      placed.origin.y, third.maxY, "the icon's own row is never covered")
+
+    // The fourth icon's bubble is the same plate in the same place, which is
+    // the whole of this rule: the words change and the frame does not.
+    let fourth = CGRect(
+      x: columnEnd - Grid.actionSize, y: 180, width: Grid.actionSize, height: Grid.actionSize)
+    let last = Tooltip.place(anchor: fourth, size: bubble, in: panel, align: .trailing)
+    XCTAssertEqual(last.origin, placed.origin)
   }
 
   // `.show-tip::after{opacity:1}`: the mock holds a tooltip open to show one,
@@ -185,7 +220,10 @@ final class ControlTests: XCTestCase {
     let row = ConfirmRow(
       title: "Sign out?", sub: "2 live watches and 1 hold will stop.", danger: .signOut)
     let measured = try probes(row, scheme: .dark)
-    XCTAssertEqual(measured["row.two"]?.height, 44)
+    XCTAssertEqual(
+      measured["row.two"]?.height, 56,
+      "the sentence beside the pair wraps to a second line rather than being cut, "
+        + "which is the grid's 44 and one 12 pt line of caption under it")
     XCTAssertEqual(measured["confirm.danger"]?.height, 20)
     XCTAssertEqual(measured["confirm.keep"]?.height, 20)
     XCTAssertEqual(TextButton.height(.compact), 20)

@@ -92,6 +92,55 @@ final class RowTests: XCTestCase {
     }
   }
 
+  // A sub-line that does not fit its column wraps to a second line rather
+  // than being cut, which is the rule a document row already followed and
+  // every two-line row now follows. The hold's own sub-line is the one that
+  // proved it: what is cut off the end of "reply held by rule Dictated ·
+  // waiting in Desktop chat" is where the text is waiting, so the row said
+  // a write was held and not where to go about it.
+  func testASubLineWrapsToASecondLineRatherThanBeingCut() throws {
+    XCTAssertEqual(RowShape.two.subLines, 2, "the same two lines a document row gets")
+    XCTAssertEqual(RowShape.doc.subLines, 2)
+    XCTAssertEqual(RowShape.plain.subLines, 1, "a one-line row has no second line")
+    XCTAssertEqual(RowShape.compact.subLines, 1)
+    XCTAssertEqual(RowShape.more.subLines, 1)
+
+    // The hold's own sub-line, as scene e3 draws it.
+    let held = "Proposal held by rule Unread target · waiting in Desktop chat"
+    let row = RowView(
+      .two, glyph: .pause, tone: .hold, title: "Hold · Group Channel Policy",
+      value: "16:34", sub: held)
+    let measured = try probes(row, scheme: .dark)
+
+    // The column the sentence is drawn in, read off the drawing: the panel's
+    // 320 less the row's 12 either side, the 16 pt glyph and the 8 pt gap
+    // after it.
+    let column = try XCTUnwrap(measured["row.sub"]?.width)
+    XCTAssertEqual(column, 272)
+    XCTAssertEqual(
+      lines(held, role: Typography.caption, width: column), 2,
+      "the sentence fits one line at this width, so this row proves nothing")
+
+    // A sub-line that fits keeps the row at the grid's 44, so nothing grew
+    // that did not have to.
+    let short = try probes(
+      RowView(.two, glyph: .dot, tone: .live, title: "Live · Chapter 5", sub: "since 13:10"),
+      scheme: .dark)
+    XCTAssertEqual(short["row.two"]?.height, Grid.twoLineRowHeight)
+
+    // The wrapped one drew two lines of the same caption, and the row grew
+    // past the grid's 44 to hold them: the 6 pt either side, the title's 16
+    // and the two lines.
+    let oneLine = try XCTUnwrap(short["row.sub"]?.height)
+    XCTAssertEqual(measured["row.sub"]?.height, 2 * oneLine, "the sentence drew two lines")
+    let height = try XCTUnwrap(measured["row.two"]?.height)
+    XCTAssertGreaterThan(height, Grid.twoLineRowHeight, "the row grew rather than clipping")
+    XCTAssertEqual(
+      height,
+      2 * RowShape.two.verticalPadding + Typography.rowTitle.lineHeight + 2 * oneLine)
+    XCTAssertEqual(height, 56)
+  }
+
   // `.row.docrow{grid-template-columns:16px minmax(0,1fr) 108px}`: four
   // icons in 108 pt, so every document row in a list breaks its title at the
   // same place.

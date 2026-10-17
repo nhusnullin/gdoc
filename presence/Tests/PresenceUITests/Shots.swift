@@ -165,3 +165,16 @@ func pixel<V: View>(
   }
   return try XCTUnwrap(sampled, "the renderer drew nothing in \(scheme)")
 }
+
+/// How many lines a sentence takes in the panel's own font at a width,
+/// which is the one thing a clamp cannot be read off the code for.
+///
+/// Three test files ask it, so it lives here with the renderer and the
+/// probes rather than three times over.
+func lines(_ text: String, role: TypeRole, width: CGFloat) -> Int {
+  let font = NSFont.systemFont(ofSize: role.size, weight: role.weight.appKit)
+  let box = NSAttributedString(string: text, attributes: [.font: font]).boundingRect(
+    with: CGSize(width: width, height: .greatestFiniteMagnitude),
+    options: [.usesLineFragmentOrigin, .usesFontLeading])
+  return Int((box.height / role.lineHeight).rounded(.up))
+}

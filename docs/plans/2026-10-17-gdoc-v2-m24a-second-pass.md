@@ -131,25 +131,25 @@ branch.
   hold confirm card, under `presence/Sources/PresenceUI/`; `RowTests.swift`,
   `CardTests.swift`, `ScrollTests.swift`, `ControlTests.swift`
 
-- [ ] TODAY sub-lines wrap to a second line before they truncate, the same
+- [x] TODAY sub-lines wrap to a second line before they truncate, the same
       rule the DOCUMENTS rows already follow; "reply held by rule Dictated ·
       waiting in Desktop chat" is whole on two lines; a test measures the
       row's height at that string
-- [ ] the stuck card's title: when the head cannot keep eight characters
+- [x] the stuck card's title: when the head cannot keep eight characters
       before the ellipsis, the tail is dropped and the title goes in whole on
       two lines, and the second line uses the full width under the icons;
       "Export stopped · Proposal to the Falcon partners, draft v1" renders
       with the word "Proposal" whole; a test pins the two lines
-- [ ] one scroll thumb per edge: the inner DOCUMENTS box's thumb sits 3 pt
+- [x] one scroll thumb per edge: the inner DOCUMENTS box's thumb sits 3 pt
       inside the box, and the panel's own indicator is hidden while an inner
       box is scrollable, or the e1 caption says the panel scrolls as well;
       a test counts the thumbs in the e1 render
-- [ ] the action tooltip is anchored under its icon and ends at the panel's
+- [x] the action tooltip is anchored under its icon and ends at the panel's
       right inset, never covering the row below; a test places the tooltip
       for the third icon and asserts its frame against the icon's
-- [ ] the hold confirm's consequence line sits inside the card's padding,
+- [x] the hold confirm's consequence line sits inside the card's padding,
       aligned with the title; a test measures its x
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 4: the captions name what is still Nail's call
 

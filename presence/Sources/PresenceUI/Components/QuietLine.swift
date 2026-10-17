@@ -36,6 +36,9 @@ public struct QuietLine: View {
       .foregroundStyle((ink ?? palette.textTertiary).color)
       .fixedSize(horizontal: false, vertical: true)
       .frame(maxWidth: .infinity, alignment: .leading)
+      // The words' own box, inside the inset: where a line starts is a
+      // thing a test reads off the drawing and not off the argument.
+      .metricProbe("quiet.text")
       .padding(.leading, inset)
       .padding(.trailing, Grid.rowInset)
       .padding(.top, 4)

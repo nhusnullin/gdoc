@@ -118,13 +118,19 @@ public struct HoldCard: View {
         // which is what HEALTH's Sign out does and for the same reason: the
         // pair of buttons takes the right-hand column, and a sentence
         // squeezed into what is left is cut after its first clause.
+        //
+        // The row negates the plate's own padding, so its 12 pt line the
+        // question up with the plate's edge; the consequence keeps the
+        // plate's padding and takes the body's inset on top of it, which is
+        // where the question above it starts.
         VStack(alignment: .leading, spacing: 0) {
           ConfirmRow(
             title: model.question, glyph: .pause, tone: .hold,
-            danger: .dismiss, onConfirm: onConfirm, onKeep: onKeep)
-          QuietLine(model.consequence, inset: 0)
+            danger: .dismiss, onConfirm: onConfirm, onKeep: onKeep
+          )
+          .padding(.horizontal, -Grid.rowInset)
+          QuietLine(model.consequence, inset: Self.bodyInset)
         }
-        .padding(.horizontal, -Grid.rowInset)
       } else {
         offer(in: palette)
       }

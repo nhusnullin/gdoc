@@ -16,8 +16,8 @@
 // Dismissing is the app's own: the card and the menu bar's exclamation go,
 // the TODAY row stays. Nothing is undone, because nothing was done.
 //
-// CardTests states the ceiling, measures the two lines, and reads the order
-// of the icons.
+// CardTests states the ceiling, measures the two lines of the reason and
+// the two of the title, and reads the order of the icons.
 
 import SwiftUI
 
@@ -87,6 +87,62 @@ public struct StuckCard: View {
   /// How many lines the title may take on a card.
   public static let titleLines = 2
 
+  /// What the title's first line is drawn in: the reason's own width less
+  /// the gap and the icons beside it, which is as little as 112 pt under
+  /// five of them. A card with no icon has the whole width.
+  public static func titleColumn(actions: Int) -> CGFloat {
+    guard actions > 0 else { return reasonColumn }
+    let icons =
+      CGFloat(actions) * Grid.actionSize + CGFloat(actions - 1) * Grid.actionGap
+      - actionsOutset
+    return reasonColumn - Grid.columnGap - icons
+  }
+
+  /// The title over the card's two lines: what the column beside the icons
+  /// holds, then the rest of it across the card.
+  ///
+  /// The whole title goes in, which is the one thing a card is for. A row
+  /// cuts the middle out of a title and keeps its end, because a row is one
+  /// line in a list of them; the card naming the write that stopped has a
+  /// second line under the icons and uses it.
+  ///
+  /// The break is the title's own separator where there is one that fits,
+  /// and the separator goes with it: a card's title is what stopped and the
+  /// document it stopped on, so the two halves are the two lines and no line
+  /// ends in a hanging dot. A title without one is broken between words.
+  public static func titleSplit(_ title: String, actions: Int) -> [String] {
+    let role = Typography.titleEmphasis
+    let column = titleColumn(actions: actions)
+    if MiddleTitle.width(title, role: role) <= column { return [title] }
+
+    let halves = title.components(separatedBy: Sentences.separator)
+    if halves.count > 1 {
+      // The last separator whose first half still fits, so a title of three
+      // parts keeps as much as it can on the line beside the icons.
+      for cut in stride(from: halves.count - 1, through: 1, by: -1) {
+        let head = halves.prefix(cut).joined(separator: Sentences.separator)
+        if MiddleTitle.width(head, role: role) <= column {
+          return [head, halves.dropFirst(cut).joined(separator: Sentences.separator)]
+        }
+      }
+    }
+
+    let words = title.split(separator: " ", omittingEmptySubsequences: false)
+    var head: [Substring] = []
+    for word in words {
+      let next = (head + [word]).joined(separator: " ")
+      if !head.isEmpty, MiddleTitle.width(next, role: role) > column { break }
+      head.append(word)
+    }
+    // One word wider than the column: it is the first line anyway, cut by
+    // the drawing, because a line of nothing is worse than a line that runs
+    // out of room.
+    if head.isEmpty { head = Array(words.prefix(1)) }
+    let rest = words.dropFirst(head.count)
+    guard !rest.isEmpty else { return [head.joined(separator: " ")] }
+    return [head.joined(separator: " "), rest.joined(separator: " ")]
+  }
+
   public let model: StuckCardModel
   /// The actions in the order they are drawn, the cross last where there is
   /// one. Built once so a test reads the same list the card draws.
@@ -118,15 +174,18 @@ public struct StuckCard: View {
 
   public var body: some View {
     let palette = Palette.of(scheme)
+    // The title over two lines: the first beside the icons, the second
+    // under them in the card's full width. With five live icons the column
+    // beside them is about 112 pt, and two lines of that cut the middle out
+    // of the title: the second line is where the rest of it goes.
+    let title = Self.titleSplit(model.title, actions: actions.count)
     return VStack(alignment: .leading, spacing: 0) {
       HStack(alignment: .top, spacing: Grid.columnGap) {
         StatusGlyph(.exclamation, tone: .bad)
           .frame(width: Grid.glyphSize, height: Typography.rowTitle.lineHeight)
-        // Two lines: with five live icons beside it the title has about
-        // 95 pt, and on one line that is "Export stoppe… v1", a card that
-        // no longer says which document stopped.
-        MiddleTitle(model.title, role: Typography.titleEmphasis, lines: Self.titleLines)
+        line(title[0], in: palette)
           .frame(maxWidth: .infinity, alignment: .leading)
+          .metricProbe("stuck.title")
         HStack(spacing: Grid.actionGap) {
           ForEach(actions) { action in
             ActionButton(
@@ -137,6 +196,13 @@ public struct StuckCard: View {
         .padding(.top, -Self.actionsOutset)
         .padding(.trailing, -Self.actionsOutset)
         .metricProbe("stuck.acts")
+      }
+
+      if title.count > 1 {
+        line(title[1], in: palette)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .metricProbe("stuck.title.second")
+          .padding(.leading, Self.reasonInset)
       }
 
       Text(model.reason)
@@ -152,5 +218,18 @@ public struct StuckCard: View {
     }
     .cardPlate(tint: palette.stuckTint, edge: palette.stuckTintEdge)
     .metricProbe("stuck.card")
+  }
+
+  /// One line of the title. The split already broke it between words, so
+  /// what is cut here is a line that ran out of room on its own, and what
+  /// is cut out of it is the middle: the end of a document's name is the
+  /// part that tells two drafts apart.
+  private func line(_ text: String, in palette: Palette) -> some View {
+    Text(text)
+      .font(Typography.titleEmphasis.font)
+      .lineLimit(1)
+      .truncationMode(.middle)
+      .foregroundStyle(palette.text.color)
+      .accessibilityLabel(model.title)
   }
 }

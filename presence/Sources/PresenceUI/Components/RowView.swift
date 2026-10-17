@@ -68,10 +68,18 @@ public enum RowShape: String, Sendable, CaseIterable {
     self == .more ? palette.textTertiary : nil
   }
 
-  /// `-webkit-line-clamp`: a document's reason gets two lines, and every
-  /// other sub-line one.
+  /// `-webkit-line-clamp`: a two-line row's sub-line wraps to a second
+  /// line before it is cut, which is what the two-line shapes are for. The
+  /// one-line shapes have no second line to wrap into.
+  ///
+  /// The row grows with it: a hold's sub-line names the rule and then where
+  /// the text is waiting, and the half that was cut off the end was the half
+  /// that said what to do about it.
   public var subLines: Int {
-    self == .doc ? 2 : 1
+    switch self {
+    case .two, .doc: return 2
+    case .plain, .compact, .more: return 1
+    }
   }
 }
 
@@ -144,6 +152,7 @@ public struct RowView<Leading: View, Trailing: View>: View {
             .fixedSize(horizontal: false, vertical: true)
             .foregroundStyle(palette.textTertiary.color)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .metricProbe("row.sub")
         }
       }
 

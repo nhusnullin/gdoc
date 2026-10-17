@@ -13,18 +13,25 @@
 // whole panel, which they cannot reach from outside.
 //
 // RowTests reads these for the five row shapes, the section label and the
-// header.
+// header, and CardTests reads one origin against another to say where a
+// line inside a card starts.
 
 import SwiftUI
 
 /// One measurement: what reported it, and the box it was drawn in.
+///
+/// The origin is in the render's own space, which is only ever read as the
+/// difference between two probes: a test that wants where a line starts
+/// inside a card asks for the line's origin less the card's.
 public struct MetricProbe: Equatable, Sendable {
   public let name: String
   public let size: CGSize
+  public let origin: CGPoint
 
-  public init(name: String, size: CGSize) {
+  public init(name: String, size: CGSize, origin: CGPoint = .zero) {
     self.name = name
     self.size = size
+    self.origin = origin
   }
 }
 
@@ -44,7 +51,10 @@ extension View {
       GeometryReader { geometry in
         Color.clear.preference(
           key: MetricProbes.self,
-          value: [MetricProbe(name: name, size: geometry.size)])
+          value: [
+            MetricProbe(
+              name: name, size: geometry.size, origin: geometry.frame(in: .global).origin)
+          ])
       }
       .allowsHitTesting(false)
     )

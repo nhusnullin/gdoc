@@ -76,6 +76,31 @@ final class CardTests: XCTestCase {
       "the consequence was squeezed onto one line and cut")
   }
 
+  // The consequence of the hold's question sits inside the card's padding
+  // and starts where the question above it starts: the card negates its own
+  // padding so the confirm row's 12 pt lines the question up with the
+  // plate, and a line left at 0 started 12 pt outside the plate's padding.
+  func testTheHoldConfirmConsequenceStartsUnderTheQuestion() throws {
+    XCTAssertEqual(
+      HoldCard.bodyInset, 24, "the glyph's 16 pt and the row's 8 pt gap")
+
+    let drawn = try probeList(
+      HoldCard(model: hold(), asking: true), scheme: .dark, width: cardWidth)
+    let plate = try XCTUnwrap(
+      drawn.first { $0.name == "hold.card" }, "the card drew no plate")
+    let line = try XCTUnwrap(
+      drawn.first { $0.name == "quiet.text" }, "the consequence drew no line of its own")
+
+    XCTAssertEqual(
+      line.origin.x - plate.origin.x, Grid.rowInset + HoldCard.bodyInset,
+      "the consequence starts under the question: the plate's 12 pt, the glyph and the gap")
+    XCTAssertGreaterThanOrEqual(
+      line.origin.x - plate.origin.x, Grid.rowInset, "and never outside the card's padding")
+    XCTAssertLessThanOrEqual(
+      line.origin.x + line.size.width, plate.origin.x + cardWidth - Grid.rowInset,
+      "nor past its other side")
+  }
+
   // `.stuck .row-sub{-webkit-line-clamp:2}`, and the reason rule of scene r2:
   // the cause with its place first, then the state of the world, in 80
   // characters or fewer. Two lines at the card's own width is what 80
@@ -113,6 +138,73 @@ final class CardTests: XCTestCase {
     XCTAssertLessThanOrEqual(
       measured["stuck.reason"]?.height ?? 0, 2 * Typography.caption.lineHeight + 1,
       "a longer reason is clamped rather than drawn")
+  }
+
+  // A title too long for the column beside the icons goes in whole on two
+  // lines, and the second of them uses the card's full width under the
+  // icons. Scene e3's export is the one that proved it: on one line it read
+  // "Export stoppe… v1", and over two lines of the narrow column it cut the
+  // word Proposal out of the middle. The card's whole job is naming the
+  // document that stopped.
+  func testALongStuckTitleGoesInWholeOnTwoLinesUnderTheIcons() throws {
+    XCTAssertEqual(StuckCard.titleLines, 2)
+    XCTAssertEqual(
+      StuckCard.titleColumn(actions: 3), 172,
+      "the reason's 256 less the 8 pt gap and three 24 pt icons with their two 4 pt gaps")
+    XCTAssertEqual(
+      StuckCard.titleColumn(actions: 0), StuckCard.reasonColumn,
+      "a card with no icon beside its title has the whole width for it")
+
+    let title = "Export stopped · Proposal to the Falcon partners, draft v1"
+    let drawn = StuckCard.titleSplit(title, actions: 3)
+    XCTAssertEqual(drawn.count, 2, "one line of this column cannot hold it")
+    XCTAssertEqual(
+      drawn.joined(separator: Sentences.separator), title,
+      "nothing of the title was dropped: the break is its own separator")
+    XCTAssertEqual(drawn[0], "Export stopped", "what stopped is the first line")
+    XCTAssertTrue(
+      drawn[1].hasPrefix("Proposal"), "and the document it stopped on is the second")
+
+    // A title with no separator in it is broken between its words instead,
+    // and every word of it is still drawn.
+    let run = StuckCard.titleSplit(
+      "Publishing the quarterly settlement review for Amsterdam", actions: 3)
+    XCTAssertEqual(run.count, 2)
+    XCTAssertEqual(
+      run.joined(separator: " "), "Publishing the quarterly settlement review for Amsterdam")
+
+    // Each line fits the width it is drawn at, so neither is cut: the first
+    // in the column beside the icons, the second across the card.
+    XCTAssertLessThanOrEqual(
+      MiddleTitle.width(drawn[0], role: Typography.titleEmphasis),
+      StuckCard.titleColumn(actions: 3))
+    XCTAssertLessThanOrEqual(
+      MiddleTitle.width(drawn[1], role: Typography.titleEmphasis), StuckCard.reasonColumn)
+
+    // A title that fits the column stays on one line, and the card draws no
+    // second one.
+    XCTAssertEqual(StuckCard.titleSplit("Publish stopped", actions: 3).count, 1)
+    XCTAssertEqual(
+      StuckCard.titleSplit("Publish stopped · Chapter 4", actions: 0).count, 1,
+      "with no icon beside it the card has the width for the whole title")
+
+    let long = StuckCardModel(
+      title: title,
+      reason: "The second tab has no heading. Nothing was written; the document is unchanged.")
+    let measured = try probes(
+      StuckCard(model: long, actions: [note(), branch()], onDismiss: {}),
+      scheme: .dark, width: cardWidth)
+    XCTAssertEqual(
+      measured["stuck.title"]?.width, StuckCard.titleColumn(actions: 3),
+      "the first line is drawn in the column the icons leave")
+    XCTAssertEqual(
+      measured["stuck.title.second"]?.width, StuckCard.reasonColumn,
+      "and the second line in the full width under them")
+
+    let short = try probes(
+      StuckCard(model: StuckCardModel(title: "Publish stopped", reason: long.reason), actions: []),
+      scheme: .dark, width: cardWidth)
+    XCTAssertNil(short["stuck.title.second"], "a title that fits draws one line")
   }
 
   // `.stuck .acts` holds Open md, Continue with Claude and the bare cross,
@@ -425,16 +517,6 @@ final class CardTests: XCTestCase {
   }
 
   // MARK: the measurements
-
-  /// How many lines a sentence takes in the panel's own font at a width,
-  /// which is the one thing a clamp cannot be read off the code for.
-  private func lines(_ text: String, role: TypeRole, width: CGFloat) -> Int {
-    let font = NSFont.systemFont(ofSize: role.size, weight: role.weight.appKit)
-    let box = NSAttributedString(string: text, attributes: [.font: font]).boundingRect(
-      with: CGSize(width: width, height: .greatestFiniteMagnitude),
-      options: [.usesLineFragmentOrigin, .usesFontLeading])
-    return Int((box.height / role.lineHeight).rounded(.up))
-  }
 
   /// One component source by name, read from this file's own path.
   private func componentSource(_ name: String) throws -> String {

@@ -13,7 +13,9 @@
 // look.
 //
 // Neither decoration appears where the list already fits: a thumb on a list
-// of three says there is more below when there is not.
+// of three says there is more below when there is not. And one thumb per
+// edge: where a box inside this one is scrolling, the inner list keeps the
+// thumb and the outer box keeps only its fade.
 //
 // One measurement decides the inside of this file, and it is in
 // docs/v2/MEASURED.md: `ImageRenderer` lays a `ScrollView` out and draws it
@@ -63,13 +65,39 @@ extension View {
   }
 }
 
-/// How tall the content inside a box turned out, reported upwards so the box
-/// can decide whether it overflows in the same layout pass.
-private struct ScrollContentHeight: PreferenceKey {
-  static let defaultValue: CGFloat = 0
+/// What the content inside a box came to: how tall it is, and how deep the
+/// deepest box that overflows under it sits.
+///
+/// Both are reported upwards so a box can decide, in the same layout pass,
+/// whether it overflows and whether a box inside it is already saying so.
+struct ScrollReport: Equatable, Sendable {
+  var height: CGFloat = 0
+  /// The depth of the deepest box whose own list is past its cap, or `nil`
+  /// where nothing under here overflows at all.
+  var overflowing: Int?
+}
 
-  static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-    value = max(value, nextValue())
+private struct ScrollContent: PreferenceKey {
+  static let defaultValue = ScrollReport()
+
+  static func reduce(value: inout ScrollReport, nextValue: () -> ScrollReport) {
+    let next = nextValue()
+    value.height = max(value.height, next.height)
+    value.overflowing = [value.overflowing, next.overflowing].compactMap { $0 }.max()
+  }
+}
+
+/// How deep in the boxes a view sits. The panel's own body is the first box
+/// and an opened section inside it is the second, so a box knows whether a
+/// box under it is reporting its own overflow or somebody else's.
+private struct ScrollDepthKey: EnvironmentKey {
+  static let defaultValue = 0
+}
+
+extension EnvironmentValues {
+  var scrollDepth: Int {
+    get { self[ScrollDepthKey.self] }
+    set { self[ScrollDepthKey.self] = newValue }
   }
 }
 
@@ -81,6 +109,7 @@ public struct ScrollBox<Content: View>: View {
 
   @Environment(\.colorScheme) private var scheme
   @Environment(\.renderMode) private var renderMode
+  @Environment(\.scrollDepth) private var depth
 
   public init(height: CGFloat = Grid.scrollBoxHeight, @ViewBuilder content: () -> Content) {
     self.height = height
@@ -103,17 +132,21 @@ public struct ScrollBox<Content: View>: View {
       box
       .frame(maxHeight: capped ? height : .infinity, alignment: .top)
       .clipped()
-      .overlayPreferenceValue(ScrollContentHeight.self) { measured in
-        if capped, measured > height {
-          decoration(palette, measured: measured)
+      .overlayPreferenceValue(ScrollContent.self) { report in
+        if capped, report.height > height {
+          decoration(
+            palette, measured: report.height,
+            thumb: (report.overflowing ?? depth) <= depth)
         }
       }
-      // The key stops here, so a box inside this one reports its list to
+      // The height stops here, so a box inside this one reports its list to
       // itself and not upwards: the reduce is a max, and the panel's own
       // body would otherwise take the length of an opened section's list
       // for its own and draw a thumb and a fade over rows that all fit:
-      // testABoxInsideABoxDecoratesOnlyItsOwnContent.
-      .preference(key: ScrollContentHeight.self, value: 0)
+      // testABoxInsideABoxDecoratesOnlyItsOwnContent. Which depth overflows
+      // carries on up, because that is the one thing the box above has to
+      // know: testOnlyTheInnerBoxCarriesAThumbOnE1.
+      .transformPreference(ScrollContent.self) { $0.height = 0 }
       .metricProbe("scrollbox")
   }
 
@@ -130,9 +163,14 @@ public struct ScrollBox<Content: View>: View {
   private var measured: some View {
     content
       .frame(maxWidth: .infinity, alignment: .leading)
+      .environment(\.scrollDepth, depth + 1)
       .background(
         GeometryReader { geometry in
-          Color.clear.preference(key: ScrollContentHeight.self, value: geometry.size.height)
+          Color.clear.preference(
+            key: ScrollContent.self,
+            value: ScrollReport(
+              height: geometry.size.height,
+              overflowing: geometry.size.height > height ? depth : nil))
         }
       )
   }
@@ -154,7 +192,12 @@ public struct ScrollBox<Content: View>: View {
   public static var thumbFloor: CGFloat { 24 }
 
   /// The thumb and the fade, over the rows and under no pointer.
-  private func decoration(_ palette: Palette, measured: CGFloat) -> some View {
+  ///
+  /// One thumb per edge: a box with a scrollable box inside it keeps its
+  /// fade, which is what says there is more below, and leaves the thumb to
+  /// the list the pointer is over. Two thumbs 3 pt apart on one edge are
+  /// two thumbs nobody can tell apart.
+  private func decoration(_ palette: Palette, measured: CGFloat, thumb: Bool) -> some View {
     ZStack(alignment: .topTrailing) {
       LinearGradient(
         colors: [palette.surface.color.opacity(0), palette.surface.color],
@@ -163,15 +206,17 @@ public struct ScrollBox<Content: View>: View {
       .frame(height: Grid.fadeHeight)
       .metricProbe("scrollbox.fade")
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-      RoundedRectangle(cornerRadius: Self.thumbRadius)
-        .fill(palette.scrollThumb.color)
-        .frame(
-          width: Self.thumbWidth,
-          height: Self.thumbLength(box: height, measured: measured)
-        )
-        .metricProbe("scrollbox.thumb")
-        .padding(.top, Self.thumbTop)
-        .padding(.trailing, Self.thumbInset)
+      if thumb {
+        RoundedRectangle(cornerRadius: Self.thumbRadius)
+          .fill(palette.scrollThumb.color)
+          .frame(
+            width: Self.thumbWidth,
+            height: Self.thumbLength(box: height, measured: measured)
+          )
+          .metricProbe("scrollbox.thumb")
+          .padding(.top, Self.thumbTop)
+          .padding(.trailing, Self.thumbInset)
+      }
     }
     .allowsHitTesting(false)
   }

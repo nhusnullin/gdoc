@@ -59,6 +59,10 @@ public enum Sentences {
   /// this is a fact and not a fault.
   public static let accountNotRead = "signed in, account not read"
   public static let loginItemApproval = "macOS is waiting for you to allow it in Login Items"
+  /// What joins the parts of one line: the middle dot with a space either
+  /// side. The stuck card breaks its title on it, so the two halves of
+  /// "Export stopped · Chapter 4" are the card's two lines.
+  public static let separator = " · "
 
   /// A count and the thing counted, with the noun agreeing with it. One
   /// document is a document, and the panel is read by somebody whose first
@@ -341,6 +345,6 @@ struct Phrases {
   }
 
   func sentence(_ parts: [String?]) -> String {
-    parts.compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
+    parts.compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: Sentences.separator)
   }
 }

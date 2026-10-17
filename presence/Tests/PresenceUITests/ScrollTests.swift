@@ -135,6 +135,35 @@ final class ScrollTests: XCTestCase {
       "the thumb is as much of the inner box's track as that box is of its own list")
   }
 
+  // One thumb per edge. Scene e1 is a box inside a box where both of them
+  // scroll: DOCUMENTS is open with its own list past the cap, and the panel
+  // under 600 pt has more below the fold as well. Two thumbs 3 pt apart on
+  // one edge are two thumbs nobody can tell apart, so the panel draws none
+  // of its own while a box inside it is scrollable, and keeps its fade,
+  // which is what says there is more below.
+  func testOnlyTheInnerBoxCarriesAThumbOnE1() throws {
+    let scene = try XCTUnwrap(Scenes.all.first { $0.id == "e1" })
+    for scheme in [ColorScheme.dark, .light] {
+      let drawn = try probeList(try scene.view(), scheme: scheme)
+      XCTAssertEqual(
+        drawn.filter { $0.name == "scrollbox" }.count, 2,
+        "e1 is the panel's own box with the opened DOCUMENTS inside it, in \(scheme)")
+      XCTAssertEqual(
+        drawn.filter { $0.name == "scrollbox.thumb" }.count, 1,
+        "two thumbs on one edge in \(scheme)")
+      XCTAssertGreaterThanOrEqual(
+        drawn.filter { $0.name == "scrollbox.fade" }.count, 1,
+        "and something still says there is more below in \(scheme)")
+
+      let thumb = try XCTUnwrap(drawn.first { $0.name == "scrollbox.thumb" })
+      XCTAssertEqual(thumb.size.width, ScrollBox<EmptyView>.thumbWidth)
+      XCTAssertLessThanOrEqual(
+        thumb.size.height, Grid.scrollBoxHeight - 2 * ScrollBox<EmptyView>.thumbTop,
+        "the one thumb is the inner list's track and not the panel's")
+    }
+    XCTAssertEqual(ScrollBox<EmptyView>.thumbInset, 3, "3 pt inside the box it belongs to")
+  }
+
   // `MORE('Show 3 more')` closed, `MORE('Show less',true)` open: one row
   // changes how much of a section is on the screen, and nothing else moves.
   func testShowMoreAndShowLessToggleTheList() throws {

@@ -26,9 +26,11 @@ public enum TooltipAlign: String, Sendable, CaseIterable {
   /// `[data-tip]::after{left:50%;transform:translateX(-50%)}`: the default,
   /// centred under the anchor.
   case centred
-  /// `.acts [data-tip]::after{left:auto;right:0}`: an action's bubble hangs
-  /// off its own right edge, which is how four icons in 108 pt keep their
-  /// words inside the panel.
+  /// `.acts [data-tip]::after{left:auto;right:0}`: an action's bubble ends
+  /// on the panel's own right inset, which is how four icons in 108 pt keep
+  /// their words inside the panel. The icon it belongs to is the one it
+  /// hangs under; a plate that ended on each icon's own edge stepped left
+  /// across the row and read as four different plates.
   case trailing
   /// `.row-title[data-tip]::after{left:0}`: a title's bubble starts where
   /// the title does.
@@ -79,16 +81,20 @@ public enum Tooltip {
   /// margin, and over the anchor when there is no room under it. The panel
   /// is a window with nothing beneath it, so a bubble that fell off the foot
   /// would be a bubble nobody reads.
+  ///
+  /// An action's bubble is the one that does not slide: it ends on the
+  /// panel's right inset whichever icon of a row it belongs to, and the
+  /// icon it hangs under is what says which one that is.
   public static func place(
     anchor: CGRect, size: CGSize, in panel: CGSize, align: TooltipAlign
   ) -> TooltipPlacement {
+    let rightmost = max(margin, panel.width - margin - size.width)
     var x: CGFloat
     switch align {
     case .centred: x = anchor.midX - size.width / 2
-    case .trailing: x = anchor.maxX - size.width
+    case .trailing: x = rightmost
     case .leading: x = anchor.minX
     }
-    let rightmost = max(margin, panel.width - margin - size.width)
     x = min(max(x, margin), rightmost)
 
     var y = anchor.maxY + align.gap

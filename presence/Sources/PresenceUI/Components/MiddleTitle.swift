@@ -12,6 +12,9 @@
 // title column in the panel, the document row's, so one title reads the same
 // in every section it appears in.
 //
+// One line of a row is the whole of this file. A card's title is two lines
+// and no split at all, which is StuckCard's own rule.
+//
 // RowTests holds the floor; TitlesTests holds the split.
 
 import AppKit
@@ -30,11 +33,6 @@ public struct MiddleTitle: View {
 
   public let title: String
   public let role: TypeRole
-  /// How many lines the title may take. A row gives it one, which is what
-  /// the head-and-tail split is for. A card gives it two: a card is a plate
-  /// rather than a row, its reason already wraps, and naming the document
-  /// that stopped is the whole of what it is for.
-  public let lines: Int
   public let gone: Bool
   /// The colour the title is drawn in when it is not gone. `nil` is
   /// `.row-title`'s own `--t1`; the quiet rows hand over `--t3`.
@@ -43,12 +41,11 @@ public struct MiddleTitle: View {
   @Environment(\.colorScheme) private var scheme
 
   public init(
-    _ title: String, role: TypeRole = Typography.rowTitle, lines: Int = 1,
+    _ title: String, role: TypeRole = Typography.rowTitle,
     gone: Bool = false, quietInk: Swatch? = nil
   ) {
     self.title = title
     self.role = role
-    self.lines = lines
     self.gone = gone
     self.quietInk = quietInk
   }
@@ -121,25 +118,13 @@ public struct MiddleTitle: View {
 
   public var body: some View {
     let palette = Palette.of(scheme)
-    return Group {
-      if lines > 1 {
-        // Over two lines there is no column to split against: the text
-        // wraps, and what is cut is cut out of the middle, so the end of
-        // the title survives here as it does in a row.
-        Text(title)
-          .lineLimit(lines)
-          .truncationMode(.middle)
-          .multilineTextAlignment(.leading)
-          .fixedSize(horizontal: false, vertical: true)
-      } else {
-        split
-      }
-    }
-    .font(role.font)
-    .tracking(role.letterSpacing)
-    .strikethrough(gone)
-    .foregroundStyle(Self.ink(gone: gone, quiet: quietInk, in: palette).color)
-    .accessibilityLabel(title)
+    return
+      split
+      .font(role.font)
+      .tracking(role.letterSpacing)
+      .strikethrough(gone)
+      .foregroundStyle(Self.ink(gone: gone, quiet: quietInk, in: palette).color)
+      .accessibilityLabel(title)
   }
 
   /// The head and the tail, which is what one line of a row gets.
