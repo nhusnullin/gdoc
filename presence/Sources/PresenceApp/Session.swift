@@ -213,6 +213,14 @@ public final class Session {
       checkShowing: check.isShowing(now: moment))
   }
 
+  /// Where the menu bar's ring stands, which is the running job's own
+  /// place in its steps. Nothing for every other state, which draws no
+  /// ring at all.
+  public var barProgress: Double? {
+    BarImage.ringProgress(
+      now: Now.fold(events, now: clock(), dismissed: ui.dismissed, alive: alive))
+  }
+
   /// What the panel draws: the events, the machine and the person.
   public var model: PanelModel {
     PanelModel.build(

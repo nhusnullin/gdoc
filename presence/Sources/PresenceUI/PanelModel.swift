@@ -12,13 +12,13 @@
 // Two words are this file's own, and both are the reading the app is allowed
 // to make. The state of a document is said in one word (hold, running, live,
 // live stopped), because the record has no word for it. And a write that
-// stopped carries one sentence that names the moment and where the reason
-// is, because the v1 record carries no cause: M24b adds `stop`, and Task 25
-// replaces the sentence with it.
+// stopped with a cause this version has no word for carries one sentence
+// that names the moment and where the reason is, because a panel that
+// invented a cause would be read as gdoc's own answer.
 //
 // Nothing here predicts anything, which is principle 5. The job card's ring
-// has no fraction until the record carries steps, and no row says when
-// something will finish.
+// is the part's place in a list of four, which is where the run is and not
+// how much of it is left, and no row says when something will finish.
 
 import Foundation
 import PresenceCore
@@ -830,21 +830,52 @@ struct Phrases {
       reason: stuckReason(write))
   }
 
-  /// One sentence, under eighty characters: when it stopped, and where the
-  /// reason is. The v1 record carries no cause at all, so the panel says
-  /// where to look rather than guessing why. M24b adds `stop`, and Task 25
-  /// puts the cause and its line here.
+  /// One sentence, under eighty characters: the cause with its place, then
+  /// the state of the world. That is scene r2's rule, and the two halves
+  /// are both the record's: `stop` is one of gdoc's seven words and `line`
+  /// is where the cause sits.
+  ///
+  /// A run whose process went away wrote neither, and so does a code this
+  /// version has never seen: then the panel says when it stopped and where
+  /// the reason is, because the one thing it must not do is invent a cause.
   private func stuckReason(_ write: StuckWrite) -> String {
-    let place = write.via == "chat" ? "Desktop chat" : "terminal"
-    return "Stopped at \(clock(write.at)). The \(place) that ran it has the reason."
+    guard let cause = Words.cause(write.stop, line: write.line) else {
+      let place = write.via == "chat" ? "Desktop chat" : "terminal"
+      return "Stopped at \(clock(write.at)). The \(place) that ran it has the reason."
+    }
+    let world =
+      write.command == "publish"
+      ? "Nothing was created; the note is unchanged."
+      : "Nothing was written; the document is unchanged."
+    return "\(Words.opening(cause)). \(world)"
   }
 
+  /// A running job, with the part it is on.
+  ///
+  /// A publish is handed no title, so the card is "Publishing" alone until
+  /// the render names the cover; the steps are the four gdoc always takes,
+  /// and the record says which of them began last. The ring is that part's
+  /// place in the list, which is a position and not a forecast.
   func jobCard(_ run: NowRun) -> JobCardModel {
-    JobCardModel(
+    let place = run.index.flatMap { index in run.count.map { "step \(index) of \($0)" } }
+    return JobCardModel(
       title: sentence([Words.running(run.command) ?? run.command, run.title]),
-      sub: sentence(["started \(clock(run.started))", Words.via(run.via)]),
-      progress: nil,
-      steps: [])
+      sub: sentence([place, "started \(clock(run.started))", Words.via(run.via)]),
+      progress: run.progress,
+      steps: steps(run))
+  }
+
+  /// The parts of a publish as rows: what the record says began last is
+  /// running, everything before it happened, everything after it has not.
+  /// A run the record named no part of draws no rows at all.
+  private func steps(_ run: NowRun) -> [JobStep] {
+    guard let now = run.step, let at = Words.steps.firstIndex(where: { $0.name == now })
+    else { return [] }
+    return Words.steps.enumerated().map { place, words in
+      if place < at { return JobStep(title: words.done, state: .done) }
+      if place == at { return JobStep(title: words.running, state: .running(nil)) }
+      return JobStep(title: words.waiting, state: .waiting)
+    }
   }
 
   /// A watch's one line of facts.
@@ -855,7 +886,13 @@ struct Phrases {
   /// word for why, because the record has none.
   func liveRow(_ session: LiveSession) -> LiveRowModel {
     let expired = facts.auth.isWorking ? nil : "sign-in expired"
-    let failed = session.lastPollFailed.map { "last poll failed \(clock($0))" }
+    let failed = session.lastPollFailed.map { moment in
+      // A poll Google refused the token on is a watch waiting for a sign-in
+      // rather than a watch in trouble: the cursor is kept and the next
+      // poll after a sign-in carries on from it. That is scene e9.
+      session.lastPollStop == "auth"
+        ? "paused \(clock(moment))" : "last poll failed \(clock(moment))"
+    }
 
     let parts: [String?] =
       failed == nil && expired == nil
@@ -865,7 +902,7 @@ struct Phrases {
         session.replied > 0 ? "answered \(session.replied)" : nil,
         session.proposed > 0 ? "proposed \(session.proposed)" : nil,
       ]
-      : [failed, expired]
+      : [failed, expired ?? Words.cause(session.lastPollStop)]
 
     return LiveRowModel(
       title: sentence(["Live", session.title ?? session.doc]),
@@ -908,7 +945,10 @@ struct Phrases {
         tone: ok ? (row.verified == false ? .quiet : .ok) : .bad,
         title: sentence([what, title]),
         value: clock(row.at),
-        sub: sentence([Words.via(row.via), Words.verified(row.verified), ok ? nil : "stopped"]))
+        sub: sentence([
+          Words.via(row.via), Words.verified(row.verified),
+          ok ? nil : (Words.cause(row.stop, line: row.line) ?? "stopped"),
+        ]))
     case .outcomeUnknown:
       return LogRowModel(
         key: "\(index)", glyph: .empty, tone: .quiet, title: sentence([what, title]),
@@ -932,8 +972,13 @@ struct Phrases {
         key: "\(index)", glyph: .dot, tone: .dim, title: sentence(["Live started", title]),
         value: clock(row.at), sub: nil)
     case .liveStopped:
+      // Who stopped it is the one thing the row can say about the ending,
+      // and only a wait a person interrupted says it. A watch whose process
+      // went away says nothing, because nobody wrote down what happened.
+      let byYou = row.totals?.stoppedByYou == true
       return LogRowModel(
-        key: "\(index)", glyph: .dot, tone: .dim, title: sentence(["Live stopped", title]),
+        key: "\(index)", glyph: .dot, tone: .dim,
+        title: sentence([byYou ? "Live stopped by you" : "Live stopped", title]),
         value: clock(row.at), sub: totals(row.totals))
     }
   }
@@ -945,6 +990,7 @@ struct Phrases {
     case .landed: return "approved by you in chat"
     case .released: return "released without writing"
     case .expired: return "ran out"
+    case .dropped: return "the sign-in changed, nothing was sent"
     case nil: return nil
     }
   }

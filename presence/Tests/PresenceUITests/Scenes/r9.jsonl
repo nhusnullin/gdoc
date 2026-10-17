@@ -23,7 +23,7 @@
 {"v":1,"at":"2026-10-16T20:20:00Z","gdoc":"v2.14.0","pid":6911,"run":"3000000000000034","call":1,"event":"start","command":"annotate","via":"terminal","doc":"1PbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRr"}
 {"v":1,"at":"2026-10-16T20:20:08Z","gdoc":"v2.14.0","pid":6911,"run":"3000000000000034","call":1,"event":"end","command":"annotate","via":"terminal","doc":"1PbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRr","title":"Partner bank setup","ok":true,"verified":true,"ms":8000}
 {"v":1,"at":"2026-10-17T09:03:10Z","gdoc":"v2.14.0","pid":7101,"run":"3000000000000001","call":1,"event":"start","command":"publish","via":"terminal"}
-{"v":1,"at":"2026-10-17T09:05:00Z","gdoc":"v2.14.0","pid":7101,"run":"3000000000000001","call":1,"event":"end","command":"publish","via":"terminal","ok":false,"ms":110000}
+{"v":1,"at":"2026-10-17T09:05:00Z","gdoc":"v2.14.0","pid":7101,"run":"3000000000000001","call":1,"event":"end","command":"publish","via":"terminal","ok":false,"stop":"svg_picture","line":41,"ms":110000}
 {"v":1,"at":"2026-10-17T10:11:30Z","gdoc":"v2.14.0","pid":7110,"run":"3000000000000002","call":1,"event":"start","command":"restyle","via":"terminal","doc":"1PbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRr"}
 {"v":1,"at":"2026-10-17T10:12:00Z","gdoc":"v2.14.0","pid":7110,"run":"3000000000000002","call":1,"event":"end","command":"restyle","via":"terminal","doc":"1PbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRr","title":"Partner bank setup","ok":true,"verified":true,"ms":30000}
 {"v":1,"at":"2026-10-17T11:37:40Z","gdoc":"v2.14.0","pid":7111,"run":"3000000000000003","call":1,"event":"start","command":"annotate","via":"terminal","doc":"1NwBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQq"}
@@ -40,7 +40,7 @@
 {"v":1,"at":"2026-10-17T14:10:40Z","gdoc":"v2.14.0","pid":7200,"run":"3000000000000008","call":1,"event":"end","command":"comments","via":"terminal","doc":"1Ch5AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp","wait":true,"ok":true,"ms":1790000}
 {"v":1,"at":"2026-10-17T14:10:50Z","gdoc":"v2.14.0","pid":7200,"run":"3000000000000009","call":1,"event":"start","command":"comments","via":"terminal","doc":"1Ch5AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp","wait":true}
 {"v":1,"at":"2026-10-17T14:29:00Z","gdoc":"v2.14.0","pid":7102,"run":"3000000000000018","call":1,"event":"start","command":"publish","via":"terminal"}
-{"v":1,"at":"2026-10-17T14:31:00Z","gdoc":"v2.14.0","pid":7102,"run":"3000000000000018","call":1,"event":"end","command":"publish","via":"terminal","ok":true,"verified":true,"ms":120000}
+{"v":1,"at":"2026-10-17T14:31:00Z","gdoc":"v2.14.0","pid":7102,"run":"3000000000000018","call":1,"event":"end","command":"publish","via":"terminal","made":"1Ch4BbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQq","title":"Chapter 4","ok":true,"verified":true,"ms":120000}
 {"v":1,"at":"2026-10-17T14:40:40Z","gdoc":"v2.14.0","pid":7200,"run":"3000000000000009","call":1,"event":"end","command":"comments","via":"terminal","doc":"1Ch5AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp","wait":true,"ok":true,"ms":1790000}
 {"v":1,"at":"2026-10-17T14:40:50Z","gdoc":"v2.14.0","pid":7200,"run":"3000000000000010","call":1,"event":"start","command":"comments","via":"terminal","doc":"1Ch5AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp","wait":true}
 {"v":1,"at":"2026-10-17T15:10:40Z","gdoc":"v2.14.0","pid":7200,"run":"3000000000000010","call":1,"event":"end","command":"comments","via":"terminal","doc":"1Ch5AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp","wait":true,"ok":true,"ms":1790000}
@@ -65,4 +65,4 @@
 {"v":1,"at":"2026-10-17T18:10:00Z","gdoc":"v2.14.0","pid":7400,"run":"3000000000000022","call":1,"event":"end","command":"export","via":"terminal","doc":"1B2EeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTt","title":"B2B2C payment card concept: the frozen vocabulary","ok":true,"verified":true,"ms":10000}
 {"v":1,"at":"2026-10-17T18:10:40Z","gdoc":"v2.14.0","pid":7200,"run":"3000000000000016","call":1,"event":"end","command":"comments","via":"terminal","doc":"1Ch5AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp","wait":true,"ok":true,"ms":1790000}
 {"v":1,"at":"2026-10-17T18:10:50Z","gdoc":"v2.14.0","pid":7200,"run":"3000000000000017","call":1,"event":"start","command":"comments","via":"terminal","doc":"1Ch5AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp","wait":true}
-{"v":1,"at":"2026-10-17T18:40:40Z","gdoc":"v2.14.0","pid":7200,"run":"3000000000000017","call":1,"event":"end","command":"comments","via":"terminal","doc":"1Ch5AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp","wait":true,"ok":true,"ms":1790000}
+{"v":1,"at":"2026-10-17T18:40:40Z","gdoc":"v2.14.0","pid":7200,"run":"3000000000000017","call":1,"event":"end","command":"comments","via":"terminal","doc":"1Ch5AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp","wait":true,"interrupted":true,"ok":true,"ms":1790000}

@@ -28,11 +28,13 @@ import Foundation
 
 /// How a hold stopped waiting. The record's own words, with no reading on
 /// top: landed is the write the person approved, released is the person
-/// saying no, expired is the hold's own life running out.
+/// saying no, expired is the hold's own life running out, and dropped is the
+/// sign-in it was held under stopping being the sign-in on the computer.
 public enum HoldEnding: String, Sendable, Equatable, CaseIterable {
   case released
   case expired
   case landed
+  case dropped
 
   /// The ending an event kind is, and nothing for the kinds that are not one.
   public init?(_ kind: EventKind) {
@@ -60,6 +62,9 @@ public struct LiveTotals: Sendable, Equatable {
   public let ended: Date
   public let replied: Int
   public let proposed: Int
+  /// A person stopped the last poll, which the record says on the end of a
+  /// wait and nowhere else. A watch whose process went away says nothing.
+  public let stoppedByYou: Bool
 
   /// How long it ran.
   public var ran: TimeInterval { ended.timeIntervalSince(since) }
@@ -84,6 +89,10 @@ public struct DayRow: Sendable, Equatable {
   public let ending: HoldEnding?
   /// A stopped watch's own totals.
   public let totals: LiveTotals?
+  /// Why a failed run stopped, in gdoc's own word for it, and the line of
+  /// the note the cause sits on where it has one.
+  public let stop: String?
+  public let line: Int?
 }
 
 /// What the chevron row of Yesterday says.
@@ -188,7 +197,7 @@ public enum Days {
   private static func action(_ event: Event, titles: [String: String]) -> DayRow {
     row(
       .action, event, titles: titles, ok: event.ok ?? false, verified: event.verified,
-      ms: event.ms)
+      ms: event.ms, stop: event.stop, line: event.line)
   }
 
   private static func lost(_ event: Event, titles: [String: String]) -> DayRow {
@@ -209,7 +218,7 @@ public enum Days {
     DayRow(
       kind: .liveStarted, at: session.since, command: "comments", via: "terminal",
       doc: session.doc, title: session.title, ok: nil, verified: nil, ms: nil, rule: nil,
-      ending: nil, totals: nil)
+      ending: nil, totals: nil, stop: nil, line: nil)
   }
 
   private static func stopped(_ session: LiveSession, at: Date) -> DayRow {
@@ -218,23 +227,25 @@ public enum Days {
       title: session.title, ok: nil, verified: nil, ms: nil, rule: nil, ending: nil,
       totals: LiveTotals(
         since: session.since, ended: at, replied: session.replied,
-        proposed: session.proposed))
+        proposed: session.proposed, stoppedByYou: session.stoppedByYou),
+      stop: nil, line: nil)
   }
 
   private static func row(
     _ kind: DayKind, _ event: Event, titles: [String: String], ok: Bool? = nil,
-    verified: Bool? = nil, ms: Int64? = nil, rule: String? = nil, ending: HoldEnding? = nil
+    verified: Bool? = nil, ms: Int64? = nil, rule: String? = nil, ending: HoldEnding? = nil,
+    stop: String? = nil, line: Int? = nil
   ) -> DayRow {
     DayRow(
-      kind: kind, at: event.at, command: event.command, via: event.via, doc: event.doc,
-      title: title(event, titles), ok: ok, verified: verified, ms: ms, rule: rule,
-      ending: ending, totals: nil)
+      kind: kind, at: event.at, command: event.command, via: event.via,
+      doc: Fold.subject(event), title: title(event, titles), ok: ok, verified: verified, ms: ms,
+      rule: rule, ending: ending, totals: nil, stop: stop, line: line)
   }
 
   /// The document's latest title, and the line's own only where the record
   /// never named one for that document.
   private static func title(_ event: Event, _ titles: [String: String]) -> String? {
-    guard let doc = event.doc, let latest = titles[doc] else { return event.title }
+    guard let doc = Fold.subject(event), let latest = titles[doc] else { return event.title }
     return latest
   }
 }

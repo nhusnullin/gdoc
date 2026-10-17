@@ -147,7 +147,7 @@ public struct DomainHint: Sendable, Equatable {
   public let expected: String
 
   /// The preference as typed, with a leading at sign taken off: somebody
-  /// writing `@altery.com` means the same thing as `altery.com`.
+  /// writing `@example.com` means the same thing as `example.com`.
   public init(expected: String) {
     self.expected = expected.hasPrefix("@") ? String(expected.dropFirst()) : expected
   }

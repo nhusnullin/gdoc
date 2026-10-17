@@ -54,7 +54,7 @@ final class Shell: NSObject, NSApplicationDelegate {
   /// is open.
   private func changed() {
     guard let session else { return }
-    item?.show(session.bar)
+    item?.show(session.bar, progress: session.barProgress)
     panel.refresh(view(of: session))
   }
 

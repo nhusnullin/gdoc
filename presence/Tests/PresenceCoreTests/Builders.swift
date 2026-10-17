@@ -23,15 +23,28 @@ func start(
     at: text, kind: .start, command: command, run: run, call: call, via: via, doc: doc, wait: wait)
 }
 
-/// An end, with the four facts an end carries.
+/// An end, with the facts an end carries: how it went, what a publish
+/// created, why it stopped and whether a person stopped the wait.
 func end(
   at text: String, command: String, run: String, doc: String?, call: Int64 = 1,
   via: String = "terminal", wait: Bool = false, ok: Bool = true, verified: Bool? = nil,
-  title: String? = nil, ms: Int64? = 1200
+  title: String? = nil, ms: Int64? = 1200, made: String? = nil, stop: String? = nil,
+  line: Int? = nil, interrupted: Bool = false
 ) -> Event {
   built(
     at: text, kind: .end, command: command, run: run, call: call, via: via, doc: doc, wait: wait,
-    ok: ok, verified: verified, title: title, ms: ms)
+    ok: ok, verified: verified, title: title, ms: ms, made: made, stop: stop, line: line,
+    interrupted: interrupted)
+}
+
+/// One part of a publish beginning, with its place in the fixed list.
+func step(
+  at text: String, name: String, index: Int, run: String, count: Int = 4,
+  command: String = "publish", call: Int64 = 1, title: String? = nil
+) -> Event {
+  built(
+    at: text, kind: .step, command: command, run: run, call: call, via: "terminal", doc: nil,
+    title: title, step: name, index: index, count: count)
 }
 
 /// One call that ran and ended: the start, and its end twenty seconds later.
@@ -70,12 +83,15 @@ func holdEnd(
 private func built(
   at text: String, kind: EventKind, command: String?, run: String, call: Int64?, via: String,
   doc: String?, wait: Bool = false, ok: Bool? = nil, verified: Bool? = nil, title: String? = nil,
-  ms: Int64? = nil, hold: String? = nil, rule: String? = nil, until: String? = nil
+  ms: Int64? = nil, hold: String? = nil, rule: String? = nil, until: String? = nil,
+  made: String? = nil, stop: String? = nil, line: Int? = nil, interrupted: Bool = false,
+  step: String? = nil, index: Int? = nil, count: Int? = nil
 ) -> Event {
   Event(
     schema: 1, at: text.asMoment, gdoc: "v2.14.0", pid: builtPid, run: run, call: call, kind: kind,
-    command: command, via: via, doc: doc, wait: wait, title: title, ok: ok, verified: verified,
-    ms: ms, hold: hold, rule: rule, until: until?.asMoment)
+    command: command, via: via, doc: doc, wait: wait, interrupted: interrupted, step: step,
+    index: index, count: count, title: title, made: made, ok: ok, verified: verified, stop: stop,
+    line: line, ms: ms, hold: hold, rule: rule, until: until?.asMoment)
 }
 
 extension String {

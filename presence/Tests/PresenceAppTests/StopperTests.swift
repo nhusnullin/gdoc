@@ -243,7 +243,7 @@ final class StopperTests: XCTestCase {
     return PanelModel.build(
       events: events,
       facts: Facts(
-        account: "nail@altery.com", versions: Versions(app: "1.0", gdoc: "v2.14.0"),
+        account: "nail@example.com", versions: Versions(app: "1.0", gdoc: "v2.14.0"),
         gdocPath: Self.gdoc, unstoppable: unstoppable),
       ui: UIState(pendingStop: pendingStop), now: at, calendar: calendar, alive: { _ in true })
   }

@@ -211,6 +211,18 @@ extension Fold {
       .map(\.element)
   }
 
+  /// The document a line is about.
+  ///
+  /// It is the one the command was handed, and the one a publish created
+  /// where it was handed none: a publish names no document until it has
+  /// made one, so `made` is that line's document everywhere the panel
+  /// groups by one. Nothing else writes `made`.
+  public static func subject(_ event: Event) -> String? {
+    if let doc = event.doc, !doc.isEmpty { return doc }
+    guard let made = event.made, !made.isEmpty else { return nil }
+    return made
+  }
+
   /// Every document's latest title, by document id.
   ///
   /// A start names no title and a held line names none either, so a card for
@@ -220,7 +232,7 @@ extension Fold {
     var titles: [String: String] = [:]
     var when: [String: Date] = [:]
     for event in events {
-      guard let doc = event.doc, let title = event.title, !title.isEmpty else { continue }
+      guard let doc = subject(event), let title = event.title, !title.isEmpty else { continue }
       if let had = when[doc], had > event.at { continue }
       titles[doc] = title
       when[doc] = event.at

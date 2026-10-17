@@ -66,6 +66,11 @@ public struct StuckWrite: Sendable, Equatable {
   /// When it failed, or when it started for a process that is gone.
   public let at: Date
   public let cause: StuckCause
+  /// Why it stopped, in one of gdoc's seven fixed words, and the line of
+  /// the note the cause sits on where it has one. A process that went away
+  /// wrote neither.
+  public let stop: String?
+  public let line: Int?
 
   /// What a dismissal names: the run and the call, as the record pairs them.
   public var key: String { "\(run)|\(call)" }
@@ -82,8 +87,24 @@ public struct NowRun: Sendable, Equatable {
   public let title: String?
   public let started: Date
   public let isWait: Bool
+  /// The part of the run that began last, which is the part running now:
+  /// gdoc writes a step line immediately before the part it names starts.
+  /// Only a publish has parts.
+  public let step: String?
+  /// That part's place in the list of parts, counted from one, and how many
+  /// parts there are. They are places and never a measure of work done.
+  public let index: Int?
+  public let count: Int?
 
   public var key: String { "\(run)|\(call)" }
+
+  /// How far along the list of parts the run is. It is the place and not a
+  /// forecast: nothing says what a part costs, so nothing here says when
+  /// the run finishes.
+  public var progress: Double? {
+    guard let index, let count, count > 0 else { return nil }
+    return Double(index) / Double(count)
+  }
 }
 
 /// A start whose process is gone and which NOW does not keep: TODAY reports
@@ -173,6 +194,7 @@ public enum Now {
     let titles = Fold.latestTitles(ordered)
 
     var starts: [String: Event] = [:]
+    var steps: [String: Event] = [:]
     var ended: Set<String> = []
     var held: [String: Event] = [:]
     var failures: [StuckWrite] = []
@@ -193,9 +215,9 @@ public enum Now {
       case .released, .expired, .landed, .dropped:
         held.removeValue(forKey: event.hold ?? "")
       case .step:
-        // M24a Task 25 wires the steps into the job card; until then a step
-        // changes nothing here.
-        continue
+        // The parts arrive in order, so the last one read is the one that
+        // began last, which is the one running.
+        steps[event.pairing] = event
       }
     }
 
@@ -211,7 +233,7 @@ public enum Now {
     for (pairing, start) in starts
     where !ended.contains(pairing) && !holding.contains(start.run) {
       if alive(start.pid) {
-        let row = run(start, titles: titles)
+        let row = run(start, step: steps[pairing], titles: titles)
         if row.isWait { watches.append(row) } else { jobs.append(row) }
         continue
       }
@@ -267,40 +289,45 @@ public enum Now {
     _ event: Event, at: Date, cause: StuckCause, titles: [String: String]
   ) -> StuckWrite {
     StuckWrite(
-      run: event.run, call: event.call ?? 0, command: event.command ?? "", doc: event.doc,
-      title: title(event, titles), via: event.via, at: at, cause: cause)
+      run: event.run, call: event.call ?? 0, command: event.command ?? "",
+      doc: Fold.subject(event), title: title(event, titles), via: event.via, at: at,
+      cause: cause, stop: event.stop, line: event.line)
   }
 
-  private static func run(_ event: Event, titles: [String: String]) -> NowRun {
+  /// One running command, with the part it is on where the record names one
+  /// and the title that part carried: a publish is handed no title, so the
+  /// only name it has is the one the render put on the cover.
+  private static func run(_ event: Event, step: Event?, titles: [String: String]) -> NowRun {
     NowRun(
       run: event.run, call: event.call ?? 0, pid: event.pid, command: event.command ?? "",
-      via: event.via, doc: event.doc, title: title(event, titles), started: event.at,
-      isWait: event.wait)
+      via: event.via, doc: Fold.subject(event),
+      title: step?.title ?? title(event, titles), started: event.at,
+      isWait: event.wait, step: step?.step, index: step?.index, count: step?.count)
   }
 
   private static func outcome(_ event: Event, titles: [String: String]) -> UnknownOutcome {
     UnknownOutcome(
       run: event.run, call: event.call ?? 0, command: event.command ?? "", via: event.via,
-      doc: event.doc, title: title(event, titles), started: event.at)
+      doc: Fold.subject(event), title: title(event, titles), started: event.at)
   }
 
   private static func hold(_ event: Event, now: Date, titles: [String: String]) -> HoldCard {
     HoldCard(
       id: event.hold ?? "", run: event.run, command: event.command, via: event.via,
-      doc: event.doc, title: title(event, titles), rule: event.rule, held: event.at,
+      doc: Fold.subject(event), title: title(event, titles), rule: event.rule, held: event.at,
       until: event.until, ranOut: event.until.map { $0 < now } ?? false)
   }
 
   private static func check(_ event: Event, titles: [String: String]) -> VerifiedWrite {
     VerifiedWrite(
-      run: event.run, call: event.call ?? 0, command: event.command ?? "", doc: event.doc,
-      title: title(event, titles), ended: event.at)
+      run: event.run, call: event.call ?? 0, command: event.command ?? "",
+      doc: Fold.subject(event), title: title(event, titles), ended: event.at)
   }
 
   /// The document's latest title, and the line's own only where the record
   /// never named one for that document.
   private static func title(_ event: Event, _ titles: [String: String]) -> String? {
-    guard let doc = event.doc, let latest = titles[doc] else { return event.title }
+    guard let doc = Fold.subject(event), let latest = titles[doc] else { return event.title }
     return latest
   }
 }

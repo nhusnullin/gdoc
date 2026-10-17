@@ -116,14 +116,15 @@ final class WordsTests: XCTestCase {
       Words.duration(24 * 3_600), "24 h", "a day is hours, because the panel has no day")
   }
 
-  /// The record's two vias, in the panel's words. `code` is M24b's and has no
-  /// word until the task that reads it.
-  func testViaIsFromTheTerminalOrFromDesktopChat() {
+  /// The record's three vias, in the panel's words. A fourth one, from a
+  /// gdoc this app has not met, has no word and the row drops the piece.
+  func testViaIsFromTheTerminalDesktopChatOrClaudeCode() {
     XCTAssertEqual(Words.via("terminal"), "from the terminal")
     XCTAssertEqual(Words.via("chat"), "from Desktop chat")
+    XCTAssertEqual(Words.via("code"), "from Claude Code")
     XCTAssertNil(Words.via(nil))
     XCTAssertNil(Words.via(""))
-    XCTAssertNil(Words.via("code"))
+    XCTAssertNil(Words.via("a_via_from_a_newer_gdoc"))
   }
 
   /// A read-back that confirmed the write, and one that did not. A false is

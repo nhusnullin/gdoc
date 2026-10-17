@@ -163,7 +163,9 @@ public enum Documents {
     var ended: Set<String> = []
 
     for event in ordered {
-      guard let doc = event.doc, !doc.isEmpty else { continue }
+      // A publish is handed no document and names the one it created, so
+      // the row it makes is under `made`: Fold.subject is that rule.
+      guard let doc = Fold.subject(event) else { continue }
       if event.kind == .end { ended.insert(event.pairing) }
       if event.kind == .held {
         held[event.hold ?? ""] = event

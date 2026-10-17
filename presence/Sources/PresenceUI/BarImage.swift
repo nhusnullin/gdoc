@@ -132,10 +132,25 @@ public enum BarImage {
   /// `.ring`'s `--stroke:1.25px` at the badge's size.
   public static let ringStroke: CGFloat = 1.25
 
-  /// How much of the ring is drawn, which is `.ring.wait`'s `--p:28` and the
-  /// panel's own indeterminate fraction: the record carries no steps, so
-  /// nothing here is a prediction. BarTests holds it to `RingView`'s.
+  /// How much of the ring is drawn where the run says nothing about where
+  /// it is, which is `.ring.wait`'s `--p:28` and the panel's own
+  /// indeterminate fraction. BarTests holds it to `RingView`'s.
   public static let ringFraction: Double = 0.28
+
+  /// How much of the badge's ring one job draws: the part it is on out of
+  /// the parts there are, and the indeterminate fraction for a run the
+  /// record names no part of. It is a place in a list and never a guess at
+  /// what is left, which is the same rule the panel's own ring follows.
+  public static func ringFraction(for progress: Double?) -> Double {
+    guard let progress else { return ringFraction }
+    return min(max(progress, 0), 1)
+  }
+
+  /// The fraction the bar turns at for one fold: the first running job that
+  /// says where it is. Nothing else in the panel moves the badge.
+  public static func ringProgress(now fold: NowFold) -> Double? {
+    fold.jobs.compactMap(\.progress).first
+  }
 
   /// What idle is drawn at. The mark stays there so the panel is reachable
   /// when nothing is happening; the vote's "nothing at all" waits for Nail.
@@ -192,9 +207,10 @@ public enum BarImage {
   /// Drawn once per state and kept: the item is set again on every refold,
   /// and the six images are the same six pictures every time.
   @MainActor
-  public static func image(for state: BarState) -> NSImage {
-    if let drawn = cache[state] { return drawn }
-    let renderer = ImageRenderer(content: BarGlyph(state: state))
+  public static func image(for state: BarState, progress: Double? = nil) -> NSImage {
+    let key = "\(state.rawValue)|\(ringFraction(for: progress))"
+    if let drawn = cache[key] { return drawn }
+    let renderer = ImageRenderer(content: BarGlyph(state: state, progress: progress))
     renderer.scale = 2
     let image: NSImage
     if let bitmap = renderer.cgImage {
@@ -207,7 +223,7 @@ public enum BarImage {
       image = NSImage(size: NSSize(width: height, height: height))
     }
     image.isTemplate = true
-    cache[state] = image
+    cache[key] = image
     return image
   }
 
@@ -223,7 +239,9 @@ public enum BarImage {
     scheme == .dark ? Swatch(0xFFFFFF, alpha8: 0xD9) : Swatch(0x000000, alpha8: 0xD9)
   }
 
-  @MainActor private static var cache: [BarState: NSImage] = [:]
+  /// The images drawn so far, by state and fraction. A job's badge is one
+  /// picture per step, which is four for a publish and never more.
+  @MainActor private static var cache: [String: NSImage] = [:]
 }
 
 /// The bar's image as a view: the mark, and the badge where there is one.
@@ -234,10 +252,13 @@ public enum BarImage {
 public struct BarGlyph: View {
   public let state: BarState
   public let ink: Color
+  /// Where the one running job is, for the badge that is a ring.
+  public let progress: Double?
 
-  public init(state: BarState, ink: Color = .black) {
+  public init(state: BarState, ink: Color = .black, progress: Double? = nil) {
     self.state = state
     self.ink = ink
+    self.progress = progress
   }
 
   public var body: some View {
@@ -246,7 +267,7 @@ public struct BarGlyph: View {
         .font(.system(size: BarImage.markSize, weight: .medium))
         .foregroundStyle(ink)
       if let badge = state.badge {
-        BarBadgeView(badge: badge, ink: ink)
+        BarBadgeView(badge: badge, ink: ink, progress: progress)
           .padding(.leading, BarImage.badgeGap)
       }
     }
@@ -260,6 +281,7 @@ public struct BarGlyph: View {
 struct BarBadgeView: View {
   let badge: BarBadge
   let ink: Color
+  var progress: Double?
 
   var body: some View {
     shape
@@ -295,8 +317,9 @@ struct BarBadgeView: View {
     }
   }
 
-  /// The ring at one fixed frame. The track is the same ink at a quarter, so
-  /// the image stays one colour.
+  /// The ring at the job's own step, or at one fixed frame where the record
+  /// names no step. The track is the same ink at a quarter, so the image
+  /// stays one colour.
   private var ring: some View {
     ZStack {
       Circle()
@@ -304,7 +327,7 @@ struct BarBadgeView: View {
         .stroke(ink.opacity(0.25), lineWidth: BarImage.ringStroke)
       Circle()
         .inset(by: BarImage.ringStroke / 2)
-        .trim(from: 0, to: BarImage.ringFraction)
+        .trim(from: 0, to: BarImage.ringFraction(for: progress))
         .stroke(ink, lineWidth: BarImage.ringStroke)
         .rotationEffect(.degrees(-90))
     }

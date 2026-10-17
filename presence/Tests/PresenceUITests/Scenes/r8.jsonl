@@ -1,5 +1,5 @@
 {"v":1,"at":"2026-10-17T09:03:10Z","gdoc":"v2.14.0","pid":7101,"run":"3000000000000001","call":1,"event":"start","command":"publish","via":"terminal"}
-{"v":1,"at":"2026-10-17T09:05:00Z","gdoc":"v2.14.0","pid":7101,"run":"3000000000000001","call":1,"event":"end","command":"publish","via":"terminal","ok":false,"ms":110000}
+{"v":1,"at":"2026-10-17T09:05:00Z","gdoc":"v2.14.0","pid":7101,"run":"3000000000000001","call":1,"event":"end","command":"publish","via":"terminal","ok":false,"stop":"svg_picture","line":41,"ms":110000}
 {"v":1,"at":"2026-10-17T10:11:30Z","gdoc":"v2.14.0","pid":7110,"run":"3000000000000002","call":1,"event":"start","command":"restyle","via":"terminal","doc":"1PbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRr"}
 {"v":1,"at":"2026-10-17T10:12:00Z","gdoc":"v2.14.0","pid":7110,"run":"3000000000000002","call":1,"event":"end","command":"restyle","via":"terminal","doc":"1PbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRr","title":"Partner bank setup","ok":true,"verified":true,"ms":30000}
 {"v":1,"at":"2026-10-17T11:37:40Z","gdoc":"v2.14.0","pid":7111,"run":"3000000000000003","call":1,"event":"start","command":"annotate","via":"terminal","doc":"1NwBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQq"}
@@ -16,7 +16,7 @@
 {"v":1,"at":"2026-10-17T14:10:40Z","gdoc":"v2.14.0","pid":7200,"run":"3000000000000008","call":1,"event":"end","command":"comments","via":"terminal","doc":"1Ch5AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp","wait":true,"ok":true,"ms":1790000}
 {"v":1,"at":"2026-10-17T14:10:50Z","gdoc":"v2.14.0","pid":7200,"run":"3000000000000009","call":1,"event":"start","command":"comments","via":"terminal","doc":"1Ch5AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp","wait":true}
 {"v":1,"at":"2026-10-17T14:29:00Z","gdoc":"v2.14.0","pid":7102,"run":"3000000000000014","call":1,"event":"start","command":"publish","via":"terminal"}
-{"v":1,"at":"2026-10-17T14:31:00Z","gdoc":"v2.14.0","pid":7102,"run":"3000000000000014","call":1,"event":"end","command":"publish","via":"terminal","ok":true,"verified":true,"ms":120000}
+{"v":1,"at":"2026-10-17T14:31:00Z","gdoc":"v2.14.0","pid":7102,"run":"3000000000000014","call":1,"event":"end","command":"publish","via":"terminal","made":"1Ch4BbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQq","title":"Chapter 4","ok":true,"verified":true,"ms":120000}
 {"v":1,"at":"2026-10-17T14:40:40Z","gdoc":"v2.14.0","pid":7200,"run":"3000000000000009","call":1,"event":"end","command":"comments","via":"terminal","doc":"1Ch5AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp","wait":true,"ok":true,"ms":1790000}
 {"v":1,"at":"2026-10-17T14:40:50Z","gdoc":"v2.14.0","pid":7200,"run":"3000000000000010","call":1,"event":"start","command":"comments","via":"terminal","doc":"1Ch5AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp","wait":true}
 {"v":1,"at":"2026-10-17T15:10:40Z","gdoc":"v2.14.0","pid":7200,"run":"3000000000000010","call":1,"event":"end","command":"comments","via":"terminal","doc":"1Ch5AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp","wait":true,"ok":true,"ms":1790000}
@@ -33,4 +33,4 @@
 {"v":1,"at":"2026-10-17T16:40:55Z","gdoc":"v2.14.0","pid":7300,"run":"3000000000000017","call":1,"event":"start","command":"reply","via":"terminal","doc":"1GcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSs"}
 {"v":1,"at":"2026-10-17T16:41:00Z","gdoc":"v2.14.0","pid":7300,"run":"3000000000000016","event":"landed","command":"reply","via":"chat","doc":"1GcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSs","hold":"h_1","rule":"Dictated"}
 {"v":1,"at":"2026-10-17T16:41:00Z","gdoc":"v2.14.0","pid":7300,"run":"3000000000000017","call":1,"event":"end","command":"reply","via":"terminal","doc":"1GcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSs","title":"Altery Group Channel Management Policy","ok":true,"verified":true,"ms":5000}
-{"v":1,"at":"2026-10-17T17:04:00Z","gdoc":"v2.14.0","pid":7200,"run":"3000000000000018","call":1,"event":"end","command":"comments","via":"terminal","doc":"1Ch5AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp","wait":true,"ok":false,"ms":1390000}
+{"v":1,"at":"2026-10-17T17:04:00Z","gdoc":"v2.14.0","pid":7200,"run":"3000000000000018","call":1,"event":"end","command":"comments","via":"terminal","doc":"1Ch5AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp","wait":true,"ok":false,"stop":"network","ms":1390000}

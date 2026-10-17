@@ -34,10 +34,11 @@ final class StatusItem: NSObject {
   var button: NSStatusBarButton? { item.button }
 
   /// The image for a state, and the tooltip under it. The dimming of idle is
-  /// inside the image, so nothing here touches the button's own opacity.
-  func show(_ state: BarState) {
+  /// inside the image, so nothing here touches the button's own opacity. A
+  /// job's ring is drawn at the step the run is on, where it says one.
+  func show(_ state: BarState, progress: Double? = nil) {
     guard let button = item.button else { return }
-    button.image = BarImage.image(for: state)
+    button.image = BarImage.image(for: state, progress: progress)
     button.toolTip = BarImage.tooltip(for: state)
   }
 

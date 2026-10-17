@@ -13,9 +13,10 @@
 //     here says when a job finishes, how much of it is still to come, or how
 //     long a hold has before it runs out: a hold's own deadline is a moment,
 //     written as a moment.
-//   - A command with no word here has no word at all. `via: code` is M24b's
-//     field and `read` is not a write, so both answer nil rather than a
-//     guess, and the row that asked drops the piece.
+//   - A word this file does not have is no word at all. `read` is not a
+//     write and a stop code from a newer gdoc is a word this version has
+//     never seen, so both answer nil rather than a guess, and the row that
+//     asked drops the piece.
 //
 // WordsTests holds each of them.
 
@@ -65,11 +66,63 @@ public enum Words {
     "export": "Exporting",
   ]
 
-  /// The two vias the record writes today, in the panel's words.
+  /// The three vias the record writes, in the panel's words.
   public static let vias: [String: String] = [
     "terminal": "from the terminal",
     "chat": "from Desktop chat",
+    "code": "from Claude Code",
   ]
+
+  /// The four parts of a publish, in the order gdoc takes them and in the
+  /// three tenses a step row is read in: what happened, what is happening,
+  /// and what has not happened yet. The words are the screens file's own
+  /// rows of scene r1.
+  ///
+  /// The list is in order because a step row is drawn for every part and not
+  /// only for the parts the record has named: it is the list, and not the
+  /// line, that says how many rows there are.
+  public static let steps: [Step] = [
+    Step(
+      name: "build", waiting: "Build the docx", running: "Building the docx",
+      done: "Built the docx"),
+    Step(name: "upload", waiting: "Upload", running: "Uploading", done: "Uploaded"),
+    Step(name: "read_back", waiting: "Read it back", running: "Reading back", done: "Read back"),
+    Step(
+      name: "link", waiting: "Link into the note", running: "Linking into the note",
+      done: "Linked into the note"),
+  ]
+
+  /// Why a run stopped, one word for each of six of gdoc's seven codes. A
+  /// code this version has not heard of has no word at all: the panel says
+  /// where the reason is rather than guessing at one.
+  ///
+  /// The seventh code is `other`, and it is left out on purpose. It is gdoc
+  /// saying that nothing it knows about matched, and a panel that turned
+  /// that into "something went wrong" would be saying more than the record.
+  public static let stops: [String: String] = [
+    "svg_picture": "SVG picture",
+    "multi_tab": "more than one tab",
+    "not_found": "not found",
+    "auth": "sign-in refused",
+    "network": "network",
+    "refused": "refused by the guard",
+  ]
+
+  /// One part of a publish: gdoc's own word for it, and the three tenses a
+  /// step row is read in.
+  public struct Step: Equatable, Sendable {
+    public let name: String
+    public let waiting: String
+    public let running: String
+    public let done: String
+
+    public init(name: String, waiting: String, running: String, done: String) {
+      self.name = name
+      self.waiting = waiting
+      self.running = running
+      self.done = done
+    }
+  }
 
   /// How many days back a weekday still names one day. A weekday seven days
   /// back names two, so that is where the date starts.
@@ -93,6 +146,20 @@ public enum Words {
   public static func via(_ value: String?) -> String? {
     guard let value, let found = vias[value] else { return nil }
     return found
+  }
+
+  /// Why a run stopped, as the panel writes it inside a line: the word for
+  /// the code, and the line of the note where the cause has one.
+  public static func cause(_ code: String?, line: Int? = nil) -> String? {
+    guard let code, let word = stops[code] else { return nil }
+    guard let line else { return word }
+    return "\(word) at line \(line)"
+  }
+
+  /// The same, opening a sentence.
+  public static func opening(_ text: String) -> String {
+    guard let first = text.first else { return text }
+    return text.replacingCharacters(in: ...text.startIndex, with: String(first).uppercased())
   }
 
   /// What a read-back came to. A false is a hollow check and not a failure:

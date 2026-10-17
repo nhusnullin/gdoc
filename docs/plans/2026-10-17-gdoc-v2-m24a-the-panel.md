@@ -506,15 +506,15 @@ every box is ticked and its commit is on the branch.
 **Files:**
 - Modify: `presence/Sources/PresenceCore/Fold.swift`, `Now.swift`, `LiveSession.swift`, `presence/Sources/PresenceUI/Words.swift`, `JobCard.swift`, `StuckCard.swift`, `PanelModel.swift`, the scene fixtures, `RenderTests.swift`
 
-- [ ] this task starts only after `main` with M24b is merged into this branch
+- [x] this task starts only after `main` with M24b is merged into this branch
       and `make app-test` is green on the merge; it says so in its commit
-- [ ] `testADroppedHoldEndsTheCard`, `testAPublishedRowTakesItsIdFromMade`,
+- [x] `testADroppedHoldEndsTheCard`, `testAPublishedRowTakesItsIdFromMade`,
       `testTheStuckReasonIsTheCodesWordsAndTheLine`,
       `testStepEventsDriveTheJobCardAndTheBarRing`,
       `testViaCodeReadsFromClaudeCode`, `testAnInterruptedWaitIsLiveStoppedByYou`;
       scenes r1, r2, r3, r8, r9, e6 and e9 re-fixtured on the new fields and
       re-rendered; the reviewer's pass run again over the changed scenes
-- [ ] `make app-lint`, `make app-test`, `make app`
+- [x] `make app-lint`, `make app-test`, `make app`
 
 ### Task 26: the acceptance rows and the close
 

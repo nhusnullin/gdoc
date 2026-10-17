@@ -10,13 +10,14 @@
 // stand-ins, of the same lengths, because the firm's documents stay out of
 // this tree.
 //
-// Five scenes draw a fallback rather than what the screens show, because
-// the v1 record does not carry the field: r1 has no title for a publish and
-// no steps, r2 and the other stuck cards have no cause, r8's failed poll has
-// no reason, e6's gone document has no field saying so, and e9's card comes
-// from `auth status` alone. M24b adds the five fields and Task 25 puts them
-// into these same scenes. Scene e4 is not built at all: releasing a hold
-// without writing is in the specification's "what is not built".
+// Two things the screens draw are still not in a scene, because the record
+// does not carry them and this milestone did not add them: a document in
+// the trash, which e6 draws as an ordinary row, and the counts beside a
+// publish's steps, which the specification put on the list of what is never
+// written down. Everything else the screens show is a field: M24b's `made`,
+// `step`, `stop`, `line`, `via: code` and `interrupted` reach these scenes.
+// Scene e4 is not built at all: releasing a hold without writing is in the
+// specification's "what is not built".
 
 import Foundation
 import PresenceCore
@@ -51,6 +52,7 @@ struct Scene {
 /// The document ids and their titles, which are the screens file's
 /// stand-ins at the same lengths.
 enum SceneDocuments {
+  static let chapter4 = "1Ch4BbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQq"
   static let chapter5 = "1Ch5AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp"
   static let northwind = "1NwBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQq"
   static let partner = "1PbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRr"
@@ -61,6 +63,7 @@ enum SceneDocuments {
   /// The hub index: a document, and the note paired with it. Northwind and
   /// Partner bank are in no note, which is what greys their md icon.
   static let pairing: [String: String] = [
+    chapter4: "falcon/chapters/04.md",
     chapter5: "falcon/chapters/05.md",
     policy: "05-rules/group-channel.md",
     concept: "falcon/b2b2c-concept.md",
@@ -110,22 +113,26 @@ enum Scenes {
     Scene(
       id: "r1", title: "Publishing Chapter 4",
       caption:
-        "A publish is running. The v1 record names no document for a publish, so the card "
-        + "is the ring and the word, with no title and no steps.",
+        "A publish is running. The steps are the record's own four, the one written last "
+        + "is the one running, and the ring is its place in the list. Nothing beside a "
+        + "step says how much it is: gdoc writes no counts and the panel invents none. "
+        + "DOCUMENTS is empty because a publish has no document until it creates one.",
       fixture: "r1", moment: "2026-10-17T09:04:00Z", alive: [7101],
       facts: machine(), ui: UIState(), appearance: nil),
     Scene(
       id: "r2", title: "The publish stopped",
       caption:
-        "The write failed. The v1 record carries no cause, so the reason names the moment "
-        + "and where the reason is, in one sentence under eighty characters.",
+        "The write failed. The reason is the cause with its place first and the state of "
+        + "the world second, in one sentence under eighty characters, out of the record's "
+        + "own stop code and the line it names.",
       fixture: "r2", moment: "2026-10-17T09:05:30Z", alive: [],
       facts: machine(), ui: UIState(), appearance: nil),
     Scene(
       id: "r3", title: "A comment and a reply, both read back",
       caption:
-        "Two writes landed and were verified. The stuck card stays until the publish is "
-        + "run again, and Copy link on the first row is a second into its green check.",
+        "Two writes landed and were verified, the comment from Claude Code and the reply "
+        + "from the terminal. The stuck card stays until the publish is run again, and "
+        + "Copy link on the first row is a second into its green check.",
       fixture: "r3", moment: "2026-10-17T11:40:30Z", alive: [],
       facts: machine(), ui: UIState(copied: SceneDocuments.chapter5), appearance: nil),
     Scene(
@@ -162,8 +169,9 @@ enum Scenes {
     Scene(
       id: "r8", title: "Google did not answer",
       caption:
-        "The last poll failed. The record says that it failed and not why, so the row "
-        + "says the moment alone; HEALTH carries what the machine knows.",
+        "The last poll failed, and the record says what kind of trouble it was in one "
+        + "word. The row says the moment and that word; HEALTH carries what the machine "
+        + "knows about the network itself.",
       fixture: "r8", moment: "2026-10-17T17:05:00Z", alive: [],
       facts: machine(
         latestStable: "v2.15.0",
@@ -173,8 +181,10 @@ enum Scenes {
     Scene(
       id: "r9", title: "You stopped the watch",
       caption:
-        "Nothing is running, so NOW is not drawn at all. The day's log is behind Show "
-        + "more and yesterday is one row.",
+        "Nothing is running, so NOW is not drawn at all. The watch says you stopped it, "
+        + "because the wait's end said so, and the publish of 14:31 is a document because "
+        + "its end named the one it created. The day's log is behind Show more and "
+        + "yesterday is one row.",
       fixture: "r9", moment: "2026-10-17T18:59:00Z", alive: [],
       facts: machine(), ui: UIState(), appearance: nil),
     Scene(
@@ -212,8 +222,8 @@ enum Scenes {
       id: "e6", title: "Icons with nothing to open, and the first hint",
       caption:
         "An unpaired document greys its note icon and says why. The strip of four labels "
-        + "is shown once under the first row. A document in the trash keeps its row; the "
-        + "v1 record cannot say it is gone, so it is not struck through yet.",
+        + "is shown once under the first row. A document in the trash keeps its row: no "
+        + "field says it is gone, so it is not struck through.",
       fixture: "e6", moment: "2026-10-17T11:00:00Z", alive: [],
       facts: machine(),
       ui: UIState(
@@ -232,8 +242,9 @@ enum Scenes {
     Scene(
       id: "e9", title: "The sign-in expired in the middle of a watch",
       caption:
-        "The card comes from `auth status` and not from the record. The watch is not "
-        + "killed: after a sign-in it carries on from the same cursor.",
+        "The card comes from `auth status` and not from the record. The watch is paused "
+        + "and not broken, which is what its last poll's own code says, and after a "
+        + "sign-in it carries on from the same cursor.",
       fixture: "e9", moment: "2026-10-17T15:30:00Z", alive: [],
       facts: machine(auth: .needsSignIn), ui: UIState(), appearance: nil),
     Scene(

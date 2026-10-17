@@ -16,8 +16,10 @@
 //     the session. A write that failed answered nobody and is not counted.
 //   - the last write's time, which is what quiet is measured from. With no
 //     write, the watch has been quiet since it began.
-//   - whether the last poll failed, with the moment it did. Why it failed is
-//     not here: the record carries no reason and the panel may not guess one.
+//   - whether the last poll failed, with the moment it did and gdoc's own
+//     word for why, which is one of seven codes and never a sentence.
+//   - whether a person stopped the last poll, which its end says and nothing
+//     else in the record does.
 //   - the wait in flight, if there is one, because that pid is the only thing
 //     Stop can signal. Between two polls a session is open and has no pid.
 //
@@ -51,6 +53,13 @@ public struct LiveSession: Sendable, Equatable {
   public let lastWrite: Date?
   /// When the last poll failed, where it did.
   public let lastPollFailed: Date?
+  /// Why it failed, in gdoc's own word for it. The record carries one of
+  /// seven codes and no sentence, and this app keeps the word it wrote.
+  public let lastPollStop: String?
+  /// A person stopped the last poll. `comments` says so on its end, and it
+  /// is the one way the panel can tell a watch somebody ended from a watch
+  /// whose process went away.
+  public let stoppedByYou: Bool
   public let flight: Flight?
 
   public var isOpen: Bool { ended == nil }
@@ -97,6 +106,8 @@ public enum Live {
     let started: Date
     var ended: Date?
     var ok: Bool?
+    var stop: String?
+    var interrupted = false
 
     /// When the next poll's gap is measured from: this one's end, or its
     /// start while it is still in flight.
@@ -125,6 +136,8 @@ public enum Live {
         guard let at = polls[event.pairing] else { continue }
         found[at].ended = event.at
         found[at].ok = event.ok ?? false
+        found[at].stop = event.stop
+        found[at].interrupted = event.interrupted
       case .step, .held, .released, .expired, .landed, .dropped:
         continue
       }
@@ -183,6 +196,8 @@ public enum Live {
       proposed: mine.filter { $0.command == "propose" }.count,
       lastWrite: mine.filter { Now.stuckCommands.contains($0.command ?? "") }.map(\.at).max(),
       lastPollFailed: last.ok == false ? last.ended : nil,
+      lastPollStop: last.ok == false ? last.stop : nil,
+      stoppedByYou: last.interrupted,
       flight: flight)
   }
 }
