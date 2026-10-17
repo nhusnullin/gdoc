@@ -282,6 +282,15 @@ this order:
   the ones that came back false. `verified: false` is not a failed publish. The
   document exists. A route that did not hold is a route that did not hold, and
   saying the run failed is how a second document gets made.
+- **`headings_without_id`.** How many headings came back from the read with no
+  heading id. It is a fact beside the checks, not one of them. `0` is the
+  answer that says Drive's import kept the ids, so once somebody refreshes the
+  contents list each entry opens the heading it names. Any other number means
+  those entries will land on the first page instead. Say the count and the
+  warning, and stop there: no Docs request can give a published document the
+  ids it came back without, so this is never a reason to publish again on your
+  own. A fresh publish from the note is what fixes it, and that is the author's
+  call to make, because it creates a second document.
 - **`marked`.** Whether `publish` put its marker over the cover. It is not one
   of the checks, and `false` is not a failed publish. Say the warning, which
   names why, and say that a restyle of this document would restyle its cover.
@@ -315,7 +324,10 @@ The binary cannot see a rendered page. After a publish that produced a document,
 say these three, as things to look at:
 
 - the Altery logo in the first-page header,
-- the contents list, which Docs fills in when the document is opened,
+- the contents list, which Docs fills in when the document is opened. Somebody
+  has to refresh it in the Docs UI, because no API request builds or refreshes
+  one. After that refresh each entry opens the heading it names, which is what
+  `headings_without_id: 0` says the import kept the ids for,
 - the page numbers in the footer.
 
 Those are facts about the document gdoc just made, and you are the one who
@@ -341,6 +353,9 @@ judges them. The session never claims them itself.
 - Never trust a status code. Read `verified` and `checks`.
 - Never say a publish failed because `verified` is false. Say which route did
   not hold.
+- Never publish again to repair a `headings_without_id` that is not zero. The
+  document that exists cannot be given those ids, and a second run is a second
+  document. Say the count and let the author decide.
 - Never delete anything from Drive, except through the rollback gdoc did
   itself, which it reports.
 - Never export a PDF. You download it from the browser.

@@ -212,14 +212,20 @@ in the test folder.
 - Modify: `skills/gdoc-publish/SKILL.md`
 - Modify: `go/cmd/gdoc/doc.go` or the command table, if `publish` gains a note
 
-- [ ] in `docs/guide/publishing.md`, the contents paragraph says that after the
+- [x] in `docs/guide/publishing.md`, the contents paragraph says that after the
       refresh each entry opens its heading, and names `headings_without_id` as
-      the read-back fact that says the import kept the ids
-- [ ] in `skills/gdoc-publish/SKILL.md`, the line about the contents list says
+      the read-back fact that says the import kept the ids. The anchor
+      paragraph's retired claim, that only a linked heading carries the landing
+      mark, is rewritten too, and the read-back section gains the field and the
+      paragraph saying it is a fact and not a check
+- [x] in `skills/gdoc-publish/SKILL.md`, the line about the contents list says
       the same, and the skill reads `headings_without_id` as a reason to stop
-      and say so rather than to retry
-- [ ] run `make test`, because the embedded skill core and the task map are
-      pinned
+      and say so rather than to retry, in Step 3 and once more under Never
+- [x] run `make test`, because the embedded skill core and the task map are
+      pinned. `make vet` and every package pass; `internal/live`'s
+      `TestLiveRestylePreservesTenFeatures` refuses for a missing
+      `GDOC_LIVE_IDEAL_DOC_ID`, which is the environment and not this change.
+      `go/cmd/gdoc` needed nothing: the command table carries no report fields
 
 ### Task 7: Verify acceptance criteria
 
