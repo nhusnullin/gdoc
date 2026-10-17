@@ -135,6 +135,38 @@ final class HubIndexTests: XCTestCase {
       HubIndex.noteURL(hub: hub, relative: "notes/supplier register.txt").fault, .notMarkdown)
   }
 
+  /// A dot folder is somebody's machinery and is skipped whole. A dot file
+  /// is one file: Finder drops `.DS_Store` into every folder a person opens,
+  /// and it sorts before the letters, so skipping the rest of the folder
+  /// after one would hide most of a vault.
+  func testADotFileHidesNothingAndADotFolderIsSkippedWhole() throws {
+    let hub = try temporaryHub()
+    try note(in: hub, at: "notes/supplier-register.md", id: Self.supplier)
+    try note(in: hub, at: ".obsidian/plugins/cached-note.md", id: Self.treasury)
+    try dotFile(in: hub, at: "notes/.DS_Store")
+
+    let index = HubIndex.scan(hub: hub)
+
+    XCTAssertEqual(
+      index.notes[Self.supplier], "notes/supplier-register.md",
+      "a .DS_Store beside a note hides nothing: it is one file, not a folder")
+    XCTAssertNil(index.notes[Self.treasury], "a note inside a dot folder is not the hub's")
+  }
+
+  /// The watcher is handed to a C stream that calls back on a queue of its
+  /// own, so the stream holds it up: a callback already in flight never
+  /// lands on memory the owner freed.
+  func testTheStreamHoldsTheWatcherUpWhileItRuns() throws {
+    let hub = try temporaryHub()
+    var strong: HubWatcher? = HubWatcher(hub: hub, debounce: 0.1) {}
+    weak var seen = strong
+    strong?.start()
+
+    strong = nil
+    let held = try XCTUnwrap(seen, "the running stream holds the watcher up")
+    held.stop()
+  }
+
   // MARK: a hub of this test's own
 
   private func temporaryHub() throws -> String {
@@ -148,6 +180,13 @@ final class HubIndexTests: XCTestCase {
     // Resolved, because a temporary directory on this machine is reached
     // through a symlink and the paths under test are compared whole.
     return base.resolvingSymlinksInPath().path
+  }
+
+  private func dotFile(in hub: String, at relative: String) throws {
+    let url = URL(fileURLWithPath: hub).appendingPathComponent(relative)
+    try FileManager.default.createDirectory(
+      at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+    try Data("\0\u{1}".utf8).write(to: url)
   }
 
   private func note(in hub: String, at relative: String, id: String) throws {

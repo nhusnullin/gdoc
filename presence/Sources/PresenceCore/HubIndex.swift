@@ -81,8 +81,14 @@ public struct HubIndex: Sendable, Equatable {
     var found: [String: String] = [:]
     for case let relative as String in walker {
       // A dot folder is somebody's own machinery: .obsidian, .git, .trash.
+      // The whole folder goes, and only a folder: skipDescendants on a plain
+      // file abandons the rest of the folder the file is in, and Finder
+      // leaves a .DS_Store in every folder a person has opened, sorted
+      // before the letters.
       if relative.split(separator: "/").contains(where: { $0.hasPrefix(".") }) {
-        walker.skipDescendants()
+        if (walker.fileAttributes?[.type] as? FileAttributeType) == .typeDirectory {
+          walker.skipDescendants()
+        }
         continue
       }
       guard relative.lowercased().hasSuffix(".md") else { continue }
@@ -286,9 +292,17 @@ public final class HubWatcher: @unchecked Sendable {
     defer { lock.unlock() }
     guard stream == nil else { return }
 
+    // Retained, and released by the stream: the callback arrives on a queue
+    // of its own, so the stream holds the watcher up rather than trusting
+    // that whoever made it is still there. `stop` is what lets it go.
+    let held = Unmanaged.passRetained(self)
     var context = FSEventStreamContext(
-      version: 0, info: Unmanaged.passUnretained(self).toOpaque(),
-      retain: nil, release: nil, copyDescription: nil)
+      version: 0, info: held.toOpaque(),
+      retain: nil,
+      release: { info in
+        guard let info else { return }
+        Unmanaged<HubWatcher>.fromOpaque(info).release()
+      }, copyDescription: nil)
     let callback: FSEventStreamCallback = { _, info, _, _, _, _ in
       guard let info else { return }
       Unmanaged<HubWatcher>.fromOpaque(info).takeUnretainedValue().changed()
@@ -299,7 +313,11 @@ public final class HubWatcher: @unchecked Sendable {
         FSEventStreamEventId(kFSEventStreamEventIdSinceNow), debounce / 2,
         FSEventStreamCreateFlags(
           kFSEventStreamCreateFlagFileEvents | kFSEventStreamCreateFlagNoDefer))
-    else { return }
+    else {
+      // Nothing was made, so nothing will ever call the release above.
+      held.release()
+      return
+    }
     FSEventStreamSetDispatchQueue(made, queue)
     FSEventStreamStart(made)
     stream = made
@@ -314,11 +332,21 @@ public final class HubWatcher: @unchecked Sendable {
     lock.unlock()
     guard let made else { return }
     FSEventStreamStop(made)
+    // Off the queue first, so no further callback is scheduled, and then a
+    // barrier on that queue, so one already running has finished before the
+    // release below drops what may be the last reference to this watcher.
+    // Nothing dispatched on that queue calls back into `stop`, so the
+    // barrier cannot wait on itself.
+    FSEventStreamSetDispatchQueue(made, nil)
     FSEventStreamInvalidate(made)
+    queue.sync {}
     FSEventStreamRelease(made)
   }
 
-  deinit { stop() }
+  // There is no `deinit` that stops: while a stream is up it holds this
+  // watcher, so a `deinit` could only run after `stop` already ran. A
+  // watcher nobody stops keeps its stream, which is a leak of one object
+  // and not a callback into freed memory.
 
   private func changed() {
     lock.lock()
