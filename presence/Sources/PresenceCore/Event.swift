@@ -63,6 +63,10 @@ public struct Event: Sendable, Equatable {
   public let via: String?
   public let doc: String?
   public let wait: Bool
+  /// Whether a person stopped this wait, on the end of a `comments --wait` and
+  /// nowhere else. A wait that ran to its deadline carries nothing, so this is
+  /// false for every line that says nothing about stopping.
+  public let interrupted: Bool
   /// Which part of a run is beginning, on a step line and nowhere else. It is
   /// one of gdoc's four fixed words for the parts of a publish, and a word
   /// this version has not heard of is still the word gdoc wrote.
@@ -93,7 +97,7 @@ public struct Event: Sendable, Equatable {
 
   public init(
     schema: Int, at: Date, gdoc: String?, pid: Int32, run: String, call: Int64?, kind: EventKind,
-    command: String?, via: String?, doc: String?, wait: Bool,
+    command: String?, via: String?, doc: String?, wait: Bool, interrupted: Bool = false,
     step: String? = nil, index: Int? = nil, count: Int? = nil, title: String?,
     made: String? = nil, ok: Bool?,
     verified: Bool?, stop: String? = nil, line: Int? = nil,
@@ -110,6 +114,7 @@ public struct Event: Sendable, Equatable {
     self.via = via
     self.doc = doc
     self.wait = wait
+    self.interrupted = interrupted
     self.step = step
     self.index = index
     self.count = count
@@ -193,6 +198,7 @@ private struct Wire: Decodable {
   var via: String?
   var doc: String?
   var wait: Bool?
+  var interrupted: Bool?
   var step: String?
   var index: Int?
   var count: Int?
@@ -240,6 +246,7 @@ private struct Wire: Decodable {
     return Event(
       schema: v, at: when, gdoc: gdoc, pid: pid, run: run, call: call, kind: kind,
       command: command, via: via, doc: doc, wait: wait ?? false,
+      interrupted: interrupted ?? false,
       step: step, index: index, count: count, title: title, made: made,
       ok: ok, verified: verified, stop: stop, line: line, ms: ms, hold: hold, rule: rule,
       until: ran)

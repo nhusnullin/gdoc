@@ -242,13 +242,26 @@ box is ticked and its commit is on the branch.
 **Files:**
 - Modify: `go/internal/presence/event.go`, `doc.go`, `go/cmd/gdoc/main.go`, `go/cmd/gdoc/mcp.go` (chat wins over code), the two fixtures, `Event.swift`, `EventTests.swift`, `LogTailTests.swift`, `docs/v2/MEASURED.md`
 
-- [ ] measure and record whether Claude Code sets `CLAUDECODE` in a child's
-      environment (run a one-line `env` through the Bash tool of a Claude Code
-      session and write the answer down); `TestViaIsCodeUnderClaudeCode`,
-      `TestViaChatWinsOverCodeInTheMcpSession`,
+- [x] measured and recorded: Claude Code's Bash tool hands a child
+      `CLAUDECODE=1`, beside a dozen `CLAUDE_CODE_*` variables including an
+      email and two token-shaped ones, which is why `CLAUDECODE` is the one
+      gdoc reads. The section and its method are in `docs/v2/MEASURED.md`,
+      "What Claude Code puts in a child's environment".
+      `TestViaIsCodeUnderClaudeCode`, `TestViaChatWinsOverCodeInTheMcpSession`,
       `TestAnInterruptedWaitSaysSo` (from `data.waited.interrupted`); Swift:
-      `testViaCodeAndInterruptedDecode`
-- [ ] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make app-test`
+      `testViaCodeAndInterruptedDecode`. Five more boxes the work asked for:
+      any value of the variable counts and not the literal `1`, because the
+      variable is Claude Code's own; `presence.WithCode` leaves a context the
+      chat session marked alone, so the mcp session needs no new line and
+      `TestChatWinsOverCode` states the rule over the context itself;
+      `cmd/gdoc` reads the environment and `internal/presence` still reads
+      none, so the record stays a file and a clock; `recording(t)` clears the
+      variable, because the suite is run from a Claude Code session and what a
+      run records may not depend on who started the test; and
+      `TestAStoppedWaitsEndSaysSo` over a real `comments --wait` somebody
+      stopped, because the word is lifted from the command's own answer and
+      nothing else in the binary knows a wait ended early
+- [x] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make app-test`
 
 ### Task 8: the words
 

@@ -12,7 +12,7 @@ import XCTest
 final class EventTests: XCTestCase {
   func testAVersionOneLineDecodesAndAnUnknownFieldIsIgnored() throws {
     let lines = try Fixture.lines("events-v1")
-    XCTAssertEqual(lines.count, 21, "the shared fixture is twenty-one records")
+    XCTAssertEqual(lines.count, 23, "the shared fixture is twenty-three records")
 
     let widened = try withUnknownField(lines[0])
     let event = try Event.decode(widened)
@@ -53,7 +53,7 @@ final class EventTests: XCTestCase {
       kinds,
       [
         .start, .end, .start, .end, .held, .released, .expired, .landed, .dropped, .start, .end,
-        .start, .end, .start, .end, .start, .step, .step, .step, .step, .end,
+        .start, .end, .start, .end, .start, .step, .step, .step, .step, .end, .start, .end,
       ]
     )
   }
@@ -220,6 +220,40 @@ final class EventTests: XCTestCase {
 
     let released = try Fixture.lines("events-v1")[5]
     XCTAssertThrowsError(try Event.decode(try without("hold", released)))
+  }
+
+  // Who ran a command is one of gdoc's three words, and a run Claude Code
+  // started says code. The wait that run was watching was stopped by a person,
+  // which its end says and no other line does: a wait that ran to its deadline
+  // writes nothing there, so the app has a fact and never a flag with two
+  // values.
+  func testViaCodeAndInterruptedDecode() throws {
+    let lines = try Fixture.lines("events-v1")
+
+    let start = try Event.decode(lines[21])
+    XCTAssertEqual(start.kind, .start)
+    XCTAssertEqual(start.command, "comments")
+    XCTAssertEqual(start.via, "code")
+    XCTAssertTrue(start.wait)
+    XCTAssertFalse(start.interrupted, "a run that has begun has not been stopped")
+
+    let end = try Event.decode(lines[22])
+    XCTAssertEqual(end.kind, .end)
+    XCTAssertEqual(end.via, "code")
+    XCTAssertTrue(end.interrupted)
+    XCTAssertEqual(end.ok, true, "a wait a person stopped is still an answer")
+
+    for index in 0..<lines.count where index != 22 {
+      XCTAssertFalse(
+        try Event.decode(lines[index]).interrupted, "line \(index) says a person stopped it")
+    }
+
+    // The three words are gdoc's, and a word this version has not heard of is
+    // kept as the word gdoc wrote: nothing here guesses at what it means.
+    XCTAssertEqual(
+      Set(try lines.compactMap { try Event.decode($0).via }), ["terminal", "chat", "code"])
+    let unknown = lines[21].replacingOccurrences(of: "\"via\":\"code\"", with: "\"via\":\"cron\"")
+    XCTAssertEqual(try Event.decode(unknown).via, "cron")
   }
 
   /// One key nobody has heard of, in front of every key that matters, so the

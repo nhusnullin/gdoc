@@ -127,8 +127,8 @@ func TestOffTouchesNothing(t *testing.T) {
 func TestTheEventCarriesOnlyItsListedFields(t *testing.T) {
 	want := []string{
 		"v", "at", "gdoc", "pid", "run", "call", "event", "command", "via",
-		"doc", "wait", "step", "index", "count", "title", "made", "ok",
-		"verified", "stop", "line", "ms", "hold", "rule", "until",
+		"doc", "wait", "interrupted", "step", "index", "count", "title", "made",
+		"ok", "verified", "stop", "line", "ms", "hold", "rule", "until",
 	}
 	var got []string
 	ty := reflect.TypeOf(Event{})
@@ -606,7 +606,7 @@ func TestTheFixtureIsWhatTheWriterWrites(t *testing.T) {
 		return when
 	}
 	elapsed := []time.Duration{540 * time.Second, 1200 * time.Millisecond, 0, 9300 * time.Millisecond,
-		3100 * time.Millisecond, 4800 * time.Millisecond}
+		3100 * time.Millisecond, 4800 * time.Millisecond, 12 * time.Second}
 	since = func(time.Time) time.Duration {
 		d := elapsed[0]
 		elapsed = elapsed[1:]
@@ -650,6 +650,15 @@ func TestTheFixtureIsWhatTheWriterWrites(t *testing.T) {
 	}
 	stepped.End(emit.Result{OK: true, Data: map[string]any{"title": "Supplier register", "verified": true}, Version: version})
 
+	// And the run a person was watching from Claude Code and stopped by hand:
+	// the via the environment named, and the one word the wait's own answer
+	// puts on the end.
+	stopped := Begin(WithCode(ctx), true, version, "comments", docID, true, false, errOut)
+	stopped.End(emit.Result{OK: true, Version: version, Data: map[string]any{
+		"title":  "Supplier register",
+		"waited": map[string]any{"polls": 6, "seconds": 12, "interrupted": true},
+	}})
+
 	if errOut.Len() != 0 {
 		t.Fatalf("stderr: %q", errOut.String())
 	}
@@ -663,5 +672,81 @@ func TestTheFixtureIsWhatTheWriterWrites(t *testing.T) {
 	}
 	if !bytes.Equal(got, want) {
 		t.Fatalf("the writer wrote\n%s\nand testdata/events-v1.jsonl holds\n%s", got, want)
+	}
+}
+
+// A wait a person stopped says so on its end, and no other end does.
+//
+// The word comes out of the command's own data, where `comments --wait` wrote
+// it, the way the title and the verified do. A wait that ran to its deadline
+// says nothing, because false is not a fact a panel has anything to draw; a
+// listing that never waited has no waited at all; and a waited that is not an
+// object, or an interrupted that is not a bool, is not this field.
+func TestAnInterruptedWaitSaysSo(t *testing.T) {
+	dir, errOut := scene(t)
+	ctx := context.Background()
+
+	waited := func(interrupted bool) map[string]any {
+		return map[string]any{
+			"title":  "Supplier register",
+			"waited": map[string]any{"polls": 3, "seconds": 6, "interrupted": interrupted},
+		}
+	}
+	for _, data := range []map[string]any{
+		waited(true),
+		waited(false),
+		{"title": "Supplier register"},
+		{"waited": "the person stopped it"},
+		{"waited": map[string]any{"interrupted": "yes"}},
+	} {
+		Begin(ctx, true, version, "comments", docID, true, false, errOut).
+			End(emit.Result{OK: true, Data: data})
+	}
+
+	ends := endsOf(decoded(t, dir, "2026-10.jsonl"))
+	if len(ends) != 5 {
+		t.Fatalf("got %d ends: %+v", len(ends), ends)
+	}
+	if !ends[0].Interrupted {
+		t.Errorf("the wait the person stopped says nothing: %+v", ends[0])
+	}
+	for i, e := range ends[1:] {
+		if e.Interrupted {
+			t.Errorf("end %d says a person stopped it: %+v", i+1, e)
+		}
+	}
+	// And the word is in the line as the one bool it is, beside the title the
+	// same data carried.
+	first := written(t, dir, "2026-10.jsonl")[1]
+	if !strings.Contains(first, `"interrupted":true`) {
+		t.Errorf("the end reads %s", first)
+	}
+	for _, line := range written(t, dir, "2026-10.jsonl")[2:] {
+		if strings.Contains(line, "interrupted") {
+			t.Errorf("a line that stopped nothing reads %s", line)
+		}
+	}
+}
+
+// Chat wins over Claude Code, because a tool call of a chat session is a chat
+// call whatever started the process: the mark the session put on its context
+// is never taken off it. cmd/gdoc's TestViaChatWinsOverCodeInTheMcpSession is
+// the same rule over the session itself.
+func TestChatWinsOverCode(t *testing.T) {
+	ctx := context.Background()
+	for _, c := range []struct {
+		name string
+		ctx  context.Context
+		want string
+	}{
+		{"nobody marked it", ctx, viaTerminal},
+		{"Claude Code", WithCode(ctx), viaCode},
+		{"a chat session", WithChat(ctx), viaChat},
+		{"a chat session under Claude Code", WithCode(WithChat(ctx)), viaChat},
+		{"Claude Code under a chat session", WithChat(WithCode(ctx)), viaChat},
+	} {
+		if got := viaOf(c.ctx); got != c.want {
+			t.Errorf("%s is via %q, want %q", c.name, got, c.want)
+		}
 	}
 }

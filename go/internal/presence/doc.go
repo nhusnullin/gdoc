@@ -78,6 +78,23 @@
 // them, and cmd/gdoc's TestAHeldWriteRecordsTheRuleAndNoneOfItsWords looks for
 // them in the line a real held write wrote.
 //
+// via is who ran the command, in three words: terminal is a person typing,
+// chat is a tool call of gdoc mcp, and code is the binary run by Claude Code's
+// own tool. The first two are a mark on the context, and the third is one
+// environment variable cmd/gdoc reads once, in dispatch, because this package
+// is a file and a clock and reads no environment of its own. chat wins over
+// code, because a tool call of a chat session is a chat call whatever started
+// the process: TestChatWinsOverCode, with cmd/gdoc's
+// TestViaIsCodeUnderClaudeCode and TestViaChatWinsOverCodeInTheMcpSession.
+//
+// wait and interrupted are the two halves of one wait: the start says the run
+// is going to watch a document, and the end says a person stopped it. The
+// second is lifted out of the waited object `gdoc comments --wait` prints,
+// which is the only place in the binary that knows a wait ended early, and a
+// wait nobody stopped writes nothing at all rather than a false:
+// TestAnInterruptedWaitSaysSo, with cmd/gdoc's TestAStoppedWaitsEndSaysSo over
+// a real wait somebody stopped.
+//
 // The one document word is the title, capped at 200 runes, because without it
 // the app would run gdoc read to fill a row and pull a whole body through a
 // second process. It is lifted from the top level of the envelope's data only

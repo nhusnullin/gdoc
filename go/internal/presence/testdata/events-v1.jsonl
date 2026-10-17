@@ -19,3 +19,5 @@
 {"v":1,"at":"2026-10-17T09:15:18Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","call":6,"event":"step","command":"publish","via":"terminal","step":"read_back","index":3,"count":4,"title":"Supplier register"}
 {"v":1,"at":"2026-10-17T09:15:19Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","call":6,"event":"step","command":"publish","via":"terminal","step":"link","index":4,"count":4,"title":"Supplier register"}
 {"v":1,"at":"2026-10-17T09:15:20Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","call":6,"event":"end","command":"publish","via":"terminal","title":"Supplier register","ok":true,"verified":true,"ms":4800}
+{"v":1,"at":"2026-10-17T09:15:21Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","call":7,"event":"start","command":"comments","via":"code","doc":"1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789","wait":true}
+{"v":1,"at":"2026-10-17T09:15:22Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","call":7,"event":"end","command":"comments","via":"code","doc":"1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789","interrupted":true,"title":"Supplier register","ok":true,"ms":12000}

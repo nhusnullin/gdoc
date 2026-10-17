@@ -14,10 +14,17 @@ import (
 // says so and stops rather than guessing at the fields it can see.
 const schema = 1
 
-// The two ways a command reaches dispatch. Nothing else is a via.
+// The three ways a command reaches dispatch. Nothing else is a via.
+//
+// A terminal is a person typing, a chat is a tool call of gdoc mcp, and code
+// is the binary run by Claude Code's own tool, which cmd/gdoc reads out of the
+// environment and marks with WithCode. Chat wins over code, because a tool
+// call of a chat session is a chat call whatever started the process:
+// TestChatWinsOverCode.
 const (
 	viaTerminal = "terminal"
 	viaChat     = "chat"
+	viaCode     = "code"
 )
 
 // publishSteps are the four parts of a publish, in the order a publish takes
@@ -44,31 +51,37 @@ const titleRunes = 200
 // OK, Verified and MS are pointers because false and zero are answers here. A
 // command that failed writes ok: false, a read-back that found nothing writes
 // verified: false, and a command that took no measurable time writes ms: 0.
+//
+// Wait and Interrupted are the two halves of one wait: the start says the run
+// is going to watch, and the end says the person stopped it. Neither is a
+// pointer, because a run nobody stopped has nothing to say about stopping:
+// TestAnInterruptedWaitSaysSo.
 type Event struct {
-	V        int    `json:"v"`
-	At       string `json:"at"`
-	Gdoc     string `json:"gdoc,omitempty"`
-	PID      int    `json:"pid"`
-	Run      string `json:"run"`
-	Call     int64  `json:"call,omitempty"`
-	Event    string `json:"event"`
-	Command  string `json:"command,omitempty"`
-	Via      string `json:"via,omitempty"`
-	Doc      string `json:"doc,omitempty"`
-	Wait     bool   `json:"wait,omitempty"`
-	Step     string `json:"step,omitempty"`
-	Index    int    `json:"index,omitempty"`
-	Count    int    `json:"count,omitempty"`
-	Title    string `json:"title,omitempty"`
-	Made     string `json:"made,omitempty"`
-	OK       *bool  `json:"ok,omitempty"`
-	Verified *bool  `json:"verified,omitempty"`
-	Stop     string `json:"stop,omitempty"`
-	Line     int    `json:"line,omitempty"`
-	MS       *int64 `json:"ms,omitempty"`
-	Hold     string `json:"hold,omitempty"`
-	Rule     string `json:"rule,omitempty"`
-	Until    string `json:"until,omitempty"`
+	V           int    `json:"v"`
+	At          string `json:"at"`
+	Gdoc        string `json:"gdoc,omitempty"`
+	PID         int    `json:"pid"`
+	Run         string `json:"run"`
+	Call        int64  `json:"call,omitempty"`
+	Event       string `json:"event"`
+	Command     string `json:"command,omitempty"`
+	Via         string `json:"via,omitempty"`
+	Doc         string `json:"doc,omitempty"`
+	Wait        bool   `json:"wait,omitempty"`
+	Interrupted bool   `json:"interrupted,omitempty"`
+	Step        string `json:"step,omitempty"`
+	Index       int    `json:"index,omitempty"`
+	Count       int    `json:"count,omitempty"`
+	Title       string `json:"title,omitempty"`
+	Made        string `json:"made,omitempty"`
+	OK          *bool  `json:"ok,omitempty"`
+	Verified    *bool  `json:"verified,omitempty"`
+	Stop        string `json:"stop,omitempty"`
+	Line        int    `json:"line,omitempty"`
+	MS          *int64 `json:"ms,omitempty"`
+	Hold        string `json:"hold,omitempty"`
+	Rule        string `json:"rule,omitempty"`
+	Until       string `json:"until,omitempty"`
 }
 
 // calls numbers the commands of one process, so a start and its end pair
@@ -211,11 +224,11 @@ func stepIndex(name string) int {
 	return 0
 }
 
-// End writes the end event for a run, with the envelope's ok, the title and
-// the verified lifted out of its data, the stop code of a run that failed, and
-// the elapsed milliseconds.
+// End writes the end event for a run, with the envelope's ok, the title, the
+// verified and the stopped wait lifted out of its data, the stop code of a run
+// that failed, and the elapsed milliseconds.
 //
-// It takes the whole result and writes six facts out of it, because the
+// It takes the whole result and writes seven facts out of it, because the
 // envelope itself carries document words, warnings, error sentences and
 // paths, and none of those may reach a file that lasts:
 // TestAnEventCarriesNoWordOfTheEnvelopeButTheTitle.
@@ -224,26 +237,27 @@ func (r *Run) End(res emit.Result) {
 		return
 	}
 	ok := res.OK
-	title, verified := lift(res.Data)
+	title, verified, interrupted := lift(res.Data)
 	if !r.readsBack {
 		verified = nil
 	}
 	stop, line := stopOf(res)
 	ms := since(r.started).Milliseconds()
 	appendEvent(Event{
-		Gdoc:     r.version,
-		Call:     r.call,
-		Event:    "end",
-		Command:  r.command,
-		Via:      r.via,
-		Doc:      r.doc,
-		Title:    title,
-		Made:     r.made,
-		OK:       &ok,
-		Verified: verified,
-		Stop:     stop,
-		Line:     line,
-		MS:       &ms,
+		Gdoc:        r.version,
+		Call:        r.call,
+		Event:       "end",
+		Command:     r.command,
+		Via:         r.via,
+		Doc:         r.doc,
+		Interrupted: interrupted,
+		Title:       title,
+		Made:        r.made,
+		OK:          &ok,
+		Verified:    verified,
+		Stop:        stop,
+		Line:        line,
+		MS:          &ms,
 	}, r.errOut)
 }
 
@@ -337,6 +351,22 @@ func WithChat(ctx context.Context) context.Context {
 	return context.WithValue(ctx, viaKey{}, viaChat)
 }
 
+// WithCode marks a context as a Claude Code session's, so every command under
+// it says via: code. cmd/gdoc marks it from the one environment variable
+// Claude Code sets in a child, and nothing else here reads an environment: the
+// record is a file and a clock, and the caller hands it the word.
+//
+// A context the chat session already marked is left alone, because a tool call
+// of gdoc mcp is a chat call whatever started the process, and that session
+// may well have been started by Claude Code: TestChatWinsOverCode and
+// cmd/gdoc's TestViaChatWinsOverCodeInTheMcpSession.
+func WithCode(ctx context.Context) context.Context {
+	if viaOf(ctx) == viaChat {
+		return ctx
+	}
+	return context.WithValue(ctx, viaKey{}, viaCode)
+}
+
 // runKey is this package's own key type for the command in flight, so no
 // other package can put a run there or read one by accident.
 type runKey struct{}
@@ -362,8 +392,8 @@ func runOf(ctx context.Context) *Run {
 	return r
 }
 
-// viaOf is the reader of what WithChat set. A context nobody marked is a
-// terminal, which is what a context nobody handed in is too.
+// viaOf is the reader of what WithChat and WithCode set. A context nobody
+// marked is a terminal, which is what a context nobody handed in is too.
 func viaOf(ctx context.Context) string {
 	if ctx == nil {
 		return viaTerminal
@@ -374,26 +404,33 @@ func viaOf(ctx context.Context) string {
 	return viaTerminal
 }
 
-// lift reads the two fields an end event keeps out of a command's data: the
-// title and the verified, each only where it is at the top level with the
-// type the record expects. A title that is a number and a verified that is a
-// word are not these fields, and a data that is no object has neither:
+// lift reads the three fields an end event keeps out of a command's data: the
+// title, the verified and the one word a stopped wait leaves, each only where
+// it is where the record expects it with the type the record expects. A title
+// that is a number and a verified that is a word are not these fields, and a
+// data that is no object has none of them:
 // TestTitleIsLiftedOnlyWhenPresentAsAString.
+//
+// The interrupted is one level down, under the waited object `gdoc comments
+// --wait` prints, because that is where the command puts it and the record
+// keeps what the command printed rather than a shape of its own. A waited that
+// is no object and an interrupted that is no bool are not this field:
+// TestAnInterruptedWaitSaysSo.
 //
 // It goes through JSON rather than reflection because what a skill reads is
 // the printed object, so what the record keeps is the printed object's own
 // top level, whatever Go shape produced it.
-func lift(data any) (string, *bool) {
+func lift(data any) (string, *bool, bool) {
 	if data == nil {
-		return "", nil
+		return "", nil, false
 	}
 	b, err := json.Marshal(data)
 	if err != nil {
-		return "", nil
+		return "", nil, false
 	}
 	var top map[string]json.RawMessage
 	if json.Unmarshal(b, &top) != nil {
-		return "", nil
+		return "", nil, false
 	}
 	var title string
 	if raw, ok := top["title"]; ok {
@@ -409,7 +446,26 @@ func lift(data any) (string, *bool) {
 			verified = &v
 		}
 	}
-	return title, verified
+	return title, verified, interruptedIn(top["waited"])
+}
+
+// interruptedIn is whether the waited object a listing printed says the person
+// stopped the wait. A field that is not there, a waited that is no object and
+// an interrupted that is no bool each answer no, because a record that lasts
+// says a person stopped a wait only where a wait said so.
+func interruptedIn(waited json.RawMessage) bool {
+	if len(waited) == 0 {
+		return false
+	}
+	var inside map[string]json.RawMessage
+	if json.Unmarshal(waited, &inside) != nil {
+		return false
+	}
+	var stopped bool
+	if json.Unmarshal(inside["interrupted"], &stopped) != nil {
+		return false
+	}
+	return stopped
 }
 
 // capRunes is the first n runes of s, counted in runes and never in bytes, so

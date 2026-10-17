@@ -287,6 +287,12 @@ func dispatch(ctx context.Context, args []string, errOut io.Writer, set settings
 		return emit.Result{OK: false, Error: err.Error()}
 	}
 	a.set = set
+	// Who is running this, where the environment says so. It is one read, here,
+	// because internal/presence is a file and a clock and reads no environment
+	// of its own, and a session of gdoc mcp has already marked its context,
+	// which this leaves alone: TestViaIsCodeUnderClaudeCode and
+	// TestViaChatWinsOverCodeInTheMcpSession.
+	ctx = viaOfEnv(ctx, os.Getenv)
 	// And the record, after the parse and before the work: a line that was
 	// refused is no run, so nothing is written for it, and the document the
 	// event names is the one the parsed line named. The two calls are the same
@@ -312,6 +318,30 @@ func dispatch(ctx context.Context, args []string, errOut io.Writer, set settings
 	// of them it is on without a run threaded through every room between here
 	// and the work: presence.WithRun and publish.go's three calls.
 	return c.run(presence.WithRun(ctx, rec), a, errOut)
+}
+
+// claudeCodeEnv is the one variable that says Claude Code started this
+// process. Measured 2026-10-17 from the Bash tool of a Claude Code session,
+// which hands a child CLAUDECODE=1 beside its other CLAUDE_CODE_* variables;
+// the measurement and its method are in docs/v2/MEASURED.md.
+//
+// Any value counts, and not the literal 1: the variable is Claude Code's own
+// and a release that writes true or 2 in it is still Claude Code, while a
+// record that said terminal in that case would be wrong about the one thing
+// the field is for.
+const claudeCodeEnv = "CLAUDECODE"
+
+// viaOfEnv marks the run's context for the record where the environment says
+// Claude Code started this process, and leaves every other run as it found it.
+//
+// getenv is handed in, as internal/tty takes it, so the rule is measured
+// without a test setting a variable of the real process:
+// TestViaIsCodeUnderClaudeCode.
+func viaOfEnv(ctx context.Context, getenv func(string) string) context.Context {
+	if getenv(claudeCodeEnv) == "" {
+		return ctx
+	}
+	return presence.WithCode(ctx)
 }
 
 // presenceDoc is the document an event names: the id the first word of the line

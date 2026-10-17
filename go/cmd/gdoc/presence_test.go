@@ -36,10 +36,16 @@ func presenceOn() settings.InEffect {
 
 // recording points the config directory at a fresh temporary one and answers
 // where the record will be, so one test's events are never another test's.
+//
+// It also clears the one variable that would make every run of these tests a
+// Claude Code run, because the suite itself is often run from a Claude Code
+// session and what a run records may not depend on who started the test:
+// TestViaIsCodeUnderClaudeCode sets it back for the one test about it.
 func recording(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
 	t.Setenv("GDOC_CONFIG_DIR", dir)
+	t.Setenv(claudeCodeEnv, "")
 	return dir
 }
 
