@@ -84,11 +84,13 @@ extension Fold {
   /// Every call's latest title, by the run and the call its events pair on.
   ///
   /// A publish is handed no document, so nothing `latestTitles` holds names
-  /// one: the name on the cover arrives on a step line, or on the end that
-  /// says what it made, and the start carries it where gdoc read the note
-  /// first. A call is named here from whichever of its own lines carried a
-  /// title, the latest winning, so a card and a row read the same whichever
-  /// of those lines the record still holds.
+  /// one: the name on the cover arrives on a step line after the render, or
+  /// on the end of a publish that read itself back. `presence.Begin` writes
+  /// no title on a start, so a publish that stopped inside the render has
+  /// none anywhere and its card and row say "Publish" alone. A call is named
+  /// here from whichever of its own lines carried a title, the latest
+  /// winning, so a card and a row read the same whichever of those lines the
+  /// record still holds.
   ///
   /// The key is the pairing and not the run alone, because the record stamps
   /// one run on every event of a process: a chat session is one run and a
@@ -104,5 +106,19 @@ extension Fold {
       when[event.pairing] = event.at
     }
     return titles
+  }
+
+  /// What one line is named by: the document's latest title, the call's own
+  /// where the record named no document, and the line's own where it named
+  /// neither.
+  ///
+  /// It is here and not in Now and Days because the card in NOW and the row
+  /// in TODAY must name one write the same way, and two copies of three
+  /// lines is how they stop doing that.
+  public static func title(
+    _ event: Event, titles: [String: String], calls: [String: String]
+  ) -> String? {
+    if let doc = subject(event), let latest = titles[doc] { return latest }
+    return calls[event.pairing] ?? event.title
   }
 }

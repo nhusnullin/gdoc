@@ -64,8 +64,10 @@ A section with nothing in it is left out rather than labelled.
   is yours, in the chat, and the card says so.
 - **A write that stopped** is a reply, proposal, withdrawal, comment, publish,
   restyle or export whose end said it failed, or whose process is gone. The
-  card names the document and the moment. It goes when the same command starts
-  again on that document, or when you dismiss it. A failed read is not one of
+  card names the document and why it stopped, in gdoc's own word for it. Where
+  gdoc wrote no reason, which is a run whose process went away, the card says
+  when it started and which terminal or session to look in. It goes when the
+  same command starts again on that document, or when you dismiss it. A failed read is not one of
   these, and `verified: false` is not either: a read-back that did not confirm
   is a hollow check, not a failed write, and the row says "not read back".
 - **A running job** is a command with an end that has not arrived yet.
@@ -75,18 +77,22 @@ A section with nothing in it is left out rather than labelled.
   The row says
   since when, how long it has been quiet, and how many replies and proposals
   went out. It never says anybody is waiting for the author. Its one icon is
-  Stop.
+  Stop. A watch whose poll Google refused the token on is over, and it stays
+  here reading "Live stopped" with no Stop icon until the sign-in works
+  again: nothing is polling that document, and starting it again is yours.
 - **A sign-in that stopped working** raises its own card here, under the
   holds. It is the one card in Now that comes from the machine and not from
-  the record, and it says how many watches are paused.
+  the record, and it says how many watches that sign-in stopped.
 
 ### Documents
 
 Every document gdoc touched in the last fourteen days, newest action first,
 five rows with Show more under them. A read alone makes no row: reading is not
 something that happened to the document. Each row says what the last action
-was, when, and where the note paired with it is, or "not in the hub". The label
-counts what is off the screen.
+was, when, and where the note paired with it is, or "not in the hub". The
+label is "3 today" where every row in the list is from today, and
+"14 days · 12" where one of them is older, counting the rows behind Show more
+as well.
 
 Four icons sit on the right of every document row, always visible:
 

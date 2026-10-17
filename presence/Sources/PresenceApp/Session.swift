@@ -82,6 +82,9 @@ public final class Session {
   var reopenHeld = false
   var index = HubIndex.empty
   var hubWatcher: HubWatcher?
+  /// Which hub scan was started last. A scan that comes back and is not it
+  /// is an older walk of the folder, and it is dropped.
+  var hubScans = 0
 
   /// Whether the record has held a line from a gdoc at a schema this app does
   /// not read. It is sticky: the line is skipped and never kept, so the one
@@ -94,10 +97,15 @@ public final class Session {
   var signingIn = false
   var signedInAt: Date?
 
-  /// Whether the app's own `update` child is up. It is the flag and not the
-  /// runner's answer, because it is set by the press and the child is
-  /// launched a moment later: the ring on the gdoc row is the actor's own
-  /// standing, and this is what makes the clock tick fast enough to show it.
+  /// Whether an `update` child of the app's own is up, either list: plain
+  /// `update` or `update --desktop`, which installs the release it writes
+  /// the extension of. It is one flag for the two because two of them at
+  /// once are two processes replacing one binary.
+  ///
+  /// It is the flag and not the runner's answer, because it is set by the
+  /// press and the child is launched a moment later: the ring on the gdoc
+  /// row is the actor's own standing, and this is what makes the clock tick
+  /// fast enough to show it.
   var installing = false
   /// Whether the last Install extension of this process handed the extension
   /// to Claude Desktop. True until a run says otherwise, because the file
@@ -114,6 +122,12 @@ public final class Session {
   var tickingEvery: TimeInterval = refoldEvery
   var checkTimer: Timer?
   var revertTimer: Timer?
+  /// The signed-in banner's own five seconds. It is a slot of its own and
+  /// not the revert's, because the banner is no question: a Copy link or a
+  /// question raised inside those five seconds would otherwise take the
+  /// banner's end away and leave it on the screen until some unrelated fact
+  /// moved: testTheSignedInBannerTakesItselfOff.
+  var bannerTimer: Timer?
   var onChange: () -> Void = {}
 
   public init(
@@ -201,6 +215,8 @@ public final class Session {
     checkTimer = nil
     revertTimer?.invalidate()
     revertTimer = nil
+    bannerTimer?.invalidate()
+    bannerTimer = nil
     tail.stop()
     watcher?.stop()
     hubWatcher?.stop()
@@ -279,9 +295,7 @@ public final class Session {
     let fold = Now.fold(events, now: moment, dismissed: ui.dismissed, alive: alive)
     guard check.saw(fold.lastVerified, live: replayed, at: moment) else { return false }
     checkTimer?.invalidate()
-    checkTimer = Timer.scheduledTimer(withTimeInterval: BarCheck.lasts, repeats: false) { _ in
-      Task { @MainActor [weak self] in self?.changed() }
-    }
+    checkTimer = redraw(after: BarCheck.lasts)
     return true
   }
 
@@ -345,7 +359,10 @@ public final class Session {
       signedInAt: signedInAt,
       bundle: bundle,
       newerRecord: newerGdoc,
-      unstoppable: stopper.unstoppable(in: events))
+      unstoppable: stopper.unstoppable(in: events),
+      // The press and not the actor's standing, so the extension's own run
+      // closes both buttons too: the actor moves no version for that one.
+      updating: installing)
   }
 
   /// Whether gdoc has ever written the Claude Desktop extension here. The
@@ -440,7 +457,22 @@ public final class Session {
   /// them at a time because there is one question at a time.
   func revert(after seconds: TimeInterval) {
     revertTimer?.invalidate()
-    revertTimer = Timer.scheduledTimer(withTimeInterval: seconds, repeats: false) { _ in
+    revertTimer = redraw(after: seconds)
+  }
+
+  /// One redraw when the signed-in banner's five seconds are up. The banner
+  /// is the clock and no fact, and it is nobody's question, so it takes a
+  /// slot of its own: testTheSignedInBannerTakesItselfOff.
+  func retireTheBanner(after seconds: TimeInterval) {
+    bannerTimer?.invalidate()
+    bannerTimer = redraw(after: seconds)
+  }
+
+  /// One redraw, that many seconds from now, on a timer the caller holds.
+  /// The three one-shots are the same line, so what differs between them is
+  /// the slot and not what firing does.
+  private func redraw(after seconds: TimeInterval) -> Timer {
+    Timer.scheduledTimer(withTimeInterval: seconds, repeats: false) { _ in
       Task { @MainActor [weak self] in self?.changed() }
     }
   }
@@ -466,15 +498,31 @@ public final class Session {
     hubWatcher = watcher
   }
 
+  /// One scan, numbered, because only the newest of them may stand.
   private func rescanTheHub(_ hub: String) {
+    hubScans += 1
+    let scan = hubScans
     Task.detached(priority: .utility) { [weak self] in
       let scanned = HubIndex.scan(hub: hub)
       await MainActor.run { [weak self] in
-        guard let self, scanned != self.index else { return }
-        self.index = scanned
+        guard let self, self.tookTheScan(scan, scanned) else { return }
         Task { await self.recompose() }
       }
     }
+  }
+
+  /// The pairing a scan came back with, kept only where that scan is still
+  /// the newest one asked for.
+  ///
+  /// A scan walks a vault off the main thread, so a burst of file events
+  /// starts several and they come back in whatever order they finish in. A
+  /// slow walk of the hub as it was, landing after a fast walk of the hub as
+  /// it is, would leave Open md on yesterday's note until the next file
+  /// event: testAnOlderHubScanDoesNotReplaceANewerOne.
+  func tookTheScan(_ scan: Int, _ scanned: HubIndex) -> Bool {
+    guard scan == hubScans, scanned != index else { return false }
+    index = scanned
+    return true
   }
 
   // MARK: the bundle under the app

@@ -34,5 +34,5 @@
 {"v":1,"at":"2026-10-17T17:10:40Z","gdoc":"v2.14.0","pid":7200,"run":"3000000000000014","call":1,"event":"end","command":"comments","via":"terminal","doc":"1Ch5AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp","ok":true,"ms":1790000}
 {"v":1,"at":"2026-10-17T17:10:50Z","gdoc":"v2.14.0","pid":7200,"run":"3000000000000015","call":1,"event":"start","command":"comments","via":"terminal","doc":"1Ch5AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp","wait":true}
 {"v":1,"at":"2026-10-17T17:14:00Z","gdoc":"v2.14.0","pid":7301,"run":"3000000000000018","event":"held","command":"propose","via":"chat","doc":"1Ch5AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp","hold":"h_2","rule":"Unread target","until":"2026-10-17T18:30:00Z"}
-{"v":1,"at":"2026-10-17T17:19:00Z","gdoc":"v2.14.0","pid":7103,"run":"3000000000000021","call":1,"event":"start","command":"publish","via":"terminal","title":"Chapter 6"}
+{"v":1,"at":"2026-10-17T17:19:00Z","gdoc":"v2.14.0","pid":7103,"run":"3000000000000021","call":1,"event":"start","command":"publish","via":"terminal"}
 {"v":1,"at":"2026-10-17T17:19:02Z","gdoc":"v2.14.0","pid":7103,"run":"3000000000000021","call":1,"event":"step","command":"publish","via":"terminal","step":"build","index":1,"count":4}

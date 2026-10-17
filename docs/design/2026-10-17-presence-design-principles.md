@@ -179,6 +179,15 @@ The three blocking ones, and where they were closed:
   two rows. A reviewer reading the day as a day read every one of them as a
   bug in the panel. Closed in Task 1, in the records under
   `Tests/PresenceUITests/Scenes`.
+
+  Half of the first one was closed the wrong way and corrected afterwards.
+  The fixtures named the stopped publish by putting a title on its `start`
+  line, and `presence.Begin` writes no title on a start: a publish that
+  stopped inside the render has no name on any line it wrote, so the card
+  and the row say "Publish" alone and the renders now draw that. Naming it
+  would be gdoc writing the note's own title into the record, which is a
+  decision and not a fixture:
+  `docs/backlog/a-publish-that-stopped-in-the-render-has-no-name.md`.
 - **A watch whose sign-in expired is stopped, not paused.** "Paused" is the
   panel saying it will carry on, which is a forecast, and nobody has
   measured whether gdoc resumes from the same cursor after a sign-in. Scene

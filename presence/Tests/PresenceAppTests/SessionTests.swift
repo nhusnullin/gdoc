@@ -161,6 +161,72 @@ final class SessionTests: XCTestCase {
     XCTAssertTrue(try argv().contains("update --desktop"), "one run, and the flag it was for")
   }
 
+  /// Update and Install extension take one slot. Both argv lists are `gdoc
+  /// update` and `--desktop` installs the release it writes the extension
+  /// of, so two children at once are two processes staging and renaming one
+  /// binary: the `.previous` copy can end up being the new binary rather
+  /// than the old one. The runner's own rule is per argv list and would let
+  /// these two through.
+  func testTheExtensionAndTheUpdateCannotRunAtOnce() throws {
+    try writeTheRecord([])
+    let session = made()
+    answered(session)
+
+    let ended = expectation(description: "the extension run reached the panel")
+    ended.assertForOverFulfill = false
+    session.start { [weak session] in
+      guard let session, !session.extensionHandedOver else { return }
+      ended.fulfill()
+    }
+    session.perform(.installExtension, "desktop")
+    XCTAssertTrue(session.installing, "the slot is taken by the press and not by the child")
+    session.perform(.update, "gdoc")
+    wait(for: [ended], timeout: 20)
+
+    let lists = try argv()
+    XCTAssertTrue(lists.contains("update --desktop"), "the run the person asked for went")
+    XCTAssertFalse(
+      lists.contains("update"), "and the second press started no second update")
+    XCTAssertFalse(session.installing, "the slot is free again once the child ended")
+  }
+
+  /// The banner after a sign-in is five seconds of the clock and no fact of
+  /// its own, so the session schedules its own end. Nothing else would take
+  /// it off: a refold that did not move redraws nothing, and the next fact
+  /// may be minutes away.
+  func testTheSignedInBannerTakesItselfOff() throws {
+    try writeTheRecord([])
+    let session = made()
+    answered(session)
+
+    let signedIn = expectation(description: "the sign-in reached the panel")
+    signedIn.assertForOverFulfill = false
+    session.start { [weak session] in
+      guard let session, session.signedInAt != nil else { return }
+      signedIn.fulfill()
+    }
+    session.perform(.signIn, nil)
+    wait(for: [signedIn], timeout: 20)
+
+    XCTAssertTrue(
+      session.model.sections.contains { if case .signedIn = $0 { true } else { false } },
+      "the address is on the screen at the size a glance catches")
+    let armed = try XCTUnwrap(session.bannerTimer, "and its end is on a timer of its own")
+    XCTAssertGreaterThan(armed.fireDate.timeIntervalSinceNow, 0)
+    XCTAssertLessThanOrEqual(
+      armed.fireDate.timeIntervalSinceNow, SignedInBanner.life,
+      "which is the banner's own five seconds")
+
+    // And nothing a person does inside those five seconds takes it away: the
+    // copied icon and the questions have the one revert slot, and the banner
+    // is neither of those.
+    session.revert(after: 1)
+    XCTAssertTrue(armed.isValid, "a copied icon does not take the banner off early")
+    XCTAssertEqual(
+      armed.fireDate, try XCTUnwrap(session.bannerTimer).fireDate,
+      "and the banner is still waiting on its own moment")
+  }
+
   /// The facts are the polls', the stores' and the record's, and the model is
   /// built out of all three.
   func testTheFactsComeFromThePollsTheStoresAndTheRecord() throws {
@@ -279,6 +345,59 @@ final class SessionTests: XCTestCase {
     XCTAssertTrue(between.sessions.allSatisfy(\.isOpen), "a wait between two polls is a watch")
     XCTAssertTrue(quiet.sessions.allSatisfy { !$0.isOpen }, "three minutes later it is not")
     XCTAssertNotEqual(quiet, between, "so the screen is drawn again with no line to read")
+  }
+
+  /// A minute passing over a hold or a live watch is a redraw with no line
+  /// behind it: both rows say how long something has been going, and
+  /// `Words.duration` counts in whole minutes. A screen with neither on it
+  /// is drawn again only when the record or the facts move.
+  func testAQuietMinuteRedrawsAHoldAndAWatchAndNothingElse() throws {
+    let calendar = Calendar(identifier: .gregorian)
+    let watching = try Event.decode(
+      line(kind: "start", command: "comments", call: 1, doc: Self.doc, wait: true))
+    let held = try Event.decode(
+      line(
+        kind: "held", command: "reply", call: nil, doc: Self.doc,
+        extra: "\"hold\":\"h_ab12\",\"rule\":\"echo\",\"until\":\"\(stamp(inAnHour: true))\""))
+    let over = try Event.decode(
+      line(kind: "end", command: "reply", call: 4, doc: Self.doc, extra: "\"ok\":true"))
+
+    for (what, events) in [("a watch", [watching]), ("a hold", [held])] {
+      let now = Drawn(
+        events, now: watching.at, dismissed: [], calendar: calendar, alive: { _ in true })
+      let later = Drawn(
+        events, now: watching.at.addingTimeInterval(60), dismissed: [], calendar: calendar,
+        alive: { _ in true })
+      XCTAssertNotEqual(later, now, "\(what) counts the minutes, so the screen is owed one")
+    }
+
+    // The minute is each stretch's own and not the clock's. A hold raised at
+    // half past the minute shows its first minute half a minute later, and a
+    // key cut at the wall clock noticed nothing until the minute after that.
+    let raised = try Event.decode(
+      line(
+        kind: "held", command: "reply", call: nil, doc: Self.doc,
+        extra: "\"hold\":\"h_cd34\",\"rule\":\"echo\",\"until\":\"2026-10-17T11:00:00Z\"",
+        at: "2026-10-17T10:00:30Z"))
+    let atTheWallMinute = Drawn(
+      [raised], now: raised.at.addingTimeInterval(30), dismissed: [], calendar: calendar,
+      alive: { _ in true })
+    let atItsOwnMinute = Drawn(
+      [raised], now: raised.at.addingTimeInterval(60), dismissed: [], calendar: calendar,
+      alive: { _ in true })
+    XCTAssertEqual(atTheWallMinute.counting, [0], "nothing is a minute old yet")
+    XCTAssertEqual(atItsOwnMinute.counting, [1], "and a minute after it was raised, one is")
+    XCTAssertNotEqual(
+      atItsOwnMinute, atTheWallMinute, "so the screen is owed the redraw that says 1 min")
+
+    // Nothing on this screen counts a stretch, so nothing moved.
+    let still = Drawn(
+      [over], now: over.at, dismissed: [], calendar: calendar, alive: { _ in false })
+    let stillLater = Drawn(
+      [over], now: over.at.addingTimeInterval(600), dismissed: [], calendar: calendar,
+      alive: { _ in false })
+    XCTAssertEqual(stillLater, still, "a finished day redraws on nothing")
+    XCTAssertNil(still.counting)
   }
 
   /// The Open md icon of the one document row the panel draws.
@@ -472,6 +591,33 @@ final class SessionTests: XCTestCase {
     XCTAssertNil(session.phase, "and the Account row keeps no countdown")
   }
 
+  /// A hub scan that comes back after a newer one is dropped.
+  ///
+  /// Every burst of file events in the hub starts its own walk, off the main
+  /// thread, and they come back in whatever order they finish in. The walk
+  /// of a big vault that started first may land last, and the pairing it
+  /// carries is the hub as it was: Open md would then open yesterday's note
+  /// until some later file event.
+  func testAnOlderHubScanDoesNotReplaceANewerOne() throws {
+    try writeTheRecord([])
+    let session = made()
+
+    let old = HubIndex(hub: "/hub", notes: [Self.doc: "old.md"])
+    let new = HubIndex(hub: "/hub", notes: [Self.doc: "new.md"])
+    // Two walks asked for, the second after the first.
+    session.hubScans = 2
+
+    XCTAssertTrue(session.tookTheScan(2, new), "the newest walk is the one that stands")
+    XCTAssertEqual(session.index.notes, new.notes)
+
+    XCTAssertFalse(
+      session.tookTheScan(1, old), "the older walk came back last and is dropped")
+    XCTAssertEqual(session.index.notes, new.notes, "so the pairing is still the newer one")
+
+    XCTAssertFalse(
+      session.tookTheScan(2, new), "a walk that found what is already there redraws nothing")
+  }
+
   // MARK: a session over this test's own machine
 
   private func made(
@@ -526,10 +672,10 @@ final class SessionTests: XCTestCase {
   /// One line of the record, at this moment, so the folds keep it.
   private func line(
     kind: String, command: String, call: Int64?, doc: String?, wait: Bool = false,
-    extra: String = ""
+    extra: String = "", at: String? = nil
   ) -> String {
     var fields = [
-      "\"v\":1", "\"at\":\"\(stamp())\"", "\"gdoc\":\"v2.14.0\"", "\"pid\":4242",
+      "\"v\":1", "\"at\":\"\(at ?? stamp())\"", "\"gdoc\":\"v2.14.0\"", "\"pid\":4242",
       "\"run\":\"\(Self.run)\"", "\"event\":\"\(kind)\"", "\"command\":\"\(command)\"",
       "\"via\":\"terminal\"",
     ]
@@ -567,6 +713,11 @@ final class SessionTests: XCTestCase {
         ;;
       "auth logout")
         printf '{"ok":true,"data":{"removed":true}}\\n'
+        ;;
+      "auth login")
+        printf 'Open this link in your browser to sign in:\\n' >&2
+        printf 'https://accounts.google.com/o/oauth2/auth?client_id=x\\n' >&2
+        printf '{"ok":true,"data":{"account":"someone@example.com"}}\\n'
         ;;
       "update --desktop")
         printf 'not really an extension' > "$(dirname "$0")/gdoc.mcpb"

@@ -15,7 +15,13 @@
 // a version this app declined to install by passing no flag.
 //
 // Install extension is the second list, `update --desktop`. It is not a new
-// gdoc, so it moves no version and the gdoc row's ring is not its.
+// gdoc, so it moves no version: the standing stays idle and the row's number
+// is the one `help --json` read.
+//
+// It does take the same slot, though, and while either child is up both rows
+// wait. `update --desktop` installs the release it writes the extension of,
+// so two of them at once are two processes staging and renaming one binary,
+// and a button offered under the one that is running is an offer to do that.
 
 import Foundation
 import PresenceCore
@@ -111,7 +117,10 @@ public actor UpdateAction {
       bundle: facts.bundle,
       newerRecord: facts.newerRecord,
       unstoppable: facts.unstoppable,
-      updating: standing == .running)
+      // Either run closes both buttons, so this never puts the flag down:
+      // the session raises it on the press, for the extension's run as well,
+      // and this raises it again while the child of a plain update is up.
+      updating: facts.updating || standing == .running)
   }
 
   /// The version this app installed, where it installed one.

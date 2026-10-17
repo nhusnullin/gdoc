@@ -124,9 +124,11 @@ extension PanelModel {
     guard let version = facts.versions.gdoc else {
       return HealthRowModel(.gdoc, waiting: true)
     }
-    // While the update's own child is up the row is a ring and the version
-    // it names is the one still installed: there is nothing to press until
-    // the end arrives, and nothing honest to say about what will be there.
+    // While an update child is up the row is a ring and the version it
+    // names is the one still installed: there is nothing to press until the
+    // end arrives, and nothing honest to say about what will be there. It is
+    // either child, because `update --desktop` installs the release it
+    // writes the extension of.
     if facts.updating {
       return HealthRowModel(.gdoc, value: version, waiting: true)
     }
@@ -148,6 +150,14 @@ extension PanelModel {
   /// loaded, and a row claiming it was connected would be a guess.
   static func desktop(facts: Facts) -> [HealthRowModel] {
     guard facts.extensionState == .notInstalled else { return [] }
+    // While an update child is up the row offers nothing to press. Both
+    // argv lists are `gdoc update` and `--desktop` installs the release it
+    // writes the extension of, so a second press is a second process
+    // renaming the binary the first one is replacing:
+    // testNeitherUpdateIsOfferedWhileOneIsRunning.
+    guard !facts.updating else {
+      return [HealthRowModel(.desktop, value: "not installed", glyph: .empty)]
+    }
     return [
       HealthRowModel(
         .desktop, value: "not installed", glyph: .empty,

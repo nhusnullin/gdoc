@@ -418,8 +418,15 @@ extension PanelModel {
   /// start it again, and NOW is where the panel keeps what is waiting on the
   /// person. Once the token works the row leaves, because then the day's log
   /// is the whole of it: testE9SaysTheWatchIsStoppedInEverySectionAndDrawsNoStop.
+  ///
+  /// Two things have to hold, not one. The token has to be refused now,
+  /// which is the machine's own word, and nothing may have got through
+  /// since that watch stopped, which is the record's: a refusal last week
+  /// that a sign-in answered is a watch nobody has run for days, and
+  /// without the second half every one of them would come back into NOW
+  /// the next time a token stopped working.
   private static func watched(_ sessions: [LiveSession], facts: Facts) -> [LiveSession] {
-    sessions.filter { $0.isOpen || ($0.stoppedBySignIn && !facts.auth.isWorking) }
+    sessions.filter { $0.isOpen || ($0.waitsForTheSignIn && !facts.auth.isWorking) }
   }
 
   /// The card a token that stopped working raises, which is the one card in
@@ -436,7 +443,13 @@ extension PanelModel {
     // cannot start, so the sentence asks for the sign-in and for the watch
     // to be started again. It never says the watch will carry on by itself,
     // which is a forecast nobody measured.
-    let stopped = watched(sessions, facts: facts).count
+    //
+    // It counts the watches this sign-in stopped and not the rows NOW draws:
+    // `watched` keeps the open ones too, and a watch still polling under a
+    // token that is only short a scope would have the card call it stopped
+    // while the row beside it drew it live with its Stop icon:
+    // testTheSignInCardCountsOnlyTheWatchesItStopped.
+    let stopped = sessions.filter(\.waitsForTheSignIn).count
     let reason =
       stopped == 0
       ? "Nothing can reach Google until you sign in."
@@ -487,7 +500,7 @@ extension PanelModel {
     // a second away and the dim icon says why it cannot be signalled, but
     // here there is no next wait until somebody signs in. Scene e9:
     // testTheExpiredSignInOfE9StopsTheWatch.
-    guard session.lastPollStop != "auth" else { return nil }
+    guard !session.stoppedBySignIn else { return nil }
     let cannot = session.flight == nil || facts.unstoppable.contains(session.doc)
     let state: ActionState = cannot ? .off(Tips.cannotStop) : .live
     return ActionModel(

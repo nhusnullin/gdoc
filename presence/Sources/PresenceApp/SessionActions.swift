@@ -163,7 +163,16 @@ extension Session {
       self.signingIn = false
       self.phase = nil
       self.retick()
-      if case .signedIn(_, let at) = result { self.signedInAt = at }
+      if case .signedIn(_, let at) = result {
+        self.signedInAt = at
+        // The banner is five seconds of the clock and no fact of its own,
+        // so nothing else would take it off: a refold that did not move
+        // redraws nothing, and the next fact may be minutes away. It is its
+        // own slot and not the revert's, which a copied icon or a question
+        // inside those five seconds would take:
+        // testTheSignedInBannerTakesItselfOff.
+        self.retireTheBanner(after: SignedInBanner.life)
+      }
       await self.ask(.changed)
     }
   }
@@ -216,13 +225,26 @@ extension Session {
   /// otherwise reads is written before the handing over and left behind when
   /// it fails: testARunThatOpenedNothingLeavesTheRowWhereItWas.
   ///
+  /// It takes the same slot the update takes, because both argv lists are
+  /// `gdoc update` and `--desktop` installs the release it writes the
+  /// extension of: two of them at once are two processes staging and
+  /// renaming one binary, which can leave the rollback copy pointing at the
+  /// new binary instead of the old one. The runner's own rule is per argv
+  /// list and would let these two through:
+  /// testTheExtensionAndTheUpdateCannotRunAtOnce.
+  ///
   /// The redraw is unconditional, unlike a refold's: a run a person started
   /// may end with no fact moved at all, and the screen is still owed the
   /// end of it.
   private func installTheExtension() {
+    guard !installing else { return }
+    installing = true
+    retick()
     Task { [weak self] in
       guard let self else { return }
       self.extensionHandedOver = await self.updates.installExtension()
+      self.installing = false
+      self.retick()
       await self.recompose()
       self.changed()
     }

@@ -138,13 +138,21 @@ struct Phrases {
   /// A run whose process went away wrote neither, and so does a code this
   /// version has never seen: then the panel says where the reason is and
   /// nothing else, because the one thing it must not do is invent a cause.
-  /// The card's own title already says the write stopped and the row in
-  /// TODAY carries the moment, so a sentence that said both again would be
-  /// the third place one screen says the same thing.
+  /// The card's own title already says the write stopped, so a sentence
+  /// that said it again would be the third place one screen says one thing.
+  ///
+  /// The moment is on the card only where nothing else on the screen has
+  /// it. A write whose end said it failed has a row in TODAY and the row
+  /// carries the moment; a write whose process went away has no row at all
+  /// while the card is up, because `Days.every` leaves out what NOW is
+  /// carding, and NOW keeps such a card for fourteen days:
+  /// testACardWithNoRowBehindItCarriesTheMoment.
   private func stuckReason(_ write: StuckWrite) -> String {
     guard let cause = Words.cause(write.stop, line: write.line) else {
       let place = Self.places[write.via ?? ""] ?? "terminal"
-      return "The \(place) that ran it has the reason."
+      let look = "The \(place) that ran it has the reason."
+      guard write.cause == .stopped else { return look }
+      return "Started \(clockInSentence(write.at)). \(look)"
     }
     let world =
       write.command == "publish"
@@ -330,10 +338,15 @@ struct Phrases {
 
   /// What the record said a hold came to, in the panel's words and with no
   /// reading on top.
+  ///
+  /// `released` is the person pressing the card, which gdoc writes before it
+  /// sends, and `landed` is the write reaching the document with no card at
+  /// all: `HoldEnding` holds which line gdoc writes when, and neither of
+  /// them is a person saying no.
   private func ending(_ ending: HoldEnding?) -> String? {
     switch ending {
-    case .landed: return "approved by you in chat"
-    case .released: return "released without writing"
+    case .released: return "approved by you in chat"
+    case .landed: return "the write went out without the card"
     case .expired: return "ran out"
     case .dropped: return "the sign-in changed, nothing was sent"
     case nil: return nil

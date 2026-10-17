@@ -5,7 +5,8 @@
 // that reason. So this room runs one argv list with no flag at all, and the
 // gdoc row draws a ring until the child's end arrives. Install extension is
 // the second list, `update --desktop`, and it is not an update of gdoc, so it
-// moves no version and draws no ring on that row.
+// moves no version of its own. It takes the same slot: both lists are `gdoc
+// update`, so while either child is up neither row offers a button.
 //
 // No test here starts a program: the call is answered by a closure, and the
 // one that holds the ring is answered by a gate this file opens.

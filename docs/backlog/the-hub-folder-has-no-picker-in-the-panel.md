@@ -1,6 +1,6 @@
 ---
 worth: later
-where: presence/Sources/PresenceApp/Preferences.swift:105
+where: presence/Sources/PresenceApp/Preferences.swift:112
 added: 2026-10-17
 ---
 # The hub folder has no picker in the panel

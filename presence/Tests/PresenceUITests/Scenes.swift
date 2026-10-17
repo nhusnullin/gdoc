@@ -98,6 +98,11 @@ enum Scenes {
     "The DOCUMENTS header is \"N today\" where every row is from today and \"14 days · N\" "
       + "otherwise, counting the rows behind Show more. The mockup wrote three forms of it "
       + "on different screens.",
+    "The publish that stopped in the render is nameless, in r2's card and in every row "
+      + "after it, where the mockup draws \"Publish stopped · Chapter 4\". gdoc writes no "
+      + "title on a start and none on the end of a publish that created nothing, so the "
+      + "note's name is in no line of that run: naming it is a new fact in the record, "
+      + "which docs/backlog/a-publish-that-stopped-in-the-render-has-no-name.md holds.",
   ]
 
   /// How HEALTH's rows are chosen, said once on the index page because it

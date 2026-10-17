@@ -27,9 +27,16 @@
 import Foundation
 
 /// How a hold stopped waiting. The record's own words, with no reading on
-/// top: landed is the write the person approved, released is the person
-/// saying no, expired is the hold's own life running out, and dropped is the
-/// sign-in it was held under stopping being the sign-in on the computer.
+/// top, and each of them is `cmd/gdoc`'s own: released is the person
+/// pressing the card, written before the write it approved goes out
+/// (`mcprelease.go` takes the hold out and then sends); landed is that write
+/// reaching the document another way, which is the model sending it again
+/// with no card (`mcphold.go`'s `landed`); expired is the hold's own life
+/// running out; and dropped is the sign-in it was held under stopping being
+/// the sign-in on the computer.
+///
+/// No line says a person refused one. A card nobody answers expires, which
+/// is why the panel never words any of these as a no.
 public enum HoldEnding: String, Sendable, Equatable, CaseIterable {
   case released
   case expired
@@ -127,6 +134,13 @@ public struct DaysFold: Sendable, Equatable {
 }
 
 public enum Days {
+  /// How long after the released line the write that approval sent may
+  /// begin. The press and the write are one tool call of `gdoc mcp`, and one
+  /// tool call is bounded by that server's own 200-second deadline
+  /// (`internal/mcp`'s callDeadline), so a start later than this is a write
+  /// of some other call and never the one the person approved.
+  static let approvalWindow: TimeInterval = 200
+
   /// Eight rows, and the rest behind Show more.
   public static let defaultRows = 8
 
@@ -172,7 +186,7 @@ public enum Days {
     var rows: [DayRow] = []
     var ended: Set<String> = []
     var held: [String: Event] = [:]
-    let landed = landings(ordered)
+    let approved = approvals(ordered)
     let closings = endings(ordered)
 
     for event in ordered {
@@ -180,16 +194,16 @@ public enum Days {
         ended.insert(event.pairing)
         guard !event.wait, Now.stuckCommands.contains(event.command ?? "") else { continue }
         rows.append(
-          action(event, titles: titles, calls: calls, ending: landed.byWrite[event.pairing]))
+          action(event, titles: titles, calls: calls, ending: approved.byWrite[event.pairing]))
       } else if event.kind == .held {
         held[event.hold ?? ""] = event
         rows.append(
           raised(
             event, titles: titles, calls: calls, ending: closings[event.hold ?? ""]))
       } else if let ending = HoldEnding(event.kind) {
-        // The write this one approved carries it, so the closing line is
+        // The write the approval sent carries it, so the closing line is
         // not a second row: scene r7 draws one Reply and no Hold closed.
-        guard !landed.absorbed.contains(event.hold ?? "") else { continue }
+        guard !approved.absorbed.contains(event.hold ?? "") else { continue }
         rows.append(
           closed(
             event, held: held[event.hold ?? ""], ending: ending, titles: titles, calls: calls))
@@ -217,28 +231,35 @@ public enum Days {
       .map(\.element)
   }
 
-  /// A hold the person approved, joined to the write it approved: that
-  /// write's own pairing, and the hold ids whose closing line is then not a
-  /// row of its own.
-  private struct Landings {
+  /// A hold the person approved, joined to the write that approval sent:
+  /// that write's own pairing, and the hold ids whose closing line is then
+  /// not a row of its own.
+  private struct Approvals {
     var byWrite: [String: HoldEnding] = [:]
     var absorbed: Set<String> = []
   }
 
-  /// Which write each approved hold was the hold for.
+  /// Which write each approved hold sent.
   ///
-  /// The record writes three lines for one thing that happened: the chat
-  /// held the write, the write went out, and the hold landed. The ending
-  /// carries the hold's id and nothing else, so what joins it to the write
-  /// is the held line's own command and document inside the window between
-  /// the two lines: `cmd/gdoc` writes the landed line straight after the
-  /// end of the call that wrote it.
+  /// The record writes four lines for one thing that happened: the chat held
+  /// the write, the person pressed the card, and the write went out with its
+  /// own start and end. `mcprelease.go` takes the hold out before it sends,
+  /// so the released line comes first and the write's end follows it.
   ///
-  /// A landing whose write is in no part of the record this app read joins
+  /// The ending line carries the hold's id and nothing else, so what joins
+  /// it to the write is the one run the approval sent in: the chat that
+  /// raised the hold is the one that sends it, and one gdoc process is one
+  /// run.
+  ///
+  /// `landed` is not an approval. It is the write reaching the document
+  /// another way, which is the model sending it again with no card, so its
+  /// closing line stays a row of its own and says so.
+  ///
+  /// An approval whose write is in no part of the record this app read joins
   /// nothing, and its closing line stays a row of its own.
-  private static func landings(_ ordered: [Event]) -> Landings {
+  private static func approvals(_ ordered: [Event]) -> Approvals {
     var held: [String: Event] = [:]
-    var found = Landings()
+    var found = Approvals()
 
     for event in ordered {
       let id = event.hold ?? ""
@@ -248,24 +269,44 @@ public enum Days {
       }
       guard HoldEnding(event.kind) != nil else { continue }
       let opened = held.removeValue(forKey: id)
-      guard event.kind == .landed, let opened,
-        let write = wrote(opened, by: event.at, in: ordered)
+      guard event.kind == .released, let opened,
+        let write = wrote(opened, after: event.at, in: ordered)
       else { continue }
-      found.byWrite[write] = .landed
+      found.byWrite[write] = .released
       found.absorbed.insert(id)
     }
     return found
   }
 
-  /// The end of the write a hold was holding: the latest end of the held
-  /// line's own command on the held line's own document, between the hold
-  /// and its landing.
-  private static func wrote(_ held: Event, by landed: Date, in ordered: [Event]) -> String? {
-    ordered.last { event in
-      event.kind == .end && !event.wait && event.command == held.command
-        && Fold.subject(event) == Fold.subject(held)
-        && event.at >= held.at && event.at <= landed
-    }?.pairing
+  /// The write an approval sent, which is the next thing that run did: the
+  /// first start inside the window after the released line, from the process
+  /// that raised the hold, and it has to be the held line's own command on
+  /// the held line's own document.
+  ///
+  /// The window is there because `mcprelease.go` writes the released line
+  /// before it sends and the send may write no line at all: the document
+  /// check reads the document, and a read that failed on the wire or a title
+  /// that drifted ends the call before the command runs. Without a bound,
+  /// the approval would reach forward to whatever that chat wrote on that
+  /// document next, which may be an hour later and nobody's approval:
+  /// testAnApprovalThatSentNothingClaimsNoLaterWrite.
+  ///
+  /// A second approval inside the window is the same case: the first one
+  /// sent nothing the record kept, so it joins nothing rather than the write
+  /// the second one sent.
+  private static func wrote(_ held: Event, after released: Date, in ordered: [Event]) -> String? {
+    let window = released...released.addingTimeInterval(approvalWindow)
+    for event in ordered where event.run == held.run && window.contains(event.at) {
+      if event.kind == .released, event.hold != held.hold { return nil }
+      guard event.kind == .start, !event.wait else { continue }
+      guard event.command == held.command, Fold.subject(event) == Fold.subject(held)
+      else { return nil }
+      // The end is what carries the row, so a write whose end never arrived
+      // leaves the approval's own closing line to say what happened.
+      return ordered.contains { $0.kind == .end && $0.pairing == event.pairing }
+        ? event.pairing : nil
+    }
+    return nil
   }
 
   private static func action(
@@ -355,14 +396,13 @@ public enum Days {
       line: line)
   }
 
-  /// The document's latest title, the call's own where the record named no
-  /// document, and the line's own where it named neither. A publish is
-  /// handed no document, so its row is named from its own lines: Now's
-  /// `title` is the same rule and the card and the row read the same.
+  /// What a row is named by, which is `Fold.title`: the document's latest
+  /// title, the call's own where the record named no document, and the
+  /// line's own where it named neither. NOW's card calls the same function,
+  /// so the card and the row cannot name one write two ways.
   private static func title(
     _ event: Event, _ titles: [String: String], _ calls: [String: String]
   ) -> String? {
-    if let doc = Fold.subject(event), let latest = titles[doc] { return latest }
-    return calls[event.pairing] ?? event.title
+    Fold.title(event, titles: titles, calls: calls)
   }
 }

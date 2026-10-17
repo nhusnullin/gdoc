@@ -108,9 +108,9 @@ public struct HoldCard: View {
   }
 
   /// What the question is drawn in, which is the plate's own ink and the
-  /// same ink the offer's title uses. Named so a test reads what the card
-  /// hands over rather than what it hopes:
-  /// testTheHoldConfirmUsesThePlatesOwnInk.
+  /// same ink the offer's title uses. The body draws through it rather than
+  /// beside it, so a test reading this reads what the card handed the
+  /// confirm row: testTheHoldConfirmUsesThePlatesOwnInk.
   func questionInk(in palette: Palette) -> Swatch { Self.titleInk(in: palette) }
 
   /// And the consequence's, which is the quiet line's.
@@ -135,12 +135,12 @@ public struct HoldCard: View {
         VStack(alignment: .leading, spacing: 0) {
           ConfirmRow(
             title: model.question, glyph: .pause, tone: .hold,
-            danger: .dismiss, titleInk: Self.titleInk(in: palette),
+            danger: .dismiss, titleInk: questionInk(in: palette),
             onConfirm: onConfirm, onKeep: onKeep
           )
           .padding(.horizontal, -Grid.rowInset)
           QuietLine(
-            model.consequence, inset: Self.bodyInset, ink: Self.quietInk(in: scheme))
+            model.consequence, inset: Self.bodyInset, ink: consequenceInk(in: scheme))
         }
       } else {
         offer(in: palette)

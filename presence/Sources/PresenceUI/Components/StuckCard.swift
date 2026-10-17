@@ -84,8 +84,6 @@ public struct StuckCard: View {
   public static let actionsOutset: CGFloat = 4
   /// The words on the icon that closes the card.
   public static let dismissTip = ButtonWord.dismiss.rawValue
-  /// How many lines the title may take on a card.
-  public static let titleLines = 2
 
   /// The room one line of the title has: the column beside the icons for
   /// the first, and the card's full body width for the second, which is

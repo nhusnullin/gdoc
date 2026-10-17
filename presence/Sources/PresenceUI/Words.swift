@@ -198,13 +198,24 @@ public enum Words {
   /// nothing is rounded up. Under a minute, and a clock that went backwards,
   /// are both no minutes at all.
   public static func duration(_ seconds: TimeInterval) -> String {
-    let minutes = seconds > 0 ? Int(seconds / 60) : 0
+    let minutes = Words.minutes(seconds)
     let hours = minutes / 60
     let rest = minutes % 60
 
     if hours == 0 { return "\(minutes) min" }
     if rest == 0 { return "\(hours) h" }
     return "\(hours) h \(rest) min"
+  }
+
+  /// The whole minutes a stretch of seconds is inside, which is the number
+  /// `duration` says it in.
+  ///
+  /// It is public and separate because the redraw key is the other reader of
+  /// it: what the screen is owed a redraw for is the minute a row shows, and
+  /// a second flooring rule beside this one would have the two drift:
+  /// PresenceApp's testAQuietMinuteRedrawsAHoldAndAWatchAndNothingElse.
+  public static func minutes(_ seconds: TimeInterval) -> Int {
+    seconds > 0 ? Int(seconds / 60) : 0
   }
 
   /// A moment in the panel's own English, in the calendar's zone.

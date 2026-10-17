@@ -360,18 +360,18 @@ public enum Now {
     return doc
   }
 
-  /// The document's latest title, the call's own where the record named no
-  /// document, and the line's own where it named neither.
+  /// What a card is named by, which is `Fold.title`: the document's latest
+  /// title, the call's own where the record named no document, and the
+  /// line's own where it named neither.
   ///
-  /// A publish is handed no document, so until it has made one the only name
-  /// it has is the one its own lines carried: the start gdoc read the note
-  /// for, or a step line, or the end that says what it created. That is why
-  /// scene r2's card reads "Publish stopped · Chapter 4" from a run whose
-  /// end named nothing at all.
+  /// It is the fold's own function and not a copy of it, because the card
+  /// here and the row in TODAY name one write, and a publish is the write
+  /// that makes the rule: handed no document, it has only the name its own
+  /// lines carried, which is a step after the render or the end of a publish
+  /// that worked.
   private static func title(
     _ event: Event, _ titles: [String: String], _ calls: [String: String]
   ) -> String? {
-    if let doc = Fold.subject(event), let latest = titles[doc] { return latest }
-    return calls[event.pairing] ?? event.title
+    Fold.title(event, titles: titles, calls: calls)
   }
 }

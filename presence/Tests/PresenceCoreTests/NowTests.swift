@@ -238,39 +238,40 @@ final class NowTests: XCTestCase {
       "a write that failed is no check, whatever its read-back managed")
   }
 
-  // MARK: - The pieces a test states
-
-  private let docA = "1AaaAaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp"
-  private let docB = "1BbbAaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp"
-
-  /// The four classes of NOW, as numbers, so one assertion states the order.
   /// A publish is handed no document, so nothing the record says about a
   /// document names it: the only name it has is the one its own lines
-  /// carried. Scene r2's card reads "Publish stopped · Chapter 4" off a run
-  /// whose end names nothing at all.
+  /// carried, which is a step after the render or the end of a publish that
+  /// worked. `presence.Begin` writes no title on a start.
   func testACallIsNamedFromItsOwnLinesTheLatestWinning() throws {
     let named = try folded(
       [
-        start(
-          at: "2026-10-17T09:03:10Z", command: "publish", run: "aaaa", doc: nil,
-          title: "Chapter 4"),
+        start(at: "2026-10-17T09:03:10Z", command: "publish", run: "aaaa", doc: nil),
+        step(at: "2026-10-17T09:03:50Z", name: "upload", index: 2, run: "aaaa", title: "Chapter 4"),
         end(at: "2026-10-17T09:05:00Z", command: "publish", run: "aaaa", doc: nil, ok: false),
       ], alive: { _ in false })
     XCTAssertEqual(
       named.stuck.map(\.title), ["Chapter 4"],
-      "the name gdoc read off the note before the run began")
+      "the name the render put on the cover, off the step that carried it")
 
     // The latest line wins, because that is the name on the cover.
     let renamed = try folded(
       [
-        start(
-          at: "2026-10-17T09:03:10Z", command: "publish", run: "bbbb", doc: nil,
-          title: "Chapter 4"),
+        start(at: "2026-10-17T09:03:10Z", command: "publish", run: "bbbb", doc: nil),
+        step(at: "2026-10-17T09:03:50Z", name: "upload", index: 2, run: "bbbb", title: "Chapter 4"),
         end(
           at: "2026-10-17T09:05:00Z", command: "publish", run: "bbbb", doc: nil, ok: false,
           title: "Chapter 4, draft v2"),
       ], alive: { _ in false })
     XCTAssertEqual(renamed.stuck.map(\.title), ["Chapter 4, draft v2"])
+
+    // A publish that stopped inside the render has no name on any line of
+    // it, so the card and the row say "Publish" alone: scene r2.
+    let render = try folded(
+      [
+        start(at: "2026-10-17T09:03:10Z", command: "publish", run: "dddd", doc: nil),
+        end(at: "2026-10-17T09:05:00Z", command: "publish", run: "dddd", doc: nil, ok: false),
+      ], alive: { _ in false })
+    XCTAssertNil(render.stuck.first?.title, "no line of that run carried a name")
 
     // The record stamps one run on every line a process writes, so a chat
     // session is one run and a dozen calls. The name of one of its writes
@@ -291,6 +292,12 @@ final class NowTests: XCTestCase {
     XCTAssertNil(session.stuck.first?.title, "no line of that call named anything")
   }
 
+  // MARK: - The pieces a test states
+
+  private let docA = "1AaaAaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp"
+  private let docB = "1BbbAaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp"
+
+  /// The four classes of NOW, as numbers, so one assertion states the order.
   private func band(_ entry: NowEntry) -> Int {
     switch entry {
     case .hold: return 0

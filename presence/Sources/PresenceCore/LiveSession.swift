@@ -80,6 +80,17 @@ public struct LiveSession: Sendable, Equatable {
   /// is the one way the panel can tell a watch somebody ended from a watch
   /// whose process went away.
   public let stoppedByYou: Bool
+  /// Whether a command reached Google after this watch stopped, by the
+  /// record's own words: an end that worked, or one Google itself answered
+  /// 404 to. It is `Reachability`'s rule over the lines after the watch's
+  /// own end, and it is false for a watch still going.
+  ///
+  /// It is here because a watch Google refused the token on is the one
+  /// ending nobody asked for, and NOW keeps it until the sign-in works. The
+  /// sign-in working is a thing the record says: once something else got
+  /// through, the token is no longer what is stopping that watch and the
+  /// row belongs to the day's log.
+  public let reachedSince: Bool
   public let flight: Flight?
 
   public var isOpen: Bool { ended == nil }
@@ -88,6 +99,12 @@ public struct LiveSession: Sendable, Equatable {
   /// next wait cannot start without a sign-in, so nothing is polling that
   /// document, and the panel says stopped rather than paused: scene e9.
   public var stoppedBySignIn: Bool { lastPollStop == Live.signInStop }
+
+  /// Whether this watch is still waiting on a sign-in: Google refused the
+  /// token on its last poll and nothing has got through since. A watch the
+  /// token outlived is history, and NOW draws it no longer:
+  /// testAWatchTheSignInOutlivedLeavesNow.
+  public var waitsForTheSignIn: Bool { stoppedBySignIn && !reachedSince }
 
   /// What the panel's "quiet" counts from: the last write, and the watch's
   /// own start where nothing has been written yet.
@@ -259,6 +276,20 @@ public enum Live {
       lastPollFailed: last.ok == false ? last.ended : nil,
       lastPollStop: last.ok == false ? last.stop : nil,
       stoppedByYou: last.interrupted,
+      reachedSince: ended.map { reached(after: $0, in: ordered) } ?? false,
       flight: flight)
+  }
+
+  /// Whether a command reached Google after this moment, which is
+  /// `Reachability`'s rule read forwards over the lines that follow: an end
+  /// that worked, or one that failed with Google's own 404, is a token
+  /// Google took. `auth logout` and `update` say nothing about Google, so
+  /// they say nothing here either.
+  private static func reached(after moment: Date, in ordered: [Event]) -> Bool {
+    ordered.contains { event in
+      guard event.kind == .end, event.at > moment else { return false }
+      guard !Reachability.offGoogle.contains(event.command ?? "") else { return false }
+      return event.ok == true || event.stop == Reachability.answered
+    }
   }
 }

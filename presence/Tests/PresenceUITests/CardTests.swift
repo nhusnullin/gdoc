@@ -245,7 +245,6 @@ final class CardTests: XCTestCase {
   // word Proposal out of the middle. The card's whole job is naming the
   // document that stopped.
   func testALongStuckTitleGoesInWholeOnTwoLinesUnderTheIcons() throws {
-    XCTAssertEqual(StuckCard.titleLines, 2)
     XCTAssertEqual(
       StuckCard.titleColumn(actions: 3), 172,
       "the reason's 256 less the 8 pt gap and three 24 pt icons with their two 4 pt gaps")

@@ -231,6 +231,48 @@ final class LiveSessionTests: XCTestCase {
     XCTAssertFalse(waiting.stoppedBySignIn)
   }
 
+  /// A watch Google refused the token on is waiting on the person only
+  /// while nothing has got through since. The record says when something
+  /// did: an end that worked, or one Google itself answered 404 to, is a
+  /// token Google took, and from there that watch is the day's log and not
+  /// a row NOW keeps. Without it every watch a refusal ever ended would
+  /// come back the next time a token stopped working.
+  func testAWatchTheSignInOutlivedLeavesNow() throws {
+    let refused = wait(
+      from: "2026-10-17T09:00:00Z", to: "2026-10-17T09:04:00Z", run: "aaaa", ok: false,
+      stop: "auth")
+    let at = try moment("2026-10-17T17:05:00Z")
+
+    let alone = try XCTUnwrap(Live.sessions(refused, now: at, alive: { _ in true }).first)
+    XCTAssertTrue(alone.stoppedBySignIn)
+    XCTAssertFalse(alone.reachedSince, "nothing reached Google after it")
+    XCTAssertTrue(alone.waitsForTheSignIn, "so NOW keeps the row")
+
+    // The person signed in again and a reply went out. The watch is over
+    // and nobody has started another, which is the day's log.
+    let worked = refused + [write(at: "2026-10-17T10:00:00Z", command: "reply", ok: true)]
+    let outlived = try XCTUnwrap(Live.sessions(worked, now: at, alive: { _ in true }).first)
+    XCTAssertTrue(outlived.stoppedBySignIn, "the record still says why it stopped")
+    XCTAssertTrue(outlived.reachedSince)
+    XCTAssertFalse(outlived.waitsForTheSignIn, "and it is no longer waiting on anybody")
+
+    // Two commands say nothing about Google: a logout opens no connection
+    // and an update reads GitHub.
+    for command in ["auth logout", "update"] {
+      let quiet = refused + [write(at: "2026-10-17T10:00:00Z", command: command, ok: true)]
+      let still = try XCTUnwrap(Live.sessions(quiet, now: at, alive: { _ in true }).first)
+      XCTAssertFalse(still.reachedSince, "\(command) is no word about the token")
+      XCTAssertTrue(still.waitsForTheSignIn)
+    }
+
+    // A watch still going says nothing of the kind.
+    let open = wait(from: "2026-10-17T17:00:00Z", to: nil, run: "bbbb")
+    let going = try XCTUnwrap(Live.sessions(open, now: at, alive: { _ in true }).first)
+    XCTAssertTrue(going.isOpen)
+    XCTAssertFalse(going.reachedSince, "there is no after yet")
+    XCTAssertFalse(going.waitsForTheSignIn)
+  }
+
   func testTheSessionKeepsPidRunAndCallForStop() throws {
     let sessions = try day()
 

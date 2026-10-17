@@ -136,7 +136,46 @@ final class StateTests: XCTestCase {
       "and there is no button to press")
   }
 
+  /// While an update child of the app's own is up, neither row offers a
+  /// button. Both argv lists are `gdoc update` and `update --desktop`
+  /// installs the release it writes the extension of, so a second press is a
+  /// second process staging and renaming the binary the first one is
+  /// replacing: the rollback copy can end up being the new binary.
+  ///
+  /// The rows stay where they are. A row that left while a child was up
+  /// would be the screen moving under the person who pressed it.
+  func testNeitherUpdateIsOfferedWhileOneIsRunning() throws {
+    let at = "2026-10-17T09:00:00Z"
+    let idle = try drawn([], at: at, facts: updating(false))
+    XCTAssertEqual(
+      idle.health.first { $0.kind == .gdoc }?.actions.map(\.kind), [.update],
+      "with nothing running the update is there to take")
+    XCTAssertEqual(
+      idle.health.first { $0.kind == .desktop }?.actions.map(\.kind), [.installExtension])
+
+    let running = try drawn([], at: at, facts: updating(true))
+    let gdoc = try XCTUnwrap(running.health.first { $0.kind == .gdoc })
+    XCTAssertTrue(gdoc.waiting, "the gdoc row is a ring while the child is up")
+    XCTAssertEqual(gdoc.value, "v2.14.0", "and the version is the one still installed")
+    XCTAssertTrue(gdoc.actions.isEmpty)
+    let desktop = try XCTUnwrap(running.health.first { $0.kind == .desktop })
+    XCTAssertEqual(desktop.value, "not installed", "the row is where it was")
+    XCTAssertTrue(desktop.actions.isEmpty, "and there is nothing on it to press")
+  }
+
   // MARK: - The pieces a test states
+
+  /// A machine with an update to take and no extension written, with and
+  /// without a child of the app's own up.
+  private func updating(_ running: Bool) -> Facts {
+    Facts(
+      account: Scenes.account,
+      versions: Versions(app: "2.14.0", gdoc: "v2.14.0", latestStable: "v2.15.0"),
+      gdocPath: Scenes.gdocPath,
+      hub: Scenes.hub,
+      extensionState: .notInstalled,
+      updating: running)
+  }
 
   /// The state of Copy link on the one document row.
   private func copyState(_ panel: PanelModel) -> ActionState? {
