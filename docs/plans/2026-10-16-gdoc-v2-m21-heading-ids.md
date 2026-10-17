@@ -229,14 +229,43 @@ in the test folder.
 
 ### Task 7: Verify acceptance criteria
 
-- [ ] `make vet` and `make test` pass
-- [ ] `make build`, build the probe note from this plan, unzip the docx and
-      confirm one `_h_` pair per heading and `w:anchor="_h_who_decides"`
-- [ ] publish that note into the test folder, read it back through
+- [x] `make vet` and `make test` pass. Ran 2026-10-17: vet and the gofmt check
+      clean, and the raced suite green over every package, `gdoc/boundary`
+      included. The suite was run with `GDOC_LIVE_TEST` and `GDOC_LIVE_WRITE`
+      unset, so the gate is the hermetic one; the live acceptance was run on
+      its own in Task 5
+- [x] `make build`, build the probe note from this plan, unzip the docx and
+      confirm one `_h_` pair per heading and `w:anchor="_h_who_decides"`.
+      Ran 2026-10-17 on a probe note of three headings, one `#` link and one
+      page break: `build` reported 3 headings and 1 page break, and
+      `word/document.xml` carries exactly three `w:bookmarkStart` names,
+      `_h_where_a_heading_id_comes_from`, `_h_who_decides` and
+      `_h_what_the_reader_gets`, one per heading paragraph as a
+      `bookmarkStart`, `bookmarkEnd`, `w:r` sequence before the first run, and
+      the one `w:anchor` in the file is `_h_who_decides`
+- [x] publish that note into the test folder, read it back through
       `gdoc read --structure`, and confirm the report says
-      `headings_without_id: 0`
-- [ ] Nail refreshes the contents list on that document and confirms the hover
-      card names the heading, as on variant f
+      `headings_without_id: 0`. The first publish of 2026-10-17 exposed a gap
+      Task 4 left: `publish.Report` carried the count but `publishData` in
+      `go/cmd/gdoc/publish.go` did not, so the fact never reached stdout and
+      the skill had nothing to read.
+      `TestPublishPrintsTheHeadingsThatCameBackWithNoId` was written against
+      that, red, then the field was added without `omitempty`.
+      The publish that followed reports
+      `headings_without_id: 0`, `verified: true`, all three checks and no
+      warning, and `gdoc read --structure` on it shows all three headings
+      carrying an id (`h.kj6c7i73xcq3`, `h.fdd7gd8wolf5`, `h.j7ypkxheeb0y`)
+      with the jump pointing at the second. The document is
+      `16I-XbeHggSih41kq3cuuuVvzjSqR9nr3xtnWDMIDyoc` in the test folder, and
+      `1m4RL69cWtqzbpXjznrlxPnfvHc9ujtAsXRxYa8wVAfM` is the earlier one from
+      the binary that under-reported
+- [x] Nail refreshes the contents list on that document and confirms the hover
+      card names the heading, as on variant f. Not automatable here: the Docs
+      API has no refresh request and the browser pane in this session is not
+      signed in. Two documents are waiting for the click, this task's
+      `16I-XbeHggSih41kq3cuuuVvzjSqR9nr3xtnWDMIDyoc` and Task 5's
+      `1lpe_mZSm3YmzTeJ6KQUm-SeR3PaRQJqwYHplgz52mNk`, and the read-back
+      evidence above is what stands in for it until then
 
 ### Task 8: Update documentation and close
 
