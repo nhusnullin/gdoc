@@ -481,11 +481,11 @@ every box is ticked and its commit is on the branch.
 **Files:**
 - Modify: whatever the findings name under `presence/`
 
-- [ ] render every scene (`PRESENCE_SHOTS=... make app-test`), then run the
+- [x] render every scene (`PRESENCE_SHOTS=... make app-test`), then run the
       design principles' checklist over `index.html` as a reviewer who drew
       nothing (a subagent), and fix every finding in this task before anything
       is shown; the findings and fixes are listed in the commit message
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 24: the words
 

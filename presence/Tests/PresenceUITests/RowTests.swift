@@ -34,7 +34,13 @@ final class RowTests: XCTestCase {
       "320 less the panel's 8 twice, the row's 12 twice, the 16 pt glyph, two 8 pt gaps "
         + "and the 108 pt action column")
 
-    for title in [twenty, forty, sixty, eighty] {
+    // The ellipsis is part of what the column carries. Scene r9's second
+    // document is the title that proved it: a tail the counted rule admits,
+    // a head the room admits, and seven characters of head once the row has
+    // drawn the three dots after them.
+    let ellipsisEater = "B2B2C payment card concept: the frozen vocabulary"
+
+    for title in [twenty, forty, sixty, eighty, ellipsisEater] {
       let shown = MiddleTitle.headCharacters(title)
       XCTAssertGreaterThanOrEqual(
         shown, Titles.headFloor, "\"\(title)\" shows only \(shown) characters of head")

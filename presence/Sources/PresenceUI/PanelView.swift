@@ -28,6 +28,7 @@ public struct PanelView: View {
   public let actions: PanelActions
 
   @Environment(\.colorScheme) private var scheme
+  @Environment(\.renderMode) private var renderMode
 
   public init(model: PanelModel, actions: PanelActions = PanelActions()) {
     self.model = model
@@ -73,7 +74,11 @@ public struct PanelView: View {
         .strokeBorder(palette.panelEdge.color, lineWidth: Grid.hairline)
     )
     .shadows(palette.panelShadows)
-    .frame(maxHeight: Grid.panelMaxHeight, alignment: .top)
+    // A whole render is the reviewer's copy, where nothing may be hidden.
+    // Every other drawing is capped, which is what the person sees.
+    .frame(
+      maxHeight: renderMode == .whole ? .infinity : Grid.panelMaxHeight, alignment: .top
+    )
     .clipped()
     .tooltipLayer()
     .metricProbe("panel")
@@ -272,8 +277,14 @@ extension ActionModel {
 
 extension View {
   /// A CSS shadow stack, in the order the stylesheet writes it.
+  ///
+  /// The tree is flattened first. SwiftUI's `shadow` is not a box-shadow: it
+  /// reaches every layer under it, so a panel that asked for its two shadows
+  /// without compositing drew one under every row, every glyph and every
+  /// line of text, which on white is a grey smear around each word. The
+  /// screens file puts no shadow inside `.panel`.
   func shadows(_ stack: [Shadow]) -> some View {
-    stack.reduce(AnyView(self)) { view, shadow in
+    stack.reduce(AnyView(self.compositingGroup())) { view, shadow in
       AnyView(
         view.shadow(
           color: shadow.swatch.color, radius: shadow.radius, x: shadow.x, y: shadow.y))

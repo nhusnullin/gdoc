@@ -106,8 +106,17 @@ public struct TextButton: View {
 
   /// `border:.5px solid var(--hair-strong)`, and transparent for the two
   /// kinds that state their own border-color.
-  public static func edge(_ kind: ButtonKind, in palette: Palette) -> Swatch? {
-    kind == .plain ? palette.hairlineStrong : nil
+  ///
+  /// `.confirm .btn{border-color:transparent}` takes it off both halves of
+  /// an inline confirm, which is the only place a compact button is drawn.
+  /// The two halves of one question have to look like one pair: a bordered
+  /// Keep beside a borderless Sign out reads as the safe half being the
+  /// button and the dangerous half being a word.
+  public static func edge(_ kind: ButtonKind, size: ButtonSize = .regular, in palette: Palette)
+    -> Swatch?
+  {
+    guard size != .compact else { return nil }
+    return kind == .plain ? palette.hairlineStrong : nil
   }
 
   public var body: some View {
@@ -137,7 +146,7 @@ public struct TextButton: View {
       if let fill = Self.fill(kind, in: palette, scheme: scheme) {
         shape.fill(fill.color)
       }
-      if let edge = Self.edge(kind, in: palette) {
+      if let edge = Self.edge(kind, size: size, in: palette) {
         shape.strokeBorder(edge.color, lineWidth: Grid.hairline)
       }
       if kind == .primary, scheme == .light {

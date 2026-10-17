@@ -133,3 +133,25 @@ func probes<V: View>(_ view: V, scheme: ColorScheme, width: CGFloat = Grid.panel
 final class ProbeCollector {
   var reported: [MetricProbe] = []
 }
+
+/// One pixel of a view, by its point in the square the view was laid out in.
+///
+/// The render is at 2x, so a point is two pixels and the sample is the first
+/// of them. A test that asks for a colour asks for it where it drew
+/// something, so there is no searching here: the caller names the place.
+@MainActor
+func pixel<V: View>(
+  _ view: V, scheme: ColorScheme, side: CGFloat, x: CGFloat, y: CGFloat
+) throws -> NSColor {
+  let framed = view.frame(width: side, height: side)
+  let renderer = ImageRenderer(content: framed.environment(\.colorScheme, scheme))
+  renderer.scale = 2
+  var sampled: NSColor?
+  let appearance = NSAppearance(named: scheme == .dark ? .darkAqua : .aqua)
+  appearance?.performAsCurrentDrawingAppearance {
+    guard let image = renderer.cgImage else { return }
+    let rep = NSBitmapImageRep(cgImage: image)
+    sampled = rep.colorAt(x: Int(x * 2), y: Int(y * 2))?.usingColorSpace(.sRGB)
+  }
+  return try XCTUnwrap(sampled, "the renderer drew nothing in \(scheme)")
+}

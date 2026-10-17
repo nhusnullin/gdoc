@@ -43,6 +43,18 @@ final class ScrollTests: XCTestCase {
     XCTAssertEqual(ScrollBox<EmptyView>.thumbInset, 3)
     XCTAssertEqual(ScrollBox<EmptyView>.thumbTop, 6)
     XCTAssertEqual(ScrollBox<EmptyView>.thumbRadius, 2)
+    XCTAssertEqual(ScrollBox<EmptyView>.thumbFloor, 24)
+
+    // The thumb is as much of the track as the box is of the list. 88 over
+    // a 236 pt box is the list the screens file drew, about 630 pt of it.
+    XCTAssertEqual(ScrollBox<EmptyView>.thumbLength(box: 236, measured: 630), 84)
+    XCTAssertEqual(ScrollBox<EmptyView>.thumbLength(box: 236, measured: 472), 112)
+    XCTAssertEqual(
+      ScrollBox<EmptyView>.thumbLength(box: 236, measured: 10_000), 24,
+      "a very long list stops at the floor rather than becoming a dot")
+    XCTAssertEqual(
+      ScrollBox<EmptyView>.thumbLength(box: 236, measured: 100), 224,
+      "a list that fits fills the track, where no thumb is drawn at all")
 
     // `rgba(255,255,255,.22)` on black and `rgba(0,0,0,.22)` on white.
     XCTAssertEqual(Palette.dark.scrollThumb, Swatch(0xFF_FF_FF, alpha: 0.22))
@@ -67,8 +79,12 @@ final class ScrollTests: XCTestCase {
       let measured = try probes(ScrollBox { plainRows(forty) }.rendering(), scheme: scheme)
       XCTAssertEqual(measured["scrollbox"]?.height, 236, "the cap in \(scheme)")
       XCTAssertEqual(measured["scrollbox"]?.width, Grid.panelWidth)
+      // Forty 32 pt rows under a 236 pt box: the thumb is that fraction of
+      // the 224 pt track, which is 41, and not the screens file's 88. The
+      // file drew one list; a thumb that is 88 whatever is under it says a
+      // number that is not true.
       XCTAssertEqual(
-        measured["scrollbox.thumb"], CGSize(width: 4, height: 88), "the thumb in \(scheme)")
+        measured["scrollbox.thumb"], CGSize(width: 4, height: 41), "the thumb in \(scheme)")
       XCTAssertEqual(measured["scrollbox.fade"]?.height, 28, "the fade in \(scheme)")
       XCTAssertEqual(measured["scrollbox.fade"]?.width, Grid.panelWidth)
 

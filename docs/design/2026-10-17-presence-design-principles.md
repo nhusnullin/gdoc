@@ -103,3 +103,60 @@ the screens reads the screenshots and checks each line.
 - Copy link uses the two-rectangles glyph, Nail's choice over the chain.
 - Long titles: one line with a middle ellipsis, the tail keeping the last
   word group under 14 characters, the full title as the row's tooltip.
+
+## Amendments, 2026-10-17, after the first reviewer's pass
+
+Two reviewers who drew nothing read every rendered screen against the
+checklist above. These are the lines the pass changed. The findings it fixed
+in code are in the commit; these are the rules that had to move.
+
+- **Principle 3's hold pair is "Open chat" and "Dismiss".** The principle
+  still said "Release", which the specification's decision table had already
+  replaced: the panel never says Release, because only the chat can say what
+  it would write. Both halves of an inline confirm are borderless, so a pair
+  reads as one pair.
+- **Principle 2 gains the confirm's red word.** "Sign out" is drawn in the
+  bad colour. It is the fourth exception, after the hold tint, the stuck tint
+  and the Copy check, and it is there because a question with a consequence
+  is the one place the panel asks for a decision.
+- **A title keeps eight characters of head including its ellipsis.** The
+  checklist line said eight characters; the measurement forgot that the three
+  dots are drawn inside the head's own room, so a title could show seven. A
+  tail that cannot leave eight characters and the dots is dropped, and the
+  title goes in whole.
+- **A card's title may take two lines.** A card is a plate rather than a row,
+  and a stuck card with five live icons beside a one-line title stops naming
+  the document that stopped.
+- **The scroll thumb is as much of the track as the box is of the list.** The
+  screens file draws 88 pt, which is that fraction for the one list it drew.
+  A fixed 88 pt under any other list states a number that is not true, which
+  principle 5 does not allow.
+- **The pause badge holds a point of gap at every size.** At the menu bar's
+  10 pt the screens file's one-point gap falls under a device pixel and the
+  two bars close into a block that reads as a stop. Principle 1 asks for five
+  states a person tells apart at a glance.
+- **An empty TODAY is not drawn under a pinned HEALTH**, which is the rule
+  the evening's amendment gave NOW. HEALTH is pinned first on three screens:
+  no token, a sign-in in flight, and the three seconds a question is asked.
+
+Left as they are, with the reason:
+
+- **The live dot is 3.5 pt, not 6.** The screens file sets `box-sizing:
+  border-box`, so `inset:5px` is measured inside the 13.5 pt padding box. The
+  file's own value is what is drawn.
+- **The panel's corner is 12 pt continuous.** The value is the file's; the
+  curve is the platform's, which is why a ruler finds about 9.5 pt.
+- **Continue with Claude is live on every row.** It activates Claude Desktop
+  and nothing more, so there is no row it would do nothing on. The screens
+  file dims it on a document restyled from chat, which is a session the
+  specification does not build.
+- **The menu bar shows the exclamation in scene e3.** The priority is stuck,
+  hold, job, live, idle, and the specification's table wins over the file's
+  own drawing of that scene.
+
+## The render for review
+
+Every scene is drawn twice: the panel as the person opens it, capped at
+600 pt with the rest under a scroll, and the same panel with nothing hidden.
+The second is the one to review. A PNG cannot be scrolled, so a screen whose
+HEALTH sat past the cap was a screen nobody had checked.

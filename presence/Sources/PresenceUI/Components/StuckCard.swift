@@ -84,6 +84,8 @@ public struct StuckCard: View {
   public static let actionsOutset: CGFloat = 4
   /// The words on the icon that closes the card.
   public static let dismissTip = ButtonWord.dismiss.rawValue
+  /// How many lines the title may take on a card.
+  public static let titleLines = 2
 
   public let model: StuckCardModel
   /// The actions in the order they are drawn, the cross last where there is
@@ -120,7 +122,10 @@ public struct StuckCard: View {
       HStack(alignment: .top, spacing: Grid.columnGap) {
         StatusGlyph(.exclamation, tone: .bad)
           .frame(width: Grid.glyphSize, height: Typography.rowTitle.lineHeight)
-        MiddleTitle(model.title, role: Typography.titleEmphasis)
+        // Two lines: with five live icons beside it the title has about
+        // 95 pt, and on one line that is "Export stoppe… v1", a card that
+        // no longer says which document stopped.
+        MiddleTitle(model.title, role: Typography.titleEmphasis, lines: Self.titleLines)
           .frame(maxWidth: .infinity, alignment: .leading)
         HStack(spacing: Grid.actionGap) {
           ForEach(actions) { action in

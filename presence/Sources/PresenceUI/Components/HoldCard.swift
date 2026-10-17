@@ -113,10 +113,17 @@ public struct HoldCard: View {
       if asking {
         // `.row:has(.confirm)`: the question takes the card over, so the
         // card carries no other action while it is asking.
-        ConfirmRow(
-          title: model.question, sub: model.consequence, glyph: .pause, tone: .hold,
-          danger: .dismiss, onConfirm: onConfirm, onKeep: onKeep
-        )
+        //
+        // The consequence is a line of its own and not the row's sub-line,
+        // which is what HEALTH's Sign out does and for the same reason: the
+        // pair of buttons takes the right-hand column, and a sentence
+        // squeezed into what is left is cut after its first clause.
+        VStack(alignment: .leading, spacing: 0) {
+          ConfirmRow(
+            title: model.question, glyph: .pause, tone: .hold,
+            danger: .dismiss, onConfirm: onConfirm, onKeep: onKeep)
+          QuietLine(model.consequence, inset: 0)
+        }
         .padding(.horizontal, -Grid.rowInset)
       } else {
         offer(in: palette)

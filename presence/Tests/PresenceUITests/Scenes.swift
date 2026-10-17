@@ -310,8 +310,13 @@ extension Scene {
   }
 
   /// This scene as a view, in the mode the renderer needs.
+  ///
+  /// `.clipped` is the panel the person opens, capped at 600 pt with the
+  /// rest under a scroll. `.whole` is the same panel with nothing hidden,
+  /// which is what the reviewer's pass reads: a PNG cannot be scrolled, so
+  /// a screen whose HEALTH is past the cap is a screen nobody checked.
   @MainActor
-  func view() throws -> some View {
-    PanelView(model: try model()).rendering()
+  func view(_ mode: RenderMode = .clipped) throws -> some View {
+    PanelView(model: try model()).rendering(mode)
   }
 }

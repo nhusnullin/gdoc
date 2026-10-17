@@ -52,6 +52,31 @@ final class GlyphTests: XCTestCase {
   // failure. The shape is the same check the green one draws, and the tone is
   // the panel's own secondary text, which is what `.glyph` is before any
   // `.glyph-*` tone class touches it.
+  /// A pause is two bars at every size it is drawn, the menu bar's 10 pt
+  /// badge included, where a gap under one device pixel closes them into a
+  /// block that reads as a stop.
+  ///
+  /// The measurement is the glyph's own middle row: two runs of ink with a
+  /// gap between them, counted off the drawing rather than off the numbers
+  /// that made it.
+  func testThePauseIsTwoBarsAtTheBadgeSizeToo() throws {
+    for side in [Grid.glyphSize, Grid.badgeSize] {
+      let geometry = GlyphGeometry(side: side, stroke: 1.25)
+      let bars = try XCTUnwrap(geometry.filled(.pause), "the pause drew nothing at \(side)")
+      let box = bars.boundingRect
+
+      // Two bars 1.25 wide with a gap: the pair is wider than one bar and
+      // the gap is at least a point of what is drawn. The glyph is authored
+      // at 16 pt, which is the panel's own size.
+      let drawn = 1.25 * side / 16
+      let gap = box.width - 2 * drawn
+      XCTAssertGreaterThanOrEqual(
+        gap, 1, "the two bars are \(gap) pt apart at \(side), which closes into a block")
+      XCTAssertEqual(
+        box.midX, side / 2, accuracy: 0.3, "the pair is off centre at \(side)")
+    }
+  }
+
   func testTheHollowCheckIsNeutral() {
     XCTAssertEqual(StatusGlyph(.check).tone, .quiet, "a glyph with no tone named is the quiet one")
 

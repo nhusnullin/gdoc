@@ -30,6 +30,11 @@ public struct MiddleTitle: View {
 
   public let title: String
   public let role: TypeRole
+  /// How many lines the title may take. A row gives it one, which is what
+  /// the head-and-tail split is for. A card gives it two: a card is a plate
+  /// rather than a row, its reason already wraps, and naming the document
+  /// that stopped is the whole of what it is for.
+  public let lines: Int
   public let gone: Bool
   /// The colour the title is drawn in when it is not gone. `nil` is
   /// `.row-title`'s own `--t1`; the quiet rows hand over `--t3`.
@@ -38,11 +43,12 @@ public struct MiddleTitle: View {
   @Environment(\.colorScheme) private var scheme
 
   public init(
-    _ title: String, role: TypeRole = Typography.rowTitle, gone: Bool = false,
-    quietInk: Swatch? = nil
+    _ title: String, role: TypeRole = Typography.rowTitle, lines: Int = 1,
+    gone: Bool = false, quietInk: Swatch? = nil
   ) {
     self.title = title
     self.role = role
+    self.lines = lines
     self.gone = gone
     self.quietInk = quietInk
   }
@@ -58,7 +64,15 @@ public struct MiddleTitle: View {
     let split = Titles.split(title)
     guard let tail = split.tail else { return split }
     let room = column - width(tail, role: role)
-    let floor = String(split.head.prefix(Titles.headFloor))
+    if width(split.head, role: role) <= room { return split }
+
+    // The head is cut, so the floor is the floor plus the three dots after
+    // it, and one character more. The dots are drawn inside the head's own
+    // room, and the row's two pieces are laid out in whole points, so a
+    // floor that fits by a hair is drawn one character short: scene r9's
+    // "B2B2C payment card concept: the frozen vocabulary" measured eight and
+    // drew seven.
+    let floor = String(split.head.prefix(Titles.headFloor + 1)) + ellipsis
     guard width(floor, role: role) <= room else { return Titles.Split(head: title) }
     return split
   }
@@ -71,17 +85,28 @@ public struct MiddleTitle: View {
     return attributed.size().width
   }
 
+  /// The three dots a truncated head ends with. They are drawn inside the
+  /// head's own room, so every measurement of what fits counts them.
+  static let ellipsis = "…"
+
   /// How many characters of the head a column shows, which is what the
   /// floor is a floor on.
+  ///
+  /// A head that fits whole shows all of itself. A head that does not is
+  /// drawn with the ellipsis after it, and the ellipsis takes room from the
+  /// characters, so it is measured with them.
   static func headCharacters(
     _ title: String, role: TypeRole = Typography.rowTitle,
     column: CGFloat = MiddleTitle.narrowestColumn
   ) -> Int {
     let split = fitted(title, role: role, column: column)
     let room = column - width(split.tail ?? "", role: role)
+    if width(split.head, role: role) <= room { return split.head.count }
+
     var shown = 0
     for count in 1...max(split.head.count, 1) {
-      guard width(String(split.head.prefix(count)), role: role) <= room else { break }
+      let drawn = String(split.head.prefix(count)) + ellipsis
+      guard width(drawn, role: role) <= room else { break }
       shown = count
     }
     return shown
@@ -96,15 +121,18 @@ public struct MiddleTitle: View {
 
   public var body: some View {
     let palette = Palette.of(scheme)
-    let split = Self.fitted(title, role: role)
-    return HStack(spacing: 0) {
-      Text(split.head)
-        .lineLimit(1)
-        .truncationMode(.tail)
-      if let tail = split.tail {
-        Text(tail)
-          .lineLimit(1)
-          .fixedSize(horizontal: true, vertical: false)
+    return Group {
+      if lines > 1 {
+        // Over two lines there is no column to split against: the text
+        // wraps, and what is cut is cut out of the middle, so the end of
+        // the title survives here as it does in a row.
+        Text(title)
+          .lineLimit(lines)
+          .truncationMode(.middle)
+          .multilineTextAlignment(.leading)
+          .fixedSize(horizontal: false, vertical: true)
+      } else {
+        split
       }
     }
     .font(role.font)
@@ -112,6 +140,21 @@ public struct MiddleTitle: View {
     .strikethrough(gone)
     .foregroundStyle(Self.ink(gone: gone, quiet: quietInk, in: palette).color)
     .accessibilityLabel(title)
+  }
+
+  /// The head and the tail, which is what one line of a row gets.
+  private var split: some View {
+    let pieces = Self.fitted(title, role: role)
+    return HStack(spacing: 0) {
+      Text(pieces.head)
+        .lineLimit(1)
+        .truncationMode(.tail)
+      if let tail = pieces.tail {
+        Text(tail)
+          .lineLimit(1)
+          .fixedSize(horizontal: true, vertical: false)
+      }
+    }
   }
 }
 

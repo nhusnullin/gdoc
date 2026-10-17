@@ -177,10 +177,17 @@ struct GlyphGeometry {
       path.addEllipse(in: padded(CGRect(x: 6.4, y: 9.5, width: 1.25, height: 1.25)))
       return scaled(path)
     case .pause:
-      var path = bar(x: 5, y: 4.5)
-      // `right:5px` is the right edge of the padding box, so the left edge
-      // moves with the circle's border-width.
-      path.addPath(bar(x: inner - 5 - 1.25, y: 4.5))
+      // `left:5px` and `right:5px` of the padding box at the size the file
+      // draws, which leaves one point between the bars. The menu bar's
+      // badge is drawn at 10 pt, where that point shrinks under one device
+      // pixel and the two bars close into a filled block: a pause that
+      // cannot be told from a stop, and principle 1 asks for five states a
+      // person tells apart at a glance. So the gap is held at one point of
+      // the drawn size and the pair stays centred on the glyph.
+      let half = pauseGap / 2
+      let centre = authoredStroke + inner / 2
+      var path = bar(x: centre - half - 1.25 - authoredStroke, y: 4.5)
+      path.addPath(bar(x: centre + half - authoredStroke, y: 4.5))
       return scaled(path)
     case .dot:
       // `inset:5px` inside the padding box, which is where the transparent
@@ -209,6 +216,11 @@ struct GlyphGeometry {
         .translatedBy(x: -centre.x, y: -centre.y))
     return scaled(turned.applying(paddingOffset))
   }
+
+  /// How far apart the pause's two bars are, in authored units: the one
+  /// point the screens file leaves between them, and never less than a
+  /// point of what is actually drawn.
+  var pauseGap: CGFloat { max(1, 1 / scale) }
 
   /// One rounded bar: 1.25 by 5 with `border-radius:1px`.
   private func bar(x: CGFloat, y: CGFloat) -> Path {

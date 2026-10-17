@@ -313,24 +313,30 @@ extension PanelModel {
 
     let words = Phrases(facts: facts, now: now, calendar: calendar)
     let items = nowItems(nowFold, sessions: sessions, facts: facts, ui: ui, words: words)
-    let documents = documentsSection(docs, facts: facts, ui: ui, words: words)
+    let documents = documentsSection(
+      docs, facts: facts, ui: ui, words: words, busy: !items.isEmpty)
     let today = todaySection(days, words: words)
     let yesterday = yesterdaySection(days, ui: ui, words: words)
     let health = healthRows(
       facts: facts, ui: ui, now: now, stopping: stopping(items, sessions: sessions))
 
-    // HEALTH is last, where a person looks for it, except on the two
+    // HEALTH is last, where a person looks for it, except on the three
     // screens where it is the whole of what the panel is for: a machine
-    // with no token at all, and the three seconds a question is asked in
-    // it. A question that scrolled out of sight is a question nobody
-    // answers.
-    let pinned = facts.auth == .signedOut || ui.isAsking(.signOut, now: now)
+    // with no token at all, a sign-in in flight, which lives in the Account
+    // row with its countdown and its address, and the three seconds a
+    // question is asked in it. A question or a countdown that scrolled out
+    // of sight is one nobody answers.
+    let pinned =
+      facts.auth == .signedOut || facts.signIn != nil || ui.isAsking(.signOut, now: now)
 
     var sections: [PanelSection] = []
     if pinned { sections.append(.health(health)) }
     if !items.isEmpty { sections.append(.now(items)) }
     sections.append(.documents(documents))
-    sections.append(.today(today))
+    // An empty TODAY under a pinned HEALTH is a label over one grey word,
+    // between the person and the row they opened the panel for. NOW is
+    // already dropped when it is empty, and this is the same rule.
+    if !(pinned && today.rows.isEmpty) { sections.append(.today(today)) }
     if let yesterday { sections.append(.yesterday(yesterday)) }
     if !pinned { sections.append(.health(health)) }
     if let account = facts.account,
@@ -457,7 +463,7 @@ extension PanelModel {
   // MARK: DOCUMENTS
 
   private static func documentsSection(
-    _ fold: DocumentsFold, facts: Facts, ui: UIState, words: Phrases
+    _ fold: DocumentsFold, facts: Facts, ui: UIState, words: Phrases, busy: Bool
   ) -> DocumentsSectionModel {
     let rows = fold.rows.map { row in
       DocumentRowModel(
@@ -479,7 +485,11 @@ extension PanelModel {
       rows: rows,
       collapsed: Documents.defaultRows,
       isOpen: ui.isOpen(.documents),
-      empty: rows.isEmpty ? Sentences.noDocuments : nil,
+      // The hint is the first run's: it tells a person who has never
+      // published how to start. With a write already running it tells
+      // them to do the thing they are doing, so the line is the quiet one
+      // until that write names a document.
+      empty: rows.isEmpty ? (busy ? Sentences.nothingYet : Sentences.noDocuments) : nil,
       showsStrip: !ui.stripSeen && !rows.isEmpty)
   }
 
@@ -520,7 +530,8 @@ extension PanelModel {
     guard !fold.yesterday.isEmpty else { return nil }
     let summary = fold.yesterdaySummary
     return YesterdayModel(
-      summary: "\(summary.actions) actions · \(summary.documents) documents",
+      summary: "\(Sentences.count(summary.actions, "action")) · "
+        + Sentences.count(summary.documents, "document"),
       isOpen: ui.isOpen(.yesterday),
       rows: fold.yesterday.enumerated().map { words.logRow($1, index: $0 + 1_000) })
   }
@@ -762,6 +773,13 @@ public enum Sentences {
   /// this is a fact and not a fault.
   public static let accountNotRead = "signed in, account not read"
   public static let loginItemApproval = "macOS is waiting for you to allow it in Login Items"
+
+  /// A count and the thing counted, with the noun agreeing with it. One
+  /// document is a document, and the panel is read by somebody whose first
+  /// language is not English, so "1 documents" is a sentence that stops them.
+  public static func count(_ number: Int, _ noun: String) -> String {
+    "\(number) \(noun)\(number == 1 ? "" : "s")"
+  }
 }
 
 /// Every sentence the panel builds out of one fold and one set of facts.
@@ -869,10 +887,11 @@ struct Phrases {
     case .hold: return "hold"
     case .running: return (Words.running(row.command) ?? "running").lowercased()
     case .live: return "live"
-    case .liveStopped: return "live stopped \(clock(row.at))"
-    case .done: return "\(Words.verb(row.command)?.past ?? row.command) \(clock(row.at))"
-    case .failed: return "stopped \(clock(row.at))"
-    case .unknown: return "outcome unknown · \(clock(row.at))"
+    case .liveStopped: return "live stopped \(clockInSentence(row.at))"
+    case .done:
+      return "\(Words.verb(row.command)?.past ?? row.command) \(clockInSentence(row.at))"
+    case .failed: return "stopped \(clockInSentence(row.at))"
+    case .unknown: return "outcome unknown · \(clockInSentence(row.at))"
     }
   }
 
@@ -948,6 +967,17 @@ struct Phrases {
 
   func clock(_ moment: Date) -> String {
     Words.time(moment, now: now, calendar: calendar)
+  }
+
+  /// The same moment inside a sentence.
+  ///
+  /// Yesterday is the one word the clock gives back that is not a proper
+  /// noun: a weekday and a month keep their capital between other words,
+  /// and "live stopped Yesterday" reads as a name. It stays capital where
+  /// it stands alone in the value column, which is where `clock` is used.
+  func clockInSentence(_ moment: Date) -> String {
+    let written = clock(moment)
+    return written == "Yesterday" ? "yesterday" : written
   }
 
   func sentence(_ parts: [String?]) -> String {

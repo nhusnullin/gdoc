@@ -102,7 +102,7 @@ final class ControlTests: XCTestCase {
   // and so does a still of the panel. Nothing in the app forces one except
   // the second after Copy link.
   func testATooltipCanBeForcedForARender() throws {
-    let words = "Open note at line 41"
+    let words = "Open the note in Obsidian"
     let plain = ActionButton(.md, tip: words)
       .tooltipLayer()
       .frame(width: Grid.panelWidth, height: 80)
@@ -204,6 +204,11 @@ final class ControlTests: XCTestCase {
       XCTAssertNil(
         TextButton.edge(.danger, in: palette), "`.confirm .btn{border-color:transparent}`")
       XCTAssertEqual(TextButton.edge(.plain, in: palette), palette.hairlineStrong)
+
+      // Inside a confirm neither half carries one, so the pair reads as one
+      // pair rather than as a button beside a word.
+      XCTAssertNil(TextButton.edge(.plain, size: .compact, in: palette))
+      XCTAssertNil(TextButton.edge(.danger, size: .compact, in: palette))
     }
 
     // `.btn{background:transparent}` on black, so a plain button on the hold
@@ -269,7 +274,7 @@ final class ControlTests: XCTestCase {
         ConfirmRow(
           title: "Sign out?", sub: "2 live watches and 1 hold will stop.", danger: .signOut)
         TooltipBubble("Open in Google Docs")
-        ActionButton(.md, tip: "Open note at line 41", forcedTooltip: true)
+        ActionButton(.md, tip: "Open the note in Obsidian", forcedTooltip: true)
           .tooltipLayer()
           .frame(height: 48)
       }

@@ -66,6 +66,14 @@ final class CardTests: XCTestCase {
     XCTAssertNotNil(asking["confirm.danger"])
     XCTAssertNotNil(asking["confirm.keep"])
     XCTAssertNil(asking["hold.open-chat"], "a card that is asking carries no other action")
+
+    // The consequence is a line of its own, so the sentence is drawn whole
+    // rather than cut after its first clause by the pair beside it. Two
+    // lines of it at this width, which is what the words come to.
+    let quiet = try XCTUnwrap(asking["quiet"], "the consequence has no line of its own")
+    XCTAssertGreaterThan(
+      quiet.height, Typography.rowValue.lineHeight + 4,
+      "the consequence was squeezed onto one line and cut")
   }
 
   // `.stuck .row-sub{-webkit-line-clamp:2}`, and the reason rule of scene r2:
@@ -402,7 +410,7 @@ final class CardTests: XCTestCase {
   }
 
   private func note() -> IconAction {
-    IconAction(.md, tip: "Open note at line 41")
+    IconAction(.md, tip: "Open the note in Obsidian")
   }
 
   private func branch() -> IconAction {

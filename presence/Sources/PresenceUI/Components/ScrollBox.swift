@@ -27,24 +27,39 @@
 
 import SwiftUI
 
-/// Whether this tree is being drawn into an image rather than shown.
-private struct RenderingKey: EnvironmentKey {
-  static let defaultValue = false
+/// How a tree is being drawn.
+public enum RenderMode: Sendable {
+  /// On the screen, where a box scrolls and the person reaches the rest.
+  case live
+  /// Into an image, as the person first sees it: the box clips at its cap.
+  case clipped
+  /// Into an image for somebody reviewing it, where nothing may be hidden:
+  /// no cap, no clip, every row drawn. A reviewer cannot scroll a PNG, and
+  /// a screen whose HEALTH is below the cut is a screen nobody checked.
+  case whole
+}
+
+private struct RenderModeKey: EnvironmentKey {
+  static let defaultValue = RenderMode.live
 }
 
 extension EnvironmentValues {
-  /// True while a render is in progress, which `ScrollBox` reads because the
-  /// renderer draws no `ScrollView`.
-  public var isRendering: Bool {
-    get { self[RenderingKey.self] }
-    set { self[RenderingKey.self] = newValue }
+  /// How this tree is drawn. `ScrollBox` reads it because the renderer
+  /// draws no `ScrollView`, and `PanelView` because a whole render is not
+  /// capped.
+  public var renderMode: RenderMode {
+    get { self[RenderModeKey.self] }
+    set { self[RenderModeKey.self] = newValue }
   }
+
+  /// True while a render is in progress, in either of its two modes.
+  public var isRendering: Bool { renderMode != .live }
 }
 
 extension View {
   /// Draw this tree for an image: the scroll boxes in it clip a stack.
-  public func rendering(_ on: Bool = true) -> some View {
-    environment(\.isRendering, on)
+  public func rendering(_ mode: RenderMode = .clipped) -> some View {
+    environment(\.renderMode, mode)
   }
 }
 
@@ -65,7 +80,7 @@ public struct ScrollBox<Content: View>: View {
   public let content: Content
 
   @Environment(\.colorScheme) private var scheme
-  @Environment(\.isRendering) private var isRendering
+  @Environment(\.renderMode) private var renderMode
 
   public init(height: CGFloat = Grid.scrollBoxHeight, @ViewBuilder content: () -> Content) {
     self.height = height
@@ -73,7 +88,8 @@ public struct ScrollBox<Content: View>: View {
   }
 
   /// `.scrollbox::after{right:3px;top:6px;width:4px;height:88px;
-  /// border-radius:2px}`.
+  /// border-radius:2px}`. The height is the one the file drew, over the one
+  /// list it drew: `thumbLength` is what any other list gets.
   public static var thumbWidth: CGFloat { 4 }
   public static var thumbHeight: CGFloat { 88 }
   public static var thumbInset: CGFloat { 3 }
@@ -82,13 +98,14 @@ public struct ScrollBox<Content: View>: View {
 
   public var body: some View {
     let palette = Palette.of(scheme)
+    let capped = renderMode != .whole
     return
       box
-      .frame(maxHeight: height, alignment: .top)
+      .frame(maxHeight: capped ? height : .infinity, alignment: .top)
       .clipped()
       .overlayPreferenceValue(ScrollContentHeight.self) { measured in
-        if measured > height {
-          decoration(palette)
+        if capped, measured > height {
+          decoration(palette, measured: measured)
         }
       }
       .metricProbe("scrollbox")
@@ -96,11 +113,11 @@ public struct ScrollBox<Content: View>: View {
 
   /// The rows, shown in a scroller or clipped in a stack.
   @ViewBuilder private var box: some View {
-    if isRendering {
-      measured.fixedSize(horizontal: false, vertical: true)
-    } else {
+    if renderMode == .live {
       ScrollView(.vertical) { measured }
         .scrollIndicators(.hidden)
+    } else {
+      measured.fixedSize(horizontal: false, vertical: true)
     }
   }
 
@@ -114,8 +131,24 @@ public struct ScrollBox<Content: View>: View {
       )
   }
 
+  /// How long the thumb is for a list of the height named.
+  ///
+  /// As much of the track as the box is of the list, which is the one thing
+  /// a thumb says. The screens file draws 88 pt over its 236 pt box, which
+  /// is a list of about 630 pt; a fixed 88 pt under a list of any other
+  /// length says a number that is not true, and principle 5 is that the
+  /// panel states facts. The floor keeps it a thumb rather than a dot.
+  public static func thumbLength(box: CGFloat, measured: CGFloat) -> CGFloat {
+    let track = box - 2 * thumbTop
+    guard measured > box else { return track }
+    return max(thumbFloor, (track * box / measured).rounded())
+  }
+
+  /// The shortest a thumb is drawn, whatever is under it.
+  public static var thumbFloor: CGFloat { 24 }
+
   /// The thumb and the fade, over the rows and under no pointer.
-  private func decoration(_ palette: Palette) -> some View {
+  private func decoration(_ palette: Palette, measured: CGFloat) -> some View {
     ZStack(alignment: .topTrailing) {
       LinearGradient(
         colors: [palette.surface.color.opacity(0), palette.surface.color],
@@ -126,7 +159,10 @@ public struct ScrollBox<Content: View>: View {
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
       RoundedRectangle(cornerRadius: Self.thumbRadius)
         .fill(palette.scrollThumb.color)
-        .frame(width: Self.thumbWidth, height: Self.thumbHeight)
+        .frame(
+          width: Self.thumbWidth,
+          height: Self.thumbLength(box: height, measured: measured)
+        )
         .metricProbe("scrollbox.thumb")
         .padding(.top, Self.thumbTop)
         .padding(.trailing, Self.thumbInset)
