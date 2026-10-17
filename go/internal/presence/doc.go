@@ -67,6 +67,14 @@
 // where it is there as a string: TestTitleIsLiftedOnlyWhenPresentAsAString
 // and TestTheTitleIsCappedAtTwoHundredRunes.
 //
+// made is the one other id a line may carry: the document a run created,
+// which only a publish does. Every other command was handed its document and
+// the doc field names it, so made is never a second name for the same thing.
+// cmd/gdoc names the command and puts the id through the resolver a line's
+// first word goes through, so a path or a sentence under that key reaches no
+// file: cmd/gdoc's TestAPublishEndNamesTheDocumentItCreated,
+// TestARolledBackPublishNamesNoDocument and TestOnlyPublishCarriesMade.
+//
 // ok is the envelope's ok, and a start says nothing about it:
 // TestOkIsTheEnvelopesOk. verified is lifted only for the commands whose
 // caller says they read their own write back, because update and restyle

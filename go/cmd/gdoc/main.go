@@ -295,7 +295,10 @@ func dispatch(ctx context.Context, args []string, errOut io.Writer, set settings
 	// TestTheFlagChangesNoByteOfTheObject.
 	rec := presence.Begin(ctx, set.Presence && c.report, releaseVersion(),
 		c.name, presenceDoc(*c, a), a.has("--wait"), c.readsBack, errOut)
-	defer func() { rec.End(r) }()
+	defer func() {
+		rec.Made(presenceMade(*c, r))
+		rec.End(r)
+	}()
 	return c.run(ctx, a, errOut)
 }
 
@@ -316,6 +319,33 @@ func presenceDoc(c command, a *args) string {
 		return ""
 	}
 	id, err := documentID(a.target())
+	if err != nil {
+		return ""
+	}
+	return id
+}
+
+// presenceMade is the document a run created: the id in publish's own answer,
+// for the one command that creates a document, and nothing for every other
+// command, whose document was handed in and is already the event's doc.
+//
+// The id goes through documentID, the resolver the first word of a line goes
+// through, so only something shaped like a Drive id reaches a file that lasts.
+// A publish that took its document back clears the id in its data and so
+// names nothing here: TestARolledBackPublishNamesNoDocument.
+//
+// The command is named here rather than in the table, because this is the one
+// command it is true of and a column with one true row says less than a line
+// that names it: TestOnlyPublishCarriesMade.
+func presenceMade(c command, r emit.Result) string {
+	if c.name != "publish" {
+		return ""
+	}
+	data, ok := r.Data.(publishData)
+	if !ok {
+		return ""
+	}
+	id, err := documentID(data.DocumentID)
 	if err != nil {
 		return ""
 	}

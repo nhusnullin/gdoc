@@ -9,3 +9,5 @@
 {"v":1,"at":"2026-10-17T09:15:08Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","event":"dropped","hold":"h_gh78"}
 {"v":1,"at":"2026-10-17T09:15:09Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","call":3,"event":"start","command":"update","via":"terminal"}
 {"v":1,"at":"2026-10-17T09:15:10Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","call":3,"event":"end","command":"update","via":"terminal","ok":false,"ms":0}
+{"v":1,"at":"2026-10-17T09:15:11Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","call":4,"event":"start","command":"publish","via":"terminal"}
+{"v":1,"at":"2026-10-17T09:15:12Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","call":4,"event":"end","command":"publish","via":"terminal","title":"Supplier register","made":"1PuBl15h9876543210987654321098765432","ok":true,"verified":true,"ms":9300}

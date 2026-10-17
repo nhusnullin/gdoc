@@ -62,6 +62,9 @@ public struct Event: Sendable, Equatable {
   public let doc: String?
   public let wait: Bool
   public let title: String?
+  /// The document a run created, which only a publish does. Every other
+  /// command was handed its document, and `doc` names that one.
+  public let made: String?
   public let ok: Bool?
   public let verified: Bool?
   public let ms: Int64?
@@ -71,7 +74,8 @@ public struct Event: Sendable, Equatable {
 
   public init(
     schema: Int, at: Date, gdoc: String?, pid: Int32, run: String, call: Int64?, kind: EventKind,
-    command: String?, via: String?, doc: String?, wait: Bool, title: String?, ok: Bool?,
+    command: String?, via: String?, doc: String?, wait: Bool, title: String?,
+    made: String? = nil, ok: Bool?,
     verified: Bool?, ms: Int64?, hold: String?, rule: String?, until: Date?
   ) {
     self.schema = schema
@@ -86,6 +90,7 @@ public struct Event: Sendable, Equatable {
     self.doc = doc
     self.wait = wait
     self.title = title
+    self.made = made
     self.ok = ok
     self.verified = verified
     self.ms = ms
@@ -163,6 +168,7 @@ private struct Wire: Decodable {
   var doc: String?
   var wait: Bool?
   var title: String?
+  var made: String?
   var ok: Bool?
   var verified: Bool?
   var ms: Int64?
@@ -202,8 +208,8 @@ private struct Wire: Decodable {
 
     return Event(
       schema: v, at: when, gdoc: gdoc, pid: pid, run: run, call: call, kind: kind,
-      command: command, via: via, doc: doc, wait: wait ?? false, title: title, ok: ok,
-      verified: verified, ms: ms, hold: hold, rule: rule, until: ran)
+      command: command, via: via, doc: doc, wait: wait ?? false, title: title, made: made,
+      ok: ok, verified: verified, ms: ms, hold: hold, rule: rule, until: ran)
   }
 }
 

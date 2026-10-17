@@ -158,10 +158,15 @@ box is ticked and its commit is on the branch.
 **Files:**
 - Modify: `go/cmd/gdoc/main.go` (the end lifts `data.document_id` through `documentID` for publish), `go/internal/presence/event.go`, `doc.go`, the two fixtures, `Event.swift`, `EventTests.swift`, `LogTailTests.swift`
 
-- [ ] `TestAPublishEndNamesTheDocumentItCreated`,
+- [x] `TestAPublishEndNamesTheDocumentItCreated`,
       `TestARolledBackPublishNamesNoDocument`, `TestOnlyPublishCarriesMade`,
-      the field-list test updated; Swift: `testMadeDecodesAndDefaultsToNil`
-- [ ] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make app-test`
+      the field-list test updated; Swift: `testMadeDecodesAndDefaultsToNil`.
+      The id reaches the record through `cmd/gdoc`'s `presenceMade`, which
+      names publish and puts `data.document_id` through `documentID`, and
+      `(*Run).Made` carries it to the end, nil-safe like every other method
+      there. The fixture's publish pair is appended, so every index the Swift
+      tests read is where it was
+- [x] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make app-test`
 
 ### Task 4: the typed failures a stop code can name
 

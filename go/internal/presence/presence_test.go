@@ -22,6 +22,7 @@ import (
 const (
 	version = "v2.13.0"
 	docID   = "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789"
+	madeID  = "1PuBl15h9876543210987654321098765432"
 	fixedID = "9f1cb3a7d2e45608"
 )
 
@@ -111,6 +112,7 @@ func TestOffTouchesNothing(t *testing.T) {
 	Expired(false, version, "h_cd34", errOut)
 	Landed(false, version, "h_ef56", errOut)
 	var none *Run
+	none.Made(madeID)
 	none.End(emit.Result{OK: true})
 
 	if _, err := os.Stat(cfg); !os.IsNotExist(err) {
@@ -124,7 +126,7 @@ func TestOffTouchesNothing(t *testing.T) {
 func TestTheEventCarriesOnlyItsListedFields(t *testing.T) {
 	want := []string{
 		"v", "at", "gdoc", "pid", "run", "call", "event", "command", "via",
-		"doc", "wait", "title", "ok", "verified", "ms", "hold", "rule", "until",
+		"doc", "wait", "title", "made", "ok", "verified", "ms", "hold", "rule", "until",
 	}
 	var got []string
 	ty := reflect.TypeOf(Event{})
@@ -517,7 +519,7 @@ func TestTheFixtureIsWhatTheWriterWrites(t *testing.T) {
 		clock = clock.Add(time.Second)
 		return when
 	}
-	elapsed := []time.Duration{540 * time.Second, 1200 * time.Millisecond, 0}
+	elapsed := []time.Duration{540 * time.Second, 1200 * time.Millisecond, 0, 9300 * time.Millisecond}
 	since = func(time.Time) time.Duration {
 		d := elapsed[0]
 		elapsed = elapsed[1:]
@@ -541,6 +543,10 @@ func TestTheFixtureIsWhatTheWriterWrites(t *testing.T) {
 
 	upgrade := Begin(ctx, true, version, "update", "", false, false, errOut)
 	upgrade.End(emit.Result{OK: false, Error: "nothing newer than v2.13.0 is published", Version: version})
+
+	made := Begin(ctx, true, version, "publish", "", false, true, errOut)
+	made.Made(madeID)
+	made.End(emit.Result{OK: true, Data: map[string]any{"title": "Supplier register", "verified": true}, Version: version})
 
 	if errOut.Len() != 0 {
 		t.Fatalf("stderr: %q", errOut.String())

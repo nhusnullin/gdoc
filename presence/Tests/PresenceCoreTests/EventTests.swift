@@ -12,7 +12,7 @@ import XCTest
 final class EventTests: XCTestCase {
   func testAVersionOneLineDecodesAndAnUnknownFieldIsIgnored() throws {
     let lines = try Fixture.lines("events-v1")
-    XCTAssertEqual(lines.count, 11, "the shared fixture is eleven records")
+    XCTAssertEqual(lines.count, 13, "the shared fixture is thirteen records")
 
     let widened = try withUnknownField(lines[0])
     let event = try Event.decode(widened)
@@ -51,8 +51,30 @@ final class EventTests: XCTestCase {
     let kinds = try lines.map { try Event.decode($0).kind }
     XCTAssertEqual(
       kinds,
-      [.start, .end, .start, .end, .held, .released, .expired, .landed, .dropped, .start, .end]
+      [
+        .start, .end, .start, .end, .held, .released, .expired, .landed, .dropped, .start, .end,
+        .start, .end,
+      ]
     )
+  }
+
+  // The one command that creates a document names it on its end, and every
+  // other line carries no made at all, so a row the app draws from one of them
+  // has nothing to link to but the doc it was handed.
+  func testMadeDecodesAndDefaultsToNil() throws {
+    let lines = try Fixture.lines("events-v1")
+
+    let end = try Event.decode(lines[12])
+    XCTAssertEqual(end.kind, .end)
+    XCTAssertEqual(end.command, "publish")
+    XCTAssertEqual(end.made, "1PuBl15h9876543210987654321098765432")
+    XCTAssertNil(end.doc, "a publish is handed no document")
+
+    let start = try Event.decode(lines[11])
+    XCTAssertNil(start.made, "nothing was created when the run began")
+    for index in 0..<11 {
+      XCTAssertNil(try Event.decode(lines[index]).made, "line \(index) names a document it made")
+    }
   }
 
   // A hold whose sign-in changed leaves the record as dropped, which is a

@@ -46,6 +46,7 @@ type Event struct {
 	Doc      string `json:"doc,omitempty"`
 	Wait     bool   `json:"wait,omitempty"`
 	Title    string `json:"title,omitempty"`
+	Made     string `json:"made,omitempty"`
 	OK       *bool  `json:"ok,omitempty"`
 	Verified *bool  `json:"verified,omitempty"`
 	MS       *int64 `json:"ms,omitempty"`
@@ -70,6 +71,7 @@ type Run struct {
 	doc       string
 	call      int64
 	readsBack bool
+	made      string
 	started   time.Time
 	errOut    io.Writer
 }
@@ -111,6 +113,27 @@ func Begin(ctx context.Context, on bool, version, command, doc string, wait, rea
 	return r
 }
 
+// Made is the document this run created, named by the caller before the end.
+//
+// It is one command's fact: a publish is the only run that brings a document
+// into the world, and every other command was handed the document it worked
+// on, which the event's doc already names. The id is the caller's because the
+// id is in the answer rather than in the run, and because cmd/gdoc is the room
+// that knows what a Drive id looks like: cmd/gdoc's presenceMade puts the
+// value through the same resolver the line's first word goes through, so
+// nothing but an id can reach a file that lasts.
+// cmd/gdoc's TestAPublishEndNamesTheDocumentItCreated and
+// TestOnlyPublishCarriesMade.
+//
+// It is safe on a nil run, as every method here is, so the hook in dispatch is
+// the same lines whether the flag is on or off.
+func (r *Run) Made(id string) {
+	if r == nil {
+		return
+	}
+	r.made = id
+}
+
 // End writes the end event for a run, with the envelope's ok, the title and
 // the verified lifted out of its data, and the elapsed milliseconds.
 //
@@ -136,6 +159,7 @@ func (r *Run) End(res emit.Result) {
 		Via:      r.via,
 		Doc:      r.doc,
 		Title:    title,
+		Made:     r.made,
 		OK:       &ok,
 		Verified: verified,
 		MS:       &ms,
