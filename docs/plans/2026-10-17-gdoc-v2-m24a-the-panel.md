@@ -419,13 +419,13 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Sources/PresenceApp/Preferences.swift`, `UpdateAction.swift`
 - Create: `presence/Tests/PresenceAppTests/PreferencesTests.swift`, `UpdateActionTests.swift`
 
-- [ ] `testDismissalsAreKeyedByRunAndCallOrHoldId`,
+- [x] `testDismissalsAreKeyedByRunAndCallOrHoldId`,
       `testDismissalsArePrunedPastSixtyTwoDays`,
       `testOnlyTheSixKeysPersist` (dismissed, hubPath, stripSeen,
       loginItem.choice, relaunch, lastAccount); `testUpdateNeverPassesAFlag`,
       `testTheGdocRowShowsTheRingUntilTheEndThenTheNewVersion`,
       `testInstallExtensionIsUpdateDesktop`
-- [ ] `make app-test`
+- [x] `make app-test`
 
 ### Task 20: the relaunch
 

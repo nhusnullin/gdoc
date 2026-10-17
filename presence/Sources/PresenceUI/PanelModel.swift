@@ -151,7 +151,8 @@ public struct HealthRowModel: Sendable, Equatable, Identifiable {
   public let value: String
   public let glyph: GlyphKind
   public let tone: GlyphTone
-  /// The ring in the glyph's place, which only a sign-in in flight draws.
+  /// The ring in the glyph's place, which a sign-in in flight and an update
+  /// that is still running draw.
   public let waiting: Bool
   public let quiet: String?
   public let actions: [ActionModel]
@@ -629,6 +630,12 @@ extension PanelModel {
       return HealthRowModel(
         .gdoc, value: "not found", glyph: .exclamation, tone: .bad,
         quiet: "looked for it at \(facts.gdocPathTried)")
+    }
+    // While the update's own child is up the row is a ring and the version
+    // it names is the one still installed: there is nothing to press until
+    // the end arrives, and nothing honest to say about what will be there.
+    if facts.updating {
+      return HealthRowModel(.gdoc, value: version, waiting: true)
     }
     guard let latest = facts.versions.updateAvailable else {
       return HealthRowModel(.gdoc, value: version, glyph: .check, tone: .ok)

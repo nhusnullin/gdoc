@@ -166,7 +166,9 @@ public actor HealthPoller {
       pairing: facts.pairing,
       signedInAt: facts.signedInAt,
       bundle: facts.bundle,
-      newerRecord: facts.newerRecord)
+      newerRecord: facts.newerRecord,
+      unstoppable: facts.unstoppable,
+      updating: facts.updating)
   }
 
   // MARK: the two questions

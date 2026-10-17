@@ -29,6 +29,9 @@ final class SourceRulesTests: XCTestCase {
   /// Where the one room that sends a signal is.
   private static let stopper = "Sources/PresenceApp/Stopper.swift"
 
+  /// Where the one room that writes anything down is.
+  private static let preferences = "Sources/PresenceApp/Preferences.swift"
+
   /// The question that signals nothing: a zero asks whether a process is
   /// there and is the whole of Liveness. Any other number is a signal.
   private static let asking = "0"
@@ -141,6 +144,33 @@ final class SourceRulesTests: XCTestCase {
       $0.trimmingCharacters(in: .whitespaces)
     }
     return arguments.last == Self.asking
+  }
+
+  /// One file writes anything down, so "nothing else persists" is a rule
+  /// somebody can read rather than a review.
+  ///
+  /// The app's own six keys are the whole of what outlives the process. A
+  /// seventh key, or a second file writing one, is a decision in
+  /// `docs/v2/DECISIONS.md`: everything else this app knows comes out of the
+  /// record, which is gdoc's file and not the app's.
+  func testOnlyThePreferencesPersist() throws {
+    let store = "User" + "Defaults"
+
+    var sawThePreferences = false
+    try eachSwiftFile { path, text in
+      guard path.hasPrefix("Sources/") else { return }
+      let named = text.split(separator: "\n").filter { word(store, isIn: String($0)) }
+      guard path != Self.preferences else {
+        sawThePreferences = true
+        XCTAssertFalse(named.isEmpty, "\(path) is the one file that writes something down")
+        return
+      }
+      for line in named {
+        XCTFail("\(path) persists something: \(line.trimmingCharacters(in: .whitespaces))")
+      }
+    }
+    XCTAssertTrue(
+      sawThePreferences, "\(Self.preferences) is not there, so this test guards nothing")
   }
 
   /// The system is asked for something in one file, so what this app can put

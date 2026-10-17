@@ -144,6 +144,10 @@ public struct Facts: Sendable, Equatable {
   /// kernel's answer about that pid did not agree with the record. It is
   /// `Stopper.unstoppable`, asked once per refold, and it greys one icon.
   public let unstoppable: Set<String>
+  /// Whether the app's own `gdoc update` child is still up. It draws the
+  /// ring on the gdoc row, and the version beside it stays the installed one
+  /// until the child's end says what was put there.
+  public let updating: Bool
 
   public init(
     account: String? = nil,
@@ -162,7 +166,8 @@ public struct Facts: Sendable, Equatable {
     signedInAt: Date? = nil,
     bundle: BundleState = .same,
     newerRecord: Bool = false,
-    unstoppable: Set<String> = []
+    unstoppable: Set<String> = [],
+    updating: Bool = false
   ) {
     self.account = account
     self.auth = auth
@@ -181,6 +186,7 @@ public struct Facts: Sendable, Equatable {
     self.bundle = bundle
     self.newerRecord = newerRecord
     self.unstoppable = unstoppable
+    self.updating = updating
   }
 
   /// What the app knows before it has asked anything: its own version, and

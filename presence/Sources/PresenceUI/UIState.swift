@@ -6,9 +6,10 @@
 // close a section somebody opened, and a still of any of those states must
 // be renderable from a literal.
 //
-// Three of these outlive the process and are written to UserDefaults in
-// Task 19: the dismissals, whether the icon strip has been seen, and the
-// hub. The rest die with the panel, which is what they are for.
+// Three of these outlive the process, in the app's own store, which is
+// PresenceApp/Preferences and the one room that writes anything down: the
+// dismissals, whether the icon strip has been seen, and the hub. The rest
+// die with the panel, which is what they are for.
 
 import Foundation
 
@@ -82,7 +83,7 @@ public struct UIState: Sendable, Equatable {
   ///
   /// The four labels under the first document row are there to be read once.
   /// The first click on any icon is the proof they were read, so they go
-  /// then and never come back; Task 19 writes the flag down so a later
+  /// then and never come back, and the app's store keeps the flag so a later
   /// launch does not show them again.
   public func afterAnIconClick() -> UIState {
     guard !stripSeen else { return self }
