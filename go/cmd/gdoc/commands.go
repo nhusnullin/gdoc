@@ -285,6 +285,17 @@ func commands() []command {
 			},
 		},
 		{
+			name:  "auth logout",
+			group: groupAccount,
+			summary: "Remove the token from this computer. The grant stays at Google until you take it away " +
+				"in your account settings.",
+			example: "gdoc auth logout",
+			report:  true,
+			run: func(_ context.Context, _ *args, _ io.Writer) emit.Result {
+				return cmdAuthLogout()
+			},
+		},
+		{
 			name:  "read",
 			group: groupRead,
 			words: []string{"<url>"},

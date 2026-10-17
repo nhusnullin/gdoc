@@ -13,7 +13,7 @@ import (
 // table, so a command added without a sentence saying what it is for fails
 // here rather than arriving in the help unannounced.
 var everyCommandName = []string{
-	"auth status", "auth login", "read", "comments", "suggestions", "export", "restyle",
+	"auth status", "auth login", "auth logout", "read", "comments", "suggestions", "export", "restyle",
 	"probe", "reply", "propose", "withdraw", "annotate", "build", "publish",
 	"update", "mcp", "help", "completion",
 }
@@ -172,11 +172,13 @@ func TestHelpMatchesByPrefixAndRefusesWhatItDoesNotKnow(t *testing.T) {
 	if code != 0 || got["ok"] != true {
 		t.Fatalf("help auth: %v (exit %d)", got, code)
 	}
-	if want := []string{"auth status", "auth login"}; !reflect.DeepEqual(helpNames(t, got), want) {
-		t.Errorf("help auth is both auth commands: %v", helpNames(t, got))
+	if want := []string{"auth status", "auth login", "auth logout"}; !reflect.DeepEqual(helpNames(t, got), want) {
+		t.Errorf("help auth is all three auth commands: %v", helpNames(t, got))
 	}
-	if !strings.Contains(prose, "auth status") || !strings.Contains(prose, "auth login") {
-		t.Errorf("the prose must carry both: %q", prose)
+	for _, name := range []string{"auth status", "auth login", "auth logout"} {
+		if !strings.Contains(prose, name) {
+			t.Errorf("the prose must carry %q: %q", name, prose)
+		}
 	}
 
 	got, _, code = runHelp(t, "help", "auth", "status")

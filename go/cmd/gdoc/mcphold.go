@@ -31,6 +31,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"slices"
@@ -39,6 +40,7 @@ import (
 	"time"
 	"unicode/utf16"
 
+	"gdoc/internal/auth"
 	"gdoc/internal/chat"
 	"gdoc/internal/docs"
 	"gdoc/internal/emit"
@@ -62,6 +64,24 @@ const mcpHoldLife = 30 * time.Minute
 // again. This one says what happened and what to do about it, and nothing else.
 const mcpHeldSentence = "Nothing was posted; tell the person this reason and end your turn."
 
+// The three sentences a release gets when the sign-in is not the one the hold
+// was raised under. They are fixed, like the held sentence above and for the
+// same reason, and none of them names an account: the mark says the sign-in is
+// another one and never whose it is.
+//
+// Two of them say the card is gone, because it is: the hold was dropped the
+// moment the sign-in changed, and asking the person to approve it again under
+// the account they are signed in as now is the honest step. The third says the
+// card is still open, because not knowing never resolves to sending and never
+// resolves to taking a person's card away either.
+const (
+	mcpSignInChanged = "the sign-in on this computer is not the one gdoc held this write under, so nothing was sent and the card is gone. " +
+		"Tell the person gdoc was signed in again since this write was held, and make the original call again if they still want this write."
+	mcpSignedOutSince = "nobody is signed in to Google on this computer any more, so nothing was sent and the card is gone. " +
+		"Tell the person they were signed out, and call the login tool before making the original call again."
+	mcpSignInUnread = "Nothing was sent and the card is still open."
+)
+
 // mcpLister is the little of a server a hold needs: one tool registered, one
 // taken away, each told to the client as a list that moved. internal/mcp's
 // Server is what fills it, and a test watches what it was asked for.
@@ -77,7 +97,7 @@ type mcpLister interface {
 // with it, which is why a client restart loses a pending card and posts nothing.
 type mcpHolds struct {
 	mu   sync.Mutex
-	byID map[string]chat.Hold
+	byID map[string]keptHold
 
 	// on is whether this session records what it is doing, and errOut where
 	// the one line goes when the record cannot be written. A hold is the one
@@ -96,10 +116,56 @@ type mcpHolds struct {
 	confirm func(chat.Hold) mcp.Tool
 }
 
+// keptHold is one hold and the sign-in it was raised under.
+//
+// The two are kept together because a release is only an approval of this
+// write under that sign-in: a person who approved a reply as one account did
+// not approve it as the next one. internal/chat knows nothing of this, by
+// design, because a hold rule is about words and this is about the token.
+type keptHold struct {
+	held chat.Hold
+
+	// mark is auth.SignInMark of the token the hold was raised under: a hash
+	// and never the token, the account or an email. Nothing carries it out of
+	// this process: TestTheSignInMarkReachesNoAnswerNoToolAndNoLine.
+	//
+	// An empty mark is a hold raised when no token could be read, and it
+	// matches no sign-in at all, so such a hold is dropped rather than sent.
+	// That is the safe way round, and it cannot happen on the ordinary route:
+	// every write tool reads the token before the rules are asked.
+	mark string
+}
+
 // newMCPHolds is one session's own.
 func newMCPHolds(on bool, errOut io.Writer) *mcpHolds {
-	return &mcpHolds{byID: map[string]chat.Hold{}, on: on, errOut: errOut}
+	return &mcpHolds{byID: map[string]keptHold{}, on: on, errOut: errOut}
 }
+
+// mcpSignInNow is which sign-in is on this computer now, and nothing about
+// whose it is: the mark of the token at the path, an empty mark where there is
+// no token at all, and the error where there is one nobody can read.
+//
+// The three answers are three different things to a hold. Another mark is
+// another sign-in, and the hold goes. No token is nobody signed in, and the
+// hold goes too, because whoever signs in next is not who approved the write.
+// A token that cannot be read is not knowing, and not knowing never resolves
+// to sending: the hold stays and nothing goes out.
+func mcpSignInNow() (string, error) {
+	tok, err := auth.Load()
+	if errors.Is(err, auth.ErrNoToken) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return auth.SignInMark(tok), nil
+}
+
+// marksOneSignIn is whether a hold raised under was may still be sent under
+// is. An empty mark on either side is not a match: a hold that remembers no
+// sign-in, and a computer nobody is signed in on, are both "not the sign-in
+// this write was approved against".
+func marksOneSignIn(was, is string) bool { return was != "" && was == is }
 
 // listIn is where this session's confirm tools are listed. serveMCP calls it
 // once, with the server it is about to run.
@@ -124,14 +190,17 @@ func (h *mcpHolds) listIn(l mcpLister, confirm func(chat.Hold) mcp.Tool) {
 // own, so the two cannot disagree about the order of the properties.
 func (h *mcpHolds) keep(ctx context.Context, held chat.Hold) chat.Hold {
 	key := chat.WriteKey(held.Tool, held.Args)
+	// The sign-in this hold is raised under, read before the lock, because a
+	// release under another one sends nothing: sameSignIn below.
+	mark, _ := mcpSignInNow()
 	h.mu.Lock()
 	for _, open := range h.byID {
-		if chat.WriteKey(open.Tool, open.Args) == key {
+		if chat.WriteKey(open.held.Tool, open.held.Args) == key {
 			h.mu.Unlock()
-			return open
+			return open.held
 		}
 	}
-	h.byID[held.ID] = held
+	h.byID[held.ID] = keptHold{held: held, mark: mark}
 	lister, confirm := h.lister, h.confirm
 	h.mu.Unlock()
 	// One hold is one held line, so the retry above is already gone: it is the
@@ -153,33 +222,114 @@ func (h *mcpHolds) hold(id string, now time.Time) *chat.Hold {
 	h.sweep(now)
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	held, ok := h.byID[id]
+	kept, ok := h.byID[id]
 	if !ok {
 		return nil
 	}
-	return &held
+	return &kept.held
 }
 
-// sweep drops every hold older than mcpHoldLife and takes its tool off the list.
-// It runs at the start of every tool call and whenever a hold is looked up, so a
-// card nobody answered leaves the client in its own time rather than waiting for
-// somebody to press it: TestAHoldRegistersOneConfirmToolAndRemovesItOnRelease.
-func (h *mcpHolds) sweep(now time.Time) {
+// signIn is the mark the hold with this id was raised under, and empty where
+// this session keeps no such hold. It is here for the tests that ask what a
+// hold remembers; nothing in the server reads it.
+func (h *mcpHolds) signIn(id string) string {
 	h.mu.Lock()
-	var gone []string
-	for id, held := range h.byID {
-		if !held.Created.After(now.Add(-mcpHoldLife)) {
-			delete(h.byID, id)
-			gone = append(gone, id)
+	defer h.mu.Unlock()
+	return h.byID[id].mark
+}
+
+// sameSignIn answers why the hold with this id cannot be sent under the
+// sign-in on this computer now, and drops it where that sign-in is not the one
+// it was raised under.
+//
+// A hold this session does not keep is nobody's business here: the lookup that
+// follows says so in its own words. A token nobody can read keeps the hold and
+// sends nothing. Anything else is a hold that will never be sendable again, so
+// it goes with its tool and its one line:
+// TestAReleaseAfterTheSignInChangedSendsNothingAndDropsTheHold.
+func (h *mcpHolds) sameSignIn(id string) error {
+	h.mu.Lock()
+	kept, ok := h.byID[id]
+	h.mu.Unlock()
+	if !ok {
+		return nil
+	}
+	mark, err := mcpSignInNow()
+	if err != nil {
+		return fmt.Errorf("%w. %s", err, mcpSignInUnread)
+	}
+	if marksOneSignIn(kept.mark, mark) {
+		return nil
+	}
+	h.drop([]string{id})
+	if mark == "" {
+		return errors.New(mcpSignedOutSince)
+	}
+	return errors.New(mcpSignInChanged)
+}
+
+// dropChangedSignIn takes out every hold raised under a sign-in that is not
+// the one on this computer now. The sweep calls it, so a card whose account
+// changed leaves the client in its own time rather than waiting for somebody
+// to press it: TestTheSweepDropsAHoldWhoseSignInChanged.
+//
+// A session keeping no hold asks the disk nothing, and a token nobody can read
+// keeps every hold.
+func (h *mcpHolds) dropChangedSignIn() {
+	h.mu.Lock()
+	open := len(h.byID)
+	h.mu.Unlock()
+	if open == 0 {
+		return
+	}
+	mark, err := mcpSignInNow()
+	if err != nil {
+		return
+	}
+	h.mu.Lock()
+	var changed []string
+	for id, kept := range h.byID {
+		if !marksOneSignIn(kept.mark, mark) {
+			changed = append(changed, id)
 		}
+	}
+	h.mu.Unlock()
+	h.drop(changed)
+}
+
+// drop takes these holds out, writes the one line each that says the sign-in
+// they were held under is gone, and takes their confirm tools off the list.
+func (h *mcpHolds) drop(ids []string) {
+	h.mu.Lock()
+	gone := make([]string, 0, len(ids))
+	for _, id := range ids {
+		if _, ok := h.byID[id]; !ok {
+			continue
+		}
+		delete(h.byID, id)
+		gone = append(gone, id)
 	}
 	lister := h.lister
 	h.mu.Unlock()
-	// Sorted, so two expiring together leave in the same order every run, in
+	h.left(gone, lister, presence.Dropped)
+}
+
+// left is the tail every way a hold leaves shares: the ids in one order, one
+// line each saying how they left, and their confirm tools off the list. The
+// caller has already taken them out of byID under the lock and handed in the
+// lister it read there, because what leaves is the caller's own question and
+// this is only what happens afterwards.
+//
+// say is the one thing that differs: presence.Dropped, Expired or Landed, all
+// three of one shape. It is a parameter rather than three copies of these
+// lines, so the order, the record and the list cannot be fixed in one place
+// and left wrong in the other two: TestEveryWayAHoldLeavesIsExactlyOneLine.
+func (h *mcpHolds) left(gone []string, lister mcpLister, say func(bool, string, string, io.Writer)) {
+	// Sorted, so two leaving together leave in the same order every run, in
 	// the record as well as on the list.
 	slices.Sort(gone)
 	for _, id := range gone {
-		presence.Expired(h.on, releaseVersion(), id, h.errOut)
+		say(h.on, releaseVersion(), id, h.errOut)
 	}
 	if lister == nil {
 		return
@@ -187,6 +337,31 @@ func (h *mcpHolds) sweep(now time.Time) {
 	for _, id := range gone {
 		lister.Remove(mcpConfirmPrefix + id)
 	}
+}
+
+// sweep drops every hold older than mcpHoldLife and takes its tool off the list.
+// It runs at the start of every tool call and whenever a hold is looked up, so a
+// card nobody answered leaves the client in its own time rather than waiting for
+// somebody to press it: TestAHoldRegistersOneConfirmToolAndRemovesItOnRelease.
+//
+// It drops the holds whose sign-in changed too, through dropChangedSignIn,
+// which reads the token file once while this session keeps any hold at all and
+// nothing at all while it keeps none: TestTheSweepDropsAHoldWhoseSignInChanged.
+// So a card whose sign-in is no longer the one it was raised under leaves on
+// the next tool call rather than on the press.
+func (h *mcpHolds) sweep(now time.Time) {
+	defer h.dropChangedSignIn()
+	h.mu.Lock()
+	var gone []string
+	for id, kept := range h.byID {
+		if !kept.held.Created.After(now.Add(-mcpHoldLife)) {
+			delete(h.byID, id)
+			gone = append(gone, id)
+		}
+	}
+	lister := h.lister
+	h.mu.Unlock()
+	h.left(gone, lister, presence.Expired)
 }
 
 // landed drops the hold for a write that reached the document another way, and
@@ -206,25 +381,14 @@ func (h *mcpHolds) landed(tool string, args json.RawMessage) {
 	h.mu.Lock()
 	var gone []string
 	for id, open := range h.byID {
-		if chat.WriteKey(open.Tool, open.Args) == key {
+		if chat.WriteKey(open.held.Tool, open.held.Args) == key {
 			delete(h.byID, id)
 			gone = append(gone, id)
 		}
 	}
 	lister := h.lister
 	h.mu.Unlock()
-	// Sorted, so two leaving together leave in the same order every run, in
-	// the record as well as on the list.
-	slices.Sort(gone)
-	for _, id := range gone {
-		presence.Landed(h.on, releaseVersion(), id, h.errOut)
-	}
-	if lister == nil {
-		return
-	}
-	for _, id := range gone {
-		lister.Remove(mcpConfirmPrefix + id)
-	}
+	h.left(gone, lister, presence.Landed)
 }
 
 // release takes one hold out and its tool off the list, which is what makes a

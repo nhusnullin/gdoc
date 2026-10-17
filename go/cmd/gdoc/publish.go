@@ -31,6 +31,7 @@ import (
 	"gdoc/internal/emit"
 	"gdoc/internal/frontmatter"
 	"gdoc/internal/guard"
+	"gdoc/internal/presence"
 	"gdoc/internal/publish"
 )
 
@@ -73,15 +74,15 @@ type publishData struct {
 func cmdPublish(ctx context.Context, a *args) emit.Result {
 	md, err := required(a, "--md")
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	target, err := required(a, "--folder-id")
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	folder, err := folderID(target)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 
 	// The note is read and judged before anything else happens. A block gdoc
@@ -90,16 +91,22 @@ func cmdPublish(ctx context.Context, a *args) emit.Result {
 	// write an entry into.
 	source, err := noteSource(md)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	if err := publishable(md, source); err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 
+	// The first of the four parts a publish reports. Each is written
+	// immediately before the part begins, and the render is where the title
+	// comes from, so this one is the only step that carries none:
+	// TestAPublishStepsAreTheFixedNamesInOrder and
+	// TestTheFirstStepsEndCarriesTheTitle.
+	presence.Step(ctx, "build", "")
 	doc, err := renderNote(ctx, source, md, a)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error(), Warnings: doc.Warnings,
-			Data: publishData{FolderID: folder, House: doc.House, Logo: doc.Logo}}
+		return withStop(emit.Result{OK: false, Error: err.Error(), Warnings: doc.Warnings,
+			Data: publishData{FolderID: folder, House: doc.House, Logo: doc.Logo}}, err)
 	}
 
 	// One door, and it is the folder. No file is named, so the document this
@@ -113,8 +120,8 @@ func cmdPublish(ctx context.Context, a *args) emit.Result {
 		// before the sign-in failed. buildFailed states the rule: a skill
 		// should not have to read the two envelopes differently.
 		// TestAPublishThatCannotSignInStillPrintsTheLogoBlock is the pin.
-		return emit.Result{OK: false, Error: err.Error(), Warnings: doc.Warnings,
-			Data: publishData{FolderID: folder, House: doc.House, Logo: doc.Logo}}
+		return withStop(emit.Result{OK: false, Error: err.Error(), Warnings: doc.Warnings,
+			Data: publishData{FolderID: folder, House: doc.House, Logo: doc.Logo}}, err)
 	}
 	return runPublish(ctx, s, md, source, folder, doc)
 }
@@ -134,6 +141,10 @@ func runPublish(ctx context.Context, s session, md string, source []byte, folder
 		FolderID: folder,
 		Title:    doc.Title,
 		Docx:     doc.Docx,
+		// The two parts that happen inside internal/publish. That package
+		// names them and knows nothing about the record; the title is this
+		// room's, because the render that learned it is this room's.
+		OnStep: func(name string) { presence.Step(ctx, name, doc.Title) },
 	})
 	data.DocumentID = rep.DocumentID
 	data.URL = rep.URL
@@ -148,9 +159,10 @@ func runPublish(ctx context.Context, s session, md string, source []byte, folder
 		// error already names the folder, and says whether a document may be
 		// sitting in it: publish.create has three failure shapes and each one
 		// answers that differently.
-		return emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: sessionWarnings(s, warns)}
+		return withStop(emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: sessionWarnings(s, warns)}, err)
 	}
 
+	presence.Step(ctx, "link", doc.Title)
 	changed, pairWarns, pairErr := pair(md, source, folder, rep.DocumentID, doc)
 	warns = append(warns, pairWarns...)
 	if pairErr == nil {
@@ -170,7 +182,7 @@ func runPublish(ctx context.Context, s session, md string, source []byte, folder
 		data.DocumentID = ""
 		data.URL = ""
 	}
-	return emit.Result{OK: false, Error: pairErr.Error(), Data: data, Warnings: sessionWarnings(s, warns)}
+	return withStop(emit.Result{OK: false, Error: pairErr.Error(), Data: data, Warnings: sessionWarnings(s, warns)}, pairErr)
 }
 
 // publishable refuses the two notes a publish must not write into.

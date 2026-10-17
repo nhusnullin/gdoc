@@ -20,6 +20,7 @@ import (
 	"strings"
 	"testing"
 
+	"gdoc/internal/emit"
 	"gdoc/internal/gapi"
 	"gdoc/internal/presence"
 	"gdoc/internal/settings"
@@ -35,10 +36,16 @@ func presenceOn() settings.InEffect {
 
 // recording points the config directory at a fresh temporary one and answers
 // where the record will be, so one test's events are never another test's.
+//
+// It also clears the one variable that would make every run of these tests a
+// Claude Code run, because the suite itself is often run from a Claude Code
+// session and what a run records may not depend on who started the test:
+// TestViaIsCodeUnderClaudeCode sets it back for the one test about it.
 func recording(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
 	t.Setenv("GDOC_CONFIG_DIR", dir)
+	t.Setenv(claudeCodeEnv, "")
 	return dir
 }
 
@@ -172,8 +179,16 @@ func TestTheFlagChangesNoByteOfTheObject(t *testing.T) {
 						return
 					}
 					events := presenceEvents(t, dir)
-					if len(events) != 2 {
+					if len(events) < 2 || events[0].Event != "start" || events[len(events)-1].Event != "end" {
 						t.Fatalf("a reporting command writes a start and an end, and wrote %d: %+v", len(events), events)
+					}
+					// And between them, only the parts of the one command that
+					// has parts. A publish writes four; every other command
+					// writes none, so its two lines are next to each other.
+					for _, e := range events[1 : len(events)-1] {
+						if e.Event != "step" {
+							t.Fatalf("the run wrote a %q between its start and its end: %+v", e.Event, e)
+						}
 					}
 				})
 			}
@@ -289,7 +304,7 @@ func TestOnlyTheReadBackWritersCarryVerified(t *testing.T) {
 	reports := map[string]bool{
 		"read": true, "comments": true, "suggestions": true, "export": true, "restyle": true,
 		"reply": true, "propose": true, "withdraw": true, "annotate": true, "publish": true,
-		"update": true, "auth login": true,
+		"update": true, "auth login": true, "auth logout": true,
 	}
 	for _, c := range commands() {
 		if c.readsBack != readBack[c.name] {
@@ -505,4 +520,111 @@ func TestAnUpdateAndALoginWriteNoDoc(t *testing.T) {
 			}
 		}
 	})
+}
+
+// The one command that creates a document names it. Every other command was
+// handed the document it worked on, and that id is already the event's doc:
+// made is the id a run brought into the world.
+func TestAPublishEndNamesTheDocumentItCreated(t *testing.T) {
+	theHouseLogoCached(t)
+	dir := os.Getenv("GDOC_CONFIG_DIR")
+	stubWire(t, &fakeWire{answers: publishAnswers(t)})
+	_, md := buildNote(t)
+
+	var out bytes.Buffer
+	if code := run(context.Background(),
+		[]string{"publish", "--md", md, "--folder-id", testFolderID}, &out, io.Discard, presenceOn()); code != 0 {
+		t.Fatalf("publish failed: exit %d, %s", code, out.String())
+	}
+
+	events := presenceEvents(t, dir)
+	if len(events) != 6 {
+		t.Fatalf("a publish wrote %d events, want its start, its four steps and its end: %+v", len(events), events)
+	}
+	start, end := events[0], endOf(t, events)
+	if start.Made != "" {
+		t.Errorf("the start names a document nothing had created yet: %q", start.Made)
+	}
+	if end.Made != publishDocID {
+		t.Errorf("the end names made %q, want the id the create answered with", end.Made)
+	}
+	if end.Doc != "" {
+		t.Errorf("a publish was handed no document, and its event names doc %q", end.Doc)
+	}
+}
+
+// A publish whose pairing failed takes the document back, and a document that
+// is not there any more is not one to name: the envelope clears the id and the
+// record carries none either.
+func TestARolledBackPublishNamesNoDocument(t *testing.T) {
+	theHouseLogoCached(t)
+	dir := os.Getenv("GDOC_CONFIG_DIR")
+	_, md := buildNote(t)
+	answers := publishAnswers(t)
+	answers[0].before = func() {
+		if err := os.Remove(md); err != nil {
+			t.Fatal(err)
+		}
+	}
+	stubWire(t, &fakeWire{answers: append(answers, trashAnswers()...)})
+
+	var out bytes.Buffer
+	if code := run(context.Background(),
+		[]string{"publish", "--md", md, "--folder-id", testFolderID}, &out, io.Discard, presenceOn()); code == 0 {
+		t.Fatalf("a note that cannot be paired is not a clean publish: %s", out.String())
+	}
+	if !bytes.Contains(out.Bytes(), []byte(`"rolled_back":true`)) {
+		t.Fatalf("the document was not taken back, so this test proves nothing: %s", out.String())
+	}
+
+	end := endOf(t, presenceEvents(t, dir))
+	if end.Made != "" {
+		t.Errorf("the end names made %q, and the document it names has gone", end.Made)
+	}
+	if end.OK == nil || *end.OK {
+		t.Errorf("the end of a rolled back publish says ok %v", end.OK)
+	}
+}
+
+// made is publish's alone. Every other command is handed its document, so an
+// answer that carried a document_id by any other route still writes none.
+func TestOnlyPublishCarriesMade(t *testing.T) {
+	res := emit.Result{OK: true, Data: publishData{DocumentID: publishDocID}}
+	for _, c := range commands() {
+		made := presenceMade(c, res)
+		if c.name == "publish" {
+			if made != publishDocID {
+				t.Errorf("publish's end names made %q, want the id in its data", made)
+			}
+			continue
+		}
+		if made != "" {
+			t.Errorf("%s's end names made %q, and it creates no document", c.name, made)
+		}
+	}
+
+	// And nothing that is not a Drive id reaches the record, whatever a
+	// command's data carries under that key.
+	for _, odd := range []any{
+		nil,
+		map[string]any{"document_id": "/Users/nail/notes/supplier.md"},
+		publishData{DocumentID: "no"},
+		publishData{},
+	} {
+		if made := presenceMade(publishCommand(t), emit.Result{OK: false, Data: odd}); made != "" {
+			t.Errorf("data %v put %q in the record", odd, made)
+		}
+	}
+}
+
+// publishCommand is the table's own publish entry.
+func publishCommand(t *testing.T) command {
+	t.Helper()
+	for _, c := range commands() {
+		if c.name == "publish" {
+			return c
+		}
+	}
+	t.Fatal("the table carries no publish")
+	return command{}
 }

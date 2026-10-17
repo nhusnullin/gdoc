@@ -6,6 +6,7 @@ package guard
 // and milestone 1's acceptance run is acceptance_test.go.
 
 import (
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -50,6 +51,38 @@ func TestARefusalNamesTheRuleItApplied(t *testing.T) {
 				t.Errorf("the refusal must say %q: %v", c.want, err)
 			}
 		})
+	}
+}
+
+// TestTheGuardsRefusalIsTyped holds that every refusal is one value a caller
+// matches, as well as the sentence a reader argues with. cmd/gdoc names a stop
+// code for the presence record from the match, so the code never depends on
+// the words, and the words are free to change rule by rule as the test above
+// requires. The refusal is a transport error, so it reaches the caller inside
+// the *url.Error net/http wraps it in, and the match has to survive that.
+func TestTheGuardsRefusalIsTyped(t *testing.T) {
+	p := NewPolicy()
+	p.AllowFile("DOC1", LevelSuggest)
+
+	err := p.Judge("GET", mustURL(t, "https://evil.example.com/v1/documents/DOC1"), nil)
+	if err == nil {
+		t.Fatal("want a refusal, got none")
+	}
+	if !errors.Is(err, ErrRefused) {
+		t.Fatalf("the refusal must be ErrRefused: %T: %v", err, err)
+	}
+	if !strings.HasPrefix(err.Error(), "guard refused: ") {
+		t.Errorf("the sentence a person reads does not change: %v", err)
+	}
+	wrapped := &url.Error{Op: "Get", URL: "https://evil.example.com/", Err: err}
+	if !errors.Is(wrapped, ErrRefused) {
+		t.Error("a refusal inside net/http's own wrapper is still a refusal")
+	}
+	if errors.Is(errors.New("the document could not be read"), ErrRefused) {
+		t.Error("an error that is not the guard's says it is")
+	}
+	if p.Judge("GET", mustURL(t, "https://docs.googleapis.com/v1/documents/DOC1"), nil) != nil {
+		t.Error("the one document the policy was handed must still be reachable")
 	}
 }
 

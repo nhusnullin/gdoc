@@ -1,12 +1,17 @@
 // Package emit is the one output contract: every command prints exactly one
 // JSON object to stdout and exits 0 iff ok. Spec: "Output contract".
 //
-// One exception, and it is the caller's to make rather than this package's.
-// A Result with Screen set carries words a person has already read, so a
-// caller whose stdout is a terminal may print nothing there. Print still
-// writes the object every time it is called, and Screen is never in it:
-// TestScreenNeverReachesTheObject. The rule itself, which runs the terminal
-// check, is cmd/gdoc's run().
+// Three fields of a Result are not in that object, and all three are the
+// caller's rather than this package's. A Result with Screen set carries words
+// a person has already read, so a caller whose stdout is a terminal may print
+// nothing there. Stop and StopLine say in one fixed word why a failed run
+// failed, and on which line of a note where the cause has one, for the
+// presence record to keep. Print still writes the object every time it is
+// called, and none of the three is ever in it:
+// TestScreenNeverReachesTheObject and TestStopNeverReachesTheObject. The
+// screen rule itself, which runs the terminal check, is cmd/gdoc's run(), and
+// the seven codes and what names each of them are stop.go here and cmd/gdoc's
+// stop.go.
 package emit
 
 import (
@@ -35,6 +40,13 @@ type Result struct {
 	// any other answer, and no skill has to learn it.
 	// TestScreenNeverReachesTheObject.
 	Screen bool `json:"-"`
+	// Stop says in one fixed word why a failed run failed, and StopLine the
+	// line of the note the cause sits on where the cause has one. Both follow
+	// Screen: a caller sets them, the object never carries them, and no skill
+	// has to learn them. The presence record is their one reader.
+	// TestStopNeverReachesTheObject.
+	Stop     StopCode `json:"-"`
+	StopLine int      `json:"-"`
 }
 
 // Print writes the result as one JSON object and a newline. HTML escaping is

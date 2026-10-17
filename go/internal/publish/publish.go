@@ -30,6 +30,33 @@ type Options struct {
 	FolderID string
 	Title    string
 	Docx     []byte
+	// OnStep is told, immediately before each part of the run begins, what
+	// that part is called. It is how a caller says what the run is doing now
+	// without this package knowing what a record is: the two words below are
+	// the two parts that happen here, and the caller decides what they mean
+	// and whether anything is written down.
+	//
+	// A nil OnStep is a caller that does not want to be told, which is every
+	// caller but one: cmd/gdoc's publish.
+	OnStep func(name string)
+}
+
+// The two parts of a publish that happen in this room. The render before it
+// and the note after it are the caller's own, and cmd/gdoc names those:
+// cmd/gdoc's TestAPublishStepsAreTheFixedNamesInOrder holds all four in order.
+const (
+	stepUpload   = "upload"
+	stepReadBack = "read_back"
+)
+
+// step tells the caller a part of the run is beginning. It is called
+// immediately before the work, never after it, because a caller that reports
+// what is happening now cannot tell the two apart.
+func (o Options) step(name string) {
+	if o.OnStep == nil {
+		return
+	}
+	o.OnStep(name)
 }
 
 // Check is the shape rule, asked before anything leaves the machine. Each of
@@ -132,6 +159,7 @@ func Run(ctx context.Context, s Session, o Options) (Report, error) {
 	if err := o.Check(); err != nil {
 		return rep, err
 	}
+	o.step(stepUpload)
 	id, err := create(ctx, s, o)
 	if err != nil {
 		return rep, err
@@ -139,6 +167,7 @@ func Run(ctx context.Context, s Session, o Options) (Report, error) {
 	rep.DocumentID = id
 	rep.URL = DocumentURL(id)
 
+	o.step(stepReadBack)
 	var d *docs.Document
 	d, rep.Checks, rep.Title, rep.Tabs, rep.HeadingsWithoutID, rep.Warnings = verify(ctx, s, id, o.Title)
 	rep.Verified = rep.Checks.all()

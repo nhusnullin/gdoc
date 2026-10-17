@@ -125,9 +125,14 @@ public enum Fold {
       case .end:
         active.removeValue(forKey: event.pairing)
         finished.append(end(event))
+      case .step:
+        // The parts of a publish have no meaning in the panel yet: M24a's job
+        // card is what reads them. A kind this fold skips is a line the app
+        // ignores, which is what every unknown kind already was.
+        break
       case .held:
         holds[event.hold ?? ""] = hold(event, now: now)
-      case .released, .expired, .landed:
+      case .released, .expired, .landed, .dropped:
         holds.removeValue(forKey: event.hold ?? "")
       }
     }
@@ -155,7 +160,11 @@ public enum Fold {
     switch event.kind {
     case .start, .end:
       return "\(event.kind.rawValue)|\(event.pairing)"
-    case .held, .released, .expired, .landed:
+    case .step:
+      // A run has four of these, so the part's own name is in the key: without
+      // it a file somebody concatenated would lose three of the four.
+      return "\(event.kind.rawValue)|\(event.pairing)|\(event.step ?? "")"
+    case .held, .released, .expired, .landed, .dropped:
       return "\(event.kind.rawValue)|\(event.hold ?? "")"
     }
   }

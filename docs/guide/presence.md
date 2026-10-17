@@ -169,3 +169,31 @@ nothing down. It cannot read a document, answer a comment, accept a held write
 or stop a review, and there is no button in it that pretends otherwise. Those
 stay where they were: in Claude Code, in the chat, or in the terminal. The
 panel tells you a chat is waiting for you, and going to the chat is your step.
+
+## Signing out, and what a held write does then
+
+`gdoc auth logout` deletes one file: the token in `~/.config/gdoc-agent/`. It
+reads the path back to be sure the file is gone, and it answers whether there
+was one to remove, so running it twice is not an error. It makes no network
+call, and that is the part worth knowing: the permission you gave gdoc still
+stands at Google. Nothing on this machine can use it, because the token is
+gone, but to take the grant away as well, open your Google account's
+third-party access settings and remove gdoc there. Logout touches nothing else
+in that folder either. Your settings file stays, and so does the presence
+record of what already ran.
+
+It refuses rather than guessing in two cases, and names what it found. A
+sign-in waiting in a browser is one: finish it or cancel it first, so a login
+landing a second later does not write the file back. The other is a file at
+that path that is not a token gdoc wrote, a link among them. Nothing is
+removed either time.
+
+A held chat write dies with the sign-in it was held under. A write can wait
+half an hour for your yes or no, and gdoc remembers which sign-in raised it. If
+you sign out in that time, or sign in as somebody else, approving the card
+sends nothing: gdoc tells the chat the sign-in changed, drops the hold and
+takes the card's approval away. Nothing is posted under the new account,
+because the account signed in now is not the one that asked. Ask in the chat
+again and the write is built again under the sign-in you have. Nobody's name is
+compared to do this, and your account is in no line of the record: gdoc only
+knows that the sign-in is a different one.

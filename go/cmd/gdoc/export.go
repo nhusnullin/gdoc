@@ -76,15 +76,15 @@ type exportMarks struct {
 func cmdExport(ctx context.Context, a *args) emit.Result {
 	out, err := required(a, "--out")
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	r, err := open(a.target())
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	d, err := docs.Fetch(ctx, r.session, r.id)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}
+		return withStop(emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}, err)
 	}
 
 	notes := unplacedWarnings(d)
@@ -115,19 +115,19 @@ func cmdExport(ctx context.Context, a *args) emit.Result {
 		Pictures:   pics,
 	})
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings(notes...)}
+		return withStop(emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings(notes...)}, err)
 	}
 
 	cfg, err := house.Load()
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings(notes...)}
+		return withStop(emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings(notes...)}, err)
 	}
 	files, pieces, other, w := export.Project(d, layout.PictureNames(), export.Palette(cfg))
 	notes = append(notes, w...)
 
 	written, err := export.Write(layout, files)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings(notes...)}
+		return withStop(emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings(notes...)}, err)
 	}
 	notes = append(notes, written.Warnings...)
 	for _, s := range written.Stamped {

@@ -1159,3 +1159,69 @@ func TestAMultipartUploadIsCarriedAndTeachesThePolicy(t *testing.T) {
 		t.Errorf("Warnings() = %v, want none on a create whose answer read", p.Warnings())
 	}
 }
+
+// TestAStatusErrorExposesItsStatus holds the typed refusal a stop code is read
+// from. Drive's 404 and a refused token are the two a person meets, and both
+// come back as one status a caller reads with errors.As rather than as words
+// it would have to recognise. The sentence itself does not change.
+func TestAStatusErrorExposesItsStatus(t *testing.T) {
+	cases := []struct {
+		name   string
+		err    error
+		status int
+		says   string
+	}{
+		{"Google's own message", statusError("https://docs.googleapis.com/v1/documents/x", 404,
+			[]byte(`{"error":{"message":"Requested entity was not found."}}`)), 404, "Requested entity was not found."},
+		{"GitHub's top-level message", statusError("https://api.github.com/repos/a/b/releases", 403,
+			[]byte(`{"message":"API rate limit exceeded"}`)), 403, "API rate limit exceeded"},
+		{"no readable message", statusError("https://docs.googleapis.com/v1/documents/x", 500,
+			[]byte("<html>Server Error</html>")), 500, "no readable message"},
+		{"a 500 behind the unknown mark", unknown(statusError("https://docs.googleapis.com/v1/documents/x", 500,
+			[]byte(`{"error":{"message":"Internal error"}}`))), 500, "Internal error"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			var status *StatusError
+			if !errors.As(c.err, &status) {
+				t.Fatalf("the refusal must be a *StatusError errors.As reaches: %T: %v", c.err, c.err)
+			}
+			if status.Status != c.status {
+				t.Errorf("Status = %d, want %d", status.Status, c.status)
+			}
+			if !strings.Contains(c.err.Error(), c.says) {
+				t.Errorf("the sentence a person reads does not change: %v", c.err)
+			}
+			if !strings.Contains(c.err.Error(), "answered") {
+				t.Errorf("the sentence still names what answered: %v", c.err)
+			}
+		})
+	}
+}
+
+// TestATokenRefusedTwiceIsAStatusError holds that the one auth refusal gapi
+// writes itself carries a status too, so cmd/gdoc names it without reading the
+// sentence. 401 is what the server said twice.
+func TestATokenRefusedTwiceIsAStatusError(t *testing.T) {
+	tokenFile(t, time.Now().Add(time.Hour))
+	w := &wire{answer: func(n int, r *http.Request) (int, string) {
+		return 401, `{"error":{"message":"Invalid Credentials"}}`
+	}}
+	s := open(t, w)
+
+	err := s.GetJSON(context.Background(), docURL(), &struct{}{})
+
+	if err == nil {
+		t.Fatal("a token the server refuses twice must be refused, not retried forever")
+	}
+	var status *StatusError
+	if !errors.As(err, &status) {
+		t.Fatalf("the refusal must be a *StatusError errors.As reaches: %T: %v", err, err)
+	}
+	if status.Status != http.StatusUnauthorized {
+		t.Errorf("Status = %d, want 401", status.Status)
+	}
+	if err.Error() != "the token was refused twice; run: gdoc auth login" {
+		t.Errorf("the sentence a person reads does not change: %q", err.Error())
+	}
+}

@@ -378,7 +378,7 @@ func readOneTab(ctx context.Context, s Session, docID string) (*docs.Document, e
 		return nil, fmt.Errorf("the document could not be read before proposing: %w", err)
 	}
 	if d.MultiTab() {
-		return nil, fmt.Errorf("the document has %d tabs, and a proposal is written into a document with one", len(d.Tabs))
+		return nil, MoreThanOneTab("the document has %d tabs, and a proposal is written into a document with one", len(d.Tabs))
 	}
 	return d, nil
 }

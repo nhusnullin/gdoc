@@ -56,6 +56,28 @@ const (
 // report, and only an absent one means signed out.
 var ErrNoToken = errors.New("no OAuth token")
 
+// ErrGrantRefused is the token endpoint refusing the grant itself: a refresh
+// token Google no longer holds, a consent the person took away in their
+// account settings, or a client the endpoint will not accept. A run that hit
+// it needs a sign-in, the way a run with no token at all does, so it is a
+// value a caller matches: cmd/gdoc reads it with errors.Is and names the
+// sign-in as why the run stopped rather than writing down a failure nobody
+// sorted.
+//
+// Only a 400 and a 401 carry it. Those are the statuses an OAuth 2.0 error
+// response comes in (RFC 6749 section 5.2), and a 500 from the token endpoint
+// is Google being unwell rather than a sign-in to do again.
+// TestAGrantTheEndpointRefusedIsTyped is the pin.
+var ErrGrantRefused = errors.New("the sign-in was refused")
+
+// grantRefusal is the endpoint's own sentence with ErrGrantRefused underneath.
+// Unwrap, rather than a %w inside the sentence, is why the words a person
+// reads stayed exactly what they were.
+type grantRefusal struct{ msg string }
+
+func (e grantRefusal) Error() string { return e.msg }
+func (e grantRefusal) Unwrap() error { return ErrGrantRefused }
+
 // Token is oauth-token.json, the google-auth "authorized user" shape. The
 // field names are the file's, so a token any google-auth program wrote reads
 // here with no migration. UniverseDomain, Account and RaptToken are carried
@@ -175,7 +197,14 @@ func postTokenForm(ctx context.Context, c *http.Client, uri string, form url.Val
 		return tokenResponse{}, fmt.Errorf("%s: the token endpoint's answer could not be read: %w", what, err)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return tokenResponse{}, fmt.Errorf("%s failed (%d): %s", what, resp.StatusCode, summarize(body))
+		said := fmt.Sprintf("%s failed (%d): %s", what, resp.StatusCode, summarize(body))
+		if resp.StatusCode == http.StatusBadRequest || resp.StatusCode == http.StatusUnauthorized {
+			// The grant itself was refused, which is a sign-in to do again
+			// rather than a failure to read twice. The sentence is the
+			// endpoint's own either way.
+			return tokenResponse{}, grantRefusal{msg: said}
+		}
+		return tokenResponse{}, errors.New(said)
 	}
 	var r tokenResponse
 	if err := json.Unmarshal(body, &r); err != nil {

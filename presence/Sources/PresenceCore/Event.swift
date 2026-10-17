@@ -7,15 +7,20 @@
 
 import Foundation
 
-/// The six things the record says happened. A command has a start and an end;
-/// a chat hold is held and then released, expired or landed, exactly once.
+/// The eight things the record says happened. A command has a start and an
+/// end, and the one command long enough to have parts says which part it is
+/// on between them; a chat hold is held and then released, expired, landed or
+/// dropped, exactly once. Dropped is the sign-in it was held under changing,
+/// which gdoc treats as the card being gone.
 public enum EventKind: String, Sendable, CaseIterable {
   case start
   case end
+  case step
   case held
   case released
   case expired
   case landed
+  case dropped
 }
 
 /// Why a line is not a record. A newer schema is the one fault the app shows
@@ -58,9 +63,33 @@ public struct Event: Sendable, Equatable {
   public let via: String?
   public let doc: String?
   public let wait: Bool
+  /// Whether a person stopped this wait, on the end of a `comments --wait` and
+  /// nowhere else. A wait that ran to its deadline carries nothing, so this is
+  /// false for every line that says nothing about stopping.
+  public let interrupted: Bool
+  /// Which part of a run is beginning, on a step line and nowhere else. It is
+  /// one of gdoc's four fixed words for the parts of a publish, and a word
+  /// this version has not heard of is still the word gdoc wrote.
+  public let step: String?
+  /// That part's place in the list of parts, counted from one, and how many
+  /// parts there are. They are positions and never a measure of work done:
+  /// gdoc writes no percentage and no estimate.
+  public let index: Int?
+  public let count: Int?
   public let title: String?
+  /// The document a run created, which only a publish does. Every other
+  /// command was handed its document, and `doc` names that one.
+  public let made: String?
   public let ok: Bool?
   public let verified: Bool?
+  /// Why a failed run stopped, in one of gdoc's seven fixed words. It is on a
+  /// failed end alone, and this app keeps it as the word gdoc wrote: a word
+  /// this version has not heard of is still a word, and nothing here guesses
+  /// at what it means.
+  public let stop: String?
+  /// The line of the note the cause sits on, where the cause has one. Today
+  /// that is the picture the house style cannot carry, and nothing else.
+  public let line: Int?
   public let ms: Int64?
   public let hold: String?
   public let rule: String?
@@ -68,8 +97,11 @@ public struct Event: Sendable, Equatable {
 
   public init(
     schema: Int, at: Date, gdoc: String?, pid: Int32, run: String, call: Int64?, kind: EventKind,
-    command: String?, via: String?, doc: String?, wait: Bool, title: String?, ok: Bool?,
-    verified: Bool?, ms: Int64?, hold: String?, rule: String?, until: Date?
+    command: String?, via: String?, doc: String?, wait: Bool, interrupted: Bool = false,
+    step: String? = nil, index: Int? = nil, count: Int? = nil, title: String?,
+    made: String? = nil, ok: Bool?,
+    verified: Bool?, stop: String? = nil, line: Int? = nil,
+    ms: Int64?, hold: String?, rule: String?, until: Date?
   ) {
     self.schema = schema
     self.at = at
@@ -82,9 +114,16 @@ public struct Event: Sendable, Equatable {
     self.via = via
     self.doc = doc
     self.wait = wait
+    self.interrupted = interrupted
+    self.step = step
+    self.index = index
+    self.count = count
     self.title = title
+    self.made = made
     self.ok = ok
     self.verified = verified
+    self.stop = stop
+    self.line = line
     self.ms = ms
     self.hold = hold
     self.rule = rule
@@ -159,9 +198,16 @@ private struct Wire: Decodable {
   var via: String?
   var doc: String?
   var wait: Bool?
+  var interrupted: Bool?
+  var step: String?
+  var index: Int?
+  var count: Int?
   var title: String?
+  var made: String?
   var ok: Bool?
   var verified: Bool?
+  var stop: String?
+  var line: Int?
   var ms: Int64?
   var hold: String?
   var rule: String?
@@ -185,9 +231,9 @@ private struct Wire: Decodable {
     }
 
     switch kind {
-    case .start, .end:
+    case .start, .end, .step:
       guard let command, !command.isEmpty else { throw RecordFault.undecodable("no command") }
-    case .held, .released, .expired, .landed:
+    case .held, .released, .expired, .landed, .dropped:
       guard let hold, !hold.isEmpty else { throw RecordFault.undecodable("no hold") }
     }
 
@@ -199,8 +245,11 @@ private struct Wire: Decodable {
 
     return Event(
       schema: v, at: when, gdoc: gdoc, pid: pid, run: run, call: call, kind: kind,
-      command: command, via: via, doc: doc, wait: wait ?? false, title: title, ok: ok,
-      verified: verified, ms: ms, hold: hold, rule: rule, until: ran)
+      command: command, via: via, doc: doc, wait: wait ?? false,
+      interrupted: interrupted ?? false,
+      step: step, index: index, count: count, title: title, made: made,
+      ok: ok, verified: verified, stop: stop, line: line, ms: ms, hold: hold, rule: rule,
+      until: ran)
   }
 }
 

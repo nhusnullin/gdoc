@@ -67,7 +67,7 @@ type markEntry struct {
 func cmdHelpMarks(json bool, errOut io.Writer) emit.Result {
 	cfg, err := house.Load()
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	entries := markEntries(cfg)
 	writeMarks(errOut, entries)

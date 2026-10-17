@@ -110,7 +110,7 @@ box is ticked and its commit is on the branch.
 - Modify: `go/cmd/gdoc/commands.go`, `go/cmd/gdoc/login.go` (the auth entries), `go/cmd/gdoc/doc.go`, `go/internal/auth/doc.go`
 - Modify: `go/cmd/gdoc/testdata/screens/*.golden` (the overview and the auth screens), `go/cmd/gdoc/testdata/pipe/help.stdout.golden`, `go/cmd/gdoc/pipe_test.go` (the comment names the exception), the completion goldens, `go/cmd/gdoc/presenceflag_test.go` (the two literals re-taken), `go/cmd/gdoc/presence_test.go` (the `reports` map), `go/cmd/gdoc/help_test.go` (`everyCommandName`), `go/cmd/gdoc/main_test.go`, `go/boundary` (the command count), `CLAUDE.md:24`
 
-- [ ] `TestLogoutRemovesTheTokenAndReadsItsAbsenceBack`,
+- [x] `TestLogoutRemovesTheTokenAndReadsItsAbsenceBack`,
       `TestLogoutWithNoTokenIsOkAndRemovesNothing`,
       `TestLogoutRefusesASymlinkOrANonRegularFileAndRemovesNothing`,
       `TestLogoutRefusesATokenItCannotParseAndLeavesIt`,
@@ -118,14 +118,14 @@ box is ticked and its commit is on the branch.
       `TestLogoutTouchesNothingElseInTheConfigDir`, `TestLogoutMakesNoRequest`,
       `TestLogoutIsNoChatTool`, `TestLogoutWritesAStartAndAnEndWithNoDoc`,
       `TestOnlyLogoutRemovesTheToken` in `go/boundary`
-- [ ] the command, visible, with its sentence, example and `report: true`;
+- [x] the command, visible, with its sentence, example and `report: true`;
       the summary says the grant stays at Google until removed in the account
       settings
-- [ ] every pin named above re-recorded or updated for the one new command,
+- [x] every pin named above re-recorded or updated for the one new command,
       and `pipe_test.go`'s comment gains the sentence that a line a milestone
       adds for a new command is re-recorded in that milestone's commit, as
       M19, M20 and M22 did
-- [ ] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make vet`
+- [x] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make vet`
 
 ### Task 2: a hold remembers the sign-in it was held under
 
@@ -134,7 +134,7 @@ box is ticked and its commit is on the branch.
 - Modify: `go/cmd/gdoc/mcphold.go`, `go/cmd/gdoc/mcprelease.go`, `go/cmd/gdoc/mcphold_test.go`
 - Modify: `go/internal/presence/event.go` (the `dropped` hold ending), `doc.go`, `testdata/events-v1.jsonl`, `presence/Tests/PresenceCoreTests/Fixtures/events-v1.jsonl`, `presence/Sources/PresenceCore/Event.swift`, `presence/Sources/PresenceCore/Fold.swift` (the two switches learn `dropped` as a hold ending), `presence/Tests/PresenceCoreTests/EventTests.swift`, `LogTailTests.swift`
 
-- [ ] `TestAHoldRemembersTheSignInItWasHeldUnder`,
+- [x] `TestAHoldRemembersTheSignInItWasHeldUnder`,
       `TestAReleaseAfterTheSignInChangedSendsNothingAndDropsTheHold`,
       `TestAReleaseAfterASignOutSendsNothingAndDropsTheHold`,
       `TestAReleaseUnderTheSameSignInStillSends`,
@@ -144,19 +144,29 @@ box is ticked and its commit is on the branch.
       `TestTheSignInMarkReachesNoAnswerNoToolAndNoLine`,
       `TestEveryWayAHoldLeavesIsExactlyOneLine` gains `dropped`;
       Swift: `testADroppedLineDecodesAsAHoldEnding`
-- [ ] the mark kept in `mcpHolds` beside the hold and compared at release and
-      in `sweep`; the fixed sentence; `internal/chat` untouched
-- [ ] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make app-test`
+- [x] the mark kept in `mcpHolds` beside the hold and compared at release and
+      in `sweep`; the fixed sentence; `internal/chat` untouched. The tests of
+      the rule are in `go/cmd/gdoc/mcpsignin_test.go`, because
+      `mcphold_test.go` is already at its length; the `dropped` way out joined
+      `TestEveryWayAHoldLeavesIsExactlyOneLine` in `mcphold_test.go` itself.
+      The new fixture line sits after `landed`, so every index the Swift tests
+      read is where it was and `LogTailTests.swift` needed no change
+- [x] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make app-test`
 
 ### Task 3: `made` on a publish end
 
 **Files:**
 - Modify: `go/cmd/gdoc/main.go` (the end lifts `data.document_id` through `documentID` for publish), `go/internal/presence/event.go`, `doc.go`, the two fixtures, `Event.swift`, `EventTests.swift`, `LogTailTests.swift`
 
-- [ ] `TestAPublishEndNamesTheDocumentItCreated`,
+- [x] `TestAPublishEndNamesTheDocumentItCreated`,
       `TestARolledBackPublishNamesNoDocument`, `TestOnlyPublishCarriesMade`,
-      the field-list test updated; Swift: `testMadeDecodesAndDefaultsToNil`
-- [ ] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make app-test`
+      the field-list test updated; Swift: `testMadeDecodesAndDefaultsToNil`.
+      The id reaches the record through `cmd/gdoc`'s `presenceMade`, which
+      names publish and puts `data.document_id` through `documentID`, and
+      `(*Run).Made` carries it to the end, nil-safe like every other method
+      there. The fixture's publish pair is appended, so every index the Swift
+      tests read is where it was
+- [x] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make app-test`
 
 ### Task 4: the typed failures a stop code can name
 
@@ -164,12 +174,19 @@ box is ticked and its commit is on the branch.
 - Create: `go/internal/emit/stop.go` (`StopCode` with the seven literals and `Result.Stop StopCode` tagged `json:"-"`, `Result.StopLine int` tagged `json:"-"`), `go/internal/emit/stop_test.go`
 - Modify: `go/internal/body/image.go` (a typed `PictureError{Line}`), `go/internal/gapi/session.go` (`statusError` exposes its status), `go/internal/propose/*.go` and `go/internal/annotate/*.go` (a typed `ErrMoreThanOneTab`), `go/internal/guard/policy.go` (a typed refusal), their tests
 
-- [ ] `TestStopNeverReachesTheObject` (as `TestScreenNeverReachesTheObject`),
+- [x] `TestStopNeverReachesTheObject` (as `TestScreenNeverReachesTheObject`),
       `TestTheSevenCodesAreLiterals`, `TestAPictureThatCannotBeEmbeddedCarriesItsLine`,
       `TestAStatusErrorExposesItsStatus`, `TestMoreThanOneTabIsATypedRefusal`,
       `TestTheGuardsRefusalIsTyped`; every existing test over those error
-      strings unchanged, because the words do not change
-- [ ] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`
+      strings unchanged, because the words do not change. Four more boxes the
+      work asked for: `TestStopCodesIsACopy`, because `StopCodes` hands out a
+      slice; `TestATokenRefusedTwiceIsAStatusError`, because the auth refusal
+      gapi writes itself is not a `statusError` and Task 5 has to name it;
+      `TestMoreThanOneTabIsATypedRefusal` a second time in `internal/annotate`,
+      because the two packages refuse separately; and `Unwrap` on
+      `*PictureError` and on the two sentence-only types, which is how every
+      word a person reads stayed the word it was
+- [x] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make vet`
 
 ### Task 5: `stop` and `line` on a failed end
 
@@ -177,62 +194,108 @@ box is ticked and its commit is on the branch.
 - Modify: `go/cmd/gdoc/main.go` and the command files that build a failed result (`publish.go`, `read.go`, `write.go` or wherever each refusal becomes an `emit.Result`): each sets `Stop` from `errors.As` over the typed failures of Task 4 and `net` errors, in `cmd/gdoc` and never inside `internal/presence`
 - Modify: `go/internal/presence/event.go` (`stop`, `line` lifted from `Result.Stop` and `Result.StopLine`), `doc.go`, the two fixtures, `Event.swift`, `EventTests.swift`, `LogTailTests.swift`
 
-- [ ] `TestAStopIsOneOfTheSevenCodesAndNeverASentence`,
+- [x] `TestAStopIsOneOfTheSevenCodesAndNeverASentence` (in `cmd/gdoc` over
+      the reader and in `internal/presence` over the record),
       `TestTheSVGRefusalCarriesItsLine`, `TestANotFoundIsNotFound`,
       `TestAnAuthRefusalIsAuth`, `TestAHandshakeTimeoutIsNetwork`,
       `TestAGuardRefusalIsRefused`, `TestAnUnknownFailureIsOther`,
       `TestPresenceOpensNoWireAndRunsNothing` unchanged, the canary test
       extended with an error sentence that must not reach the line; Swift:
-      `testStopAndLineDecodeAndDefaultToNil`
-- [ ] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make app-test`
+      `testStopAndLineDecodeAndDefaultToNil`. Four things the work asked for:
+      `TestAStopReachesNoSuccessfulEnd`, because a caller may set a code on a
+      run that worked and the record may not keep one; the word filled in by
+      `dispatch`'s own deferred hook, so a command that builds a refusal by
+      hand still ends with one of the seven and no command file has to
+      remember it; `cmd/gdoc`'s three status literals, because that package
+      may not import `net/http` (`TestNetHTTPStaysInItsRooms`); and
+      `buildFailed` now taking the error rather than its sentence, which is
+      how the code reaches the envelope `build` and `publish` share
+- [x] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make app-test`
 
 ### Task 6: `step` events for publish
 
 **Files:**
 - Modify: `go/internal/presence/event.go`, `doc.go`, `go/cmd/gdoc/publish.go`, `go/internal/publish/publish.go` (`Options.OnStep`), `go/cmd/gdoc/main.go` (`presence.WithRun` on the context), the two fixtures, `Event.swift`, `Fold.swift` (the switches skip `step` for now), `EventTests.swift`, `LogTailTests.swift`, `go/boundary/presence_test.go`
 
-- [ ] `TestAPublishStepsAreTheFixedNamesInOrder` (build, upload, read_back,
-      link, each written immediately before it begins),
-      `TestTheFirstStepsEndCarriesTheTitle`, `TestStepHasOnlyPublishAsCaller`
-      (boundary), `TestAPanicAfterAStepStillWritesTheEnd`,
+- [x] `TestAPublishStepsAreTheFixedNamesInOrder` (build, upload, read_back,
+      link, each written immediately before it begins, the two network parts
+      measured from the wire itself: the step is already on disk when the
+      request leaves), `TestTheFirstStepsEndCarriesTheTitle`,
+      `TestStepHasOnlyPublishAsCaller` (boundary),
+      `TestAPanicAfterAStepStillWritesTheEnd`,
       `TestNoPercentageOrEstimateIsEverWritten`; Swift:
-      `testAStepLineDecodesWithItsNameIndexAndCount`
-- [ ] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make app-test`
+      `testAStepLineDecodesWithItsNameIndexAndCount`. Three more boxes the work
+      asked for: `TestAStepIsItsNameAndItsPlaceInTheFixedList`, because the
+      four names and the two numbers are the record's own shape;
+      `TestAStepNameThatIsNotOneOfTheFourWritesNothing`, because
+      `internal/publish` names two of the four and a drift there must write no
+      line rather than a word nobody has seen; and
+      `TestAStepOutsideARunWritesNothing`, which is the flag being off and a
+      context nobody marked. `presence.Step` reads the run off the context,
+      which `dispatch` puts there, so no room between `cmd/gdoc` and the work
+      is handed a run; `Fold.swift` skips `step` and keys it by the part's own
+      name, so M24a's job card loses none of the four
+- [x] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make app-test`
 
 ### Task 7: `via: code` and `interrupted`
 
 **Files:**
 - Modify: `go/internal/presence/event.go`, `doc.go`, `go/cmd/gdoc/main.go`, `go/cmd/gdoc/mcp.go` (chat wins over code), the two fixtures, `Event.swift`, `EventTests.swift`, `LogTailTests.swift`, `docs/v2/MEASURED.md`
 
-- [ ] measure and record whether Claude Code sets `CLAUDECODE` in a child's
-      environment (run a one-line `env` through the Bash tool of a Claude Code
-      session and write the answer down); `TestViaIsCodeUnderClaudeCode`,
-      `TestViaChatWinsOverCodeInTheMcpSession`,
+- [x] measured and recorded: Claude Code's Bash tool hands a child
+      `CLAUDECODE=1`, beside a dozen `CLAUDE_CODE_*` variables including an
+      email and two token-shaped ones, which is why `CLAUDECODE` is the one
+      gdoc reads. The section and its method are in `docs/v2/MEASURED.md`,
+      "What Claude Code puts in a child's environment".
+      `TestViaIsCodeUnderClaudeCode`, `TestViaChatWinsOverCodeInTheMcpSession`,
       `TestAnInterruptedWaitSaysSo` (from `data.waited.interrupted`); Swift:
-      `testViaCodeAndInterruptedDecode`
-- [ ] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make app-test`
+      `testViaCodeAndInterruptedDecode`. Five more boxes the work asked for:
+      any value of the variable counts and not the literal `1`, because the
+      variable is Claude Code's own; `presence.WithCode` leaves a context the
+      chat session marked alone, so the mcp session needs no new line and
+      `TestChatWinsOverCode` states the rule over the context itself;
+      `cmd/gdoc` reads the environment and `internal/presence` still reads
+      none, so the record stays a file and a clock; `recording(t)` clears the
+      variable, because the suite is run from a Claude Code session and what a
+      run records may not depend on who started the test; and
+      `TestAStoppedWaitsEndSaysSo` over a real `comments --wait` somebody
+      stopped, because the word is lifted from the command's own answer and
+      nothing else in the binary knows a wait ended early
+- [x] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make app-test`
 
 ### Task 8: the words
 
 **Files:**
 - Modify: `go/internal/presence/doc.go`, `go/internal/emit/emit.go` (the package comment names `Stop`), `go/cmd/gdoc/doc.go`, `docs/guide/presence.md` (the logout paragraph and the hold's sign-in rule, two paragraphs appended at the end so M24a's edits merge cleanly)
 
-- [ ] the doc comments name every new field and kind with its test; the
+- [x] the doc comments name every new field and kind with its test; the
       guide says what logout does and does not do, and that a held write dies
       with the sign-in it was held under; CLAUDE.md is not touched beyond
-      Task 1's one word; `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`
+      Task 1's one word; `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`.
+      `internal/presence`'s own doc.go named each field as its task landed, so
+      this task adds the kind list to its opening paragraph, names `Stop` and
+      `StopLine` in `internal/emit`'s package comment beside `Screen`, and
+      gives `cmd/gdoc/doc.go` the two sections it had none of: the five facts
+      of the record this layer decides, and the hold that dies with its
+      sign-in, with the accepted rotation strain written down there. The
+      guide's paragraphs are appended under one new heading at the end of
+      `docs/guide/presence.md`
 
 ### Task 9: the acceptance rows and the close
 
 **Files:**
 - Modify: `docs/plans/2026-10-17-gdoc-v2-m24-the-panel-spec.md`, `docs/v2/PLAN.md`
 
-- [ ] the Go rows of the spec's acceptance table, under a heading "M24b",
-      pass or the test that says otherwise
-- [ ] a new M24 row in `docs/v2/PLAN.md`'s Done table with the M24b half
+- [x] the Go rows of the spec's acceptance table, under a heading "M24b",
+      pass or the test that says otherwise. Every row passes: the section is
+      one row per clause of the three rules this half owns, each naming its
+      test, and it closes by saying which measurements are not this half's
+- [x] a new M24 row in `docs/v2/PLAN.md`'s Done table with the M24b half
       written and the M24a half left as "running"
-- [ ] this plan moves to `docs/plans/completed/`; the spec stays until M24a
-      closes, which moves it
+- [x] this plan moves to `docs/plans/completed/`; the spec stays until M24a
+      closes, which moves it. The spec's own opening paragraph now names this
+      plan at its new path, because that reference would otherwise be stale
+      while the spec waits for M24a
 
 ## Post-completion
 

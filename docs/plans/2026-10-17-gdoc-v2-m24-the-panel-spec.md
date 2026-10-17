@@ -18,7 +18,7 @@ trust guardian with the Go binary's owner; their reports are summarised in
 `docs/design/2026-10-17-presence-mechanism.md` under M24. The decision entry
 is in `docs/v2/DECISIONS.md` under 2026-10-17, and the task lists are
 `docs/plans/2026-10-17-gdoc-v2-m24a-the-panel.md` and
-`docs/plans/2026-10-17-gdoc-v2-m24b-what-the-panel-needs.md`.
+`docs/plans/completed/2026-10-17-gdoc-v2-m24b-what-the-panel-needs.md`.
 
 ## Principles
 
@@ -128,3 +128,52 @@ Into `docs/v2/MEASURED.md`, each with its method, Nail confirming:
 
 Filled in when both runs finish, one row per rule above, pass or the test
 that says otherwise.
+
+### M24b, the Go half
+
+Done 2026-10-17 in eight commits, from `gdoc auth logout` to the words. One
+row per clause of the three rules this half owns, the logout command, the
+hold's sign-in, and the record's new fields, each naming the test that holds
+it. Every row passes. `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
+`make vet` and `make app-test` are green at every commit, offline, with the
+live variables unset.
+
+| Clause of the rule | Test |
+|---|---|
+| `logout` removes the token file at `config.TokenPath()` and nothing else | `TestLogoutTouchesNothingElseInTheConfigDir`, and `TestOnlyLogoutRemovesTheToken` in `go/boundary` over the tree |
+| and reads its absence back | `TestLogoutRemovesTheTokenAndReadsItsAbsenceBack` |
+| refuses by name a symlink or a non-regular file | `TestLogoutRefusesASymlinkOrANonRegularFileAndRemovesNothing` |
+| refuses a file that does not parse as the token | `TestLogoutRefusesATokenItCannotParseAndLeavesIt`, with `TestLogoutRemovesATokenARefreshCouldNotUse` for the token that parses and Google has stopped taking |
+| refuses a waiting sign-in lock | `TestLogoutRefusesWhileASignInIsWaiting` |
+| answers `ok: true, removed: false` with no token | `TestLogoutWithNoTokenIsOkAndRemovesNothing`, `TestTheLogoutCommandAnswersWhatItRemoved` |
+| makes no request | `TestLogoutMakesNoRequest` |
+| is no chat tool | `TestLogoutIsNoChatTool`, and `TestNothingInTheChatSignsAnybodyOut` in `go/boundary` |
+| reports a start and an end with no document | `TestLogoutWritesAStartAndAnEndWithNoDoc` |
+| is a visible command with its help and completion lines | the re-recorded screens, pipe and completion goldens, `TestTheLogoutSummarySaysTheGrantStaysAtGoogle` for the sentence about the grant Google keeps, `everyCommandName` in `help_test.go` and `TestTheUsageLineNamesEveryCommand` |
+| `mcpHolds` keeps a hash of the refresh token beside the hold | `TestAHoldRemembersTheSignInItWasHeldUnder`, over the mark itself `TestTheSignInMarkIsTheDomainPrefixedHashOfTheRefreshToken`, `TestTheSameRefreshTokenMarksTheSameAndAnotherOneDoesNot`, `TestATokenWithNoRefreshTokenHasNoMark` |
+| in memory and never in `internal/chat` | `TestTheSignInMarkReachesNoAnswerNoToolAndNoLine`, and `TestTheSignInMarkCarriesNoWordOfTheToken` for the hash |
+| a release that finds another token or none drops the hold, removes its confirm tool, writes `dropped`, and answers that the sign-in changed and nothing was sent | `TestAReleaseAfterTheSignInChangedSendsNothingAndDropsTheHold`, `TestAReleaseAfterASignOutSendsNothingAndDropsTheHold`, and `TestAReleaseUnderTheSameSignInStillSends` the other way |
+| a sweep that finds the same does the same | `TestTheSweepDropsAHoldWhoseSignInChanged` |
+| and every way out is still exactly one line | `TestEveryWayAHoldLeavesIsExactlyOneLine`, which gained `dropped` |
+| a token that cannot be read keeps the hold and sends nothing | `TestAnUnreadableTokenAtReleaseKeepsTheHoldAndSendsNothing` |
+| no email is compared | the mark is the refresh token's hash alone, and nothing else reaches it: `TestTheSignInMarkCarriesNoWordOfTheToken` |
+| the strain the rule accepts: this process's own rotation reads as another sign-in and drops the hold too | `TestARotatedRefreshTokenRefusesTheRelease`, written down in `go/cmd/gdoc/doc.go` and in `docs/guide/presence.md` |
+| the record's new fields are all at schema `v: 1` | `TestTheSwiftFixtureIsTheGoFixture` over the one fixture, and `testAVersionOneLineDecodesAndAnUnknownFieldIsIgnored` on the Swift side |
+| `made` on a publish end, absent after a rollback | `TestAPublishEndNamesTheDocumentItCreated`, `TestARolledBackPublishNamesNoDocument`, `TestOnlyPublishCarriesMade`, Swift `testMadeDecodesAndDefaultsToNil` |
+| a `step` event for publish with a fixed name from build, upload, read_back, link, its index and count | `TestAPublishStepsAreTheFixedNamesInOrder`, `TestAStepIsItsNameAndItsPlaceInTheFixedList`, `TestAStepNameThatIsNotOneOfTheFourWritesNothing`, `TestAStepOutsideARunWritesNothing`, `TestStepHasOnlyPublishAsCaller` in `go/boundary`, `TestAPanicAfterAStepStillWritesTheEnd`, Swift `testAStepLineDecodesWithItsNameIndexAndCount` |
+| the first step's title once the render is done | `TestTheFirstStepsEndCarriesTheTitle` |
+| `stop` on a failed end as a fixed code from the seven, with `line` where the cause has one | `TestAStopIsOneOfTheSevenCodesAndNeverASentence` in `cmd/gdoc` over the reader and in `internal/presence` over the record, `TestTheSevenCodesAreLiterals`, `TestTheSVGRefusalCarriesItsLine`, `TestANotFoundIsNotFound`, `TestAnAuthRefusalIsAuth`, `TestAHandshakeTimeoutIsNetwork`, `TestAGuardRefusalIsRefused`, `TestAnUnknownFailureIsOther`, `TestAStopReachesNoSuccessfulEnd`, Swift `testStopAndLineDecodeAndDefaultToNil` |
+| carried on `emit.Result` in a field the object never prints, as `Screen` is | `TestStopNeverReachesTheObject`, with `TestTheFlagChangesNoByteOfTheObject` still holding the envelope |
+| set in `cmd/gdoc` from typed failures the packages raise | `TestAPictureThatCannotBeEmbeddedCarriesItsLine`, `TestAStatusErrorExposesItsStatus`, `TestATokenRefusedTwiceIsAStatusError`, `TestMoreThanOneTabIsATypedRefusal` in `internal/propose` and again in `internal/annotate`, `TestTheGuardsRefusalIsTyped`; every word a person reads stayed the word it was, which `Unwrap` and the unchanged sentence tests hold |
+| so `internal/presence` imports nothing new | `TestPresenceOpensNoWireAndRunsNothing` and `presenceClosedTo` unchanged |
+| `via: code` when the binary runs under Claude Code, with `chat` winning inside `gdoc mcp` | `TestViaIsCodeUnderClaudeCode`, `TestViaChatWinsOverCodeInTheMcpSession`, `TestChatWinsOverCode` over the context itself, Swift `testViaCodeAndInterruptedDecode`; the variable gdoc reads is measured in `docs/v2/MEASURED.md` under "What Claude Code puts in a child's environment" |
+| `interrupted` on a comments end | `TestAnInterruptedWaitSaysSo`, and `TestAStoppedWaitsEndSaysSo` over a real `comments --wait` somebody stopped |
+| the `dropped` hold ending | the hold rows above, and Swift `testADroppedLineDecodesAsAHoldEnding` |
+| never a path, a folder name, a sentence, a count from the document, the mark, the account | `TestTheEventCarriesOnlyItsListedFields`, `TestAnEventCarriesNoWordOfTheEnvelopeButTheTitle` extended with an error sentence that must not reach the line, `TestNoPercentageOrEstimateIsEverWritten` |
+| two halves run in parallel, M24b merges first | the branch is a worktree off `main` after M23, touching `go/`, the two fixtures and the Swift decoder only; the merge itself is Nail's |
+| CLAUDE.md's presence invariant | this half changed one word, "sixteen" to "seventeen" on line 24 for the new command; M24a owns the invariant's words and the 300-line ceiling after the merge |
+
+The one measurement this half could take alone is in `docs/v2/MEASURED.md`,
+"What Claude Code puts in a child's environment", with its method. The six
+numbered measurements above are M24a's or Nail's; measurement 4, a SIGINT from
+the app to a wait, needs both halves merged and is Nail's.

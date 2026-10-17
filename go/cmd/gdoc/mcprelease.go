@@ -6,13 +6,15 @@
 // this hold registered, named after this hold, which the client draws as a card
 // with every argument on it. The person approves that card or nothing happens.
 //
-// Three things are asked of the call that releases a hold, and all three are
+// Four things are asked of the call that releases a hold, and all four are
 // asked by the binary. The card's four words have to be the hold's own, byte for
 // byte, so the person cannot be shown a paraphrase of why the write was stopped:
 // internal/chat's Release is where that is judged. Five seconds of quiet have to
 // sit behind the call, because the one shape that is not an honest approval is a
-// model releasing its own write inside the turn that was held. And the hold has
-// to still be there: thirty minutes, or until one write went out under it.
+// model releasing its own write inside the turn that was held. The hold has to
+// still be there: thirty minutes, or until one write went out under it. And the
+// sign-in has to be the one the hold was raised under, because an approval is an
+// approval of this write as this account: mcphold.go holds that rule.
 //
 // What goes out is the call as it arrived, kept on the hold, and never anything
 // the release sends: TestAReleasedHoldPostsExactlyTheHeldTextOnce. The rules are
@@ -98,14 +100,25 @@ const mcpHoldGone = "this hold is no longer open: it was released already, or th
 
 // mcpRelease is one call of one confirm tool.
 //
-// The order is: the card read, the hold found, the words and the gap judged, the
-// sign-in, and only then the hold taken out and the write sent. The hold goes
-// before the write runs, so one approval sends one write whatever the write
-// itself answers: a send that failed on the wire is a write the person asks for
-// again, not a card they can press twice.
+// The order is: the card read, the sign-in judged, the hold found, the words
+// and the gap judged, and only then the hold taken out and the write sent. The
+// hold goes before the write runs, so one approval sends one write whatever the
+// write itself answers: a send that failed on the wire is a write the person
+// asks for again, not a card they can press twice.
+//
+// The sign-in is judged before the hold is looked up, and not after, because
+// the lookup sweeps: a hold the sweep had dropped for its account would leave
+// the lookup answering the thirty minutes, which is not what happened.
 func mcpRelease(ctx context.Context, id string, args json.RawMessage, errOut io.Writer, ch *mcpChat) mcp.Result {
 	card, err := mcpCard(args)
 	if err != nil {
+		return mcpEnvelope(emit.Result{OK: false, Error: err.Error()})
+	}
+	// The token before the hold is spent, and against the sign-in this hold
+	// was raised under rather than against any token at all: a release nobody
+	// is signed in for could send nothing, and a release under the next account
+	// would send the person's approval somewhere they never gave it.
+	if err := ch.holds.sameSignIn(id); err != nil {
 		return mcpEnvelope(emit.Result{OK: false, Error: err.Error()})
 	}
 	at := now()
@@ -118,12 +131,6 @@ func mcpRelease(ctx context.Context, id string, args json.RawMessage, errOut io.
 	}
 	c, err := mcpWriteNamed(held.Tool)
 	if err != nil {
-		return mcpEnvelope(emit.Result{OK: false, Error: err.Error()})
-	}
-	// The token before the hold is spent: a release nobody is signed in for
-	// could send nothing, and burning the approval for it would cost the person
-	// the card as well as the write.
-	if err := mcpSignedIn(); err != nil {
 		return mcpEnvelope(emit.Result{OK: false, Error: err.Error()})
 	}
 	ch.holds.release(id)
