@@ -357,16 +357,16 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Sources/PresenceCore/HealthFacts.swift`, `presence/Sources/PresenceApp/HealthPoller.swift`
 - Create: `presence/Tests/PresenceCoreTests/HealthFactsTests.swift`, `presence/Tests/PresenceAppTests/HealthPollerTests.swift`
 
-- [ ] `testHelpJSONGivesTheMarkTheVersionAndTheLatest`,
+- [x] `testHelpJSONGivesTheMarkTheVersionAndTheLatest`,
       `testAuthStatusGivesTheThreeWordsAndTheEmail`,
       `testATokenWithNoAccountReadsSignedInAccountNotRead`,
       `testTheExpectedDomainIsAHintThatBlocksNothing`,
       `testAccountChangedIsTheAppsOwnMemory`,
       `testThePollIsOnOpenAtMostOnceAMinuteAndEveryTenMinutesWhileLive`,
       `testHelpIsAskedOnOpenAndNeverOnATimer`
-- [ ] the parsers in core, the schedule in the app library, the facts fed
+- [x] the parsers in core, the schedule in the app library, the facts fed
       into `Facts`
-- [ ] `make app-test`
+- [x] `make app-test`
 
 ### Task 17: the opener, the hub index, sign in
 
