@@ -658,6 +658,7 @@ const headingIDFixtureStyle = `"paragraphStyle": {"namedStyleType": "HEADING_1"}
 // envelope learns that the import kept the ids rather than learning nothing.
 func TestPublishPrintsTheHeadingsThatCameBackWithNoId(t *testing.T) {
 	t.Run("a heading with no id is counted and warned about", func(t *testing.T) {
+		theHouseLogoCached(t)
 		stubWire(t, &fakeWire{answers: publishAnswers(t)})
 		_, md := buildNote(t)
 
@@ -685,6 +686,7 @@ func TestPublishPrintsTheHeadingsThatCameBackWithNoId(t *testing.T) {
 			t.Fatalf("the fixture no longer holds %s, so this case measures nothing", headingIDFixtureStyle)
 		}
 		answers[1] = &answer{method: "GET", match: publishDocID + "?includeTabsContent", json: with}
+		theHouseLogoCached(t)
 		stubWire(t, &fakeWire{answers: answers})
 		_, md := buildNote(t)
 
