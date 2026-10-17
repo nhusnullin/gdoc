@@ -156,6 +156,17 @@
 // file build wrote and the part publish uploaded are the same bytes.
 // TestBuildAndPublishRenderTheSameBytes in cmd/gdoc is the pin.
 //
+// # OnStep says a part is beginning, and this room judges nothing by it
+//
+// Options.OnStep is called immediately before the two parts of the run that
+// happen here, the upload and the read-backs, with that part's name. Nothing
+// here knows what the caller does with it: cmd/gdoc writes a line of the
+// presence record, and a caller that sets no OnStep is told nothing, which is
+// every caller but publish's own command. The render before the upload and
+// the note after the read-backs are cmd/gdoc's parts and cmd/gdoc names
+// those, so the four names in order are its test:
+// TestAPublishStepsAreTheFixedNamesInOrder.
+//
 // # Nothing calls this from a skill
 //
 // A publish is invoked by hand. Wiring it into a skill is M9's, with the

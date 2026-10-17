@@ -12,6 +12,23 @@
 // the card is gone and nothing about whose it was:
 // cmd/gdoc's TestTheSignInMarkReachesNoAnswerNoToolAndNoLine.
 //
+// A publish is the one command with parts, and between its start and its end
+// it writes one step line for each of them: build, upload, read_back, link,
+// each written immediately before that part begins, with the part's place in
+// that fixed list and the length of the list beside its name. The names are
+// this package's, so a caller that drifts from the four writes no line at all:
+// TestAStepNameThatIsNotOneOfTheFourWritesNothing, with cmd/gdoc's
+// TestAPublishStepsAreTheFixedNamesInOrder over a real run and go/boundary's
+// TestStepHasOnlyPublishAsCaller over the one room that calls it.
+//
+// The title reaches a step as soon as the render knows it, which is why the
+// build step carries none: cmd/gdoc's TestTheFirstStepsEndCarriesTheTitle.
+// Nothing else about a part is written, and there is nowhere to write it: no
+// percentage and no estimate, because what a part of a publish costs is not
+// something gdoc knows before it runs it, and the two numbers a step carries
+// are places in a list of four:
+// TestNoPercentageOrEstimateIsEverWritten.
+//
 // It exists because of the 2026-10-17 brief: gdoc must not change in kind,
 // and it may say what it is doing in real time. A live review is hours of
 // silence in a chat window, and alive and dead look the same there. The

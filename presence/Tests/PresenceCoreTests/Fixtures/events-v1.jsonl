@@ -13,3 +13,9 @@
 {"v":1,"at":"2026-10-17T09:15:12Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","call":4,"event":"end","command":"publish","via":"terminal","title":"Supplier register","made":"1PuBl15h9876543210987654321098765432","ok":true,"verified":true,"ms":9300}
 {"v":1,"at":"2026-10-17T09:15:13Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","call":5,"event":"start","command":"publish","via":"terminal"}
 {"v":1,"at":"2026-10-17T09:15:14Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","call":5,"event":"end","command":"publish","via":"terminal","ok":false,"stop":"svg_picture","line":42,"ms":3100}
+{"v":1,"at":"2026-10-17T09:15:15Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","call":6,"event":"start","command":"publish","via":"terminal"}
+{"v":1,"at":"2026-10-17T09:15:16Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","call":6,"event":"step","command":"publish","via":"terminal","step":"build","index":1,"count":4}
+{"v":1,"at":"2026-10-17T09:15:17Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","call":6,"event":"step","command":"publish","via":"terminal","step":"upload","index":2,"count":4,"title":"Supplier register"}
+{"v":1,"at":"2026-10-17T09:15:18Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","call":6,"event":"step","command":"publish","via":"terminal","step":"read_back","index":3,"count":4,"title":"Supplier register"}
+{"v":1,"at":"2026-10-17T09:15:19Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","call":6,"event":"step","command":"publish","via":"terminal","step":"link","index":4,"count":4,"title":"Supplier register"}
+{"v":1,"at":"2026-10-17T09:15:20Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","call":6,"event":"end","command":"publish","via":"terminal","title":"Supplier register","ok":true,"verified":true,"ms":4800}

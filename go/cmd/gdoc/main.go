@@ -308,7 +308,10 @@ func dispatch(ctx context.Context, args []string, errOut io.Writer, set settings
 		rec.Made(presenceMade(*c, r))
 		rec.End(r)
 	}()
-	return c.run(ctx, a, errOut)
+	// The run goes on the context, so the one command with parts can say which
+	// of them it is on without a run threaded through every room between here
+	// and the work: presence.WithRun and publish.go's three calls.
+	return c.run(presence.WithRun(ctx, rec), a, errOut)
 }
 
 // presenceDoc is the document an event names: the id the first word of the line

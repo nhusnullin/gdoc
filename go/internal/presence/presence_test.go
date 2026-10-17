@@ -111,6 +111,7 @@ func TestOffTouchesNothing(t *testing.T) {
 	Released(false, version, "h_ab12", errOut)
 	Expired(false, version, "h_cd34", errOut)
 	Landed(false, version, "h_ef56", errOut)
+	Step(WithRun(ctx, r), "build", "")
 	var none *Run
 	none.Made(madeID)
 	none.End(emit.Result{OK: true})
@@ -126,8 +127,8 @@ func TestOffTouchesNothing(t *testing.T) {
 func TestTheEventCarriesOnlyItsListedFields(t *testing.T) {
 	want := []string{
 		"v", "at", "gdoc", "pid", "run", "call", "event", "command", "via",
-		"doc", "wait", "title", "made", "ok", "verified", "stop", "line", "ms",
-		"hold", "rule", "until",
+		"doc", "wait", "step", "index", "count", "title", "made", "ok",
+		"verified", "stop", "line", "ms", "hold", "rule", "until",
 	}
 	var got []string
 	ty := reflect.TypeOf(Event{})
@@ -605,7 +606,7 @@ func TestTheFixtureIsWhatTheWriterWrites(t *testing.T) {
 		return when
 	}
 	elapsed := []time.Duration{540 * time.Second, 1200 * time.Millisecond, 0, 9300 * time.Millisecond,
-		3100 * time.Millisecond}
+		3100 * time.Millisecond, 4800 * time.Millisecond}
 	since = func(time.Time) time.Duration {
 		d := elapsed[0]
 		elapsed = elapsed[1:]
@@ -637,6 +638,17 @@ func TestTheFixtureIsWhatTheWriterWrites(t *testing.T) {
 	refused := Begin(ctx, true, version, "publish", "", false, true, errOut)
 	refused.End(emit.Result{OK: false, Error: "line 42: an inline picture could not be embedded",
 		Version: version, Stop: emit.StopSVGPicture, StopLine: 42})
+
+	// And the one command with parts: each of the four is a line of its own,
+	// written before that part begins, and the title reaches the record as
+	// soon as the render knows it.
+	stepped := Begin(ctx, true, version, "publish", "", false, true, errOut)
+	within := WithRun(ctx, stepped)
+	Step(within, "build", "")
+	for _, name := range publishSteps[1:] {
+		Step(within, name, "Supplier register")
+	}
+	stepped.End(emit.Result{OK: true, Data: map[string]any{"title": "Supplier register", "verified": true}, Version: version})
 
 	if errOut.Len() != 0 {
 		t.Fatalf("stderr: %q", errOut.String())

@@ -31,6 +31,7 @@ import (
 	"gdoc/internal/emit"
 	"gdoc/internal/frontmatter"
 	"gdoc/internal/guard"
+	"gdoc/internal/presence"
 	"gdoc/internal/publish"
 )
 
@@ -96,6 +97,12 @@ func cmdPublish(ctx context.Context, a *args) emit.Result {
 		return failed(err)
 	}
 
+	// The first of the four parts a publish reports. Each is written
+	// immediately before the part begins, and the render is where the title
+	// comes from, so this one is the only step that carries none:
+	// TestAPublishStepsAreTheFixedNamesInOrder and
+	// TestTheFirstStepsEndCarriesTheTitle.
+	presence.Step(ctx, "build", "")
 	doc, err := renderNote(ctx, source, md, a)
 	if err != nil {
 		return withStop(emit.Result{OK: false, Error: err.Error(), Warnings: doc.Warnings,
@@ -134,6 +141,10 @@ func runPublish(ctx context.Context, s session, md string, source []byte, folder
 		FolderID: folder,
 		Title:    doc.Title,
 		Docx:     doc.Docx,
+		// The two parts that happen inside internal/publish. That package
+		// names them and knows nothing about the record; the title is this
+		// room's, because the render that learned it is this room's.
+		OnStep: func(name string) { presence.Step(ctx, name, doc.Title) },
 	})
 	data.DocumentID = rep.DocumentID
 	data.URL = rep.URL
@@ -151,6 +162,7 @@ func runPublish(ctx context.Context, s session, md string, source []byte, folder
 		return withStop(emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: sessionWarnings(s, warns)}, err)
 	}
 
+	presence.Step(ctx, "link", doc.Title)
 	changed, pairWarns, pairErr := pair(md, source, folder, rep.DocumentID, doc)
 	warns = append(warns, pairWarns...)
 	if pairErr == nil {

@@ -173,8 +173,16 @@ func TestTheFlagChangesNoByteOfTheObject(t *testing.T) {
 						return
 					}
 					events := presenceEvents(t, dir)
-					if len(events) != 2 {
+					if len(events) < 2 || events[0].Event != "start" || events[len(events)-1].Event != "end" {
 						t.Fatalf("a reporting command writes a start and an end, and wrote %d: %+v", len(events), events)
+					}
+					// And between them, only the parts of the one command that
+					// has parts. A publish writes four; every other command
+					// writes none, so its two lines are next to each other.
+					for _, e := range events[1 : len(events)-1] {
+						if e.Event != "step" {
+							t.Fatalf("the run wrote a %q between its start and its end: %+v", e.Event, e)
+						}
 					}
 				})
 			}
@@ -524,10 +532,10 @@ func TestAPublishEndNamesTheDocumentItCreated(t *testing.T) {
 	}
 
 	events := presenceEvents(t, dir)
-	if len(events) != 2 {
-		t.Fatalf("a publish wrote %d events, want its start and its end: %+v", len(events), events)
+	if len(events) != 6 {
+		t.Fatalf("a publish wrote %d events, want its start, its four steps and its end: %+v", len(events), events)
 	}
-	start, end := events[0], events[1]
+	start, end := events[0], endOf(t, events)
 	if start.Made != "" {
 		t.Errorf("the start names a document nothing had created yet: %q", start.Made)
 	}

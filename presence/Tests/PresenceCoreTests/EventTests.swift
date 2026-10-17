@@ -12,7 +12,7 @@ import XCTest
 final class EventTests: XCTestCase {
   func testAVersionOneLineDecodesAndAnUnknownFieldIsIgnored() throws {
     let lines = try Fixture.lines("events-v1")
-    XCTAssertEqual(lines.count, 15, "the shared fixture is fifteen records")
+    XCTAssertEqual(lines.count, 21, "the shared fixture is twenty-one records")
 
     let widened = try withUnknownField(lines[0])
     let event = try Event.decode(widened)
@@ -53,7 +53,7 @@ final class EventTests: XCTestCase {
       kinds,
       [
         .start, .end, .start, .end, .held, .released, .expired, .landed, .dropped, .start, .end,
-        .start, .end, .start, .end,
+        .start, .end, .start, .end, .start, .step, .step, .step, .step, .end,
       ]
     )
   }
@@ -120,7 +120,7 @@ final class EventTests: XCTestCase {
     XCTAssertNil(start.stop, "a run that has begun has not stopped")
     XCTAssertNil(start.line)
 
-    for index in 0..<14 {
+    for index in 0..<lines.count where index != 14 {
       let event = try Event.decode(lines[index])
       XCTAssertNil(event.stop, "line \(index) says why it stopped")
       XCTAssertNil(event.line, "line \(index) names a line of a note")
@@ -131,6 +131,42 @@ final class EventTests: XCTestCase {
     // for carrying one.
     let unknown = lines[14].replacingOccurrences(of: "svg_picture", with: "quota")
     XCTAssertEqual(try Event.decode(unknown).stop, "quota")
+  }
+
+  // A publish says which of its four parts it is on. The name is one of
+  // gdoc's four words, the two numbers are that part's place in the list and
+  // the length of the list, and the part that follows the render is the first
+  // line of the run that can carry a title. No other line is a step, and a
+  // step says nothing about an outcome: the end of the run says that.
+  func testAStepLineDecodesWithItsNameIndexAndCount() throws {
+    let lines = try Fixture.lines("events-v1")
+    let steps = try (16...19).map { try Event.decode(lines[$0]) }
+
+    XCTAssertEqual(steps.map(\.kind), [.step, .step, .step, .step])
+    XCTAssertEqual(steps.map(\.step), ["build", "upload", "read_back", "link"])
+    XCTAssertEqual(steps.map(\.index), [1, 2, 3, 4])
+    XCTAssertEqual(steps.map(\.count), [4, 4, 4, 4])
+    for step in steps {
+      XCTAssertEqual(step.command, "publish")
+      XCTAssertEqual(step.call, 6, "a step belongs to the run it is a part of")
+      XCTAssertNil(step.ok, "a step is not an outcome")
+      XCTAssertNil(step.ms)
+      XCTAssertNil(step.made)
+    }
+    XCTAssertNil(steps[0].title, "the render had not read the note when the build began")
+    XCTAssertEqual(steps[1].title, "Supplier register")
+
+    // A step names its command, as a start and an end do.
+    XCTAssertThrowsError(
+      try Event.decode(try without("command", lines[16])), "a step names its command")
+
+    // And every other line of the fixture is no step at all.
+    for index in 0..<lines.count where !(16...19).contains(index) {
+      let event = try Event.decode(lines[index])
+      XCTAssertNil(event.step, "line \(index) names a step")
+      XCTAssertNil(event.index, "line \(index) carries a place in a list")
+      XCTAssertNil(event.count, "line \(index) carries a count")
+    }
   }
 
   func testAnUnknownVersionIsRefusedAsNewer() throws {

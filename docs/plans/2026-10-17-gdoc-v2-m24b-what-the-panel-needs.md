@@ -217,13 +217,25 @@ box is ticked and its commit is on the branch.
 **Files:**
 - Modify: `go/internal/presence/event.go`, `doc.go`, `go/cmd/gdoc/publish.go`, `go/internal/publish/publish.go` (`Options.OnStep`), `go/cmd/gdoc/main.go` (`presence.WithRun` on the context), the two fixtures, `Event.swift`, `Fold.swift` (the switches skip `step` for now), `EventTests.swift`, `LogTailTests.swift`, `go/boundary/presence_test.go`
 
-- [ ] `TestAPublishStepsAreTheFixedNamesInOrder` (build, upload, read_back,
-      link, each written immediately before it begins),
-      `TestTheFirstStepsEndCarriesTheTitle`, `TestStepHasOnlyPublishAsCaller`
-      (boundary), `TestAPanicAfterAStepStillWritesTheEnd`,
+- [x] `TestAPublishStepsAreTheFixedNamesInOrder` (build, upload, read_back,
+      link, each written immediately before it begins, the two network parts
+      measured from the wire itself: the step is already on disk when the
+      request leaves), `TestTheFirstStepsEndCarriesTheTitle`,
+      `TestStepHasOnlyPublishAsCaller` (boundary),
+      `TestAPanicAfterAStepStillWritesTheEnd`,
       `TestNoPercentageOrEstimateIsEverWritten`; Swift:
-      `testAStepLineDecodesWithItsNameIndexAndCount`
-- [ ] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make app-test`
+      `testAStepLineDecodesWithItsNameIndexAndCount`. Three more boxes the work
+      asked for: `TestAStepIsItsNameAndItsPlaceInTheFixedList`, because the
+      four names and the two numbers are the record's own shape;
+      `TestAStepNameThatIsNotOneOfTheFourWritesNothing`, because
+      `internal/publish` names two of the four and a drift there must write no
+      line rather than a word nobody has seen; and
+      `TestAStepOutsideARunWritesNothing`, which is the flag being off and a
+      context nobody marked. `presence.Step` reads the run off the context,
+      which `dispatch` puts there, so no room between `cmd/gdoc` and the work
+      is handed a run; `Fold.swift` skips `step` and keys it by the part's own
+      name, so M24a's job card loses none of the four
+- [x] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make app-test`
 
 ### Task 7: `via: code` and `interrupted`
 

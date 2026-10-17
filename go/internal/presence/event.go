@@ -20,6 +20,17 @@ const (
 	viaChat     = "chat"
 )
 
+// publishSteps are the four parts of a publish, in the order a publish takes
+// them, and the only step names the record knows.
+//
+// They are here rather than in cmd/gdoc because the shape of the record is
+// this package's: somebody reading a month's file reads these four words and
+// no others, so a caller that drifts from the list writes no line at all
+// rather than a name nobody has seen.
+// TestAStepNameThatIsNotOneOfTheFourWritesNothing, with cmd/gdoc's
+// TestAPublishStepsAreTheFixedNamesInOrder over a real publish.
+var publishSteps = []string{"build", "upload", "read_back", "link"}
+
 // titleRunes is the cap on the one document word an event carries. A title is
 // in the record so the app can fill a row without running gdoc read; the cap
 // bounds the line and removes nothing a long title would have told a reader
@@ -45,6 +56,9 @@ type Event struct {
 	Via      string `json:"via,omitempty"`
 	Doc      string `json:"doc,omitempty"`
 	Wait     bool   `json:"wait,omitempty"`
+	Step     string `json:"step,omitempty"`
+	Index    int    `json:"index,omitempty"`
+	Count    int    `json:"count,omitempty"`
 	Title    string `json:"title,omitempty"`
 	Made     string `json:"made,omitempty"`
 	OK       *bool  `json:"ok,omitempty"`
@@ -134,6 +148,67 @@ func (r *Run) Made(id string) {
 		return
 	}
 	r.made = id
+}
+
+// Step writes the one line that says a part of this command's work is
+// beginning, with the part's place in the fixed list and the length of that
+// list beside its name.
+//
+// It is written immediately before the part it names begins, because that is
+// the whole of what a step is for: a panel saying what a run is doing now. A
+// line written after the work would name the part that has just finished, and
+// a reader could not tell the two apart. The last step is followed by no line
+// of its own: the end says the run finished.
+//
+// title is what the render put on the cover, which is why the first step
+// carries none: at that moment the title is in a note nothing has read yet.
+// cmd/gdoc's TestTheFirstStepsEndCarriesTheTitle.
+//
+// The run comes off the context, where dispatch put it, so the rooms between
+// a command and the hook are handed no run and know nothing about the record.
+// A context nobody marked and a run under a flag that is off each write
+// nothing: TestAStepOutsideARunWritesNothing.
+//
+// There is no percentage here and nowhere to put one. The two numbers are
+// places in a list of four, because what a part of a publish costs is not
+// something gdoc knows before it runs it, and a number saying 60% would be a
+// guess in a file that lasts: TestNoPercentageOrEstimateIsEverWritten.
+func Step(ctx context.Context, name, title string) {
+	runOf(ctx).step(name, title)
+}
+
+// step is the line itself, safe on a nil run as every method here is.
+func (r *Run) step(name, title string) {
+	if r == nil {
+		return
+	}
+	index := stepIndex(name)
+	if index == 0 {
+		return
+	}
+	appendEvent(Event{
+		Gdoc:    r.version,
+		Call:    r.call,
+		Event:   "step",
+		Command: r.command,
+		Via:     r.via,
+		Doc:     r.doc,
+		Step:    name,
+		Index:   index,
+		Count:   len(publishSteps),
+		Title:   capRunes(title, titleRunes),
+	}, r.errOut)
+}
+
+// stepIndex is a step's place in the fixed list, counted from one, and zero
+// for a word that is not one of them.
+func stepIndex(name string) int {
+	for i, step := range publishSteps {
+		if step == name {
+			return i + 1
+		}
+	}
+	return 0
 }
 
 // End writes the end event for a run, with the envelope's ok, the title and
@@ -260,6 +335,31 @@ type viaKey struct{}
 // a terminal.
 func WithChat(ctx context.Context) context.Context {
 	return context.WithValue(ctx, viaKey{}, viaChat)
+}
+
+// runKey is this package's own key type for the command in flight, so no
+// other package can put a run there or read one by accident.
+type runKey struct{}
+
+// WithRun puts this command's run on the context. dispatch does it once, where
+// it begins the run, so a command that reports a part of its own work needs no
+// new argument threaded through the rooms between it and the hook, and those
+// rooms go on knowing nothing about the record.
+//
+// A nil run is put there too, which is the flag being off, so the lookup has
+// one shape and the caller has no case to remember:
+// TestAStepOutsideARunWritesNothing.
+func WithRun(ctx context.Context, r *Run) context.Context {
+	return context.WithValue(ctx, runKey{}, r)
+}
+
+// runOf is the run WithRun put there, and nil where nobody did.
+func runOf(ctx context.Context) *Run {
+	if ctx == nil {
+		return nil
+	}
+	r, _ := ctx.Value(runKey{}).(*Run)
+	return r
 }
 
 // viaOf is the reader of what WithChat set. A context nobody marked is a

@@ -7,13 +7,15 @@
 
 import Foundation
 
-/// The seven things the record says happened. A command has a start and an
-/// end; a chat hold is held and then released, expired, landed or dropped,
-/// exactly once. Dropped is the sign-in it was held under changing, which gdoc
-/// treats as the card being gone.
+/// The eight things the record says happened. A command has a start and an
+/// end, and the one command long enough to have parts says which part it is
+/// on between them; a chat hold is held and then released, expired, landed or
+/// dropped, exactly once. Dropped is the sign-in it was held under changing,
+/// which gdoc treats as the card being gone.
 public enum EventKind: String, Sendable, CaseIterable {
   case start
   case end
+  case step
   case held
   case released
   case expired
@@ -61,6 +63,15 @@ public struct Event: Sendable, Equatable {
   public let via: String?
   public let doc: String?
   public let wait: Bool
+  /// Which part of a run is beginning, on a step line and nowhere else. It is
+  /// one of gdoc's four fixed words for the parts of a publish, and a word
+  /// this version has not heard of is still the word gdoc wrote.
+  public let step: String?
+  /// That part's place in the list of parts, counted from one, and how many
+  /// parts there are. They are positions and never a measure of work done:
+  /// gdoc writes no percentage and no estimate.
+  public let index: Int?
+  public let count: Int?
   public let title: String?
   /// The document a run created, which only a publish does. Every other
   /// command was handed its document, and `doc` names that one.
@@ -82,7 +93,8 @@ public struct Event: Sendable, Equatable {
 
   public init(
     schema: Int, at: Date, gdoc: String?, pid: Int32, run: String, call: Int64?, kind: EventKind,
-    command: String?, via: String?, doc: String?, wait: Bool, title: String?,
+    command: String?, via: String?, doc: String?, wait: Bool,
+    step: String? = nil, index: Int? = nil, count: Int? = nil, title: String?,
     made: String? = nil, ok: Bool?,
     verified: Bool?, stop: String? = nil, line: Int? = nil,
     ms: Int64?, hold: String?, rule: String?, until: Date?
@@ -98,6 +110,9 @@ public struct Event: Sendable, Equatable {
     self.via = via
     self.doc = doc
     self.wait = wait
+    self.step = step
+    self.index = index
+    self.count = count
     self.title = title
     self.made = made
     self.ok = ok
@@ -178,6 +193,9 @@ private struct Wire: Decodable {
   var via: String?
   var doc: String?
   var wait: Bool?
+  var step: String?
+  var index: Int?
+  var count: Int?
   var title: String?
   var made: String?
   var ok: Bool?
@@ -207,7 +225,7 @@ private struct Wire: Decodable {
     }
 
     switch kind {
-    case .start, .end:
+    case .start, .end, .step:
       guard let command, !command.isEmpty else { throw RecordFault.undecodable("no command") }
     case .held, .released, .expired, .landed, .dropped:
       guard let hold, !hold.isEmpty else { throw RecordFault.undecodable("no hold") }
@@ -221,7 +239,8 @@ private struct Wire: Decodable {
 
     return Event(
       schema: v, at: when, gdoc: gdoc, pid: pid, run: run, call: call, kind: kind,
-      command: command, via: via, doc: doc, wait: wait ?? false, title: title, made: made,
+      command: command, via: via, doc: doc, wait: wait ?? false,
+      step: step, index: index, count: count, title: title, made: made,
       ok: ok, verified: verified, stop: stop, line: line, ms: ms, hold: hold, rule: rule,
       until: ran)
   }
