@@ -34,7 +34,8 @@ final class GlyphTests: XCTestCase {
     for scheme in [ColorScheme.dark, .light] {
       for kind in GlyphKind.allCases {
         for tone in GlyphTone.allCases {
-          let inked = try inkedPixels(StatusGlyph(kind, tone: tone), scheme: scheme)
+          let inked = try inkedPixels(
+            StatusGlyph(kind, tone: tone), scheme: scheme, side: StatusGlyph.size)
           if kind == .blank {
             XCTAssertEqual(inked, 0, "a blank glyph draws nothing, in \(scheme) and \(tone)")
           } else {
@@ -98,7 +99,8 @@ final class GlyphTests: XCTestCase {
     // The track is drawn whatever the progress, so an empty ring is still a
     // ring and never a hole in the row.
     XCTAssertGreaterThan(
-      try inkedPixels(RingView(progress: 0, size: .small), scheme: .dark), 8,
+      try inkedPixels(RingView(progress: 0, size: .small), scheme: .dark, side: StatusGlyph.size),
+      8,
       "a ring at nought still draws its track")
   }
 
@@ -165,69 +167,5 @@ final class GlyphTests: XCTestCase {
       try data.write(to: shots.appendingPathComponent(name))
       XCTAssertGreaterThan(data.count, 1_000, "\(name) is too small to be the sheet")
     }
-  }
-
-  /// One view through the renderer at 2x, in the appearance named.
-  private func png<V: View>(_ view: V, scheme: ColorScheme) throws -> Data {
-    let renderer = ImageRenderer(content: view.environment(\.colorScheme, scheme))
-    renderer.scale = 2
-    var data: Data?
-    let appearance = NSAppearance(named: scheme == .dark ? .darkAqua : .aqua)
-    appearance?.performAsCurrentDrawingAppearance {
-      guard let image = renderer.cgImage else { return }
-      data = NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:])
-    }
-    return try XCTUnwrap(data, "the renderer drew nothing in \(scheme)")
-  }
-
-  /// How many pixels carry ink. The view is laid out in a square of its own
-  /// size over nothing, so a transparent pixel is a pixel nothing drew on.
-  private func inkedPixels<V: View>(
-    _ view: V, scheme: ColorScheme, side: CGFloat = StatusGlyph.size
-  ) throws -> Int {
-    let framed = view.frame(width: side, height: side)
-    let renderer = ImageRenderer(content: framed.environment(\.colorScheme, scheme))
-    renderer.scale = 2
-    var counted = 0
-    var failure: String?
-    let appearance = NSAppearance(named: scheme == .dark ? .darkAqua : .aqua)
-    appearance?.performAsCurrentDrawingAppearance {
-      guard let image = renderer.cgImage else {
-        failure = "the renderer drew nothing"
-        return
-      }
-      let rep = NSBitmapImageRep(cgImage: image)
-      for x in 0..<rep.pixelsWide {
-        for y in 0..<rep.pixelsHigh {
-          if let colour = rep.colorAt(x: x, y: y), colour.alphaComponent > 0.05 { counted += 1 }
-        }
-      }
-    }
-    if let failure { XCTFail(failure) }
-    return counted
-  }
-
-  /// Where the PNGs go: outside the repository, always, because a committed
-  /// screenshot is a file nobody compares against the code that drew it.
-  private func shotsDirectory() throws -> URL {
-    let named = ProcessInfo.processInfo.environment["PRESENCE_SHOTS"]
-    let temporary = URL(fileURLWithPath: NSTemporaryDirectory())
-      .appendingPathComponent("gdoc-presence-shots")
-    let base = named.map { URL(fileURLWithPath: $0) } ?? temporary
-    let repository = packageRoot().deletingLastPathComponent().standardizedFileURL.path
-    XCTAssertFalse(
-      base.standardizedFileURL.path.hasPrefix(repository),
-      "PRESENCE_SHOTS names \(base.path), which is inside the repository")
-    try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
-    return base
-  }
-
-  /// This file is Tests/PresenceUITests/GlyphTests.swift, so the package is
-  /// three directories up from it.
-  private func packageRoot() -> URL {
-    URL(fileURLWithPath: #filePath)
-      .deletingLastPathComponent()
-      .deletingLastPathComponent()
-      .deletingLastPathComponent()
   }
 }

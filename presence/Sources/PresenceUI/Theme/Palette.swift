@@ -80,6 +80,11 @@ public struct Palette: Sendable, Equatable {
   public let textSecondary: Swatch
   public let textTertiary: Swatch
 
+  // `.act`'s own colour, which is --t3 in the dark block and a grey of its
+  // own in the light one, so an action icon is not the same grey as a
+  // chevron there.
+  public let actionIcon: Swatch
+
   // The hairlines, --hair and --hair-strong, each one device pixel wide.
   public let hairline: Swatch
   public let hairlineStrong: Swatch
@@ -134,6 +139,7 @@ public struct Palette: Sendable, Equatable {
     text: Swatch(0xF2_F2_F7),
     textSecondary: Swatch(0xEB_EB_F5, alpha: 0.60),
     textTertiary: Swatch(0xEB_EB_F5, alpha: 0.32),
+    actionIcon: Swatch(0xEB_EB_F5, alpha: 0.32),
     hairline: Swatch(0xFF_FF_FF, alpha: 0.08),
     hairlineStrong: Swatch(0xFF_FF_FF, alpha: 0.14),
     ok: Swatch(0x5C_C4_89),
@@ -175,6 +181,7 @@ public struct Palette: Sendable, Equatable {
     text: Swatch(0x11_11_13),
     textSecondary: Swatch(0x6B_6B_70),
     textTertiary: Swatch(0x96_96_9C),
+    actionIcon: Swatch(0x7B_7B_81),
     hairline: Swatch(0x00_00_00, alpha8: 0x1A),
     hairlineStrong: Swatch(0x00_00_00, alpha8: 0x29),
     ok: Swatch(0x1B_9E_4B),

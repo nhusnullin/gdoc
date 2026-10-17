@@ -30,6 +30,9 @@ final class ThemeTests: XCTestCase {
     XCTAssertEqual(dark.textSecondary, Swatch(0xEB_EB_F5, alpha: 0.60))
     XCTAssertEqual(dark.textTertiary, Swatch(0xEB_EB_F5, alpha: 0.32))
 
+    // .act's color, which the dark block leaves at --t3
+    XCTAssertEqual(dark.actionIcon, Swatch(0xEB_EB_F5, alpha: 0.32))
+
     // --hair, --hair-strong
     XCTAssertEqual(dark.hairline, Swatch(0xFF_FF_FF, alpha: 0.08))
     XCTAssertEqual(dark.hairlineStrong, Swatch(0xFF_FF_FF, alpha: 0.14))
@@ -89,6 +92,9 @@ final class ThemeTests: XCTestCase {
     XCTAssertEqual(light.text, Swatch(0x11_11_13))
     XCTAssertEqual(light.textSecondary, Swatch(0x6B_6B_70))
     XCTAssertEqual(light.textTertiary, Swatch(0x96_96_9C))
+
+    // .screen.light .act: the one grey in the light block that is not --t3
+    XCTAssertEqual(light.actionIcon, Swatch(0x7B_7B_81))
 
     // #0000001a and #00000029: the alpha is a byte in the stylesheet
     XCTAssertEqual(light.hairline, Swatch(0x00_00_00, alpha8: 0x1A))

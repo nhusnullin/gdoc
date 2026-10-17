@@ -136,13 +136,14 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Sources/PresenceUI/Components/IconShapes.swift`, `ActionButton.swift`
 - Create: `presence/Tests/PresenceUITests/IconTests.swift`
 
-- [ ] `testTheIconSheetRenders` (gdocs, md, branch, link, done, stop, down,
-      signin, signout, x, xmark, chevron at 16 px, stroke 1.25, round caps),
-      `testAnOffIconIsDimmedWithItsOwnTooltip` (0.38),
+- [x] `testTheIconSheetRenders` (gdocs, md, branch, link, done, stop, down,
+      signin, signout, x, xmark, chevron at 16 px, stroke 1.25, round caps;
+      the chevron is 12, which is `.row-chevron svg` and the screens file
+      winning on a pixel), `testAnOffIconIsDimmedWithItsOwnTooltip` (0.38),
       `testADoneIconIsGreenForOneSecondThenReturns`
-- [ ] `IconShape` as `Path` ports of the `IC` SVG paths; `ActionButton` 24 px,
+- [x] `IconShape` as `Path` ports of the `IC` SVG paths; `ActionButton` 24 px,
       radius 6, states live, off(tip), done
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 4: rows, sections, header, titles
 
