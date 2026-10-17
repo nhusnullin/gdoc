@@ -100,7 +100,7 @@ final class PreferencesTests: XCTestCase {
     XCTAssertEqual(preferences.hub, "/Users/someone/hub")
     XCTAssertTrue(preferences.stripSeen)
     XCTAssertEqual(preferences.loginItemChoice, .off)
-    XCTAssertEqual(preferences.lastRelaunch(now: now), Relaunch(version: "v2.15.0", at: now))
+    XCTAssertEqual(preferences.lastRelaunch(now: now), RelaunchStamp(version: "v2.15.0", at: now))
     XCTAssertEqual(preferences.lastAccount, "someone@example.com")
   }
 

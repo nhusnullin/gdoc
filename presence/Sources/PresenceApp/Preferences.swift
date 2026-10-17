@@ -41,18 +41,6 @@ public enum LoginItemChoice: String, Sendable, Equatable, CaseIterable {
   case off
 }
 
-/// The last time the app opened its own bundle again, and which version on
-/// disk it did it for. The ten-minute guard in Task 20 is counted from here.
-public struct Relaunch: Sendable, Equatable {
-  public let version: String
-  public let at: Date
-
-  public init(version: String, at: Date) {
-    self.version = version
-    self.at = at
-  }
-}
-
 /// The app's own state, on disk, and the whole of it.
 ///
 /// Unchecked Sendable: the store is reached under a lock, because a dismissal
@@ -150,7 +138,7 @@ public final class Preferences: @unchecked Sendable {
   // MARK: the relaunch
 
   /// The last relaunch, where there is one inside the horizon.
-  public func lastRelaunch(now: Date = Date()) -> Relaunch? {
+  public func lastRelaunch(now: Date = Date()) -> RelaunchStamp? {
     lock.lock()
     defer { lock.unlock() }
     guard let written = store.object(forKey: Key.relaunch.rawValue) as? [String: Any],
@@ -162,7 +150,7 @@ public final class Preferences: @unchecked Sendable {
       store.removeObject(forKey: Key.relaunch.rawValue)
       return nil
     }
-    return Relaunch(version: version, at: at)
+    return RelaunchStamp(version: version, at: at)
   }
 
   /// Write down that the app opened its own bundle again.

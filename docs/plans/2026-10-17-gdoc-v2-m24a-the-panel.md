@@ -434,15 +434,15 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Tests/PresenceCoreTests/RelaunchPolicyTests.swift`
 - Modify: `presence/Tests/PresenceCoreTests/SourceRulesTests.swift` (`openApplication` only in `Relauncher.swift`)
 
-- [ ] `testRelaunchHappensOncePerOnDiskVersionInTenMinutes`,
+- [x] `testRelaunchHappensOncePerOnDiskVersionInTenMinutes`,
       `testNoRelaunchWhileAnUpdateRunsOrAChildLives`,
       `testNoRelaunchIntoAnotherIdentifierOrAnInvalidSignature`,
       `testGoneNeverRelaunches`, `testAFailedOpenLeavesTheReopenRow`,
       `testANewInstanceWaitsForItsLauncherThenASecondInstanceQuits`
-- [ ] the policy as a pure function, the executor with
+- [x] the policy as a pure function, the executor with
       `createsNewApplicationInstance`, `activates = false`, the
       `--relaunched-by` argument, the three guards
-- [ ] `make app-lint`, `make app-test`, `make app`
+- [x] `make app-lint`, `make app-test`, `make app`
 
 ### Task 21: launch at login
 

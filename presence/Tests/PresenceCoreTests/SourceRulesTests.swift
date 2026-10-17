@@ -32,6 +32,10 @@ final class SourceRulesTests: XCTestCase {
   /// Where the one room that writes anything down is.
   private static let preferences = "Sources/PresenceApp/Preferences.swift"
 
+  /// Where the one room that opens an application is, and the one
+  /// application it opens is this app's own bundle.
+  private static let relauncher = "Sources/PresenceApp/Relauncher.swift"
+
   /// The question that signals nothing: a zero asks whether a process is
   /// there and is the whole of Liveness. Any other number is a signal.
   private static let asking = "0"
@@ -173,34 +177,70 @@ final class SourceRulesTests: XCTestCase {
       sawThePreferences, "\(Self.preferences) is not there, so this test guards nothing")
   }
 
-  /// The system is asked for something in one file, so what this app can put
-  /// in front of a person is a list one person can read.
+  /// The system is asked for something in two files, so what this app can
+  /// put in front of a person is a list one person can read.
   ///
-  /// A later task adds one more file to the workspace half: the relauncher
-  /// opens this app's own bundle. Both names are here rather than in a
-  /// review, because the next person to add a convenience will not have read
-  /// the specification.
-  func testTheSystemIsAskedOnlyThroughTheOpener() throws {
+  /// The opener is the four verbs a row's icons have; the relauncher opens
+  /// this app's own bundle and nothing else. Both names are here rather than
+  /// in a review, because the next person to add a convenience will not have
+  /// read the specification.
+  func testTheSystemIsAskedOnlyThroughTheOpenerAndTheRelauncher() throws {
     let workspace = "NSWork" + "space"
     let board = "NSPaste" + "board"
     let running = "NSRunning" + "Application"
 
-    var sawTheOpener = false
+    var asking: Set<String> = []
     try eachSwiftFile { path, text in
       guard path.hasPrefix("Sources/") else { return }
       let named = text.split(separator: "\n").filter { line in
         [workspace, board, running].contains { word($0, isIn: String(line)) }
       }
-      guard path != Self.opener else {
-        sawTheOpener = true
-        XCTAssertFalse(named.isEmpty, "\(path) is the one file that asks the system")
+      guard [Self.opener, Self.relauncher].contains(path) else {
+        for line in named {
+          XCTFail("\(path) asks the system: \(line.trimmingCharacters(in: .whitespaces))")
+        }
+        return
+      }
+      if !named.isEmpty { asking.insert(path) }
+    }
+    XCTAssertEqual(
+      asking, [Self.opener, Self.relauncher],
+      "both files are there and both ask the system, so this test guards something")
+  }
+
+  /// One file starts an application, and the application is this app.
+  ///
+  /// Every other route to the system is a URL or an activation of an app a
+  /// person installed themselves. Opening a bundle at a path is the one call
+  /// that could start anything at all, so it is held to the file that opens
+  /// this app's own bundle, with the new instance and the no-activation the
+  /// specification names.
+  func testOnlyTheRelauncherOpensAnApplication() throws {
+    let start = "openApp" + "lication"
+
+    var sawTheRelauncher = false
+    try eachSwiftFile { path, text in
+      guard path.hasPrefix("Sources/") else { return }
+      let named = text.split(separator: "\n").filter { $0.contains(start) }
+      guard path != Self.relauncher else {
+        sawTheRelauncher = true
+        XCTAssertFalse(named.isEmpty, "\(path) is the one file that opens an application")
         return
       }
       for line in named {
-        XCTFail("\(path) asks the system: \(line.trimmingCharacters(in: .whitespaces))")
+        XCTFail("\(path) opens an application: \(line.trimmingCharacters(in: .whitespaces))")
       }
     }
-    XCTAssertTrue(sawTheOpener, "\(Self.opener) is not there, so this test guards nothing")
+    XCTAssertTrue(
+      sawTheRelauncher, "\(Self.relauncher) is not there, so this test guards nothing")
+
+    let text = try String(
+      contentsOf: packageRoot().appendingPathComponent(Self.relauncher), encoding: .utf8)
+    XCTAssertTrue(
+      text.contains("createsNewApplicationInstance = true"),
+      "the bundle on the disk is opened as a new instance")
+    XCTAssertTrue(
+      text.contains("activates = false"), "a relaunch is not something a person asked to look at")
   }
 
   /// Two schemes and two hosts in the whole of the sources.
