@@ -122,13 +122,13 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Sources/PresenceUI/Components/StatusGlyph.swift`, `RingView.swift`
 - Create: `presence/Tests/PresenceUITests/GlyphTests.swift`
 
-- [ ] `testEveryGlyphKindAndToneRenders` (seven kinds by six tones, 16 px,
+- [x] `testEveryGlyphKindAndToneRenders` (seven kinds by six tones, 16 px,
       stroke 1.25 dark and 1.5 light, a PNG sheet under `PRESENCE_SHOTS`),
       `testTheHollowCheckIsNeutral`, `testTheRingIsTwoSizes` (16 at 1.5, 28 at
       2), `testAnIndeterminateRingIsStaticUnderReduceMotionAndInRenderMode`
-- [ ] the views drawn with `Path`, the geometry from the CSS; the M23
+- [x] the views drawn with `Path`, the geometry from the CSS; the M23
       `Glyph.swift` stays untouched until Task 14
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 3: the action icons
 
