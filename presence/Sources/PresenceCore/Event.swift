@@ -169,10 +169,13 @@ private struct Wire: Decodable {
 
   /// The schema is read before anything else, because a line from a newer
   /// gdoc may hold a field whose meaning changed, and the app has no way to
-  /// notice that from here. It says so and reads none of the rest.
+  /// notice that from here. It says so and reads none of the rest. A schema
+  /// under the known one is not a newer gdoc and never says it is: no gdoc
+  /// wrote one, so it is a line this app skips like any other.
   func decoded() throws -> Event {
     guard let v else { throw RecordFault.undecodable("no v") }
-    guard v == Event.knownSchema else { throw RecordFault.newerSchema(v) }
+    guard v <= Event.knownSchema else { throw RecordFault.newerSchema(v) }
+    guard v == Event.knownSchema else { throw RecordFault.undecodable("unknown v") }
 
     guard let at, let when = moment(at) else { throw RecordFault.undecodable("no at") }
     guard let pid, pid > 0 else { throw RecordFault.undecodable("no pid") }

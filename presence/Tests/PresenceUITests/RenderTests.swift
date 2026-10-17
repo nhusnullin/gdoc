@@ -86,7 +86,8 @@ final class RenderTests: XCTestCase {
 
     let row = try XCTUnwrap(
       PanelModel.build(
-        glance: gone, appVersion: "2.13.0", bundle: .same, calendar: try amsterdam()
+        glance: gone, appVersion: "2.13.0", bundle: .same, newerGdoc: false,
+        calendar: try amsterdam()
       ).now.first, "the hold is still a row in the panel")
     XCTAssertEqual(row.kind, .hold)
     XCTAssertEqual(row.value, "ran out")
@@ -158,21 +159,43 @@ final class RenderTests: XCTestCase {
     XCTAssertEqual(try dayModel(bundle: .gone).notice?.leading, "gdoc presence was removed")
   }
 
+  // The one fault the app says out loud. A line from a gdoc this app does not
+  // know is refused by the decoder, so the panel would otherwise go quiet
+  // with nothing to explain why; the notice stands in for every line the
+  // decoder let go.
+  func testANewerGdocIsSaidInTheNotice() throws {
+    XCTAssertNil(
+      try dayModel().notice, "nothing is said while the record is a schema this app reads")
+
+    let newer = try dayModel(newerGdoc: true)
+    XCTAssertEqual(newer.notice?.kind, .notice)
+    XCTAssertEqual(newer.notice?.leading, "gdoc is newer than this app")
+
+    XCTAssertEqual(
+      try dayModel(bundle: .reopenNeeded("2.14.0"), newerGdoc: true).notice?.leading,
+      "Updated to 2.14.0. Quit and reopen",
+      "the app on the disk is the one a person can act on, so it is said first")
+  }
+
   // MARK: the fixture
 
   /// The shared day fixture folded into a model, which is what every test
   /// here reads except the glyph's.
-  private func dayModel(bundle: BundleState = .same) throws -> PanelModel {
+  private func dayModel(
+    bundle: BundleState = .same, newerGdoc: Bool = false
+  ) throws -> PanelModel {
     let data = try Data(contentsOf: fixture("day"))
-    return try built(of: Event.scan(data).events, appVersion: "2.13.0", bundle: bundle)
+    return try built(
+      of: Event.scan(data).events, appVersion: "2.13.0", bundle: bundle, newerGdoc: newerGdoc)
   }
 
   private func built(
-    of events: [Event], appVersion: String, bundle: BundleState
+    of events: [Event], appVersion: String, bundle: BundleState, newerGdoc: Bool = false
   ) throws -> PanelModel {
     PanelModel.build(
       glance: try fold(events, alive: { [deadPid] in $0 != deadPid }),
-      appVersion: appVersion, bundle: bundle, calendar: try amsterdam())
+      appVersion: appVersion, bundle: bundle, newerGdoc: newerGdoc,
+      calendar: try amsterdam())
   }
 
   private func fold(_ events: [Event], alive: (Int32) -> Bool) throws -> Glance {

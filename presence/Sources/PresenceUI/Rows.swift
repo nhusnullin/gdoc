@@ -54,8 +54,9 @@ public struct Row: Sendable, Equatable {
   }
 }
 
-/// The whole panel: NOW, TODAY, the two versions, and the one notice about
-/// the bundle under the running app.
+/// The whole panel: NOW, TODAY, the two versions, and the one notice, which
+/// is about the bundle under the running app or about a gdoc this app cannot
+/// read.
 public struct PanelModel: Sendable, Equatable {
   public let now: [Row]
   public let today: [Row]
@@ -79,7 +80,8 @@ public struct PanelModel: Sendable, Equatable {
   /// written in, so the fold's moments and the panel's clock agree and
   /// neither reads the machine's own settings in a test.
   public static func build(
-    glance: Glance, appVersion: String, bundle: BundleState, calendar: Calendar
+    glance: Glance, appVersion: String, bundle: BundleState, newerGdoc: Bool,
+    calendar: Calendar
   ) -> PanelModel {
     let clock = Clock(calendar: calendar)
     return PanelModel(
@@ -89,7 +91,7 @@ public struct PanelModel: Sendable, Equatable {
         Row(kind: .version, leading: "gdoc presence", value: appVersion),
         Row(kind: .version, leading: "gdoc", value: glance.gdoc ?? "checkout build"),
       ],
-      notice: notice(bundle))
+      notice: notice(bundle, newerGdoc: newerGdoc))
   }
 
   private static func row(_ now: NowRow, clock: Clock) -> Row {
@@ -135,15 +137,27 @@ public struct PanelModel: Sendable, Equatable {
     }
   }
 
-  private static func notice(_ bundle: BundleState) -> Row? {
+  /// The one line the panel says about itself. The app on the disk comes
+  /// first, because that is the one a person can do something about; a gdoc
+  /// at a schema this app does not read is said next, because every line of
+  /// it was let go and NOW and TODAY would otherwise be empty with nothing to
+  /// explain them.
+  ///
+  /// testTheReopenRowAppearsWhenThePlistVersionDiffers and
+  /// testANewerGdocIsSaidInTheNotice.
+  private static func notice(_ bundle: BundleState, newerGdoc: Bool) -> Row? {
     switch bundle {
     case .same:
-      return nil
+      break
     case .reopenNeeded(let version):
       return Row(kind: .notice, leading: "Updated to \(version). Quit and reopen")
     case .gone:
       return Row(kind: .notice, leading: "gdoc presence was removed")
     }
+    guard newerGdoc else { return nil }
+    return Row(
+      kind: .notice, leading: "gdoc is newer than this app",
+      detail: "part of the record is not read until the app is updated")
   }
 
   /// The second line of a live or stopped run: the command when the title

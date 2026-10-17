@@ -38,6 +38,11 @@ final class AppState {
   private(set) var glance: Glance
   private(set) var bundle: BundleState = .same
 
+  /// Whether the record has held a line from a gdoc at a schema this app does
+  /// not read. It is sticky: the line is skipped and never kept, so the one
+  /// thing left to say is that it was there.
+  private(set) var newerGdoc = false
+
   private let calendar: Calendar
   private let tail: LogTail
   private let watcher: BundleWatcher?
@@ -54,8 +59,11 @@ final class AppState {
       [], now: Date(), calendar: Calendar.current, alive: Liveness.isAlive)
   }
 
-  /// Start reading. The first pass has already run by the time this returns,
-  /// so the first click opens a panel with the record in it.
+  /// Start reading. The tail's first pass runs inside start, and what it
+  /// found reaches this object through the same route every later pass does,
+  /// so the batches arrive in the order the file holds them. There is no
+  /// second, synchronous read here: it would take the newer batch first and
+  /// an end seen before its start puts one run in NOW and in TODAY at once.
   func start(onChange: @escaping () -> Void) {
     self.onChange = onChange
     tail.start { records in
@@ -69,7 +77,6 @@ final class AppState {
     ticker = Timer.scheduledTimer(withTimeInterval: refoldEvery, repeats: true) { _ in
       Task { @MainActor [weak self] in self?.refold() }
     }
-    took(tail.poll())
   }
 
   func stop() {
@@ -85,27 +92,37 @@ final class AppState {
   /// What the panel draws.
   var model: PanelModel {
     PanelModel.build(
-      glance: glance, appVersion: version, bundle: bundle, calendar: calendar)
+      glance: glance, appVersion: version, bundle: bundle, newerGdoc: newerGdoc,
+      calendar: calendar)
   }
 
   private func took(_ records: Records) {
-    guard !records.events.isEmpty else {
-      if !records.isEmpty { refold() }
-      return
+    guard !records.isEmpty else { return }
+    var said = false
+    if records.newerSchema, !newerGdoc {
+      newerGdoc = true
+      said = true
     }
-    events.append(contentsOf: records.events)
-    if events.count > eventCeiling {
-      events.removeFirst(events.count - eventCeiling)
+    if !records.events.isEmpty {
+      events.append(contentsOf: records.events)
+      if events.count > eventCeiling {
+        events.removeFirst(events.count - eventCeiling)
+      }
     }
-    refold()
+    if refolded() || said { onChange() }
   }
 
   private func refold() {
+    if refolded() { onChange() }
+  }
+
+  /// The fold taken again, and whether it moved. A glance that did not change
+  /// redraws nothing.
+  private func refolded() -> Bool {
     let before = glance
     glance = Fold.glance(
       events, now: Date(), calendar: calendar, alive: Liveness.isAlive)
-    guard glance != before else { return }
-    onChange()
+    return glance != before
   }
 }
 

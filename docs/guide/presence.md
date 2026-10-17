@@ -86,6 +86,12 @@ If the app cannot be written, the update says so as a warning and names both
 paths. The binary is still updated. The two can sit at different versions until
 a later run, and the app's version row is what tells you.
 
+An app left far enough behind stops reading the record at all: a later gdoc may
+write a line in a shape this app was never taught, and it skips every one of
+them rather than guessing. When that happens the panel says `gdoc is newer than
+this app` and the sections under it go quiet. Run `gdoc update` again, or
+reinstall the app, and both come back.
+
 `gdoc update --rollback` puts the earlier binary back, and the earlier app with
 it. There is one trap in that, and it is worth reading twice. A rollback to a
 release older than this flag leaves `presence: true` in your settings file, and

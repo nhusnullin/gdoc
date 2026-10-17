@@ -68,6 +68,26 @@ final class EventTests: XCTestCase {
     XCTAssertEqual(scan.skipped, 0, "a newer schema is not an undecodable record")
   }
 
+  // A schema under the one this app knows is not a gdoc that is newer. It is
+  // a line nobody can place, so it is skipped like any other, and the one
+  // notice that says gdoc is ahead of the app is kept for when that is true.
+  func testAVersionUnderTheKnownOneIsSkippedRatherThanCalledNewer() throws {
+    let line = try Fixture.lines("events-v1")[0]
+      .replacingOccurrences(of: "\"v\":1", with: "\"v\":0")
+
+    XCTAssertThrowsError(try Event.decode(line)) { error in
+      guard case .undecodable = error as? RecordFault else {
+        return XCTFail("a v under the known one is undecodable, and this said \(error)")
+      }
+    }
+
+    var records = Records()
+    records.add(Data(line.utf8))
+    XCTAssertTrue(records.events.isEmpty, "the line is not a record")
+    XCTAssertEqual(records.skipped, 1)
+    XCTAssertFalse(records.newerSchema, "nothing here says gdoc is newer than this app")
+  }
+
   func testAMissingRequiredFieldSkipsTheRecord() throws {
     let line = try Fixture.lines("events-v1")[0]
     for key in ["v", "at", "pid", "run", "event"] {
