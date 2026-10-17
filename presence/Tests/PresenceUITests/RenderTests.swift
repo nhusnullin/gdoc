@@ -278,6 +278,45 @@ final class RenderTests: XCTestCase {
       rows.contains { $0.title.hasPrefix("Hold closed") }, "the write carries the ending")
   }
 
+  /// Scene e2's DOCUMENTS header: four rows from three days, so the header
+  /// is the stretch and the whole count. The old rule drew "1 today" over
+  /// those four rows, which counted one thing and listed another.
+  func testTheHeaderOfE2IsTheStretchAndTheWholeCount() throws {
+    let scene = try XCTUnwrap(Scenes.all.first { $0.id == "e2" })
+    let documents = try XCTUnwrap(scene.model().documents)
+    XCTAssertEqual(documents.rows.count, 4)
+    XCTAssertEqual(documents.count, "14 days · 4")
+  }
+
+  /// Scene e9: the sign-in expired in the middle of a watch.
+  ///
+  /// The last poll came back with gdoc's `auth` code, so no poll follows it
+  /// until somebody signs in: the watch is stopped and not paused, the card
+  /// says what to do about it, and there is no Stop icon because there is no
+  /// process to signal and never will be one.
+  func testTheExpiredSignInOfE9StopsTheWatch() throws {
+    let scene = try XCTUnwrap(Scenes.all.first { $0.id == "e9" })
+    let model = try scene.model()
+
+    guard case .live(_, let row, let stop, _)? = model.now.last else {
+      return XCTFail("e9 draws its watch as a live row")
+    }
+    XCTAssertEqual(row.sub, "stopped 15:29 · sign-in expired")
+    XCTAssertNil(stop, "nothing is polling, so there is nothing to stop")
+
+    guard case .stuck(_, let card, _)? = model.now.first else {
+      return XCTFail("e9 opens with the card `auth status` raised")
+    }
+    XCTAssertEqual(card.title, "Needs sign-in")
+    XCTAssertEqual(card.reason, "1 live watch stopped. Sign in and start it again.")
+    XCTAssertTrue(StuckCard.fits(card.reason), "it fits the card's two lines")
+
+    XCTAssertTrue(
+      scene.caption.contains("unmeasured"),
+      "whether gdoc carries on from the same cursor after a sign-in is nobody's measurement yet")
+    XCTAssertFalse(scene.caption.contains("paused"), "the caption says what the row says")
+  }
+
   /// One title as a row draws it: the head cut to what the column shows,
   /// the ellipsis where it was cut, and the tail whole. `MiddleTitle` draws
   /// exactly this, and a test that compared the titles themselves would

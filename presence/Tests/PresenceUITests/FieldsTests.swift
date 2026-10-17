@@ -58,8 +58,8 @@ final class FieldsTests: XCTestCase {
             "2026-10-17T09:05:00Z", .end, command: "reply", doc: chapter5, ok: false, stop: code),
         ], at: "2026-10-17T09:06:00Z")
       XCTAssertEqual(
-        unknown.reasons, ["Stopped at 09:05. The terminal that ran it has the reason."],
-        "\(code) names no cause, so the card says where to look")
+        unknown.reasons, ["The terminal that ran it has the reason."],
+        "\(code) names no cause, so the card says where to look and nothing else")
     }
   }
 
@@ -79,7 +79,7 @@ final class FieldsTests: XCTestCase {
             stop: "other"),
         ], at: "2026-10-17T09:06:00Z")
       XCTAssertEqual(
-        panel.reasons, ["Stopped at 09:05. The \(place) that ran it has the reason."],
+        panel.reasons, ["The \(place) that ran it has the reason."],
         "a write from \(via) is sent to the place it ran in")
       XCTAssertTrue(StuckCard.fits(panel.reasons[0]), "it still fits the card")
     }
@@ -164,7 +164,8 @@ final class FieldsTests: XCTestCase {
 
   // Scene r8 and scene e9: a poll that failed carries its code, so the row
   // says what kind of trouble it is. The one code the row words differently
-  // is auth: a watch nobody can sign in for is paused and not broken.
+  // is auth: a watch nobody can sign in for is stopped, because no poll
+  // follows a token Google refused until somebody signs in again.
   func testAFailedPollCarriesItsCode() throws {
     let network = try drawn(
       [
@@ -186,8 +187,8 @@ final class FieldsTests: XCTestCase {
           title: "Chapter 5 storyline", ok: false, stop: "auth"),
       ], at: "2026-10-17T15:30:00Z", facts: Scenes.machine(auth: .needsSignIn))
     XCTAssertEqual(
-      expired.now.compactMap(liveSub), ["paused 15:29 · sign-in expired"],
-      "the watch is not broken, it is waiting for a sign-in")
+      expired.now.compactMap(liveSub), ["stopped 15:29 · sign-in expired"],
+      "nothing is polling that document any more, so the row says stopped")
   }
 
   // The hold the sign-in changed under: the card goes, and the one line in
@@ -212,6 +213,82 @@ final class FieldsTests: XCTestCase {
     let closed = try XCTUnwrap(panel.today?.rows.first)
     XCTAssertEqual(closed.title, "Hold closed · Altery Group Channel Management Policy")
     XCTAssertEqual(closed.sub, "the sign-in changed, nothing was sent")
+  }
+
+  // The TODAY row of a hold names the write by the command's heading, the
+  // way every other row in the panel names it: the record writes `propose`
+  // and a person reads "Proposal". A raw command name in one row and a
+  // heading in the next is two vocabularies for one thing.
+  func testAHeldWriteIsNamedByItsHeading() throws {
+    for (command, verb) in Words.verbs {
+      let panel = try drawn(
+        [
+          event(
+            "2026-10-17T16:19:01Z", .end, command: "read", doc: policy,
+            title: "Altery Group Channel Management Policy", ok: true),
+          event(
+            "2026-10-17T16:20:00Z", .held, command: command, via: "chat", doc: policy,
+            hold: "h_1", rule: "Unread target"),
+        ], at: "2026-10-17T16:34:00Z")
+
+      let raised = try XCTUnwrap(
+        panel.today?.rows.first { $0.title.hasPrefix("Hold ·") },
+        "a held \(command) is one row in TODAY")
+      XCTAssertEqual(
+        raised.sub, "\(verb.heading) held by rule Unread target · waiting in Desktop chat",
+        "the row says \(verb.heading) and never \(command)")
+    }
+  }
+
+  // One rule for the DOCUMENTS header, and one number in it: the day's own
+  // count where every row in the list is from today, and "14 days" with the
+  // whole list's count where one row is older. The count is the list's and
+  // never the screen's, because a row behind "Show more" is a document too.
+  // Scene e2 is the mixed one, and it reads "14 days · 4".
+  func testTheDocumentsHeaderCountsTheWholeList() throws {
+    var runs = 0
+    func wrote(_ at: String, _ doc: String) -> Event {
+      runs += 1
+      return event(
+        at, .end, command: "reply", doc: doc, title: "A note", ok: true, verified: true,
+        run: "300000000000000\(runs)")
+    }
+
+    let bare = try drawn([], at: "2026-10-17T18:00:00Z")
+    XCTAssertNil(bare.documents?.count, "an empty list has no count at all")
+
+    let day = try drawn(
+      [
+        wrote("2026-10-17T09:00:00Z", chapter4),
+        wrote("2026-10-17T10:00:00Z", chapter5),
+        wrote("2026-10-17T11:00:00Z", policy),
+      ], at: "2026-10-17T18:00:00Z")
+    XCTAssertEqual(day.documents?.count, "3 today", "every row is from today")
+
+    let older = try drawn(
+      [
+        wrote("2026-10-16T09:00:00Z", SceneDocuments.northwind),
+        wrote("2026-10-17T09:00:00Z", chapter4),
+        wrote("2026-10-17T10:00:00Z", chapter5),
+        wrote("2026-10-17T11:00:00Z", policy),
+      ], at: "2026-10-17T18:00:00Z")
+    XCTAssertEqual(
+      older.documents?.count, "14 days · 4",
+      "one row is from yesterday, so the header is the stretch and the whole count")
+
+    let long = try drawn(
+      [
+        wrote("2026-10-17T09:00:00Z", chapter4),
+        wrote("2026-10-17T10:00:00Z", chapter5),
+        wrote("2026-10-17T11:00:00Z", policy),
+        wrote("2026-10-17T12:00:00Z", SceneDocuments.northwind),
+        wrote("2026-10-17T13:00:00Z", SceneDocuments.partner),
+        wrote("2026-10-17T14:00:00Z", SceneDocuments.concept),
+      ], at: "2026-10-17T18:00:00Z")
+    XCTAssertEqual(long.documents?.rows.count, 6)
+    XCTAssertEqual(
+      long.documents?.count, "6 today",
+      "the sixth row is behind Show more and is counted all the same")
   }
 
   // MARK: the record, as values
@@ -243,13 +320,13 @@ final class FieldsTests: XCTestCase {
     doc: String? = nil, wait: Bool = false, interrupted: Bool = false, step: String? = nil,
     index: Int? = nil, count: Int? = nil, title: String? = nil, made: String? = nil,
     ok: Bool? = nil, verified: Bool? = nil, stop: String? = nil, line: Int? = nil,
-    hold: String? = nil, rule: String? = nil
+    hold: String? = nil, rule: String? = nil, run: String = "3000000000000001"
   ) -> Event {
     let formatter = ISO8601DateFormatter()
     formatter.formatOptions = [.withInternetDateTime]
     return Event(
       schema: 1, at: formatter.date(from: at) ?? Date(timeIntervalSince1970: 0),
-      gdoc: "v2.15.0", pid: 7101, run: "3000000000000001", call: hold == nil ? 1 : nil,
+      gdoc: "v2.15.0", pid: 7101, run: run, call: hold == nil ? 1 : nil,
       kind: kind, command: command, via: via, doc: doc, wait: wait, interrupted: interrupted,
       step: step, index: index, count: count, title: title, made: made, ok: ok,
       verified: verified, stop: stop, line: line, ms: nil, hold: hold, rule: rule, until: nil)

@@ -141,7 +141,7 @@ final class RowTests: XCTestCase {
 
     for scheme in [ColorScheme.dark, .light] {
       let measured = try probes(
-        SectionLabel("Documents", count: "14 days · 3 today"),
+        SectionLabel("Documents", count: "14 days · 11"),
         scheme: scheme)
       XCTAssertEqual(measured["section-label"]?.height, 28, "the label in \(scheme)")
       XCTAssertEqual(measured["section-label"]?.width, Grid.panelWidth)
@@ -154,7 +154,7 @@ final class RowTests: XCTestCase {
         SectionLabel("Documents").frame(width: Grid.panelWidth), scheme: scheme,
         side: Grid.panelWidth)
       let counted = try inkWeight(
-        SectionLabel("Documents", count: "14 days · 3 today").frame(width: Grid.panelWidth),
+        SectionLabel("Documents", count: "14 days · 11").frame(width: Grid.panelWidth),
         scheme: scheme, side: Grid.panelWidth)
       XCTAssertGreaterThan(counted, bare, "the count reached the screen in \(scheme)")
     }
@@ -234,7 +234,7 @@ final class RowTests: XCTestCase {
           RowView(.plain, glyph: .check, tone: .ok, title: twenty, value: "09:05")
           RowView(.compact, glyph: .blank, title: "Mark", value: "⁘")
         }
-        SectionView("Documents", count: "14 days · 3 today") {
+        SectionView("Documents", count: "14 days · 11") {
           RowView(
             .doc, glyph: .check, tone: .ok, title: eighty, sub: "Proposed 2 · verified",
             trailing: {

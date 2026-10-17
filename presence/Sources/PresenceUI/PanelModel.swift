@@ -420,12 +420,17 @@ extension PanelModel {
     // `signInWithGoogle` refuses while one is running.
     guard facts.signIn == nil else { return nil }
     guard facts.auth == .needsSignIn || facts.auth == .missingScopes else { return nil }
-    let paused = sessions.filter(\.isOpen).count
+    // A watch whose token Google refused is stopped: the skill's next wait
+    // cannot start, so the sentence asks for the sign-in and for the watch
+    // to be started again. It never says the watch will carry on by itself,
+    // which is a forecast nobody measured.
+    let stopped = sessions.filter(\.isOpen).count
     let reason =
-      paused == 0
+      stopped == 0
       ? "Nothing can reach Google until you sign in."
-      : "\(paused) live \(paused == 1 ? "watch is" : "watches are") paused. "
-        + "Sign in to carry on."
+      : stopped == 1
+        ? "1 live watch stopped. Sign in and start it again."
+        : "\(stopped) live watches stopped. Sign in and start them again."
     return .stuck(
       id: "auth",
       card: StuckCardModel(title: facts.auth.rawValue, reason: reason),
@@ -464,6 +469,12 @@ extension PanelModel {
     -> ActionModel?
   {
     guard !ui.pendingStop.contains(session.doc) else { return nil }
+    // A watch whose last poll Google refused the token on draws no Stop at
+    // all, not even a dim one: between two ordinary polls the next wait is
+    // a second away and the dim icon says why it cannot be signalled, but
+    // here there is no next wait until somebody signs in. Scene e9:
+    // testTheExpiredSignInOfE9StopsTheWatch.
+    guard session.lastPollStop != "auth" else { return nil }
     let cannot = session.flight == nil || facts.unstoppable.contains(session.doc)
     let state: ActionState = cannot ? .off(Tips.cannotStop) : .live
     return ActionModel(
@@ -503,13 +514,18 @@ extension PanelModel {
       showsStrip: !ui.stripSeen && !rows.isEmpty)
   }
 
-  /// `14 days · 12` once the list is longer than what is on the screen, and
-  /// the day's own count otherwise. The label is the one place a number
-  /// says how much is not on the screen.
+  /// One rule, and one number in it: `3 today` where every row in the list
+  /// is from today, and `14 days · 12` where one of them is older.
+  ///
+  /// The number is the list's and never the screen's, because a row behind
+  /// "Show more" is a document the person has. `1 today` over four rows
+  /// from three days, which is what the old rule drew on scene e2, is a
+  /// count of one thing over a list of another:
+  /// testTheDocumentsHeaderCountsTheWholeList.
   private static func count(_ fold: DocumentsFold) -> String? {
     guard !fold.rows.isEmpty else { return nil }
-    if fold.rows.count > Documents.defaultRows { return "14 days · \(fold.rows.count)" }
-    return fold.today > 0 ? "\(fold.today) today" : nil
+    if fold.today == fold.rows.count { return "\(fold.today) today" }
+    return "14 days · \(fold.rows.count)"
   }
 
   private static func glyph(for state: DocumentState) -> (kind: GlyphKind, tone: GlyphTone) {

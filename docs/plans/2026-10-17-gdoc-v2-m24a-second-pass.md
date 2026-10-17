@@ -104,25 +104,25 @@ branch.
   hold row's sub-line, the DOCUMENTS header, `presence/Tests/PresenceUITests/WordsTests.swift`,
   `RenderTests.swift`, `Scenes.swift` (e9 caption)
 
-- [ ] e9: a watch that ended with `stop: auth` is stopped, not paused. The
+- [x] e9: a watch that ended with `stop: auth` is stopped, not paused. The
       row says "stopped 15:29 · sign-in expired", the card says "1 live
       watch stopped. Sign in and start it again.", the Stop icon is not
       drawn (nothing to stop), and the caption says that whether gdoc resumes
       from the same cursor after a sign-in is unmeasured; a test pins the
       three strings and the absent icon
-- [ ] the hold's TODAY sub-line uses the heading form of the command
+- [x] the hold's TODAY sub-line uses the heading form of the command
       ("Proposal held by rule Unread target", "Reply held by rule
       Dictated"), never the raw command name; a test over every command the
       vocabulary names
-- [ ] the stuck card's reason for the `other` code is only where the reason
+- [x] the stuck card's reason for the `other` code is only where the reason
       is ("The terminal that ran it has the reason."), with no second
       "stopped" and no time, because the title, the glyph and the TODAY row
       already carry both; a test pins the string
-- [ ] one DOCUMENTS header rule: "N today" when every row listed is from
+- [x] one DOCUMENTS header rule: "N today" when every row listed is from
       today, otherwise "14 days · N", where N counts every document in the
       list including the ones behind "Show N more"; e2 reads "14 days · 4";
       the rows sheet uses the same words; a test over the three cases
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 3: the rows and the cards use their width
 

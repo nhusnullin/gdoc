@@ -132,12 +132,15 @@ struct Phrases {
   /// is where the cause sits.
   ///
   /// A run whose process went away wrote neither, and so does a code this
-  /// version has never seen: then the panel says when it stopped and where
-  /// the reason is, because the one thing it must not do is invent a cause.
+  /// version has never seen: then the panel says where the reason is and
+  /// nothing else, because the one thing it must not do is invent a cause.
+  /// The card's own title already says the write stopped and the row in
+  /// TODAY carries the moment, so a sentence that said both again would be
+  /// the third place one screen says the same thing.
   private func stuckReason(_ write: StuckWrite) -> String {
     guard let cause = Words.cause(write.stop, line: write.line) else {
       let place = Self.places[write.via ?? ""] ?? "terminal"
-      return "Stopped at \(clock(write.at)). The \(place) that ran it has the reason."
+      return "The \(place) that ran it has the reason."
     }
     let world =
       write.command == "publish"
@@ -183,11 +186,14 @@ struct Phrases {
   func liveRow(_ session: LiveSession) -> LiveRowModel {
     let expired = facts.auth.isWorking ? nil : "sign-in expired"
     let failed = session.lastPollFailed.map { moment in
-      // A poll Google refused the token on is a watch waiting for a sign-in
-      // rather than a watch in trouble: the cursor is kept and the next
-      // poll after a sign-in carries on from it. That is scene e9.
+      // A poll Google refused the token on is the end of the watch and not
+      // a watch in trouble: the skill's next wait cannot start without a
+      // sign-in, so nothing is polling that document any more. "Paused"
+      // would be the panel saying it will carry on, which is a forecast and
+      // nobody has measured whether gdoc resumes from the same cursor.
+      // That is scene e9.
       session.lastPollStop == "auth"
-        ? "paused \(clock(moment))" : "last poll failed \(clock(moment))"
+        ? "stopped \(clock(moment))" : "last poll failed \(clock(moment))"
     }
 
     let parts: [String?] =
@@ -257,7 +263,7 @@ struct Phrases {
         key: "\(index)", glyph: .pause, tone: .hold, title: sentence(["Hold", title]),
         value: clock(row.at),
         sub: sentence([
-          row.rule.map { "\(row.command ?? "write") held by rule \($0)" },
+          row.rule.map { "\(held(row.command)) held by rule \($0)" },
           "waiting in Desktop chat",
         ]))
     case .holdClosed:
@@ -280,6 +286,15 @@ struct Phrases {
         title: sentence([byYou ? "Live stopped by you" : "Live stopped", title]),
         value: clock(row.at), sub: totals(row.totals))
     }
+  }
+
+  /// What a held write is called: the command's own heading, which is the
+  /// word every other row in the panel uses for it. The record writes
+  /// `propose` and `annotate`; a person reads Proposal and Comment, and a
+  /// raw command name here would be a second vocabulary for one thing.
+  /// testAHeldWriteIsNamedByItsHeading.
+  private func held(_ command: String?) -> String {
+    Words.verb(command)?.heading ?? command ?? "write"
   }
 
   /// What the record said a hold came to, in the panel's words and with no

@@ -91,7 +91,7 @@ final class CardTests: XCTestCase {
     // The two reasons the screens file writes, and one at the ceiling.
     let reasons = [
       "SVG picture at line 41. Nothing was created; the note is unchanged.",
-      "Live watch on Chapter 5 is paused. Sign in to resume; the cursor is kept.",
+      "1 live watch stopped. Sign in and start it again.",
       "The second tab has no heading. Nothing was written; the document is unchanged.",
     ]
     for reason in reasons {

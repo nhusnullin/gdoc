@@ -249,9 +249,11 @@ enum Scenes {
     Scene(
       id: "e9", title: "The sign-in expired in the middle of a watch",
       caption:
-        "The card comes from `auth status` and not from the record. The watch is paused "
-        + "and not broken, which is what its last poll's own code says, and after a "
-        + "sign-in it carries on from the same cursor.",
+        "The card comes from `auth status` and not from the record. The watch is stopped: "
+        + "its last poll came back with gdoc's own auth code, so nothing is polling that "
+        + "document and there is no Stop to press. Whether gdoc carries on from the same "
+        + "cursor once somebody signs in is unmeasured, so the card asks for the watch to "
+        + "be started again.",
       fixture: "e9", moment: "2026-10-17T15:30:00Z", alive: [],
       facts: machine(auth: .needsSignIn), ui: UIState(), appearance: nil),
     Scene(
