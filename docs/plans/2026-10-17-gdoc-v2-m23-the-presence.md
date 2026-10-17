@@ -471,18 +471,18 @@ every box in it is ticked and its commit is on the branch.
 **Files:**
 - Modify: `docs/v2/MEASURED.md`
 
-- [ ] the prototype measurements of 2026-10-17 (the universal build time, the
+- [x] the prototype measurements of 2026-10-17 (the universal build time, the
       Go-unzipped bundle's attributes and signature, the headless render)
       written down with how each was taken
-- [ ] two built binaries, a shell loop, 10,000 lines each into one file, a
+- [x] two built binaries, a shell loop, 10,000 lines each into one file, a
       strict decode of all 20,000: the command, the result and the date
-- [ ] the Go route on a locally built bundle, unzipped by the updater's own
+- [x] the Go route on a locally built bundle, unzipped by the updater's own
       code into a temp directory: `xattr -lr`, `codesign --verify --deep
       --strict -vv`, `spctl -a -t exec -vv` recorded, with the note that
       `spctl` rejects every ad-hoc bundle and that is not the verdict; the
       launch itself is Nail's step and the section says so, with the negative
       control written out for him
-- [ ] the swap while running, as far as it can be measured without launching
+- [x] the swap while running, as far as it can be measured without launching
       a GUI app here: the rename sequence over a running `sleep` inside a
       bundle-shaped folder keeps the process alive, and the plist read after
       the swap names the new version; the live half, the reopen row appearing
