@@ -182,7 +182,7 @@ extension Session {
   private func signOut() async {
     // The watches first: each of them is a wait that would go on asking
     // Google with a token that is no longer there.
-    for session in Live.sessions(events, now: clock()) where session.isOpen {
+    for session in Live.sessions(events, now: clock(), alive: alive) where session.isOpen {
       if case .signalled = stopper.stop(doc: session.doc, in: events) {
         ui.pendingStop.insert(session.doc)
       }

@@ -78,6 +78,12 @@ enum Scenes {
   static let signInURL =
     "https://accounts.google.com/o/oauth2/auth?client_id=…&redirect_uri=http://127.0.0.1:0"
 
+  /// A second before r3's own moment, 2026-10-17T11:40:30Z, which is what
+  /// its caption claims: Copy link one second into its green check. A
+  /// document with no moment is nothing pressed, so the moment is the whole
+  /// of the state.
+  static let copiedOnR3 = Date(timeIntervalSince1970: 1_792_237_229)
+
   /// A machine that is signed in and up to date, which most scenes are.
   static func machine(
     auth: AuthWord = .ok,
@@ -133,14 +139,16 @@ enum Scenes {
         + "from the terminal. The stuck card stays until the publish is run again, and "
         + "Copy link on the first row is a second into its green check.",
       fixture: "r3", moment: "2026-10-17T11:40:30Z", alive: [],
-      facts: machine(), ui: UIState(copied: SceneDocuments.chapter5), appearance: nil),
+      facts: machine(),
+      ui: UIState(copied: SceneDocuments.chapter5, copiedAt: copiedOnR3), appearance: nil),
     Scene(
       id: "r3l", title: "The same screen in the light appearance",
       caption:
         "The panel follows the system and nothing else: the same three surfaces, three "
         + "text levels and hairlines in their light values.",
       fixture: "r3", moment: "2026-10-17T11:40:30Z", alive: [],
-      facts: machine(), ui: UIState(copied: SceneDocuments.chapter5), appearance: .light),
+      facts: machine(),
+      ui: UIState(copied: SceneDocuments.chapter5, copiedAt: copiedOnR3), appearance: .light),
     Scene(
       id: "r4", title: "A watch is live while the card is stuck",
       caption:
@@ -236,7 +244,7 @@ enum Scenes {
       fixture: nil, moment: "2026-10-17T09:01:00Z", alive: [],
       facts: machine(
         signIn: SignInPhase(url: signInURL, secondsLeft: 163),
-        signedInAt: Date(timeIntervalSince1970: 1_792_911_659)),
+        signedInAt: Date(timeIntervalSince1970: 1_792_227_659)),
       ui: UIState(), appearance: nil),
     Scene(
       id: "e9", title: "The sign-in expired in the middle of a watch",
@@ -254,7 +262,7 @@ enum Scenes {
       fixture: "e10", moment: "2026-10-17T18:00:00Z", alive: [7200, 7210],
       facts: machine(previousAccount: "nail@gmail.example"),
       ui: UIState(
-        question: .signOut, questionAt: Date(timeIntervalSince1970: 1_792_944_000)),
+        question: .signOut, questionAt: Date(timeIntervalSince1970: 1_792_259_999)),
       appearance: nil),
   ]
 }
@@ -315,7 +323,8 @@ extension Scene {
     var check = BarCheck()
     check.saw(fold.lastVerified, live: true, at: fold.lastVerified?.ended ?? at)
     return BarImage.state(
-      now: fold, sessions: Live.sessions(events, now: at), facts: facts,
+      now: fold, sessions: Live.sessions(events, now: at, alive: { alive.contains($0) }),
+      facts: facts,
       checkShowing: check.isShowing(now: at))
   }
 

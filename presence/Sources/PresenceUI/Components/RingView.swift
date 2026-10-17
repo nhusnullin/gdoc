@@ -15,19 +15,6 @@
 
 import SwiftUI
 
-/// Whether the view tree is being drawn into an image rather than onto a
-/// screen. A render has one frame, so nothing in it animates.
-private struct PresenceRenderModeKey: EnvironmentKey {
-  static let defaultValue = false
-}
-
-extension EnvironmentValues {
-  public var presenceRenderMode: Bool {
-    get { self[PresenceRenderModeKey.self] }
-    set { self[PresenceRenderModeKey.self] = newValue }
-  }
-}
-
 /// A progress ring, or an indeterminate one.
 public struct RingView: View {
   /// `.ring` and `.ring.lg`.
@@ -65,7 +52,10 @@ public struct RingView: View {
   public let size: Size
 
   @Environment(\.colorScheme) private var scheme
-  @Environment(\.presenceRenderMode) private var renderMode
+  /// How this tree is drawn. It is the one render mode `rendering(_:)` sets,
+  /// so a scene's PNG and a scene's panel agree about it: a second key of
+  /// its own was a flag nothing outside a test ever set.
+  @Environment(\.renderMode) private var mode
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var angle: Double = 0
 
@@ -82,7 +72,8 @@ public struct RingView: View {
   public var body: some View {
     let palette = Palette.of(scheme)
     let fraction = min(max(progress ?? Self.indeterminateFraction, 0), 1)
-    let spinning = progress == nil && Self.spins(reduceMotion: reduceMotion, renderMode: renderMode)
+    let spinning =
+      progress == nil && Self.spins(reduceMotion: reduceMotion, renderMode: mode != .live)
     let line = StrokeStyle(lineWidth: size.stroke, lineCap: .butt)
     return ZStack {
       Circle()

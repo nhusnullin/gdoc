@@ -116,6 +116,16 @@ struct Phrases {
       reason: stuckReason(write))
   }
 
+  /// Where the reason is, by the record's own `via`. All three the record
+  /// writes are here: a run from Claude Code left nothing in a terminal, so
+  /// sending a person to one would be a sentence that is not true.
+  /// testAStoppedWriteNamesThePlaceItRanFrom.
+  private static let places: [String: String] = [
+    "terminal": "terminal",
+    "chat": "Desktop chat",
+    "code": "Claude Code session",
+  ]
+
   /// One sentence, under eighty characters: the cause with its place, then
   /// the state of the world. That is scene r2's rule, and the two halves
   /// are both the record's: `stop` is one of gdoc's seven words and `line`
@@ -126,7 +136,7 @@ struct Phrases {
   /// the reason is, because the one thing it must not do is invent a cause.
   private func stuckReason(_ write: StuckWrite) -> String {
     guard let cause = Words.cause(write.stop, line: write.line) else {
-      let place = write.via == "chat" ? "Desktop chat" : "terminal"
+      let place = Self.places[write.via ?? ""] ?? "terminal"
       return "Stopped at \(clock(write.at)). The \(place) that ran it has the reason."
     }
     let world =

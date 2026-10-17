@@ -96,10 +96,13 @@ public struct ActionButton: View {
     return true
   }
 
-  /// How long after the press the check is still green.
+  /// How long after the press the check is still green. A press in the
+  /// future is no press: a clock that stepped backwards would otherwise
+  /// leave the check green for ever.
   public static func isDone(copiedAt: Date?, now: Date) -> Bool {
     guard let copiedAt else { return false }
-    return now.timeIntervalSince(copiedAt) < Timing.doneFlash
+    let since = now.timeIntervalSince(copiedAt)
+    return since >= 0 && since < Timing.doneFlash
   }
 
   public var body: some View {

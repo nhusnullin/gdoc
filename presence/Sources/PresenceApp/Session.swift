@@ -222,7 +222,7 @@ public final class Session {
     let moment = clock()
     return BarImage.state(
       now: Now.fold(events, now: moment, dismissed: ui.dismissed, alive: alive),
-      sessions: Live.sessions(events, now: moment),
+      sessions: Live.sessions(events, now: moment, alive: alive),
       facts: facts,
       checkShowing: check.isShowing(now: moment))
   }
@@ -360,7 +360,7 @@ public final class Session {
   /// Whether a watch is open, which is what makes the token a question
   /// every ten minutes.
   func isLive() -> Bool {
-    Live.sessions(events, now: clock()).contains(where: \.isOpen)
+    Live.sessions(events, now: clock(), alive: alive).contains(where: \.isOpen)
   }
 
   // MARK: the clocks

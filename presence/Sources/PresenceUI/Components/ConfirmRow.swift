@@ -52,9 +52,12 @@ public struct ConfirmRow: View {
   ///
   /// The clock is the caller's, so the revert is a value a test can state
   /// rather than a timer it has to wait for.
+  /// A question asked in the future is no question on the screen: a clock
+  /// that stepped backwards would otherwise leave it up for ever.
   public nonisolated static func isShowing(askedAt: Date?, now: Date) -> Bool {
     guard let askedAt else { return false }
-    return now.timeIntervalSince(askedAt) < Timing.confirmRevert
+    let since = now.timeIntervalSince(askedAt)
+    return since >= 0 && since < Timing.confirmRevert
   }
 
   public var body: some View {

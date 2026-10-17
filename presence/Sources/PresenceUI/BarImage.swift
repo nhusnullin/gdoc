@@ -98,7 +98,8 @@ public struct BarCheck: Sendable, Equatable {
 
   public func isShowing(now: Date) -> Bool {
     guard let since else { return false }
-    return now.timeIntervalSince(since) < Self.lasts
+    let passed = now.timeIntervalSince(since)
+    return passed >= 0 && passed < Self.lasts
   }
 }
 

@@ -91,6 +91,51 @@ final class StateTests: XCTestCase {
       "and that row is the one waiting for Google")
   }
 
+  /// `latest_stable` is a fact and not a judgement: gdoc prints the newest
+  /// stable release whatever is installed. A nightly is an ordinary tag whose
+  /// patch is not zero, and this repository cuts one after every merge, so a
+  /// machine ahead of the stable line must not be offered a release behind
+  /// it: the row would claim an update and the button would do nothing.
+  func testAnOlderPublishedReleaseIsNoUpdate() throws {
+    let cases: [(installed: String, published: String, offered: String?)] = [
+      ("v2.14.0", "v2.15.0", "v2.15.0"),
+      ("v2.14.0", "v2.14.1", "v2.14.1"),
+      ("v2.14.0", "v2.14.0", nil),
+      ("v2.14.1", "v2.14.0", nil),
+      ("v2.15.0", "v2.14.9", nil),
+      ("v2.9.0", "v2.10.0", "v2.10.0"),
+      // Neither is a tag this app can read, so the most it can say is that
+      // the two strings differ.
+      ("dev", "v2.15.0", "v2.15.0"),
+      ("dev", "dev", nil),
+    ]
+    for (installed, published, offered) in cases {
+      let versions = Versions(app: "2.14.0", gdoc: installed, latestStable: published)
+      XCTAssertEqual(
+        versions.updateAvailable, offered,
+        "installed \(installed) against published \(published)")
+    }
+
+    XCTAssertNil(
+      Versions(app: "2.14.0", gdoc: nil, latestStable: "v2.15.0").updateAvailable,
+      "a binary nobody found is no update")
+    XCTAssertNil(
+      Versions(app: "2.14.0", gdoc: "v2.14.0").updateAvailable,
+      "and a check that heard nothing offers nothing")
+
+    // The row itself, so the rule reaches the screen it is about.
+    let behind = try drawn(
+      [], at: "2026-10-17T09:00:00Z", facts: Scenes.machine(latestStable: "v2.15.0"))
+    XCTAssertEqual(
+      behind.health.first { $0.kind == .gdoc }?.value, "v2.14.0 · v2.15.0 available")
+    let ahead = try drawn(
+      [], at: "2026-10-17T09:00:00Z", facts: Scenes.machine(latestStable: "v2.13.0"))
+    XCTAssertEqual(ahead.health.first { $0.kind == .gdoc }?.value, "v2.14.0")
+    XCTAssertTrue(
+      ahead.health.first { $0.kind == .gdoc }?.actions.isEmpty ?? false,
+      "and there is no button to press")
+  }
+
   // MARK: - The pieces a test states
 
   /// The state of Copy link on the one document row.

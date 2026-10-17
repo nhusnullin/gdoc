@@ -114,8 +114,7 @@ final class RenderTests: XCTestCase {
         wholeHeight, cappedHeight,
         "\(id) is cut at the cap, so the reviewer's copy has to be taller")
       XCTAssertNotNil(
-        whole["row.health.quit"] ?? whole["section-label"],
-        "\(id)'s whole render drew no HEALTH at all")
+        whole["health.quit"], "\(id)'s whole render drew no HEALTH at all")
     }
   }
 

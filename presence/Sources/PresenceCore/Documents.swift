@@ -203,7 +203,7 @@ public enum Documents {
         Action(doc: doc, at: event.at, command: event.command ?? "", state: .hold))
     }
 
-    for session in Live.sessions(ordered, now: now) {
+    for session in Live.sessions(ordered, now: now, alive: alive) {
       found.append(
         Action(
           doc: session.doc, at: session.ended ?? session.since, command: "comments",

@@ -149,15 +149,28 @@ final class GlyphTests: XCTestCase {
     // Twice through the renderer, byte for byte the same, so a scene's PNG
     // does not change under a reviewer who opened it a second time.
     let first = try png(
-      RingView(size: .large).environment(\.presenceRenderMode, true), scheme: .dark)
+      RingView(size: .large).rendering(), scheme: .dark)
     let second = try png(
-      RingView(size: .large).environment(\.presenceRenderMode, true), scheme: .dark)
+      RingView(size: .large).rendering(), scheme: .dark)
     XCTAssertEqual(first, second, "an indeterminate ring in render mode is one fixed frame")
     XCTAssertGreaterThan(
       try inkedPixels(
-        RingView(size: .large).environment(\.presenceRenderMode, true), scheme: .dark,
+        RingView(size: .large).rendering(), scheme: .dark,
         side: RingView.Size.large.diameter),
       8, "the indeterminate ring draws its arc and its track")
+
+    // And it is `rendering(_:)`'s own key the ring reads, which is the key
+    // a scene sets. A second key of the ring's own was a flag nothing
+    // outside this file ever set, so every rendered scene spun.
+    let source = try String(
+      contentsOf: presencePackageRoot()
+        .appendingPathComponent("Sources/PresenceUI/Components/RingView.swift"),
+      encoding: .utf8)
+    XCTAssertTrue(
+      source.contains("@Environment(\\.renderMode)"),
+      "the ring reads the render mode `rendering(_:)` sets")
+    XCTAssertFalse(
+      source.contains("EnvironmentKey"), "and declares no render key of its own")
   }
 
   // MARK: the renders
@@ -181,7 +194,7 @@ final class GlyphTests: XCTestCase {
           RingView(progress: 0, size: .large)
           RingView(progress: 0.5, size: .large)
           RingView(progress: 1, size: .large)
-          RingView(size: .large).environment(\.presenceRenderMode, true)
+          RingView(size: .large).rendering()
         }
       }
       .padding(16)

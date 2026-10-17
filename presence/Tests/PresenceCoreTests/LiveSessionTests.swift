@@ -24,7 +24,7 @@ final class LiveSessionTests: XCTestCase {
   private func day() throws -> [LiveSession] {
     let scan = Event.scan(try Fixture.data("live-day"))
     XCTAssertEqual(scan.skipped, 0, "the day fixture is clean")
-    return Live.sessions(scan.events, now: try halfPastSeven())
+    return Live.sessions(scan.events, now: try halfPastSeven(), alive: { _ in true })
   }
 
   func testWaitsWithinThreeMinutesAreOneSession() throws {
@@ -48,13 +48,14 @@ final class LiveSessionTests: XCTestCase {
       wait(from: "2026-10-17T17:12:59Z", to: nil, run: "bbbb"),
     ].flatMap { $0 }
     XCTAssertEqual(
-      Live.sessions(near, now: try halfPastSeven()).count, 1, "two minutes and 59 seconds")
+      Live.sessions(near, now: try halfPastSeven(), alive: { _ in true }).count, 1,
+      "two minutes and 59 seconds")
 
     let far = [
       wait(from: "2026-10-17T17:00:00Z", to: "2026-10-17T17:10:00Z", run: "aaaa"),
       wait(from: "2026-10-17T17:13:00Z", to: nil, run: "bbbb"),
     ].flatMap { $0 }
-    let split = Live.sessions(far, now: try halfPastSeven())
+    let split = Live.sessions(far, now: try halfPastSeven(), alive: { _ in true })
     XCTAssertEqual(split.count, 2, "three minutes exactly is a second watch")
     XCTAssertEqual(
       split.map(\.since),
@@ -67,7 +68,8 @@ final class LiveSessionTests: XCTestCase {
       wait(from: "2026-10-17T17:00:00Z", to: "2026-10-17T17:10:00Z", run: "aaaa")
       + wait(from: "2026-10-17T17:10:10Z", to: nil, run: "bbbb", doc: northwind)
     XCTAssertEqual(
-      Live.sessions(apart, now: try halfPastSeven()).map(\.doc), [chapterFive, northwind])
+      Live.sessions(apart, now: try halfPastSeven(), alive: { _ in true }).map(\.doc),
+      [chapterFive, northwind])
   }
 
   func testRepliedAndProposedCountTheDocumentsOkEnds() throws {
@@ -88,7 +90,8 @@ final class LiveSessionTests: XCTestCase {
     let events =
       wait(from: "2026-10-17T17:00:00Z", to: nil, run: "aaaa")
       + [before, failed, elsewhere, counted]
-    let session = try XCTUnwrap(Live.sessions(events, now: try halfPastSeven()).first)
+    let session = try XCTUnwrap(
+      Live.sessions(events, now: try halfPastSeven(), alive: { _ in true }).first)
     XCTAssertEqual(session.replied, 0, "a failed reply answered nobody")
     XCTAssertEqual(session.proposed, 1)
   }
@@ -107,11 +110,14 @@ final class LiveSessionTests: XCTestCase {
     }
     let events = [line(.start, started, nil), line(.end, stopped, true)]
 
-    let open = try XCTUnwrap(Live.sessions(events, now: try moment("2026-10-17T17:03:00Z")).first)
+    let open = try XCTUnwrap(
+      Live.sessions(events, now: try moment("2026-10-17T17:03:00Z"), alive: { _ in true })
+        .first)
     XCTAssertNil(open.flight, "the end paired, so no poll is in flight")
     XCTAssertTrue(open.isOpen, "still inside the three-minute gap")
 
-    let later = Live.sessions(events, now: try moment("2026-10-17T17:10:00Z"))
+    let later = Live.sessions(
+      events, now: try moment("2026-10-17T17:10:00Z"), alive: { _ in true })
     XCTAssertEqual(later.count, 1, "one wait is one session, not one per half of it")
     XCTAssertEqual(later[0].ended, stopped, "and it closed at the end the record wrote")
   }
@@ -128,7 +134,8 @@ final class LiveSessionTests: XCTestCase {
     let signalled = wait(
       from: "2026-10-17T17:00:00Z", to: "2026-10-17T17:04:00Z", run: "aaaa", interrupted: true)
     let stopped = try XCTUnwrap(
-      Live.sessions(signalled, now: try moment("2026-10-17T17:04:10Z")).first)
+      Live.sessions(signalled, now: try moment("2026-10-17T17:04:10Z"), alive: { _ in true })
+        .first)
     XCTAssertFalse(stopped.isOpen, "ten seconds after the signal the watch is over")
     XCTAssertEqual(
       stopped.ended, try moment("2026-10-17T17:04:00Z"), "at the end the record wrote")
@@ -138,7 +145,8 @@ final class LiveSessionTests: XCTestCase {
     // The three minutes are still what closes a watch nobody stopped: there
     // the next poll really may be a second away.
     let ran = wait(from: "2026-10-17T17:00:00Z", to: "2026-10-17T17:04:00Z", run: "bbbb")
-    let between = try XCTUnwrap(Live.sessions(ran, now: try moment("2026-10-17T17:04:10Z")).first)
+    let between = try XCTUnwrap(
+      Live.sessions(ran, now: try moment("2026-10-17T17:04:10Z"), alive: { _ in true }).first)
     XCTAssertTrue(between.isOpen, "a poll that ended by itself is inside the gap")
     XCTAssertFalse(between.stoppedByYou)
   }
@@ -163,7 +171,8 @@ final class LiveSessionTests: XCTestCase {
         write(at: "2026-10-17T17:09:00Z", command: "annotate", ok: true),
         write(at: "2026-10-17T17:12:00Z", command: "read", ok: true),
       ]
-    let session = try XCTUnwrap(Live.sessions(events, now: try halfPastSeven()).first)
+    let session = try XCTUnwrap(
+      Live.sessions(events, now: try halfPastSeven(), alive: { _ in true }).first)
     XCTAssertEqual(
       session.lastWrite, try moment("2026-10-17T17:09:00Z"), "a read changed nothing")
   }
@@ -175,12 +184,16 @@ final class LiveSessionTests: XCTestCase {
 
     let events = wait(
       from: "2026-10-17T17:00:00Z", to: "2026-10-17T17:04:00Z", run: "aaaa", ok: false)
-    let fresh = try XCTUnwrap(Live.sessions(events, now: try moment("2026-10-17T17:05:00Z")).first)
+    let fresh = try XCTUnwrap(
+      Live.sessions(events, now: try moment("2026-10-17T17:05:00Z"), alive: { _ in true })
+        .first)
     XCTAssertEqual(
       fresh.lastPollFailed, try moment("2026-10-17T17:04:00Z"), "when it failed, and nothing else")
     XCTAssertTrue(fresh.isOpen, "the next poll is still inside the gap")
 
-    let cold = try XCTUnwrap(Live.sessions(events, now: try moment("2026-10-17T17:08:00Z")).first)
+    let cold = try XCTUnwrap(
+      Live.sessions(events, now: try moment("2026-10-17T17:08:00Z"), alive: { _ in true })
+        .first)
     XCTAssertFalse(cold.isOpen, "no poll followed it inside three minutes")
     XCTAssertEqual(
       cold.lastPollFailed, try moment("2026-10-17T17:04:00Z"), "the fact stays after the watch")
@@ -203,16 +216,46 @@ final class LiveSessionTests: XCTestCase {
 
     // Between two waits a session is open and still has no pid.
     let between = wait(from: "2026-10-17T17:00:00Z", to: "2026-10-17T17:29:00Z", run: "aaaa")
-    let session = try XCTUnwrap(Live.sessions(between, now: try halfPastSeven()).first)
+    let session = try XCTUnwrap(
+      Live.sessions(between, now: try halfPastSeven(), alive: { _ in true }).first)
     XCTAssertTrue(session.isOpen, "a minute after the last poll, inside the gap")
     XCTAssertNil(session.flight, "and between waits there is no process to signal")
+  }
+
+  /// A wait killed outright writes no end, so the record alone says the watch
+  /// is still going for as long as it keeps the line. The kernel's answer is
+  /// the bound: no pid, no watch, and the watch ended where that wait began.
+  func testAWaitWhoseProcessWentAwayEndsTheWatch() throws {
+    let scan = Event.scan(try Fixture.data("live-day"))
+    let flying: Int32 = 6022
+
+    let open = try XCTUnwrap(
+      Live.sessions(scan.events, now: try halfPastSeven(), alive: { _ in true }).last)
+    XCTAssertEqual(open.doc, northwind)
+    XCTAssertTrue(open.isOpen, "the fixture's last wait is in flight")
+
+    let gone = try XCTUnwrap(
+      Live.sessions(scan.events, now: try halfPastSeven(), alive: { $0 != flying }).last)
+    XCTAssertEqual(gone.doc, northwind)
+    XCTAssertFalse(gone.isOpen, "a wait whose process is not there is no watch")
+    XCTAssertEqual(
+      gone.ended, try moment("2026-10-17T17:26:00Z"),
+      "the watch ends where its last wait began, which is the last fact about it")
+    XCTAssertNil(gone.flight, "there is no pid left to signal")
+
+    // The one in flight is the only poll the kernel is asked about: a watch
+    // whose earlier polls all ended is closed by its own ends.
+    let stopped = try XCTUnwrap(
+      Live.sessions(scan.events, now: try halfPastSeven(), alive: { _ in false }).first)
+    XCTAssertEqual(stopped.ended, try moment("2026-10-17T16:55:00Z"), "its last end stands")
   }
 
   func testNoSessionSaysWaitingForTheAuthor() throws {
     let reading = [write(at: "2026-10-17T17:00:00Z", command: "read", ok: true)]
     XCTAssertTrue(
-      Live.sessions(reading, now: try halfPastSeven()).isEmpty, "a read is no watch")
-    XCTAssertTrue(Live.sessions([], now: try halfPastSeven()).isEmpty)
+      Live.sessions(reading, now: try halfPastSeven(), alive: { _ in true }).isEmpty,
+      "a read is no watch")
+    XCTAssertTrue(Live.sessions([], now: try halfPastSeven(), alive: { _ in true }).isEmpty)
 
     // The specification leaves the thread's own state out: gdoc prints no
     // field for it and the app may not guess one. The scan is over Sources

@@ -208,6 +208,11 @@ enum SVGPath {
     while !scanner.atEnd() {
       if scanner.nextIsNumber() {
         guard let repeated = command else { return nil }
+        // A close takes no numbers, so a number after one repeats a command
+        // that would consume nothing and the loop would never end. Nothing
+        // drawn is the answer to a path this does not understand, and a
+        // hang is worse than nothing: testANumberAfterACloseDrawsNothing.
+        guard repeated != "Z", repeated != "z" else { return nil }
         // A second pair after a moveto is a lineto, which is how
         // "M12.5 2.5 8 7" draws its diagonal.
         command = repeated == "M" ? "L" : (repeated == "m" ? "l" : repeated)

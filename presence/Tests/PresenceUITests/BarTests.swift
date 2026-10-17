@@ -297,7 +297,7 @@ final class BarTests: XCTestCase {
     let at = try moment()
     return BarImage.state(
       now: Now.fold(events, now: at, alive: alive),
-      sessions: Live.sessions(events, now: at),
+      sessions: Live.sessions(events, now: at, alive: alive),
       facts: facts,
       checkShowing: checkShowing)
   }

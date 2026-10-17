@@ -283,20 +283,28 @@ final class CardTests: XCTestCase {
       ])
     XCTAssertEqual(HealthRows.quitShortcut, "⌘Q")
 
-    // The five screens the blueprint draws HEALTH on, each shuffled and put
-    // back in order.
+    // Which rows each screen draws, out of that screen's own model. The
+    // rows are the panel's and not a literal this test also sorts: a list
+    // built here and put back in order by the same code says nothing about
+    // what any screen holds.
+    //
+    // Network is drawn only where the record says Google did not answer,
+    // and Claude Desktop only where no extension has been written, which is
+    // why the two move screen to screen and the other five never do.
     let screens: [(String, [HealthRowKind])] = [
-      ("r8", [.account, .network, .gdoc, .desktop, .mark, .launchAtLogin, .quit]),
-      ("e5", [.account, .gdoc, .desktop, .launchAtLogin, .quit]),
-      ("e8", [.account, .gdoc, .launchAtLogin, .quit]),
-      ("e9", [.account, .gdoc, .desktop, .launchAtLogin, .quit]),
-      ("e10", [.account, .gdoc, .desktop, .launchAtLogin, .quit]),
+      ("r8", [.account, .network, .gdoc, .mark, .launchAtLogin, .quit]),
+      ("e5", [.account, .gdoc, .desktop, .mark, .launchAtLogin, .quit]),
+      ("e8", [.account, .gdoc, .mark, .launchAtLogin, .quit]),
+      ("e9", [.account, .gdoc, .mark, .launchAtLogin, .quit]),
+      ("e10", [.account, .gdoc, .mark, .launchAtLogin, .quit]),
     ]
-    for (screen, order) in screens {
-      let rows = order.map { HealthRow($0, value: $0.label) }
+    for (screen, expected) in screens {
+      let scene = try XCTUnwrap(Scenes.all.first { $0.id == screen }, "\(screen) is not a scene")
+      let drawn = try scene.model().health.map(\.kind)
+      XCTAssertEqual(drawn, expected, "HEALTH on \(screen) is not the rows it should hold")
       XCTAssertEqual(
-        HealthRows.ordered(rows.shuffled()).map(\.kind), order,
-        "HEALTH on \(screen) is out of order")
+        HealthRows.ordered(drawn.map { HealthRow($0, value: $0.label) }.shuffled()).map(\.kind),
+        drawn, "and the view puts them back in that order")
     }
 
     // The quiet line under a row is that row's, so it never floats to the

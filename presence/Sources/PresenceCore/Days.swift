@@ -193,7 +193,7 @@ public enum Days {
       rows.append(lost(event, titles: titles))
     }
 
-    for session in Live.sessions(ordered, now: now) {
+    for session in Live.sessions(ordered, now: now, alive: alive) {
       rows.append(began(session))
       if let ended = session.ended { rows.append(stopped(session, at: ended)) }
     }

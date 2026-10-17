@@ -66,6 +66,18 @@ final class IconTests: XCTestCase {
 
   // `.act.off{opacity:.38}`, and the off icon carries its own words: the
   // tooltip is why it cannot be pressed, never the action it is not doing.
+  /// A path this does not understand draws nothing, and the one input that
+  /// could draw nothing for ever is a number after a close: the close
+  /// consumes no number, so repeating it would never move the scanner on.
+  func testANumberAfterACloseDrawsNothing() throws {
+    XCTAssertNil(SVGPath.parse("M0 0L4 4Z 2 2"), "a number after Z is a path, not a hang")
+    XCTAssertNil(SVGPath.parse("M0 0L4 4z 2 2"))
+    XCTAssertNotNil(SVGPath.parse("M0 0L4 4Z"), "and the same path without it still draws")
+    XCTAssertNotNil(
+      SVGPath.parse("M12.5 2.5 8 7"), "a second pair after a moveto is still a lineto")
+    XCTAssertNil(SVGPath.parse("2 2"), "a number before any command is nothing to repeat")
+  }
+
   func testAnOffIconIsDimmedWithItsOwnTooltip() throws {
     XCTAssertEqual(ActionButton.size, 24)
     XCTAssertEqual(ActionButton.radius, 6)

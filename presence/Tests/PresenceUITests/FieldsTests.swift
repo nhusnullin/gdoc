@@ -63,6 +63,28 @@ final class FieldsTests: XCTestCase {
     }
   }
 
+  // The place a person is sent to look is the record's own `via`, and the
+  // record writes three of them. A run from Claude Code left nothing in a
+  // terminal, so naming one would be a sentence that is not true.
+  func testAStoppedWriteNamesThePlaceItRanFrom() throws {
+    let places = [
+      "terminal": "terminal", "chat": "Desktop chat", "code": "Claude Code session",
+    ]
+    for (via, place) in places {
+      let panel = try drawn(
+        [
+          event("2026-10-17T09:03:10Z", .start, command: "reply", via: via, doc: chapter5),
+          event(
+            "2026-10-17T09:05:00Z", .end, command: "reply", via: via, doc: chapter5, ok: false,
+            stop: "other"),
+        ], at: "2026-10-17T09:06:00Z")
+      XCTAssertEqual(
+        panel.reasons, ["Stopped at 09:05. The \(place) that ran it has the reason."],
+        "a write from \(via) is sent to the place it ran in")
+      XCTAssertTrue(StuckCard.fits(panel.reasons[0]), "it still fits the card")
+    }
+  }
+
   // Scene r1: the steps are the record's own four, the one that was written
   // last is the one running, and the ring is that step's place in the list.
   // Nothing here is a percentage of work done: gdoc writes none and the

@@ -44,9 +44,13 @@ public struct SignedInBanner: View {
 
   /// Whether the banner is still on the screen. The clock is the caller's,
   /// so the life is a value a test states rather than a timer it waits for.
+  ///
+  /// A moment in the future is not inside the window either: a clock that
+  /// stepped backwards would otherwise leave the banner up for ever.
   public nonisolated static func isShowing(signedInAt: Date?, now: Date) -> Bool {
     guard let signedInAt else { return false }
-    return now.timeIntervalSince(signedInAt) < life
+    let since = now.timeIntervalSince(signedInAt)
+    return since >= 0 && since < life
   }
 
   public var body: some View {

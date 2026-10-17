@@ -104,8 +104,9 @@ public struct Versions: Sendable, Equatable {
   /// The installed binary's, from `help --json`. Nothing where gdoc was not
   /// found at all.
   public let gdoc: String?
-  /// The newest release gdoc's own daily check heard about, where it is not
-  /// the installed one.
+  /// The newest stable release gdoc's own daily check heard about. It is a
+  /// fact and not a judgement: gdoc prints what is published whatever is
+  /// installed, so it may name a release older than this machine's.
   public let latestStable: String?
 
   public init(app: String, gdoc: String? = nil, latestStable: String? = nil) {
@@ -114,11 +115,46 @@ public struct Versions: Sendable, Equatable {
     self.latestStable = latestStable
   }
 
-  /// Whether the row offers an update: a release that is named and is not
-  /// the one installed.
+  /// Whether the row offers an update: a published release that is newer
+  /// than the one installed.
+  ///
+  /// It is the three numbers and never the two strings. A nightly is an
+  /// ordinary `x.y.z` tag whose patch is not zero, and this repository cuts
+  /// one after every merge, so a machine on v2.14.1 against a published
+  /// v2.14.0 would be offered an update that does not exist and a button
+  /// `gdoc update` answers with "up to date".
+  /// testAnOlderPublishedReleaseIsNoUpdate.
   public var updateAvailable: String? {
-    guard let latestStable, let gdoc, latestStable != gdoc else { return nil }
-    return latestStable
+    guard let latestStable, let gdoc else { return nil }
+    guard let published = Release(latestStable), let installed = Release(gdoc) else {
+      // A version neither side can read is a string, and two strings that
+      // differ are the most that can honestly be said about them.
+      return latestStable == gdoc ? nil : latestStable
+    }
+    return published > installed ? latestStable : nil
+  }
+}
+
+/// A release tag as the three numbers it is, for the one comparison HEALTH
+/// makes. It is `go/internal/update`'s own rule: `vX.Y.Z`, nothing else.
+struct Release: Comparable {
+  let major: Int
+  let minor: Int
+  let patch: Int
+
+  init?(_ tag: String) {
+    let parts = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
+    let numbers = parts.split(separator: ".", omittingEmptySubsequences: false)
+    guard numbers.count == 3 else { return nil }
+    guard let major = Int(numbers[0]), let minor = Int(numbers[1]), let patch = Int(numbers[2])
+    else { return nil }
+    self.major = major
+    self.minor = minor
+    self.patch = patch
+  }
+
+  static func < (left: Release, right: Release) -> Bool {
+    (left.major, left.minor, left.patch) < (right.major, right.minor, right.patch)
   }
 }
 

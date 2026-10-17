@@ -307,7 +307,7 @@ extension PanelModel {
     alive: (Int32) -> Bool
   ) -> PanelModel {
     let nowFold = Now.fold(events, now: now, dismissed: ui.dismissed, alive: alive)
-    let sessions = Live.sessions(events, now: now)
+    let sessions = Live.sessions(events, now: now, alive: alive)
     let docs = Documents.fold(events, now: now, calendar: calendar, alive: alive)
     // The cards NOW is keeping are not rows TODAY writes as well: the
     // horizon and the dismissals are the NOW fold's, so it is folded first
@@ -380,7 +380,7 @@ extension PanelModel {
         items.append(
           .hold(
             id: hold.id, card: words.holdCard(hold),
-            asking: ui.question == .dismissHold(hold.id)))
+            asking: ui.isAsking(.dismissHold(hold.id), now: words.now)))
       case .stuck(let write):
         items.append(
           .stuck(

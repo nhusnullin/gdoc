@@ -24,6 +24,14 @@
 //   - the wait in flight, if there is one, because that pid is the only thing
 //     Stop can signal. Between two polls a session is open and has no pid.
 //
+// A last wait that wrote no end and whose pid the kernel does not know is the
+// watch over, at that wait's own start. A process killed outright, or one that
+// took a SIGHUP with the terminal window, writes nothing: without this the
+// session would be open with no bound at all, the bar would say live for as
+// long as the record keeps the line, and Stop would offer to signal a pid that
+// is gone. It is the same rule NOW applies to a start whose process left, and
+// the kernel's answer comes in as an argument for the same reason.
+//
 // The thread's own state is not here and never will be: gdoc prints no field
 // for whether an author has answered, so the panel says nothing about it.
 
@@ -80,8 +88,11 @@ public enum Live {
   /// Every live watch the events hold, oldest first.
   ///
   /// now decides only whether the last session on a document is still open,
-  /// so a fixture folds the same way at any later moment.
-  public static func sessions(_ events: [Event], now: Date) -> [LiveSession] {
+  /// so a fixture folds the same way at any later moment, and alive decides
+  /// whether a last wait that wrote no end is still one.
+  public static func sessions(
+    _ events: [Event], now: Date, alive: (Int32) -> Bool
+  ) -> [LiveSession] {
     let ordered = Fold.inOrder(events)
     let titles = Fold.latestTitles(ordered)
 
@@ -93,7 +104,8 @@ public enum Live {
     var sessions: [LiveSession] = []
     for (doc, byDoc) in polls {
       for run in stitch(byDoc.sorted { $0.started < $1.started }) {
-        sessions.append(session(run, doc: doc, in: ordered, titles: titles, now: now))
+        sessions.append(
+          session(run, doc: doc, in: ordered, titles: titles, now: now, alive: alive))
       }
     }
     return sessions.sorted { $0.since < $1.since }
@@ -171,7 +183,8 @@ public enum Live {
   }
 
   private static func session(
-    _ polls: [Poll], doc: String, in ordered: [Event], titles: [String: String], now: Date
+    _ polls: [Poll], doc: String, in ordered: [Event], titles: [String: String], now: Date,
+    alive: (Int32) -> Bool
   ) -> LiveSession {
     let since = polls[0].started
     let last = polls[polls.count - 1]
@@ -189,9 +202,15 @@ public enum Live {
       } else {
         ended = nil
       }
-    } else {
+    } else if alive(last.pid) {
       flight = LiveSession.Flight(
         pid: last.pid, run: last.run, call: last.call, started: last.started)
+    } else {
+      // The last wait wrote no end and its process is not there, so the
+      // watch ended where that wait began: nothing later than its start is
+      // a fact the record holds about it.
+      // testAWaitWhoseProcessWentAwayEndsTheWatch.
+      ended = last.started
     }
 
     // The writes inside the session's own span. An open session runs to the

@@ -30,7 +30,7 @@ struct Drawn: Equatable {
   ) {
     let fold = Now.fold(events, now: moment, dismissed: dismissed, alive: alive)
     self.now = fold
-    self.sessions = Live.sessions(events, now: moment)
+    self.sessions = Live.sessions(events, now: moment, alive: alive)
     self.days = Days.fold(
       events, now: moment, calendar: calendar, carded: Set(fold.stuck.map(\.key)), alive: alive)
     self.documents = Documents.fold(events, now: moment, calendar: calendar, alive: alive)
