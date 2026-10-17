@@ -247,13 +247,13 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Sources/PresenceCore/LiveSession.swift`
 - Create: `presence/Tests/PresenceCoreTests/LiveSessionTests.swift`, `Fixtures/live-day.jsonl`
 
-- [ ] `testWaitsWithinThreeMinutesAreOneSession`,
+- [x] `testWaitsWithinThreeMinutesAreOneSession`,
       `testRepliedAndProposedCountTheDocumentsOkEnds`,
       `testTheLastWriteTimeIsTheQuietAnchor`, `testAFailedPollIsAFact`,
       `testTheSessionKeepsPidRunAndCallForStop`,
       `testNoSessionSaysWaitingForTheAuthor` (a scan over the words)
-- [ ] the session fold
-- [ ] `make app-test`
+- [x] the session fold
+- [x] `make app-test`
 
 ### Task 11: the fold, DOCUMENTS, TODAY, Yesterday
 
