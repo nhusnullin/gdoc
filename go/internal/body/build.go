@@ -411,10 +411,12 @@ func (r *renderer) paragraph(runs []Run) *etree.Element {
 // heading is one heading paragraph, at the house style for its level and in
 // the colour that style states.
 //
-// bookmark is the name a jump to this heading lands on, empty for a heading
-// that carries none. The pair wraps the runs rather than the paragraph,
-// because a bookmark outside the paragraph it names is one Word moves with the
-// paragraph mark and not with the words.
+// bookmark is the name Drive's import mints this heading's id from, and the
+// name a jump to this heading lands on. The pair is empty and sits before the
+// first run, which is the shape Google's own docx export writes and the shape
+// measured to mint an id: the range carries nothing, so nothing in the
+// paragraph can be moved out of it, and the pair stays inside the paragraph
+// it names rather than on the paragraph mark Word drags around.
 func (r *renderer) heading(level int, runs []Run, pageBreak bool, bookmark string) *etree.Element {
 	if level > 6 {
 		level = 6
@@ -429,16 +431,13 @@ func (r *renderer) heading(level int, runs []Run, pageBreak bool, bookmark strin
 		HangingPt: &zero,
 		Mark:      &mark,
 	})
-	id := ""
 	if bookmark != "" {
-		id = strconv.Itoa(r.bookmarkID)
+		id := strconv.Itoa(r.bookmarkID)
 		r.bookmarkID++
 		sub(p, "w:bookmarkStart", "w:id", id, "w:name", bookmark)
-	}
-	r.addRuns(p, runs, runOpts{Color: style.Color})
-	if bookmark != "" {
 		sub(p, "w:bookmarkEnd", "w:id", id)
 	}
+	r.addRuns(p, runs, runOpts{Color: style.Color})
 	return p
 }
 

@@ -68,8 +68,8 @@ type Session interface {
 //
 // The policy it is given is AllowCreateIn(folderID) and nothing else. The probe
 // document is learned from the create the guard itself carried, which is the
-// second of the policy's two doors, so no handed-in document is reachable while
-// this runs and the probe cannot touch the document being reviewed.
+// second of the policy's three doors, so no handed-in document is reachable
+// while this runs and the probe cannot touch the document being reviewed.
 //
 // The report comes back on every path, error included. A create that succeeded
 // and a step that then failed is exactly the case where the id matters most: it

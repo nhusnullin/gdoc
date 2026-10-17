@@ -75,6 +75,27 @@
 // TestAnExportThatNeverArrivedIsNotVerified and TestRunSendsTheRequestsInOrder
 // are the pins.
 //
+// # headings_without_id is the contents list's one honest check
+//
+// A contents entry is a link to a heading by its id. Drive's import mints that
+// id only where the docx carries a hidden bookmark on the heading, the one
+// internal/body writes, so a document whose headings came back without ids has
+// a contents list that lands every click on the first page. Every document
+// published before 2026-10-16 is one, and nobody noticed for a month because
+// the words were right and the list looked right.
+//
+// So the read-back counts the headings and the headings with no id, and reports
+// the second number. It is a fact and a warning, never a failure: the document
+// is in the folder, correct and readable, and no Docs request can give a
+// published document the ids it came back without, so the way out is a fresh
+// publish from the note rather than a repair. The title and the subtitle are
+// not counted, because Docs gives neither an id and neither reaches a contents
+// list. TestAPublishReportsHeadingsThatCameBackWithNoId,
+// TestAPublishWhoseHeadingsAllCarryAnIdSaysSoAndWarnsAboutNone and
+// TestHeadingsWithoutAnIdLeaveThePublishVerified are the pins, with
+// TestEveryHeadingCarriesAHiddenBookmark in internal/body on the other side of
+// the import.
+//
 // # publish marks its own cover
 //
 // After the read-back, publish writes a named range called

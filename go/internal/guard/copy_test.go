@@ -68,7 +68,7 @@ func TestACopyOfAnotherDocumentIsRefused(t *testing.T) {
 	}
 }
 
-// The grant is not a third door. AllowCopy names a source; it does not admit
+// The grant is no door of its own. AllowCopy names a source; it does not admit
 // one. An id nobody handed in is refused by the file check, before the grant is
 // ever read.
 func TestTheCopyGrantAdmitsNoID(t *testing.T) {

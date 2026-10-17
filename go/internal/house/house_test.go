@@ -3,10 +3,12 @@ package house
 import (
 	"bytes"
 	"encoding/base64"
+	"image"
 	"image/png"
 	"math"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -224,8 +226,13 @@ func TestTheThreeTablesAreThereWithTheirColumns(t *testing.T) {
 	}
 }
 
+// TestTheLogoDecodesAsAPNGOfTheStatedSize reads the copy under testdata
+// rather than the embedded file, because the firm's logo is one file in Drive
+// and no test in this tree carries its bytes. The copy is the embedded file
+// with the placeholder's base64 in place of them, so what is under test is
+// still the house's own statement of the mark and the decode of it.
 func TestTheLogoDecodesAsAPNGOfTheStatedSize(t *testing.T) {
-	cfg := load(t)
+	cfg := loadBase64House(t)
 	if cfg.Logo.Mime != "image/png" {
 		t.Errorf("logo.mime = %q, want image/png", cfg.Logo.Mime)
 	}
@@ -495,11 +502,12 @@ func TestAHighlightThatIsAColourIsRefused(t *testing.T) {
 
 func TestALogoThatIsNotAPNGIsRefused(t *testing.T) {
 	bad := base64.StdEncoding.EncodeToString([]byte("this is not a png"))
-	cut := bytes.Index(embedded, []byte("  base64: |-\n"))
+	house := base64House(t)
+	cut := bytes.Index(house, []byte("  base64: |-\n"))
 	if cut < 0 {
 		t.Fatal("the logo base64 block was not found to replace")
 	}
-	src := append(append([]byte{}, embedded[:cut]...), []byte("  base64: "+bad+"\n")...)
+	src := append(append([]byte{}, house[:cut]...), []byte("  base64: "+bad+"\n")...)
 	_, err := LoadFile(write(t, src))
 	if err == nil {
 		t.Fatal("a logo that is not a PNG was accepted")
@@ -571,4 +579,275 @@ func TestUsableWidthIsTheSpaceBetweenTheSideMargins(t *testing.T) {
 	if got := p.UsableWidthPt(); got != 75 {
 		t.Errorf("a 100pt page inside 10 and 15 leaves %v points, want 75", got)
 	}
+}
+
+// houseWithLogo returns the embedded house file with its whole logo: block
+// replaced by the one stated here. logo: is the last top-level key in the
+// file, so the cut needs no end. Every variant below states its block in
+// full, because the thing under test is which keys are there.
+func houseWithLogo(t *testing.T, block string) []byte {
+	t.Helper()
+	cut := bytes.Index(embedded, []byte("\nlogo:\n"))
+	if cut < 0 {
+		t.Fatal("the logo block was not found to replace")
+	}
+	return append(append([]byte{}, embedded[:cut+1]...), []byte(block)...)
+}
+
+// logoBlock is a well-formed logo: block carrying every key but the two that
+// name the bytes. The caller appends one of them, or both, or neither.
+const logoBlock = `logo:
+  mime: image/png
+  px:
+  - 195
+  - 97
+  width_pt: 146.25
+  height_pt: 72.75
+  anchor:
+    in: first_page_header
+    relative_h: column
+    offset_x_pt: 404.25
+    relative_v: paragraph
+    offset_y_pt: -5.15
+    wrap: square
+    wrap_dist_pt: 9
+`
+
+// aDriveID is a file id of the shape Drive mints, written out here so no test
+// in this package names the firm's own file.
+const aDriveID = "1AbCdEfGhIjKlMnOpQrStUvWxYz012345"
+
+// pngOfHouseSize is a PNG of the size the house file states, so a refusal in
+// these tests is never about the bytes.
+func pngOfHouseSize(t *testing.T) string {
+	t.Helper()
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, image.NewRGBA(image.Rect(0, 0, 195, 97))); err != nil {
+		t.Fatalf("encode: %v", err)
+	}
+	return base64.StdEncoding.EncodeToString(buf.Bytes())
+}
+
+// TestALogoNamesExactlyOneOfDriveAndBase64 holds the door the bytes come
+// through: logo.drive, one file in Drive, or logo.base64, the bytes in the
+// file. Both is a file with two answers and neither is a file with none, and
+// each is refused naming the keys rather than failing later at the PNG.
+func TestALogoNamesExactlyOneOfDriveAndBase64(t *testing.T) {
+	for _, c := range []struct{ name, tail string }{
+		{"both", "  drive: " + aDriveID + "\n  base64: " + pngOfHouseSize(t) + "\n"},
+		{"neither", ""},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			_, err := LoadFile(write(t, houseWithLogo(t, logoBlock+c.tail)))
+			if err == nil {
+				t.Fatalf("a logo naming %s of drive and base64 was accepted", c.name)
+			}
+			if !strings.Contains(err.Error(), "logo") {
+				t.Errorf("error %q does not name the logo", err)
+			}
+			if !strings.Contains(err.Error(), "logo.drive") {
+				t.Errorf("error %q does not name logo.drive, so it does not say which keys", err)
+			}
+			if !strings.Contains(err.Error(), "logo.base64") {
+				t.Errorf("error %q does not name logo.base64, so it does not say which keys", err)
+			}
+		})
+	}
+}
+
+// TestADriveIdThatIsNotOneIsRefusedByName is all this package can judge about
+// a file it cannot read: the shape of the id. 25 or more of the characters
+// Drive mints ids from, and nothing else.
+func TestADriveIdThatIsNotOneIsRefusedByName(t *testing.T) {
+	for _, bad := range []string{"", "a/b", "x", "1AbCdEfGhIjKlMnOpQrStUvW"} {
+		t.Run("refused "+bad, func(t *testing.T) {
+			tail := "  drive: " + strconv.Quote(bad) + "\n"
+			_, err := LoadFile(write(t, houseWithLogo(t, logoBlock+tail)))
+			if err == nil {
+				t.Fatalf("drive: %q was accepted as a file id", bad)
+			}
+			if !strings.Contains(err.Error(), "logo.drive") {
+				t.Errorf("error %q does not name logo.drive", err)
+			}
+		})
+	}
+	for _, good := range []string{aDriveID, "1AbCdEfGhIjKlMnOpQrStUvWx"} {
+		t.Run("accepted "+good, func(t *testing.T) {
+			tail := "  drive: " + good + "\n"
+			if _, err := LoadFile(write(t, houseWithLogo(t, logoBlock+tail))); err != nil {
+				t.Errorf("drive: %q was refused: %v", good, err)
+			}
+		})
+	}
+}
+
+// TestADriveLogoCarriesNoBytes is the other half of the move: with the bytes
+// in Drive this package checks no PNG, because it has none and reaches
+// nothing, and says so when somebody asks it for the bytes. What it still
+// requires is everything render reads to place the mark on the page.
+func TestADriveLogoCarriesNoBytes(t *testing.T) {
+	cfg, err := LoadFile(write(t, houseWithLogo(t, logoBlock+"  drive: "+aDriveID+"\n")))
+	if err != nil {
+		t.Fatalf("a logo in Drive was refused: %v", err)
+	}
+	if cfg.Logo.Drive != aDriveID {
+		t.Errorf("logo.drive = %q, want %s", cfg.Logo.Drive, aDriveID)
+	}
+	raw, err := cfg.LogoBytes()
+	if err == nil {
+		t.Fatalf("LogoBytes returned %d bytes for a logo that is in Drive", len(raw))
+	}
+	if !strings.Contains(err.Error(), aDriveID) {
+		t.Errorf("error %q does not name the file the bytes are in", err)
+	}
+	for _, c := range []struct{ name, drop, names string }{
+		{"no width", "  width_pt: 146.25\n", "logo.width_pt"},
+		{"no height", "  height_pt: 72.75\n", "logo.height_pt"},
+		{"no anchor", "    in: first_page_header\n", "logo.anchor"},
+		{"no wrap", "    wrap: square\n", "logo.anchor.wrap"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			block := strings.Replace(logoBlock, c.drop, "", 1)
+			if block == logoBlock {
+				t.Fatalf("the line %q is not in the block, so nothing was dropped", c.drop)
+			}
+			_, err := LoadFile(write(t, houseWithLogo(t, block+"  drive: "+aDriveID+"\n")))
+			if err == nil {
+				t.Fatalf("a logo with %s was accepted", c.name)
+			}
+			if !strings.Contains(err.Error(), c.names) {
+				t.Errorf("error %q does not name %s", err, c.names)
+			}
+		})
+	}
+}
+
+// The firm's logo is one file in its Drive, and the bytes are in no file here.
+// What stands in for them is testdata/placeholder-logo.png, a flat light grey
+// PNG of the size the house file states, and testdata/house-base64.yaml, the
+// embedded file with that placeholder's base64 where the firm's used to be.
+// Every test that needs real logo bytes reads one of the two.
+//
+// The placeholder was written once, by hand, as a PNG of colour type 6: 195 by
+// 97 pixels of #D9D9D9 at full alpha, one IHDR, one IDAT and one IEND. Go's
+// png.Encode drops a fully opaque image to colour type 2, and the firm's logo
+// is type 6, so the stand-in is written rather than encoded. The YAML beside
+// it is house.yaml up to the key that names the logo's bytes, then
+// "  base64: |-" and that PNG's standard base64 wrapped at 76 characters,
+// indented four spaces. Either can be made again from those two sentences.
+const (
+	placeholderLogoPath = "testdata/placeholder-logo.png"
+	base64HousePath     = "testdata/house-base64.yaml"
+)
+
+// TestThePlaceholderIsAPNGOfTheHouseSize holds the one thing the stand-in has
+// to be: a PNG of the pixels the house file states. Both numbers are literals,
+// as every house value in this file is.
+func TestThePlaceholderIsAPNGOfTheHouseSize(t *testing.T) {
+	img, err := png.DecodeConfig(bytes.NewReader(placeholderLogoBytes(t)))
+	if err != nil {
+		t.Fatalf("the placeholder is not a PNG: %v", err)
+	}
+	if img.Width != 195 || img.Height != 97 {
+		t.Errorf("the placeholder is %dx%d px, want 195x97", img.Width, img.Height)
+	}
+}
+
+// TestTheBase64HouseCarriesThePlaceholderAndNothingElse is the other half of
+// the rule TestTheLogoIsNotInTheTree states, and the half that test cannot
+// reach. The boundary scan hashes whole files, so base64 text sitting inside a
+// larger YAML file is invisible to it, and this file is the one place in the
+// tree whose whole purpose is to carry a logo's bytes. Nothing else pins what
+// those bytes are: the copy is checked against house.yaml only above the key
+// that names them, and every test reading it asks for a PNG of 195 by 97,
+// which the firm's own logo also is. So the firm's bytes pasted here would
+// pass every other test in the tree. This one decodes them and holds them to
+// the placeholder, byte for byte.
+func TestTheBase64HouseCarriesThePlaceholderAndNothingElse(t *testing.T) {
+	raw, err := loadBase64House(t).LogoBytes()
+	if err != nil {
+		t.Fatalf("LogoBytes: %v", err)
+	}
+	if !bytes.Equal(raw, placeholderLogoBytes(t)) {
+		t.Errorf("%s carries %d logo bytes that are not %s; the stand-in is the only picture this tree holds",
+			base64HousePath, len(raw), placeholderLogoPath)
+	}
+}
+
+// TestTheEmbeddedLogoIsADriveIdAndCarriesNoBytes is where this milestone ends:
+// the shipped house names the firm's file and carries none of it. Bytes put
+// back under logo.base64 fail here, which is the point: the tree holds no
+// copy of the firm's mark.
+func TestTheEmbeddedLogoIsADriveIdAndCarriesNoBytes(t *testing.T) {
+	cfg := load(t)
+	if strings.TrimSpace(cfg.Logo.Base64) != "" {
+		t.Fatal("the embedded house carries logo.base64, and the firm's bytes do not live in this tree")
+	}
+	if cfg.LogoDrive() == "" {
+		t.Fatal("the embedded logo names neither bytes nor a file in Drive")
+	}
+	raw, err := cfg.LogoBytes()
+	if err == nil {
+		t.Fatalf("the embedded house handed over %d logo bytes, and its logo is in Drive", len(raw))
+	}
+	if !strings.Contains(err.Error(), cfg.LogoDrive()) {
+		t.Errorf("error %q does not name the file the bytes are in", err)
+	}
+}
+
+// placeholderLogoBytes is the stand-in logo as bytes.
+func placeholderLogoBytes(t *testing.T) []byte {
+	t.Helper()
+	raw, err := os.ReadFile(placeholderLogoPath)
+	if err != nil {
+		t.Fatalf("read the placeholder: %v", err)
+	}
+	return raw
+}
+
+// base64House is the copy of the embedded file whose logo carries the
+// placeholder's bytes. It is checked against the embedded file first, because
+// a copy that drifted from it would quietly test a style nothing ships: the
+// two must be byte for byte the same up to the key that names the logo's
+// bytes, which is the one line they are allowed to differ in.
+func base64House(t *testing.T) []byte {
+	t.Helper()
+	copied, err := os.ReadFile(base64HousePath)
+	if err != nil {
+		t.Fatalf("read %s: %v", base64HousePath, err)
+	}
+	if !bytes.Equal(upToTheLogoBytes(t, copied), upToTheLogoBytes(t, embedded)) {
+		t.Fatalf("%s has drifted from house.yaml above the logo's bytes, so it tests a style nothing ships", base64HousePath)
+	}
+	return copied
+}
+
+// loadBase64House is base64House parsed, with the error already checked.
+func loadBase64House(t *testing.T) *Config {
+	t.Helper()
+	cfg, err := LoadFile(write(t, base64House(t)))
+	if err != nil {
+		t.Fatalf("LoadFile %s: %v", base64HousePath, err)
+	}
+	return cfg
+}
+
+// upToTheLogoBytes is one house file with everything from the key that names
+// the logo's bytes onwards cut off. It takes whichever of the two keys is
+// there, so it reads the same before and after the firm's bytes leave the
+// tree.
+func upToTheLogoBytes(t *testing.T, src []byte) []byte {
+	t.Helper()
+	for _, key := range []string{"\n  base64: |-\n", "\n  drive: "} {
+		switch bytes.Count(src, []byte(key)) {
+		case 0:
+			continue
+		case 1:
+			return src[:bytes.Index(src, []byte(key))]
+		default:
+			t.Fatalf("a house file names %q more than once, so the logo's bytes have no one place", key)
+		}
+	}
+	t.Fatal("a house file names neither logo.base64 nor logo.drive")
+	return nil
 }

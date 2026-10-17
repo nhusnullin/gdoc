@@ -221,7 +221,11 @@ this order:
   the lists, the table column widths, and, when there is one, a named style the
   house has no look for. A run that proposed a prelude adds the column widths
   and row heights of the front-matter tables. The list says what is left to do
-  and never whether the document is finished.
+  and never whether the document is finished. The picture that header wants is
+  the house logo, which is one file in the firm's Drive: `build` and `publish`
+  fetch it once a day and keep it cached beside the token, and a run that can
+  read neither refuses. A restyle fetches it at no point. It gives you the menu
+  path and you upload that same file yourself.
 - **`verified`.** It is every landing check holding, the preservation half
   intact, and no thread whose witness stopped answering. Name what went false.
   `verified: false` is not a failed run. What was applied is in the document

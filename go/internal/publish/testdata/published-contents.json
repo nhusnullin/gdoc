@@ -70,7 +70,8 @@
        "endIndex": 66,
        "paragraph": {
         "paragraphStyle": {
-         "namedStyleType": "HEADING_1"
+         "namedStyleType": "HEADING_1",
+         "headingId": "h.suppliers"
         },
         "elements": [
          {

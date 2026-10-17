@@ -46,7 +46,7 @@ var publishedMarks = []publishedMark{
 	{"blue", "a line changed since the last version", "background", "#5DB3FF"},
 	{"red", "a warning", "background", "#FF6B6B"},
 	{"orange", "an aside", "background", "#FFB85C"},
-	{"pencil", "a line that stays in the document but is not the argument", "foreground", "#9A9A9A"},
+	{"pencil", "that stays in the document but is not the argument", "foreground", "#9A9A9A"},
 }
 
 // TestLivePublishCarriesTheMarksIntoDocs is the second half of acceptance 6

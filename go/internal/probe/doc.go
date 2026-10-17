@@ -93,7 +93,7 @@
 // at M6. This package is what reached it first, at M3, through propose until
 // M14 and through its own command after. The door itself, and
 // what a create is judged on, are internal/guard's, in its package comment
-// under "Two doors into the set, and five grants beside it".
+// under "Three doors into the set, and seven grants beside it".
 //
 // # Two rules this package rests on and does not hold
 //

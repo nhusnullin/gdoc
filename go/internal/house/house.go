@@ -3,7 +3,8 @@
 // house.yaml is the style: page geometry, the ten named styles, the cover,
 // the header and footer with the positioned logo, the three front-matter
 // tables cell by cell, the legend, the live contents field, heading numbering
-// and the logo itself as base64. TestTheTenStylesAreThere,
+// and the logo: its mime, its size, its placement, and either the bytes or the
+// id of the one file in Drive that holds them. TestTheTenStylesAreThere,
 // TestFrontMatterIsFourteenBlocksInOrder, TestTheThreeTablesAreThereWithTheirColumns,
 // TestTOCIsALiveFieldOverThreeHeadingLevels and TestTheLogoDecodesAsAPNGOfTheStatedSize
 // are the pins over what the file has to carry.
@@ -78,6 +79,35 @@
 // TestAMarkWhoseColourIsNotHexIsRefused, TestAMarkWithNoSyntaxIsRefused and
 // TestTwoMarksCannotShareASyntax are the pins.
 //
+// The same door holds the two openers a mark has to claim. Nobody claiming
+// '==' is every highlight reaching the page with no colour, and nobody
+// claiming a comment's opener is every aside reaching it as prose, so each is
+// refused naming the opener nobody claims. The comment's two spellings go to
+// one mark, HTML's first, because that is the opener the projection writes and
+// the closer it writes is always HTML's.
+// TestAPaletteWhereNoMarkClaimsTheBareHighlightIsRefused,
+// TestAPaletteWhereNoMarkClaimsACommentIsRefused,
+// TestBothCommentSpellingsBelongToOneMark and
+// TestTheWrittenCommentSpellingComesFirst are the pins.
+// # The logo's bytes are in one of two places, and the file names one
+//
+// logo.drive is one file in Drive by id and logo.base64 is the bytes here.
+// Exactly one of them is set: both is a file with two answers, neither is a
+// file with none, and each is refused naming the two keys.
+// TestALogoNamesExactlyOneOfDriveAndBase64 is the pin.
+//
+// The PNG check follows the bytes out of this package. With logo.base64 the
+// bytes are here and Validate decodes them against the stated mime and
+// pixels. With logo.drive they are not, this package reaches no network, so
+// the same check is internal/asset's, the room that fetches them. All this
+// package can judge there is the id's shape, and it does.
+// TestADriveIdThatIsNotOneIsRefusedByName and TestADriveLogoCarriesNoBytes
+// are the pins, and the second one holds what stays required either way:
+// the two sizes and the anchor, which is how render places the mark whichever
+// place the bytes came from. LogoBytes on a Drive house is an error naming
+// the file rather than empty bytes, because an unbranded document is the one
+// thing this must not resolve to.
+//
 // # A house-style test states its value as a literal
 //
 // if got != 595.28, never if got != cfg.Page.WidthPt. A test that reads the
@@ -95,6 +125,7 @@ import (
 	"fmt"
 	"image/png"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -144,7 +175,9 @@ var markKinds = map[string]bool{markKindHighlight: true, "text": true}
 
 // Mark is one authoring mark. Syntax is every opener an author may write for
 // it: one colour emoji for five of the highlights, both '==' and 🟡 for the
-// yellow a plain highlight is, and '.pencil' for the one span gdoc reads.
+// yellow a plain highlight is, and two for the pencil, which is the comment
+// it is written as from milestone 20 on, HTML's '<!--' and Obsidian's '%%'.
+// The first is the one export writes, which is why HTML's comes first.
 // Debt says the mark is counted on the build and publish envelopes, which is
 // a fact the skills judge rather than a refusal.
 type Mark struct {
@@ -511,14 +544,16 @@ type HeadingNumbering struct {
 	Note         string `yaml:"note"`
 }
 
-// Logo is the mark in the first page's header, carried in the file itself so
-// the binary is the whole dependency.
+// Logo is the mark in the first page's header. The size, the placement and
+// the mime are always here; the bytes are in one of two places, and Drive and
+// Base64 are those two. Exactly one of them is set.
 type Logo struct {
 	Mime     string  `yaml:"mime"`
 	Px       []int   `yaml:"px"`
 	WidthPt  float64 `yaml:"width_pt"`
 	HeightPt float64 `yaml:"height_pt"`
 	Anchor   Anchor  `yaml:"anchor"`
+	Drive    string  `yaml:"drive"`
 	Base64   string  `yaml:"base64"`
 }
 
@@ -568,8 +603,22 @@ func (c *Config) Style(name string) (Style, bool) {
 	return s, ok
 }
 
-// LogoBytes decodes the logo out of the config.
+// LogoDrive is the id of the file in Drive this house's logo is, or empty
+// when the bytes are in logo.base64. It is the one place the key is trimmed,
+// so the question "is this logo in Drive" has one answer wherever it is
+// asked: here, in Validate, and in the command that fetches it.
+func (c *Config) LogoDrive() string {
+	return strings.TrimSpace(c.Logo.Drive)
+}
+
+// LogoBytes decodes the logo out of the config. A house whose logo is one
+// file in Drive carries no bytes here, and the error names the file so
+// whoever reads it knows where to look: internal/asset fetches those, and
+// this package reaches nothing.
 func (c *Config) LogoBytes() ([]byte, error) {
+	if drive := c.LogoDrive(); drive != "" {
+		return nil, fmt.Errorf("logo: this house's logo is file %s in Drive, and logo.base64 is not set", drive)
+	}
 	raw, err := base64.StdEncoding.DecodeString(strings.TrimSpace(c.Logo.Base64))
 	if err != nil {
 		return nil, fmt.Errorf("logo: base64: %w", err)
@@ -663,8 +712,57 @@ func (c *Config) validateMarks() error {
 	} else if !c.Marks[name].IsHighlight() {
 		return fmt.Errorf("marks.%s: %q is a highlight an author writes, and this mark is %q rather than a highlight", name, plainHighlight, c.Marks[name].Kind)
 	}
+	return c.validateComment(owner)
+}
+
+// validateComment holds the palette to the rule a comment is read and written
+// by: one mark claims both spellings an author may write a comment with, the
+// HTML one first, and that mark is a text colour.
+//
+// Each clause is a document published wrong where it is missing. A spelling no
+// mark claims resolves to no mark at all in internal/body, so the aside the
+// author meant nobody to read reaches the page as black prose and the build
+// says ok, which is the same failure the bare highlight is checked for one
+// clause above. Two marks sharing the work would write one spelling's comment
+// with the other's opener, because internal/export writes the mark's first
+// syntax and always the same closer. A highlight there would shade the aside
+// instead of greying it, and bring it home as a highlight rather than as the
+// comment it was.
+// TestAPaletteWhereNoMarkClaimsACommentIsRefused,
+// TestBothCommentSpellingsBelongToOneMark,
+// TestTheWrittenCommentSpellingComesFirst and
+// TestTheCommentBelongsToATextColour are the pins.
+func (c *Config) validateComment(owner map[string]string) error {
+	first := ""
+	for _, spelling := range commentSpellings {
+		name := owner[spelling]
+		if name == "" {
+			return fmt.Errorf("marks: no mark claims %q, which is how an author writes a comment, so every aside written with it would reach the document as prose rather than grey", spelling)
+		}
+		if first == "" {
+			first = name
+		}
+		if name != first {
+			return fmt.Errorf("marks.%s: %q is a comment an author writes and mark %s claims the other spelling: one mark carries both, because the projection writes that mark's first opener and always the same closer", name, spelling, first)
+		}
+	}
+	mark := c.Marks[first]
+	if mark.Syntax[0] != commentSpellings[0] {
+		return fmt.Errorf("marks.%s: %q is the spelling a document comes home in, so it is this mark's first opener and not %q: the projection writes the first opener and shuts it with the HTML closer", first, commentSpellings[0], mark.Syntax[0])
+	}
+	if mark.IsHighlight() {
+		return fmt.Errorf("marks.%s: %q is a comment an author writes, and this mark is %q rather than a text colour", first, commentSpellings[0], mark.Kind)
+	}
 	return nil
 }
+
+// commentSpellings is the two openers a comment may be written with, HTML's
+// first because that is the one a document comes home in. They are stated here
+// as well as in internal/body for the reason plainHighlight is: this package is
+// the door a palette passes, and a palette claiming neither of them publishes
+// an author's own aside as prose.
+// TestTheSevenMarksAreStatedAsLiterals pins the two the file gives the pencil.
+var commentSpellings = []string{"<!--", "%%"}
 
 // plainHighlight is the syntax a bare ==highlight== is written with. It is
 // stated in internal/body and in internal/export as well, each for its own
@@ -881,9 +979,27 @@ func pageBreakExtra(b Block) string {
 	return ""
 }
 
-// validateLogo decodes the logo and checks it against what the file says it
-// is. A stated size that is not the real one would put the mark on the page at
-// the wrong scale, and nothing downstream reads the PNG to notice.
+// driveFileID is the shape Drive mints a file id in: 25 or more of these
+// characters and nothing else. The length is a floor and not a size, because
+// Drive has minted ids of several lengths. It is all this package can judge
+// about a file it cannot read.
+var driveFileID = regexp.MustCompile(`^[A-Za-z0-9_-]{25,}$`)
+
+// validateLogo checks the logo against what the file says of it. A stated
+// size that is not the real one would put the mark on the page at the wrong
+// scale, and nothing downstream reads the PNG to notice.
+//
+// The bytes are in one of two places and the file names exactly one of them:
+// logo.drive, one file in Drive by id, or logo.base64, the bytes here. Both
+// is a file with two answers and neither is a file with none, and each is
+// refused naming the two keys.
+//
+// The PNG check follows the bytes. With logo.base64 the bytes are here and
+// the check is here. With logo.drive they are not, this package reaches no
+// network and never will, so internal/asset checks the PNG against the mime
+// and the pixels this file states, which is the room that has the bytes. What
+// stays here either way is everything render reads to place the mark on the
+// page: the two sizes and the anchor.
 func (c *Config) validateLogo() error {
 	if c.Logo.Mime != "image/png" {
 		return fmt.Errorf("logo: mime is %q, and only image/png is carried", c.Logo.Mime)
@@ -891,6 +1007,61 @@ func (c *Config) validateLogo() error {
 	if len(c.Logo.Px) != 2 {
 		return fmt.Errorf("logo: px names %d numbers, want width and height", len(c.Logo.Px))
 	}
+	if err := c.validateLogoPlacement(); err != nil {
+		return err
+	}
+	drive, b64 := c.LogoDrive(), strings.TrimSpace(c.Logo.Base64)
+	switch {
+	case drive != "" && b64 != "":
+		return fmt.Errorf("logo: exactly one of logo.drive and logo.base64 is wanted, and both are set")
+	case drive == "" && b64 == "":
+		return fmt.Errorf("logo: exactly one of logo.drive and logo.base64 is wanted, and neither is set")
+	case drive != "":
+		if !driveFileID.MatchString(drive) {
+			return fmt.Errorf("logo.drive: %q is not a Drive file id", drive)
+		}
+		return nil
+	}
+	return c.validateLogoPNG()
+}
+
+// validateLogoPlacement requires every value render reads to put the mark on
+// the page. A logo whose bytes are in Drive is still placed from this file, so
+// this holds whichever of the two keys names the bytes.
+//
+// The walk is ordered for the reason validateMarks is ordered: a file with two
+// of these missing is refused naming the same one on every run.
+func (c *Config) validateLogoPlacement() error {
+	for _, f := range []struct {
+		key   string
+		value float64
+	}{
+		{"logo.width_pt", c.Logo.WidthPt},
+		{"logo.height_pt", c.Logo.HeightPt},
+	} {
+		if f.value <= 0 {
+			return fmt.Errorf("%s is %v, and render scales the mark by it", f.key, f.value)
+		}
+	}
+	for _, f := range []struct {
+		key   string
+		value string
+	}{
+		{"logo.anchor.in", c.Logo.Anchor.In},
+		{"logo.anchor.relative_h", c.Logo.Anchor.RelativeH},
+		{"logo.anchor.relative_v", c.Logo.Anchor.RelativeV},
+		{"logo.anchor.wrap", c.Logo.Anchor.Wrap},
+	} {
+		if strings.TrimSpace(f.value) == "" {
+			return fmt.Errorf("%s is empty, and render reads it by name", f.key)
+		}
+	}
+	return nil
+}
+
+// validateLogoPNG decodes the bytes in logo.base64 and holds them to the mime
+// and the pixels the file states.
+func (c *Config) validateLogoPNG() error {
 	raw, err := c.LogoBytes()
 	if err != nil {
 		return err

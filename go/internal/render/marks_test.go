@@ -89,7 +89,7 @@ func TestTheMarkStyleIDIsTheHouseKeyRaised(t *testing.T) {
 // seven. It keeps Word's named yellow and names no character style, so a
 // restyle, an export or a reader counting marks never reads a cover as one.
 func TestTheCoverPlaceholdersAreNotMarks(t *testing.T) {
-	pkg, err := Build(config(t), cover.Fields{}, nil, nil, nil, 0)
+	pkg, err := Build(config(t), houseLogo(t), cover.Fields{}, nil, nil, nil, 0)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}

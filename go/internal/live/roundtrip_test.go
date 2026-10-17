@@ -67,6 +67,19 @@ var (
 	tableSeparator     = regexp.MustCompile(`^[-:]+(\|[-:]+)+$`)
 	taskBox            = regexp.MustCompile(`^([-*+] )\[[ xX]\] `)
 	blockStarter       = regexp.MustCompile(`^(#{1,6} |[-*+] |[0-9]+[.)] |> |\||` + "```" + `|---$|\*\*\*$)`)
+	// The pencil's two shapes, as the author writes them: a comment with words
+	// of the sentence in front of it, and a comment opening a line.
+	inlinePencil = regexp.MustCompile(`(?m)^.*\S.*<!--.*-->`)
+	blockPencil  = regexp.MustCompile(`(?m)^<!--`)
+)
+
+// The pencil's delimiters, as the author types them and as the export writes
+// them back. internal/house states them as the mark's syntax and
+// internal/export writes them; they are literals here for the reason every
+// house-style test states its value as a literal.
+const (
+	commentOpener = "<!--"
+	commentCloser = "-->"
 )
 
 // knownDifferences is the list. alt is the alt text of every picture the note
@@ -118,16 +131,20 @@ func knownDifferences(alt map[string]bool, notes footnoteNumbering) []knownDiffe
 		Export: func(s string) string { return canonicalSeparator(s) },
 	}, {
 		Name:   "typography",
-		Reason: "the generator's smart punctuation is goldmark's typographer, so the straight quotes, the two kinds of dash and the three dots are single characters in the document",
-		Note:   typography,
+		Reason: "the generator's smart punctuation is goldmark's typographer, so the straight quotes, the two kinds of dash and the three dots are single characters in the document. A pencil's words are not its business: goldmark hands a comment over as one piece of raw HTML, so the typographer never sees inside it and both sides hold what the author typed",
+		Note:   func(s string) string { return outsideComments(s, typography) },
 	}, {
 		Name:   "inline markup",
 		Reason: "bold, italic, code and strikeout are text styles in the document rather than characters, so the projection prints the words and the delimiters are not there to print. The highlight is not in that list any more: a mark is a colour the export recognises and writes back, so both sides spell it the same way and a difference in one is a difference",
-		Note:   stripDelimiters,
+		Note:   func(s string) string { return outsideComments(s, stripDelimiters) },
 	}, {
 		Name:   "relative links as words",
 		Reason: "a link to a file in the hub means nothing in Drive, so the generator writes the words and not the address",
-		Note:   func(s string) string { return relativeLink.ReplaceAllStringFunc(s, dropRelative) },
+		Note: func(s string) string {
+			return outsideComments(s, func(out string) string {
+				return relativeLink.ReplaceAllStringFunc(out, dropRelative)
+			})
+		},
 	}, {
 		Name:   "blockquotes",
 		Reason: "the generator writes a quote as a paragraph in the quote style, so no character of the document says it is quoted",
@@ -137,6 +154,40 @@ func knownDifferences(alt map[string]bool, notes footnoteNumbering) []knownDiffe
 		Reason: "a task box is a checkbox character in the note and a plain bullet in the house style",
 		Note:   func(s string) string { return taskBox.ReplaceAllString(s, "$1") },
 	}}
+}
+
+// outsideComments reads one of the note's lines through a rule, and hands the
+// rule the words around each comment rather than the whole line. A comment is
+// left as it stands, delimiters and all.
+//
+// Three of the note-side rules rewrite the middle of a line: the smart
+// punctuation, the emphasis delimiters and the link to a file in the hub. None
+// of the three happened inside a pencil, because goldmark hands the comment
+// over as one piece of raw HTML and neither the typographer nor the emphasis
+// parsers see inside it, so the document holds the characters the author typed
+// and so does the file the export wrote. A rule that retyped them would turn a
+// line both sides spell the same way into a difference no name covers.
+//
+// An unclosed `<!--` is left alone with the rest of the line, which is the one
+// shape the build refuses to carry anyway.
+func outsideComments(s string, rule func(string) string) string {
+	var b strings.Builder
+	for {
+		open := strings.Index(s, commentOpener)
+		if open < 0 {
+			break
+		}
+		shut := strings.Index(s[open:], commentCloser)
+		if shut < 0 {
+			break
+		}
+		shut += open + len(commentCloser)
+		b.WriteString(rule(s[:open]))
+		b.WriteString(s[open:shut])
+		s = s[shut:]
+	}
+	b.WriteString(rule(s))
+	return b.String()
 }
 
 // thematicBreak is a note's thematic break in the one spelling the export
@@ -553,6 +604,31 @@ func unescapeMarkup(s string) string {
 	return b.String()
 }
 
+// TestTheComparisonLeavesAPencilsWordsAsTyped runs in `make test`, with
+// neither variable set.
+//
+// A pencil's words reach the document as the author typed them: goldmark hands
+// the comment over as one piece of raw HTML, so the typographer and the
+// emphasis parsers never see inside it, and internal/body's
+// TestTheWordsInsideAPencilAreLiteral says so from the build's side. The
+// reading above has to leave them alone for the same reason. It did not when
+// M20 first measured a live round trip: the smart punctuation rule read the
+// `--` of `<!--` as an en dash, so a pencil on a line that also carried a
+// quote or a bold word came home spelled the same way on both sides and was
+// still reported as a difference no name covered.
+func TestTheComparisonLeavesAPencilsWordsAsTyped(t *testing.T) {
+	note := "The author's aside <!-- don't -- **retype** [this](./other.md) -->, and *stress* on the words around it."
+	file := "The author’s aside <!-- don't -- **retype** [this](./other.md) -->, and stress on the words around it."
+
+	list := knownDifferences(map[string]bool{}, numberFootnotes(nil))
+	have := map[string]int{normaliseLine(file): 1}
+	counts := map[string]int{}
+	if !matchLine(list, normaliseLine(note), have, counts) {
+		t.Errorf("the note's line reaches no line of the file, and the only difference between them is in the words around the comment:\n  note %q\n  file %q",
+			note, file)
+	}
+}
+
 // TestTheRoundTripNoteCarriesAFootnoteAndEveryMark runs in `make test`, with
 // neither variable set.
 //
@@ -562,6 +638,12 @@ func unescapeMarkup(s string) string {
 // the shapes of M17 would otherwise leave the live run green and the question
 // unasked, so the seven mark openers and the footnote are pinned here, each as
 // the literal an author types.
+//
+// The pencil is pinned twice, because since M20 it has two shapes rather than
+// one spelling: a comment inside a sentence is a grey run of that sentence,
+// and a comment on lines of its own is a grey paragraph. They travel home by
+// different routes, so a note holding only the first would leave the second
+// measured by no live run at all.
 func TestTheRoundTripNoteCarriesAFootnoteAndEveryMark(t *testing.T) {
 	named := false
 	for _, name := range roundTripNotes {
@@ -586,11 +668,17 @@ func TestTheRoundTripNoteCarriesAFootnoteAndEveryMark(t *testing.T) {
 		{"🔵", "blue"},
 		{"🔴", "red"},
 		{"🟠", "orange"},
-		{"{.pencil}", "pencil"},
+		{"<!--", "pencil"},
 	} {
 		if !strings.Contains(note, c.syntax) {
 			t.Errorf("%s holds no %q, so the round trip measures no %s mark", kitchenSinkNote, c.syntax, c.mark)
 		}
+	}
+	if !inlinePencil.MatchString(note) {
+		t.Errorf("%s holds no comment inside a sentence, so the round trip measures no pencil run", kitchenSinkNote)
+	}
+	if !blockPencil.MatchString(note) {
+		t.Errorf("%s holds no comment on a line of its own, so the round trip measures no grey paragraph", kitchenSinkNote)
 	}
 	if !footnoteDefinition.MatchString(note) && !strings.Contains(note, "\n[^") {
 		t.Errorf("%s defines no footnote, so the round trip measures none", kitchenSinkNote)

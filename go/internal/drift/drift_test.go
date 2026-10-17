@@ -310,7 +310,7 @@ func buildNote(t *testing.T) *Docx {
 	if err != nil {
 		t.Fatalf("the note's markdown did not render: %v", err)
 	}
-	pkg, err := render.Build(cfg, fields, walked.Blocks, walked.Media, walked.Footnotes, walked.NumberedLists)
+	pkg, err := render.Build(cfg, houseLogo(t), fields, walked.Blocks, walked.Media, walked.Footnotes, walked.NumberedLists)
 	if err != nil {
 		t.Fatalf("the document did not build: %v", err)
 	}
@@ -349,4 +349,22 @@ func TestTheBodySpacingIsReadOffTheParagraphNotTheStyle(t *testing.T) {
 			t.Errorf("no row is named %q", name)
 		}
 	}
+}
+
+// placeholderLogo is the stand-in for the mark in the first page's header. The
+// firm's logo is one file in its Drive and the tree carries no copy of it, so
+// a test that needs real PNG bytes reads internal/house's placeholder: a flat
+// light grey of the size the house file states.
+const placeholderLogo = "../house/testdata/placeholder-logo.png"
+
+// houseLogo is the mark render is handed. Build takes the logo from its caller
+// rather than reading it off the config, because a house style may name one
+// file in Drive instead of carrying the bytes, and this gate measures the logo's geometry rather than its pixels.
+func houseLogo(t *testing.T) []byte {
+	t.Helper()
+	raw, err := os.ReadFile(placeholderLogo)
+	if err != nil {
+		t.Fatalf("read the placeholder logo: %v", err)
+	}
+	return raw
 }

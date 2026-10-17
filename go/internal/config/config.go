@@ -6,8 +6,10 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 )
 
@@ -108,6 +110,50 @@ func SettingsPath() (string, error) {
 		return "", err
 	}
 	return filepath.Join(d, "settings.yaml"), nil
+}
+
+// assetDir is the folder the cached assets live in, under the config dir. One
+// folder rather than one file, because every asset is its own id and there is
+// no listing anywhere that would tell them apart from the token beside them.
+const assetDir = "assets"
+
+// assetID is what an id may be made of here: Drive's own alphabet and nothing
+// else. The shape of a real file id is internal/house's business; this is
+// narrower and about one thing only, that the id becomes one path segment.
+//
+// A dot is refused with the slashes, so no id can be `..` and no stamp can
+// collide with the bytes of an id spelled with `.json` at the end.
+var assetID = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
+
+// assetFile is the path of one file under assets/, with suffix on the end.
+// The id is checked rather than cleaned: a caller holding an id that is not
+// one has read a house file somebody wrote by hand, and the honest answer is
+// to name it rather than to write somewhere else.
+func assetFile(id, suffix string) (string, error) {
+	if !assetID.MatchString(id) {
+		return "", fmt.Errorf("config: %q is not a file id, so there is no file under %s for it", id, assetDir)
+	}
+	d, err := Dir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(d, assetDir, id+suffix), nil
+}
+
+// AssetPath is where the bytes of one Drive file are cached: assets/<id> in
+// the config dir, in the shape internal/asset writes. It lives beside the
+// token because both are per-user state this machine keeps, and it is never a
+// credential: what is in it is a file the signed-in account may read.
+func AssetPath(id string) (string, error) {
+	return assetFile(id, "")
+}
+
+// AssetStampPath is where the record of the last fetch of that file sits:
+// assets/<id>.json, beside the bytes, in the shape internal/asset reads and
+// writes. It is the same bookkeeping update-check.json is, for a file rather
+// than for a release.
+func AssetStampPath(id string) (string, error) {
+	return assetFile(id, ".json")
 }
 
 // PresenceDir is where the presence record lives: a presence directory in the

@@ -99,29 +99,34 @@ var shellRels = []struct{ id, kind, target string }{
 // eight below it are the shell's own.
 const FirstMediaRelID = 9
 
-// Build renders one document: the house style, the note's fields as
-// internal/cover read them, the body the markdown walker produced, the images
-// it read, and how many numbered lists it walked. The note has one reader and
-// this package only spends what it returns, so the cover and the running head
-// cannot disagree. Nothing here reaches the network, and nothing reads the
-// Word master.
+// Build renders one document: the house style, the bytes of the mark that goes
+// in the first page's header, the note's fields as internal/cover read them,
+// the body the markdown walker produced, the images it read, and how many
+// numbered lists it walked. The note has one reader and this package only
+// spends what it returns, so the cover and the running head cannot disagree.
+// Nothing here reaches the network, and nothing reads the Word master.
+//
+// The logo is a parameter rather than something read off cfg, because a house
+// style may name it as one file in Drive instead of carrying its bytes. Only
+// internal/asset can turn that into bytes, and this package reaches nothing:
+// the caller fetches the mark and hands it over. An empty logo is refused
+// rather than rendered, because an unbranded document is the one thing this
+// must not resolve to: TestBuildRefusesALogoWithNoBytes.
 //
 // footnotes is body.Result.Footnotes, one entry per mark in the prose and in
 // the order Word numbers them. numberedLists is body.Result.NumberedLists.
 // Every one of them gets its own w:num in word/numbering.xml, which is what
 // makes each start at 1.
-func Build(cfg *house.Config, f cover.Fields, body []*etree.Element, media []Media, footnotes []Footnote, numberedLists int) (*Package, error) {
+func Build(cfg *house.Config, logo []byte, f cover.Fields, body []*etree.Element, media []Media, footnotes []Footnote, numberedLists int) (*Package, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("render: no house style")
+	}
+	if len(logo) == 0 {
+		return nil, fmt.Errorf("render: no logo bytes, and the first page's header carries the mark")
 	}
 	b := &builder{cfg: cfg, fields: f}
 	if err := checkMedia(media); err != nil {
 		return nil, err
-	}
-
-	logo, err := cfg.LogoBytes()
-	if err != nil {
-		return nil, fmt.Errorf("render: %w", err)
 	}
 
 	pkg := &Package{Parts: []Part{

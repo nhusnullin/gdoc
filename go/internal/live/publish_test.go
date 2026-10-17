@@ -1,10 +1,13 @@
-// M6's two live tests: a publish, and the drift gate that means something.
+// M6's two live tests, a publish and the drift gate that means something, and
+// M21's heading id acceptance beside them, because it publishes the same way.
 //
-// Both are write tests, so both need GDOC_LIVE_TEST=1 and GDOC_LIVE_WRITE=1,
-// and both create only documents of their own in the Drive test folder and
-// trash them on the way out. The policy has one door, AllowCreateIn on the
-// folder, so every document either test touches is one the guard carried the
-// create for.
+// All three are write tests, so each needs GDOC_LIVE_TEST=1 and
+// GDOC_LIVE_WRITE=1, and each creates only documents of its own in the Drive
+// test folder. The policy has one door, AllowCreateIn on the folder, so every
+// document any of them touches is one the guard carried the create for. M6's
+// two trash theirs on the way out; the heading id run leaves its document
+// behind on purpose, because the refresh of the contents list is a click
+// nothing here can make.
 //
 // The drift gate is the reason this file exists at all. The offline gate in
 // `make test` reads two docx files and says the generator wrote what house.yaml
@@ -19,6 +22,7 @@ package live
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,6 +31,7 @@ import (
 
 	"gdoc/internal/body"
 	"gdoc/internal/cover"
+	"gdoc/internal/docs"
 	"gdoc/internal/drift"
 	"gdoc/internal/drive"
 	"gdoc/internal/frontmatter"
@@ -62,6 +67,53 @@ read back again. The document it makes is trashed a moment later.
 - The title Drive gave it is the title that went on the cover.
 `
 
+// headingIDNoteSource is the note M21's acceptance publishes: three headings,
+// and one `#` link naming the second of them. One note, because the question
+// is what Drive's import does with the hidden bookmark the docx carries on
+// every heading, and three headings with one jump among them hold both halves
+// of the answer.
+//
+// It is written into a temp directory for publishNoteSource's reason, with one
+// difference: the document this one makes is left in the folder rather than
+// trashed, so the note it came from would point at a document that is still
+// there and still has to be read by hand. A fixture pairing with whichever run
+// went last is worse than no fixture, so there is none.
+const headingIDNoteSource = `---
+title: Live Heading Id Test
+doc_type: Note
+version: 1.0
+date: 2026-10-16
+owner: Chief Risk Officer
+classification: internal
+---
+
+# Where a heading id comes from
+
+Drive's import mints a heading id for a heading paragraph from the hidden
+bookmark the docx carries on it, and a contents entry is a link to a heading by
+that id.
+
+## Who decides
+
+Nail decides, and this heading is the one the jump below names.
+
+## What the reader gets
+
+A reader who clicks an entry in the contents list lands on the section it
+names. See [who decides](#who-decides) for the heading this note jumps to.
+`
+
+// The note's shape as literals: how many headings it holds, the words the
+// heading the jump names shows, and the words the jump itself shows. Literals
+// rather than counts read back out of the note, for the reason the page break
+// measurement's two phrases are literals: what the run asserts is what a
+// person really published.
+const (
+	headingIDNoteHeadings = 3
+	headingIDTarget       = "Who decides"
+	headingIDJump         = "who decides"
+)
+
 // policyNote is the note the drift gate builds, and it is the body package's
 // own copy rather than a second one here. One note, so the goldens, the offline
 // gate and this gate all measure the same words.
@@ -88,7 +140,16 @@ func TestLivePublish(t *testing.T) {
 	if err := os.WriteFile(note, []byte(publishNoteSource), 0o600); err != nil {
 		t.Fatalf("the note could not be written: %v", err)
 	}
-	doc := renderNoteFile(t, note)
+	// The firm's own mark, fetched the way a real publish fetches it, so the
+	// document that goes into Drive is the document production puts there.
+	// TestPublishCarriesTheHouseLogo is the measurement; this is the publish
+	// that rests on it.
+	cfg, err := house.Load()
+	if err != nil {
+		t.Fatalf("the embedded house style did not load: %v", err)
+	}
+	doc := renderNoteFileWithLogo(t, note, liveHouseLogo(t, cfg))
+	carriesTheHouseLogo(t, doc.docx)
 	t.Logf("rendered %d bytes titled %q from the %s house style", len(doc.docx), doc.title, doc.house)
 
 	rep, err := publish.Run(ctx, s, publish.Options{
@@ -197,6 +258,165 @@ func TestLivePublish(t *testing.T) {
 	if !bytes.Contains(paired, []byte("title: Live Publish Test")) {
 		t.Errorf("the author's own front matter did not survive the pairing:\n%s", paired)
 	}
+}
+
+// TestAPublishedHeadingCarriesAnIdAndAJumpIsAHeadingLink is M21's acceptance,
+// and it is the question no fixture can answer: what Drive's import does with
+// the hidden bookmark internal/body writes on every heading.
+//
+// The offline tests of internal/body say the docx carries one `_h_<slug>` pair
+// before each heading's runs and that a `#` link anchors at that name. What no
+// test on this machine can say is whether Google still mints a heading id from
+// it, and a heading with no id is a contents entry that opens the first page
+// instead of the section. That failure is silent in every offline reading, and
+// it was silent in every document gdoc published before 2026-10-16.
+//
+// So this publishes the note above through the production render and the
+// production upload, reads the document back through the read every command
+// makes, and asks three things: every heading came back with an id, the jump
+// came back as a heading link naming the right heading's id, and the publish
+// report counted no heading without one.
+//
+// The document is left in the folder rather than trashed, because the one step
+// no API can take is the refresh of the contents list. The Docs API has no
+// request that builds or refreshes one, so an entry that opens its heading is
+// a click in the UI and Nail's eyes on the hover card. The URL is in the log.
+func TestAPublishedHeadingCarriesAnIdAndAJumpIsAHeadingLink(t *testing.T) {
+	ctx, s, folder := liveWriteSession(t)
+
+	dir := t.TempDir()
+	note := filepath.Join(dir, "live-heading-id.md")
+	if err := os.WriteFile(note, []byte(headingIDNoteSource), 0o600); err != nil {
+		t.Fatalf("the note could not be written: %v", err)
+	}
+	built := renderNoteFile(t, note)
+	title := "gdoc M21 heading id " + time.Now().UTC().Format(time.RFC3339)
+
+	rep, err := publish.Run(ctx, s, publish.Options{FolderID: folder, Title: title, Docx: built.docx})
+	// Registered before the error is read, for the reason TestLivePublish
+	// registers its trash there: a create Drive accepted and this run failed
+	// after is still a document somebody has to find.
+	if rep.DocumentID != "" {
+		id := rep.DocumentID
+		t.Cleanup(func() {
+			t.Logf("the document is left for the refresh a person has to click: %s", publish.DocumentURL(id))
+			t.Logf("refresh the contents list, check an entry names its heading, then trash it in folder %s", folder)
+		})
+	}
+	for _, w := range rep.Warnings {
+		t.Logf("publish warning: %s", w)
+	}
+	if err != nil {
+		t.Fatalf("the publish failed: %v", err)
+	}
+	if rep.DocumentID == "" {
+		t.Fatal("the publish answered with no document id, so nothing below has a document to ask about")
+	}
+	t.Logf("published %s at %s", rep.DocumentID, rep.URL)
+
+	// The read-back's own count first, because that is the fact the skill acts
+	// on and the one that would have caught this a month ago.
+	if rep.HeadingsWithoutID != 0 {
+		t.Errorf("the publish reports headings_without_id: %d, and Drive's import mints an id for every heading that carries the hidden bookmark", rep.HeadingsWithoutID)
+	}
+
+	// Then the document itself, through the read every command makes, so what
+	// is asserted below is what `read` would print.
+	var raw json.RawMessage
+	if err := s.GetJSON(ctx, docs.URL(rep.DocumentID), &raw); err != nil {
+		t.Fatalf("the published document (%s) could not be read back: %v", rep.DocumentID, err)
+	}
+	d, err := docs.Parse(raw)
+	if err != nil {
+		t.Fatalf("the read of %s did not parse: %v", rep.DocumentID, err)
+	}
+	t.Logf("read %s back as %d tabs titled %q", rep.DocumentID, len(d.Tabs), d.Title)
+
+	headings, jumps := headingsAndJumps(d)
+	if len(headings) != headingIDNoteHeadings {
+		t.Fatalf("the document came back with %d headings and the note holds %d, so neither list below is about the note", len(headings), headingIDNoteHeadings)
+	}
+	var target string
+	for _, h := range headings {
+		t.Logf("heading %q carries heading id %q", h.text, h.id)
+		if h.id == "" {
+			t.Errorf("the heading %q came back with no heading id, so a contents entry naming it opens the first page instead", h.text)
+		}
+		if strings.Contains(h.text, headingIDTarget) {
+			target = h.id
+		}
+	}
+	if target == "" {
+		t.Fatalf("no heading of the document shows %q with an id, so there is nothing the jump could name", headingIDTarget)
+	}
+
+	// The jump. One run, because the note holds one `#` link, and a document
+	// that came back with more than one would be reporting the contents list
+	// rather than the note.
+	if len(jumps) != 1 {
+		t.Fatalf("the document came back with %d links to a heading, and the note holds one: %+v", len(jumps), jumps)
+	}
+	jump := jumps[0]
+	t.Logf("the jump %q points at heading id %q", jump.text, jump.headingID)
+	if !strings.Contains(jump.text, headingIDJump) {
+		t.Errorf("the one heading link shows %q, and the note's jump shows %q", jump.text, headingIDJump)
+	}
+	if jump.headingID != target {
+		t.Errorf("the jump points at heading id %q and %q is the heading it names: a jump anchored at the hidden bookmark comes back as a link to that heading", jump.headingID, target)
+	}
+}
+
+// liveHeading is one heading paragraph of a published document: the words it
+// shows, and the id a link to it names.
+type liveHeading struct {
+	text string
+	id   string
+}
+
+// liveJump is one run pointing at a heading of the same document: the words it
+// shows, and the heading id it names.
+type liveJump struct {
+	text      string
+	headingID string
+}
+
+// headingsAndJumps reads both lists off one document, through the tables of
+// every tab and never into the contents list.
+//
+// The contents list is skipped for countHeadings' reason: its entries are the
+// links to the headings and never headings themselves, so a walk that went in
+// would count Docs' own list twice over and find a heading link per entry.
+func headingsAndJumps(d *docs.Document) ([]liveHeading, []liveJump) {
+	var headings []liveHeading
+	var jumps []liveJump
+	var blocks func([]docs.Block)
+	blocks = func(bs []docs.Block) {
+		for _, b := range bs {
+			switch {
+			case b.Paragraph != nil:
+				var text string
+				for _, r := range b.Paragraph.Runs {
+					text += r.Text
+					if r.Link != nil && r.Link.HeadingID != "" {
+						jumps = append(jumps, liveJump{text: strings.TrimSpace(r.Text), headingID: r.Link.HeadingID})
+					}
+				}
+				if strings.HasPrefix(b.Paragraph.Style, "HEADING_") {
+					headings = append(headings, liveHeading{text: strings.TrimSpace(text), id: b.Paragraph.HeadingID})
+				}
+			case b.Table != nil:
+				for _, row := range b.Table.Rows {
+					for _, cell := range row {
+						blocks(cell.Blocks)
+					}
+				}
+			}
+		}
+	}
+	for _, tab := range d.Tabs {
+		blocks(tab.Body)
+	}
+	return headings, jumps
 }
 
 // TestLiveDrift is the measurement DECISIONS.md left open on 2026-08-29: build
@@ -316,11 +536,29 @@ type noteDocument struct {
 	house string
 }
 
-// renderNoteFile runs the generator over one note. It is cmd/gdoc's render
-// step, spelled here because that package is main and cannot be imported, and
-// it is the same five calls internal/drift's own gate makes for the same
-// reason.
+// renderNoteFile runs the generator over one note with the placeholder mark,
+// which is what every test here but one wants: a document whose logo is the
+// right shape, since what they measure about it is geometry.
+//
+// TestPublishCarriesTheHouseLogo is the one, and it hands over the bytes it
+// read out of the firm's Drive.
 func renderNoteFile(t *testing.T, path string) noteDocument {
+	t.Helper()
+	cfg, err := house.Load()
+	if err != nil {
+		t.Fatalf("the embedded house style did not load: %v", err)
+	}
+	return renderNoteFileWithLogo(t, path, houseLogo(t, cfg))
+}
+
+// renderNoteFileWithLogo is cmd/gdoc's render step, spelled here because that
+// package is main and cannot be imported, and it is the same five calls
+// internal/drift's own gate makes for the same reason.
+//
+// The mark is a parameter for render.Build's own reason: a house style may
+// name its logo as one file in Drive, and only internal/asset can turn that
+// into bytes.
+func renderNoteFileWithLogo(t *testing.T, path string, logo []byte) noteDocument {
 	t.Helper()
 	source, err := os.ReadFile(path)
 	if err != nil {
@@ -341,7 +579,7 @@ func renderNoteFile(t *testing.T, path string) noteDocument {
 	for _, w := range walked.Warnings {
 		t.Logf("render warning: %s", w)
 	}
-	pkg, err := render.Build(cfg, fields, walked.Blocks, walked.Media, walked.Footnotes, walked.NumberedLists)
+	pkg, err := render.Build(cfg, logo, fields, walked.Blocks, walked.Media, walked.Footnotes, walked.NumberedLists)
 	if err != nil {
 		t.Fatalf("the document did not build: %v", err)
 	}
@@ -443,20 +681,26 @@ func trashLive(t *testing.T, ctx context.Context, s *gapi.Session, id, what stri
 // TestTheLiveFixturesRenderWithNoNetwork is the offline half of this file, and
 // it runs in `make test` like everything else.
 //
-// Both live tests above render a note before they reach Drive, and a note that
+// Three live tests above render a note before they reach Drive, and a note that
 // no longer renders, or a fixture path that moved, would otherwise be found by
 // Nail in the middle of a live run rather than by the suite. So this renders
-// both notes and opens the master, and touches no wire at all: it never asks
-// for the two live variables, because there is nothing here to protect.
+// all three notes and opens the master, and touches no wire at all: it never
+// asks for the two live variables, because there is nothing here to protect.
+//
+// The heading id note is held to its shape as well, because that run asserts
+// three headings and one jump: a note somebody edited down to two headings, or
+// one whose `#` link lost its target, would leave the live run failing on the
+// note rather than on Drive.
 func TestTheLiveFixturesRenderWithNoNetwork(t *testing.T) {
-	for _, c := range []struct{ what, source string }{
-		{"the publish test's note", ""},
-		{"the drift gate's note", policyNote},
+	for _, c := range []struct{ what, source, inline string }{
+		{what: "the publish test's note", inline: publishNoteSource},
+		{what: "the heading id test's note", inline: headingIDNoteSource},
+		{what: "the drift gate's note", source: policyNote},
 	} {
 		path := c.source
 		if path == "" {
-			path = filepath.Join(t.TempDir(), "live-publish.md")
-			if err := os.WriteFile(path, []byte(publishNoteSource), 0o600); err != nil {
+			path = filepath.Join(t.TempDir(), "live-note.md")
+			if err := os.WriteFile(path, []byte(c.inline), 0o600); err != nil {
 				t.Fatalf("%s could not be written: %v", c.what, err)
 			}
 		}
@@ -474,4 +718,39 @@ func TestTheLiveFixturesRenderWithNoNetwork(t *testing.T) {
 	if _, err := os.Stat(masterDocx); err != nil {
 		t.Errorf("the Word master the live gate measures against is not at %s: %v", masterDocx, err)
 	}
+	if n := strings.Count(headingIDNoteSource, "\n# ") + strings.Count(headingIDNoteSource, "\n## "); n != headingIDNoteHeadings {
+		t.Errorf("the heading id note holds %d headings and its run asserts %d", n, headingIDNoteHeadings)
+	}
+	if !strings.Contains(headingIDNoteSource, "["+headingIDJump+"](#who-decides)") {
+		t.Errorf("the heading id note holds no `#` link showing %q, so its run has no jump to measure", headingIDJump)
+	}
+	if !strings.Contains(headingIDNoteSource, "## "+headingIDTarget) {
+		t.Errorf("the heading id note holds no heading reading %q, so its jump names a heading that is not there", headingIDTarget)
+	}
+}
+
+// placeholderLogo is the PNG these renders are handed when the house names its
+// logo in Drive rather than carrying it. The firm's logo is one file in its
+// Drive and the tree holds no copy, and nothing in this file measures the
+// picture: every logo assertion above reads geometry. The run that reads the
+// real bytes out of Drive is TestPublishCarriesTheHouseLogo.
+const placeholderLogo = "../house/testdata/placeholder-logo.png"
+
+// houseLogo is the mark render is handed. Build takes the logo from its caller
+// now rather than reading it off the config, because a house style may name
+// one file in Drive instead of carrying the bytes.
+func houseLogo(t *testing.T, cfg *house.Config) []byte {
+	t.Helper()
+	if cfg.LogoDrive() != "" {
+		raw, err := os.ReadFile(placeholderLogo)
+		if err != nil {
+			t.Fatalf("read the placeholder logo: %v", err)
+		}
+		return raw
+	}
+	raw, err := cfg.LogoBytes()
+	if err != nil {
+		t.Fatalf("LogoBytes: %v", err)
+	}
+	return raw
 }

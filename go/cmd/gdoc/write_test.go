@@ -141,6 +141,12 @@ func (f *fakeWire) GetBytes(ctx context.Context, rawURL string, _ int64) ([]byte
 	return a.bytes, nil
 }
 
+// A write command fetches no asset either: the logo is build and publish's,
+// and the fake wire refuses it by name.
+func (f *fakeWire) FileBytes(_ context.Context, fileID string, _ int64) ([]byte, error) {
+	return nil, fmt.Errorf("a write command fetches no file's bytes: %s", fileID)
+}
+
 func (f *fakeWire) PostJSON(ctx context.Context, rawURL string, body any, into any) error {
 	return f.write(ctx, "POST", rawURL, body, into)
 }

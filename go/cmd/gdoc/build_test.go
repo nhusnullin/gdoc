@@ -53,10 +53,17 @@ func zipNames(t *testing.T, path string) []string {
 	return names
 }
 
-// noSession fails the test if anything opens a session. The build reaches no
-// network at all, and the session factory is the only door to one.
+// noSession fails the test if anything opens a session. The session factory is
+// the only door to one, so a build that opens nothing opens no door.
+//
+// Since M22 the shipped house names its logo in Drive rather than carrying the
+// bytes, and a build reads them. So this hands the run a config dir of its own
+// with that read already cached and its stamp fresh, which is every run after
+// the first on a machine: the asset room answers out of the cache and the wire
+// stays shut. The runs that do fetch are logo_test.go's.
 func noSession(t *testing.T) {
 	t.Helper()
+	theHouseLogoCached(t)
 	old := openSession
 	openSession = func(*guard.Policy) (session, error) {
 		t.Fatal("build must make no request: the session factory was called")

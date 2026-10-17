@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"gdoc/internal/docs"
 	"gdoc/internal/docx"
@@ -78,6 +79,12 @@ type Report struct {
 	Tabs       int    `json:"tabs,omitempty"`
 	Verified   bool   `json:"verified"`
 	Checks     Checks `json:"checks"`
+	// HeadingsWithoutID is how many of the document's headings came back from
+	// the read with no heading id. It is a fact beside Verified rather than a
+	// check inside it: the document is there and its words are right, and what
+	// is missing is only what a contents entry needs to open a heading. Zero is
+	// the answer worth printing, so it has no omitempty.
+	HeadingsWithoutID int `json:"headings_without_id"`
 	// Marked says the marker over the cover was written and read back. It is
 	// beside Verified rather than inside it, because an unmarked document is
 	// still the document: mark.go says what it costs.
@@ -133,7 +140,7 @@ func Run(ctx context.Context, s Session, o Options) (Report, error) {
 	rep.URL = DocumentURL(id)
 
 	var d *docs.Document
-	d, rep.Checks, rep.Title, rep.Tabs, rep.Warnings = verify(ctx, s, id, o.Title)
+	d, rep.Checks, rep.Title, rep.Tabs, rep.HeadingsWithoutID, rep.Warnings = verify(ctx, s, id, o.Title)
 	rep.Verified = rep.Checks.all()
 	if d == nil || !rep.Checks.OneTab {
 		rep.Warnings = append(rep.Warnings, unmarked("the document could not be read back as one tab, so there was no contents list to mark up to"))
@@ -190,10 +197,11 @@ func create(ctx context.Context, s Session, o Options) (string, error) {
 // verify reads the new document back two ways and reports what each said. It
 // raises nothing: every failure here is a fact about a document that exists,
 // and the caller decides what to tell Nail.
-func verify(ctx context.Context, s Session, id, asked string) (*docs.Document, Checks, string, int, []string) {
+func verify(ctx context.Context, s Session, id, asked string) (*docs.Document, Checks, string, int, int, []string) {
 	var c Checks
 	var title string
 	var tabs int
+	var headless int
 	var warns []string
 
 	d, err := docs.Fetch(ctx, s, id)
@@ -217,6 +225,16 @@ func verify(ctx context.Context, s Session, id, asked string) (*docs.Document, C
 			// match and this says nothing.
 			warns = append(warns, fmt.Sprintf("the upload asked for the title %q and the document came back titled %q", asked, title))
 		}
+		var headings int
+		headings, headless = countHeadings(d.Tabs)
+		if headless > 0 {
+			// Named rather than judged, and not a failure: the document is in
+			// the folder and its words are right. What it cannot do is open a
+			// heading from its contents list, and nothing in the API can give
+			// the ids to a document that came back without them, so the way
+			// out is a fresh publish from the note.
+			warns = append(warns, fmt.Sprintf("%d of the %d headings came back with no heading id, so an entry in the contents list points at the tab rather than at its heading and a click lands on the first page: Drive's import mints the id from the hidden bookmark the docx carries on every heading, and a document already published cannot be given one, so the way to a document whose contents list opens its sections is a fresh publish from the note", headless, headings))
+		}
 	}
 
 	b, err := docx.Export(ctx, s, id)
@@ -230,7 +248,50 @@ func verify(ctx context.Context, s Session, id, asked string) (*docs.Document, C
 			c.DocxExport = true
 		}
 	}
-	return d, c, title, tabs, warns
+	return d, c, title, tabs, headless, warns
+}
+
+// countHeadings says how many heading paragraphs the read came back with, and
+// how many of those carry no heading id.
+//
+// A contents entry is a link to a heading by its id, so a heading with none is
+// a heading nothing in the list can open. Only HEADING_1 to HEADING_6 are
+// counted: the title and the subtitle are not headings to Docs, carry no id and
+// reach no contents list.
+func countHeadings(tabs []docs.Tab) (headings, without int) {
+	for _, t := range tabs {
+		h, w := countInBlocks(t.Body)
+		headings += h
+		without += w
+	}
+	return headings, without
+}
+
+// countInBlocks walks one body, through the cells of its tables. The contents
+// list is skipped: its entries are the links to the headings and never
+// headings themselves.
+func countInBlocks(blocks []docs.Block) (headings, without int) {
+	for _, b := range blocks {
+		switch {
+		case b.Paragraph != nil:
+			if !strings.HasPrefix(b.Paragraph.Style, "HEADING_") {
+				continue
+			}
+			headings++
+			if b.Paragraph.HeadingID == "" {
+				without++
+			}
+		case b.Table != nil:
+			for _, row := range b.Table.Rows {
+				for _, cell := range row {
+					h, w := countInBlocks(cell.Blocks)
+					headings += h
+					without += w
+				}
+			}
+		}
+	}
+	return headings, without
 }
 
 // Rollback takes back a document this run published, because the pairing could

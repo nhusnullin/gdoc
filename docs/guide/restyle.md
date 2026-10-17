@@ -149,6 +149,11 @@ it left alone, because the request that sets a bullet also deletes the tabs that
 set its nesting level, and any table's column widths, and any paragraph whose
 named style the house has no look for.
 
+The picture the first-page header wants is the house logo, which is one file in
+the firm's Drive. `build` and `publish` fetch it once a day and keep it cached
+beside the token, and a run that can read neither refuses. A restyle reaches
+for it at no point: it gives you the menu path and you upload that same file.
+
 A document with more than one tab is refused before anything is sent. A style
 request names a range, and a range means nothing without saying which tab it is
 in.

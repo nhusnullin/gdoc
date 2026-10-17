@@ -580,9 +580,9 @@ func checkPartHeaders(h textproto.MIMEHeader) error {
 	return nil
 }
 
-// learnFromCreate is the second of the policy's two doors: an id that came back
-// from a create the guard itself carried. The response body is restored so the
-// caller reads it whole. A create whose id the guard could not read is
+// learnFromCreate is the second of the policy's three doors: an id that came
+// back from a create the guard itself carried. The response body is restored
+// so the caller reads it whole. A create whose id the guard could not read is
 // recorded, because the alternative is silence: the next request against that
 // document is refused with "file was not given to this command", which names
 // the wrong problem.

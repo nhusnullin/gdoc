@@ -125,7 +125,7 @@ type ManualStep struct {
 // line held: the binary prints facts and the skill judges.
 var apiCannot = []ManualStep{
 	{
-		What:  "the first-page header carrying the Altery logo",
+		What:  "the first-page header carrying the house logo",
 		Where: "Insert > Headers & footers > Header, then Options > Header format > Different first page, then Insert > Image > Upload from computer",
 	},
 	{

@@ -389,7 +389,7 @@ func TestAPrefixIsNotASegment(t *testing.T) {
 }
 
 // AllowCreateIn names a folder to create in. It does not put the folder in the
-// reachable set: the set has exactly two doors, and a create target is neither.
+// reachable set: a create target is none of the three doors into it.
 func TestAllowCreateInDoesNotAdmitTheFolder(t *testing.T) {
 	p := NewPolicy()
 	p.AllowCreateIn("FOLDER1")

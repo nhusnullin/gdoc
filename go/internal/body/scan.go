@@ -194,7 +194,7 @@ func proseLines(source []byte, f func(sourceLine)) {
 // "```x``` is a span" opens nothing: goldmark reads a code span there and the
 // rest of the line as words. Read as an opener, every line after it was left
 // out of both checks until something closed the block, so a mark naming no
-// note and an attribute closing no span reached the document as the words the
+// note and the grey mark's old spelling reached the document as the words the
 // author wrote; and a real fenced block under such a line was read as prose
 // instead, which refused a note nothing was wrong with. A tilde fence's info
 // string may hold anything, backticks included.
@@ -248,9 +248,12 @@ func atMargin(raw string) bool {
 // a note explaining a regular expression writes "[^abc]" in one: read as a
 // mark, it would refuse a note nothing is wrong with.
 //
-// A backtick run with no closer on the line is text, which is what goldmark
-// makes of it, so the scan carries on from just after it rather than giving up
-// on the rest of the line and missing a real mark.
+// A backtick run with no closer on the line is text as far as this line goes,
+// so the scan carries on from just after it rather than giving up on the rest
+// of the line and missing a real mark. Where goldmark shut that run on a later
+// line of the same paragraph, the span wrapped and the words inside it are
+// code: blankCodeSpans has already taken them out of the line this reads, and
+// holds why one line cannot answer that on its own.
 func withoutCode(line string) string {
 	src := []byte(line)
 	var b strings.Builder
@@ -302,22 +305,79 @@ func ticks(line []byte, i int) int {
 // checkLines calls f for every source line a refusal may be read off: the
 // prose lines, with the lines of a block of HTML left out.
 //
-// A block of HTML is named on the envelope and left out of the document, and
-// nothing inside one is markdown: goldmark reads the whole block as one leaf,
-// so a footnote definition written there defines nothing and a span written
-// there is never formed. That is the rule a code block already has, and the
-// lines come off the parse rather than off a second reading of the source,
-// because CommonMark opens a block of HTML on seven different conditions and
-// shuts it on as many. TestADefinitionInsideABlockOfHTMLRefusesNothing and
-// TestAPencilAttributeInsideABlockOfHTMLRefusesNothing are the pins.
+// A block of HTML that is not a comment is named on the envelope and left out
+// of the document, and nothing inside one is markdown: goldmark reads the
+// whole block as one leaf, so a footnote definition written there defines
+// nothing and the grey mark's old spelling marks nothing. That is the rule a
+// code block already has, and the lines come off the parse rather than off a
+// second reading of the source, because CommonMark opens a block of HTML on
+// seven different conditions and shuts it on as many.
+// A code span that wrapped comes off the parse for the same reason, and
+// blankCodeSpans holds it.
+// TestADefinitionInsideABlockOfHTMLRefusesNothing and
+// TestTheOldSpanWhereNothingIsMarkdownIsNotRefused are the pins.
 func checkLines(source []byte, root ast.Node, f func(sourceLine)) {
 	html := htmlBlockLines(source, root)
-	proseLines(source, func(l sourceLine) {
+	proseLines(blankCodeSpans(source, root), func(l sourceLine) {
 		if html[l.at] {
 			return
 		}
 		f(l)
 	})
+}
+
+// blankCodeSpans is the source with the inside of every code span the parse
+// read replaced by spaces, byte for byte and never over a newline, so every
+// line keeps its number, its length and its indent.
+//
+// withoutCode reads one line at a time, and a code span wraps: a backtick run
+// with no closer on its own line is text as far as that line goes, while
+// goldmark reads the paragraph to its end and shuts the span on the line
+// below. So an opener, a footnote mark or the grey mark's old spelling written
+// inside backticks the author's editor wrapped was read as the document's own
+// words, and all three line checks refused a note for the one place this
+// package promises nothing is markdown. Which lines a line cannot answer, so
+// the spans come off the parse, the way the lines of a block of HTML do.
+// TestAWrappedCodeSpanIsStillCode is the pin.
+//
+// Spaces rather than nothing at all, because every structural reading in
+// proseLines is measured in columns: taking the characters out moved the
+// fence, the list marker and the indent of a code block that a line is read
+// by. The source is copied rather than written over, because Render hands the
+// note's own bytes in and the walk reads them after this.
+func blankCodeSpans(source []byte, root ast.Node) []byte {
+	if root == nil {
+		return source
+	}
+	var out []byte
+	_ = ast.Walk(root, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+		if _, ok := node.(*ast.CodeSpan); !ok {
+			return ast.WalkContinue, nil
+		}
+		for child := node.FirstChild(); child != nil; child = child.NextSibling() {
+			text, ok := child.(*ast.Text)
+			if !ok {
+				continue
+			}
+			if out == nil {
+				out = append([]byte(nil), source...)
+			}
+			segment := text.Segment
+			for i := segment.Start; i < segment.Stop && i < len(out); i++ {
+				if out[i] != '\n' {
+					out[i] = ' '
+				}
+			}
+		}
+		return ast.WalkSkipChildren, nil
+	})
+	if out == nil {
+		return source
+	}
+	return out
 }
 
 // htmlBlockLines is every line a block of HTML holds, the line it shuts on

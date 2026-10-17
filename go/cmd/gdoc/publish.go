@@ -48,21 +48,29 @@ import (
 // about a rollback at all. false has to mean "it was tried and did not hold",
 // which is the run where the live id below it matters most.
 type publishData struct {
-	DocumentID   string         `json:"document_id,omitempty"`
-	FolderID     string         `json:"folder_id"`
-	URL          string         `json:"url,omitempty"`
-	Title        string         `json:"title,omitempty"`
-	House        string         `json:"house"`
-	Bytes        int64          `json:"bytes"`
-	Tabs         int            `json:"tabs,omitempty"`
-	Verified     bool           `json:"verified"`
-	Checks       publish.Checks `json:"checks"`
-	RolledBack   *bool          `json:"rolled_back,omitempty"`
-	FilesChanged []string       `json:"files_changed,omitempty"`
-	Body         body.Counts    `json:"body"`
+	DocumentID string         `json:"document_id,omitempty"`
+	FolderID   string         `json:"folder_id"`
+	URL        string         `json:"url,omitempty"`
+	Title      string         `json:"title,omitempty"`
+	House      string         `json:"house"`
+	Logo       logoData       `json:"logo"`
+	Bytes      int64          `json:"bytes"`
+	Tabs       int            `json:"tabs,omitempty"`
+	Verified   bool           `json:"verified"`
+	Checks     publish.Checks `json:"checks"`
+	// HeadingsWithoutID is publish.Report's own count, printed at zero as
+	// well. A contents entry opens a heading by its id, so the number is what
+	// says whether Drive's import kept the ids the docx asked for, and zero is
+	// the answer a reader of this envelope learns the most from.
+	// TestPublishPrintsTheHeadingsThatCameBackWithNoId is the pin, over both
+	// numbers, and internal/publish/doc.go holds the rule itself.
+	HeadingsWithoutID int         `json:"headings_without_id"`
+	RolledBack        *bool       `json:"rolled_back,omitempty"`
+	FilesChanged      []string    `json:"files_changed,omitempty"`
+	Body              body.Counts `json:"body"`
 }
 
-func cmdPublish(a *args) emit.Result {
+func cmdPublish(ctx context.Context, a *args) emit.Result {
 	md, err := required(a, "--md")
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
@@ -88,9 +96,10 @@ func cmdPublish(a *args) emit.Result {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
 
-	doc, err := renderNote(source, md, a)
+	doc, err := renderNote(ctx, source, md, a)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return emit.Result{OK: false, Error: err.Error(), Warnings: doc.Warnings,
+			Data: publishData{FolderID: folder, House: doc.House, Logo: doc.Logo}}
 	}
 
 	// One door, and it is the folder. No file is named, so the document this
@@ -100,9 +109,14 @@ func cmdPublish(a *args) emit.Result {
 	p.AllowCreateIn(folder)
 	s, err := openSession(p)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		// The render is already done, so the logo is a fact this run earned
+		// before the sign-in failed. buildFailed states the rule: a skill
+		// should not have to read the two envelopes differently.
+		// TestAPublishThatCannotSignInStillPrintsTheLogoBlock is the pin.
+		return emit.Result{OK: false, Error: err.Error(), Warnings: doc.Warnings,
+			Data: publishData{FolderID: folder, House: doc.House, Logo: doc.Logo}}
 	}
-	return runPublish(context.Background(), s, md, source, folder, doc)
+	return runPublish(ctx, s, md, source, folder, doc)
 }
 
 // runPublish is the run itself: upload, verify, pair, and take the document
@@ -112,6 +126,7 @@ func runPublish(ctx context.Context, s session, md string, source []byte, folder
 	data := publishData{
 		FolderID: folder,
 		House:    doc.House,
+		Logo:     doc.Logo,
 		Bytes:    int64(len(doc.Docx)),
 		Body:     doc.Counts,
 	}
@@ -126,6 +141,7 @@ func runPublish(ctx context.Context, s session, md string, source []byte, folder
 	data.Tabs = rep.Tabs
 	data.Verified = rep.Verified
 	data.Checks = rep.Checks
+	data.HeadingsWithoutID = rep.HeadingsWithoutID
 	warns = append(warns, rep.Warnings...)
 	if err != nil {
 		// No id, so there is nothing to verify, to record or to take back. The

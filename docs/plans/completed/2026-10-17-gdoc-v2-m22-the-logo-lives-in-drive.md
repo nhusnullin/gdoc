@@ -1,11 +1,11 @@
 # gdoc v2 Milestone 22: the logo lives in Drive, not in the tree, plan
 
 2026-10-17. The task list for the specification beside it,
-`docs/plans/2026-10-17-gdoc-v2-m22-the-logo-lives-in-drive-spec.md`, whose
-five decisions are Nail's and whose design rules are listed there for him to
-strike. One commit per task. The spec holds the rules. This plan repeats none
-of them. Where the code, the spec or this plan disagree, the task stops and
-says so rather than choosing. It starts from `main` after M20 merged.
+`docs/plans/completed/2026-10-17-gdoc-v2-m22-the-logo-lives-in-drive-spec.md`,
+whose five decisions are Nail's and whose design rules are listed there for
+him to strike. One commit per task. The spec holds the rules. This plan
+repeats none of them. Where the code, the spec or this plan disagree, the task
+stops and says so rather than choosing. It starts from `main` after M20 merged.
 
 ## Principles
 
@@ -95,15 +95,15 @@ cd go && GDOC_LIVE_TEST=1 GDOC_LIVE_WRITE=1 go test ./internal/live -run 'HouseL
 
 ## Progress Tracking
 
-- [ ] Task 1: `logo:` names exactly one of `drive` and `base64`
-- [ ] Task 2: the seventh grant, `AllowAsset`
-- [ ] Task 3: the asset room, its cache and its stamp
-- [ ] Task 4: `build` and `publish` read the logo through the room, and say where it came from
-- [ ] Task 5: a placeholder, and the tests that read the embedded bytes read it instead
-- [ ] Task 6: the tree carries no logo
-- [ ] Task 7: the words
-- [ ] Task 8: the live measurement
-- [ ] Task 9: the acceptance table
+- [x] Task 1: `logo:` names exactly one of `drive` and `base64`
+- [x] Task 2: the seventh grant, `AllowAsset`
+- [x] Task 3: the asset room, its cache and its stamp
+- [x] Task 4: `build` and `publish` read the logo through the room, and say where it came from
+- [x] Task 5: a placeholder, and the tests that read the embedded bytes read it instead
+- [x] Task 6: the tree carries no logo
+- [x] Task 7: the words
+- [x] Task 8: the live measurement
+- [x] Task 9: the acceptance table
 
 ## Tasks
 

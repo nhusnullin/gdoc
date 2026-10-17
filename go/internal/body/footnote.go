@@ -144,7 +144,7 @@ func (r *renderer) footnoteBlocks(note *east.Footnote) []*etree.Element {
 			continue
 		default:
 			r.warn("line %d: %s inside a footnote is not rendered in the house style and was left out",
-				line, footnoteBlockName(child))
+				line, footnoteBlockName(child, r.source))
 			continue
 		}
 		r.curLine = line
@@ -215,8 +215,8 @@ func hasFootnoteLink(node ast.Node) bool {
 // footnoteBlockName is what a block inside a note is called in the sentence
 // that says it was left out. The words are the ones the block's own warning
 // uses elsewhere in this package, so an author reads one vocabulary.
-func footnoteBlockName(node ast.Node) string {
-	switch node.(type) {
+func footnoteBlockName(node ast.Node, source []byte) string {
+	switch typed := node.(type) {
 	case *ast.List:
 		return "a list"
 	case *east.Table:
@@ -228,6 +228,14 @@ func footnoteBlockName(node ast.Node) string {
 	case *ast.Blockquote:
 		return "a block quote"
 	case *ast.HTMLBlock:
+		// A comment is a pencil, and it is named as one: an author told they
+		// wrote a block of HTML would look for a tag that is not in the note.
+		// It is left out all the same, because a note under the page is a
+		// paragraph this package sets and the house style has no grey
+		// paragraph of its own there.
+		if isCommentBlock(typed, source) {
+			return "a comment"
+		}
 		return "a block of HTML"
 	case *ast.ThematicBreak:
 		return "a page break"

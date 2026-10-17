@@ -25,8 +25,8 @@ import (
 // length and by sha256. Both literals, so a byte that moves is named here and
 // nowhere else.
 const (
-	helpObjectBytes  = 8921
-	helpObjectSHA256 = "40a28f2a2ff65037099cfeee3109f701e57b6de95e44569fc57c1bf5ca2c0a46"
+	helpObjectBytes  = 9109
+	helpObjectSHA256 = "e3fbedc4cb261086e5d6e64fa166b9481838a717a4668992c262cf49b563f4df"
 )
 
 // One flag of the three is experimental, it is --presence, and it carries the

@@ -1,12 +1,20 @@
 // Package render writes the docx itself: the thirteen parts and the logo, the
 // cover, the tables, the header and footer, the contents field.
 //
-// Build takes the house style, the note's cover fields, the body elements the
-// markdown walker produced, the pictures it read and the footnotes it
-// numbered, and hands back a Package of named parts a caller zips. Nothing
-// here reads the Word master, and nothing here reaches the network.
-// TestBuildWritesTheThirteenPartsAndTheLogo, TestEveryXMLPartParses and
-// TestTheZipListsContentTypesFirst are the pins over what a build produces.
+// Build takes the house style, the bytes of the logo, the note's cover fields,
+// the body elements the markdown walker produced, the pictures it read and the
+// footnotes it numbered, and hands back a Package of named parts a caller
+// zips. Nothing here reads the Word master, and nothing here reaches the
+// network. TestBuildWritesTheThirteenPartsAndTheLogo, TestEveryXMLPartParses
+// and TestTheZipListsContentTypesFirst are the pins over what a build
+// produces.
+//
+// The logo is a parameter and not something read off the style, because since
+// M22 a house file may name it as one file in Drive rather than carry its
+// bytes. internal/asset is the room that turns an id into bytes, and this one
+// reaches nothing: the caller fetches the mark and hands it over. Build
+// refuses an empty one rather than writing a document with no mark in its
+// header: TestBuildRefusesALogoWithNoBytes.
 //
 // This comment holds why the package refuses what it refuses. What it reports
 // is in the code beside it.
@@ -184,6 +192,15 @@
 // That is why a publish uploads once and has no measuring pass: nothing here
 // lays the document out, so no page number is known until something does.
 // TestTheContentsIsALiveWordField is the pin.
+//
+// An entry in that list opens the heading it names only because internal/body
+// writes one hidden bookmark into every heading paragraph. Drive's import
+// mints a heading id from such a bookmark and from nothing else, and a
+// contents entry is a link to a heading by that id, so a document whose
+// headings carry none gets a list where every entry lands on the start of the
+// tab. The field this package emits is the same either way, which is why the
+// failure was silent for a month. internal/body's
+// TestEveryHeadingCarriesAHiddenBookmark is the pin on the bookmark.
 //
 // # Points come in and the units go out here
 //

@@ -29,61 +29,45 @@
 // ==mark== is mark.go, written here rather than pulled in, and it carries seven
 // marks rather than one highlight (DECISIONS.md, 2026-10-14). ==words== is
 // yellow, a colour emoji at the start of the highlight picks one of the other
-// five, and [words]{.pencil} is the one Pandoc span this package reads, text
-// colour rather than shading. house.yaml states the seven with their syntax,
-// kind and Doc colour, so no emoji and no hex is a constant here; the one
-// string written out is the attribute ".pencil", because the parsers are built
-// before any house file is read, and TestThePencilSyntaxIsTheHouseStyles pins
-// it to the pencil mark's own syntax. What is carried is the mark on the run;
-// what is refused by line is a nested mark, an empty span, a highlight whose
-// only content is the colour emoji that opened it, which marks no words the way
-// an empty span marks none and counted a colour on an envelope the document does
-// not carry, a span carrying any
-// other attribute, a span that does not open and close on one line, a mark
-// inside a heading, for the reason a footnote mark in a heading is refused, and
-// a mark inside a picture's alt text, which becomes the caption: the caption is
-// built with no palette at all, so the mark was dropped there and the colour
-// emoji that opened it reached the document as words. An
-// emoji anywhere but the start of a highlight, and a bracket not followed by
-// ]{, are the author's own words. A bracket inside a code span is neither: the
-// parser steps over a code span the way the line scan does, so the two agree
-// on what opens a span.
+// five, and the grey pencil is a comment, text colour rather than shading:
+// HTML's "<!-- words -->" or Obsidian's "%% words %%", read by comment.go and
+// obsidian.go. house.yaml states the seven with their syntax, kind and Doc
+// colour, so no emoji and no hex is a constant here; the two strings written
+// out are the comment delimiters, because the walk reads a comment before any
+// house file is in hand, and TestThePencilSyntaxIsTheHouseStyles pins them to
+// the pencil mark's own syntax. What is carried is the mark on the run; what
+// is refused by line is a nested mark, a highlight whose only content is the
+// colour emoji that opened it, which marks no words and counted a colour on
+// an envelope the document does not carry, a mark inside a heading, for the
+// reason a footnote mark in a heading is refused, and a mark inside a
+// picture's alt text, which becomes the caption: the caption is built with no
+// palette at all, so the mark was dropped there and the colour emoji that
+// opened it reached the document as words. An emoji anywhere but the start of
+// a highlight is the author's own words, and so is a bracket: no mark opens
+// with one.
 //
-// The words question is asked of a line that lost no code. The line scan reads
-// a line with its code spans taken out, so a span whose whole content is one,
-// "[`code`]{.pencil}", read as "[]{.pencil}" and was refused for marking no
-// words, naming a span nowhere in the file and refusing a note the parser was
-// about to render grey. An empty span on a line that held code is still
-// refused, because the parse forms no span for a bracket with nothing in it
-// and the attribute then closes none.
-//
-// The attribute is counted against the spans the parse formed, because a
-// bracket this package's parser never gets to claim still reads as a span by
-// line: a bracket after "!" is a picture's, a bracket holding a caret is a
-// footnote mark's, and a bracket followed by a target or a reference is a
-// link's. In each of those "{.pencil}" closed nothing and was published as
-// words with the build saying ok, which is the failure the line check exists
-// to prevent.
+// The grey mark was a Pandoc span, "[words]{.pencil}", until milestone 20, and
+// that spelling is refused by line now, naming the comment to write instead.
+// Nothing parses it, so a note that still carries it would publish the
+// brackets and the braces as the characters the author typed with the build
+// saying ok, which is the failure every line check in this package exists to
+// prevent. The refusal is one regular expression on the lines checkLines
+// reads, in comment.go beside the reading of the spelling that replaced it, so
+// the old syntax written in a code span or a code block refuses nothing: a
+// note explaining the change is not refused for explaining it.
 // TestAHighlightOpeningWithAColourEmojiCarriesItsMark,
-// TestAnEmojiElsewhereInAHighlightIsText, TestAPencilSpanIsARunCarryingItsMark,
-// TestALinkIsStillALink, TestABracketNotFollowedByAttributesIsText,
-// TestASpanWithAnotherAttributeIsRefusedByLineNamingPencil,
-// TestANestedMarkIsRefusedByLine, TestAnEmptySpanIsRefusedByLine,
+// TestAnEmojiElsewhereInAHighlightIsText, TestALinkIsStillALink,
+// TestABracketIsTheAuthorsOwnWords, TestANestedMarkIsRefusedByLine,
 // TestAHighlightOfOnlyItsColourEmojiIsRefusedByLine,
 // TestAHighlightWithWordsAfterItsColourIsNotRefused,
-// TestASpanCrossingAParagraphIsRefusedByLine,
-// TestASpanWhoseWordsHoldACodeSpanWithABracketIsStillASpan,
-// TestASpanInsideACodeBlockIsNotASpan,
-// TestAPencilAttributeThatOpensNoSpanIsRefusedByLine,
-// TestAPencilAttributeInsideABlockOfHTMLRefusesNothing,
-// TestASpanTheParseFormsIsNotRefused,
-// TestASpanWhoseWordsAreOnlyACodeSpanIsStillASpan,
-// TestAnEmptySpanBesideACodeSpanIsStillRefused and
-// TestAMarkInAHeadingIsRefusedByLine and
-// TestAMarkInAPicturesAltTextIsRefusedByLine are the pins, with
+// TestAMarkInAHeadingIsRefusedByLine,
+// TestAMarkInAPicturesAltTextIsRefusedByLine,
+// TestTheOldSpanIsRefusedByLineNamingTheComment and
+// TestTheOldSpanWhereNothingIsMarkdownIsNotRefused are the pins, with
 // TestTwoMarksSideBySideStayTwoRuns over merge and
 // TestTheDebtsAreCountedAndTheOthersAreNot over the three counted on the
-// envelope.
+// envelope. The comment itself is the warnings section below, which holds what
+// a pencil is and where it goes.
 //
 // A mark reaches Word twice over. The run names the character style
 // internal/render writes, so Word lists the marks and a reader finds every
@@ -179,6 +163,125 @@
 // dropped the same way. TestACodeBlockWarnsAndIsLeftOut,
 // TestInlineHTMLWarnsAndIsLeftOut, TestInlineHTMLInATableCellOrAQuoteWarnsToo
 // and TestAPictureTheHouseStyleCannotPlaceIsNamed are the pins.
+//
+// HTML that is a comment is the one exception, and it is not a loss: a comment
+// is how a pencil is written from milestone 20 on, so its words reach the
+// document grey rather than being left out, and the line is not warned about.
+// A comment holding no words marks none and goes in silence.
+// TestAnHTMLCommentIsAPencilRun, TestTheWordsInsideAPencilAreLiteral,
+// TestAnEmptyCommentIsLeftOut and TestOtherRawHTMLIsStillWarnedAndLeftOut are
+// the pins.
+//
+// A comment standing on lines of its own is grey paragraphs of its own, one
+// per stretch of lines, the lines of a stretch joined by a single space
+// because a comment is wrapped where the author's editor wrapped it. It goes
+// where the walk stands: an aside inside a bullet is that bullet's, and one
+// inside a quote is indented with it. TestACommentOnLinesOfItsOwnIsGreyParagraphs
+// and TestACommentOnOneLineOfItsOwnIsOneGreyParagraph are the pins.
+//
+// A comment with the author's own words after it on one line is that pencil
+// and that prose, and two comments on one line are two pencils. CommonMark
+// gives a block of HTML the whole of the line holding the closer, so both
+// shapes were one block: the first lost the sentence and the second reached
+// the document as one grey paragraph with the delimiters inside it as words.
+// commentline.go claims that line in front of goldmark's own block parser and
+// reads it as the paragraph it is, which is the shape internal/view writes
+// whenever a paragraph opens with a grey run. Wrapped over two lines, where
+// the closer sits inside a block of HTML, it is left out and named as a
+// comment with words after its closer. The claimed line wraps the way any
+// other paragraph's line wraps: shutting it on every line lost the line under
+// it whole and said nothing, for the reason commentline.go's Continue gives.
+// TestACommentWithProseAfterItIsAPencilAndThatProse,
+// TestTwoCommentsOnOneLineAreTwoPencils and
+// TestAPencilsLineWrapsLikeAnyOtherParagraph are the pins.
+//
+// A comment the author's editor wrapped is one line in the document. goldmark
+// hands an inline comment back with its newlines inside it, and a newline in a
+// run is a hard line break in the published paragraph, so its lines are joined
+// by one space the way a block comment's are. The join trims each line, so a
+// comment's words carry no space on either edge whichever shape they were
+// written in. TestAWrappedCommentInsideASentenceIsOneLine and
+// TestACommentsWordsCarryNoSpaceOnEitherEdge are the pins.
+//
+// A comment has a second spelling, Obsidian's "%% words %%", and obsidian.go
+// parses it into the two nodes goldmark gives the HTML one: an ast.RawHTML
+// inside a sentence and an ast.HTMLBlock for a "%%" fence on lines of its
+// own. So there is one meaning and one set of arms, and every rule above
+// holds for both spellings. The pair that matched is what the mark is looked
+// up by, so the house style says which mark each spelling is and this package
+// says which spellings there are. TestAnObsidianCommentIsAPencilRun,
+// TestTheWordsInsideAnObsidianCommentAreLiteral,
+// TestAnEmptyObsidianCommentIsLeftOut, TestAnObsidianFenceIsGreyParagraphs,
+// TestAnObsidianFenceInterruptsAParagraph,
+// TestAnObsidianCommentOnOneLineOfItsOwnIsOneGreyParagraph and
+// TestAnObsidianCommentInCodeIsCode are the pins, with
+// TestAWrappedObsidianCommentIsOnePencil over the pair the author's editor
+// wrapped and TestAnObsidianDelimiterWithNoCloserIsWords over the single
+// delimiter that closes nothing.
+//
+// A comment the note never closes runs to the end of the note, in either
+// spelling, and is named as the comment it is rather than as a block of HTML:
+// an author told they wrote one would go looking for a tag that is not in the
+// note. The sentence names the lines under it too, because they went with it.
+// TestAnUnterminatedObsidianFenceIsNamedAndLeftOut,
+// TestAnUnclosedHTMLCommentIsNamedAsAComment,
+// TestAnUnclosedFenceEndingInTheDelimiterIsStillUnclosed and
+// TestABlockOfHTMLThatIsNoCommentIsStillNamedAsOne are the pins.
+//
+// An opener with no closer inside a sentence is refused by line instead. That
+// one opens no block, and goldmark reads raw HTML only once it has the
+// closer, so the aside stayed prose: it reached the document black, with the
+// typographer rewriting the two dashes of the opener into an en dash on the
+// way, and the build said ok. The words nobody was meant to read are the
+// reason it is a refusal rather than the warning the block gets, and the
+// refusal is read off the same lines every other line check is, so an opener
+// inside backticks, inside a code block or inside a block of HTML refuses
+// nothing. An opener the parse did read refuses nothing either, which is how
+// a comment the author's editor wrapped and an opener inside a comment's own
+// words stay what they are. Only the HTML spelling is asked about: a lone
+// "%%" is two characters an author may have typed for themselves. An escaped
+// opener refuses nothing either, by the one escaping parity internal/markers
+// holds: a backslash makes the opener the author's own four characters, which
+// is how a note written about gdoc's own comment markers publishes at all.
+// TestAnUnclosedCommentInsideASentenceIsRefusedByLine,
+// TestAnOpenerGoldmarkReadIsNotRefused,
+// TestAnEscapedOpenerIsNotRefused and
+// TestAnOpenerAfterAnEscapedBackslashIsStillRefused are the pins.
+//
+// A pencil goes where a mark goes, because the milestone's one decision is
+// that the grey mark keeps everything it does and changes its spelling. So a
+// comment that marks words is one of the shapes isMark names, and it is
+// refused by line inside a heading, inside a picture's alt text and inside
+// another mark, for the three reasons the marks section above gives, each
+// refusal naming the comment's own line: a comment holds its characters as
+// segments rather than as text children, so the line lookup asks it before it
+// asks the block around it, and TestAPencilsRefusalNamesItsOwnLine is that
+// pin. It is
+// carried in a table cell, a list item and a block quote. A comment holding no
+// words is not a mark at all: it reaches no run, so there is nothing for a
+// refusal to protect and "empty is nothing" holds in a heading as it holds in
+// a paragraph. A highlight written inside a comment is words rather than a
+// mark inside a mark, because nothing inside a comment is markdown.
+// TestAPencilGoesWhereAMarkGoes and TestAHighlightInsideAPencilIsWords are the
+// pins.
+//
+// A pencil inside a footnote is carried, which is what every mark does there,
+// and it does not come home: the read keeps a footnote's text alone, so
+// internal/export writes the words plain and names the loss, which is
+// docs/backlog/marks-inside-footnotes.md and its own
+// TestAPencilMarkInsideAFootnoteIsNamedAsALoss. A comment on lines of its own
+// inside a footnote is the one shape left out there, because a note under the
+// page is a paragraph this package sets and the house style has no grey
+// paragraph of its own in one. It is named as a comment rather than as a block
+// of HTML, for the reason the unclosed fence is.
+//
+// A paragraph that renders not one run and names not one picture emits
+// nothing. The only way to write one is a comment holding no words, and an
+// empty paragraph there is a blank line the author never typed and the hub's
+// reader never sees. A block quote is the one path that emits a paragraph
+// without going through paragraphBlock, so it makes the same check itself.
+// TestAnEmptyCommentIsLeftOut, TestAnEmptyObsidianCommentIsLeftOut and
+// TestAnEmptyCommentInsideAQuoteIsLeftOut are the pins.
 //
 // A footnote is no longer one of them: it is set in the document, and what the
 // house style cannot set inside one is the warning instead. The section below
@@ -288,8 +391,8 @@
 // it on as many.
 // A code block is a fence or four spaces, a fenced block shuts only on its own
 // character in a run at least as long as its opener and carrying nothing else,
-// and the whole rule lives in scan.go because the footnote scan and the span
-// scan read the same lines. An indented block opens wherever a new block may:
+// and the whole rule lives in scan.go because the footnote scan and the scan
+// for the grey mark's old spelling read the same lines. An indented block opens wherever a new block may:
 // after a blank line, at the start of the file, and after a line that closed a
 // block of its own, which is a heading, a thematic break, the underline of a
 // setext heading or a fence that shut. The one thing it cannot do is interrupt
@@ -318,6 +421,15 @@
 // document as words, and a real fenced block under such a line was read as
 // prose instead.
 // TestABacktickSpanIsNotACodeFence is the pin.
+//
+// A code span wraps, and one line cannot see that it did: the opening backtick
+// run has no closer where it stands, while goldmark reads the paragraph to its
+// end and shuts the span on the line below. So the spans come off the parse
+// too, with their insides blanked out of the lines the checks read, the way
+// the lines of a block of HTML do. Read as the document's own words instead,
+// every one of the three checks refused a note for the one place nothing is
+// markdown, and named a loss that could not happen.
+// TestAWrappedCodeSpanIsStillCode is the pin.
 //
 // A footnote mark inside a table cell is refused as well. The spec carries
 // none, and a cell's paragraph has no footnotes part to write into, so the note
@@ -379,11 +491,12 @@
 //
 // # A marker of gdoc's own is refused by line, before the note is parsed
 //
-// internal/view writes {+, {-, [[c: and [s: into the text `read` prints and
-// `export` writes to a file, and they say a thing about a document: these words
-// are a pending insertion, this range carries a comment. In a document they say
-// nothing, so a note still carrying one publishes the brackets and the id as
-// prose. The check is asked of the source line rather than of any block,
+// internal/view writes {+, {-, [[c:, [s:, `<!-- tab `, `<!-- image: `,
+// `<!-- drawing: ` and `<!-- object: ` into
+// the text `read` prints and `export` writes to a file, and they say a thing
+// about a document: these words are a pending insertion, this range carries a
+// comment, a picture floats here. In a document they say nothing, so a note
+// still carrying one publishes the brackets and the id as prose. The check is asked of the source line rather than of any block,
 // because the export writes a marker into the middle of a sentence and the
 // sentence is a paragraph like any other, and it is asked of internal/markers,
 // which holds the literals and the escaping parity for all three routes out of
@@ -391,6 +504,29 @@
 // note written about the markers themselves still publishes.
 // TestBuildRefusesAMarkerByLine and TestBuildLeavesAnEscapedMarkerAlone are the
 // pins.
+//
+// Four of the eight markers are comments, which is the shape the grey mark is
+// written in since this milestone. The refusal reaches them first, because it
+// is asked before the note is parsed, so a note carrying the comment `read`
+// writes for a floating picture is named rather than published as a grey aside
+// about a document it is no longer in. Three of them are that comment, one per
+// kind a floating object comes back as, and the fourth is the tab's. Only
+// those four openers are markers: every other comment is the author's own and
+// comes out grey.
+// TestGdocsOwnCommentsAreMarkersAndNotPencil and
+// TestAnAuthorsOwnCommentIsStillAPencil are the two halves.
+//
+// Those four are also the reason the refusal has two sentences. gdoc's markup
+// is syntax nobody types by hand, so a note carrying "{+" was exported out of
+// a document and the way out is to resolve the export. A comment marker is an
+// ordinary English word behind an opener an author writes every day, so
+// "<!-- tab order matters -->" may be an aside somebody wrote for themselves,
+// and an export is the wrong thing to send them looking for: that half names
+// the opener as gdoc's own and asks for the aside to be reworded.
+// internal/markers' IsComment is which half a marker is in, there rather than
+// here because that package owns the list.
+// TestAnAsideOpeningLikeGdocsOwnCommentSaysSo and
+// TestAMarkupMarkerStillNamesTheExport are the pins.
 //
 // It is a refusal rather than the warning a code block gets. A code block
 // leaves one block out of the document; a marker puts words into it that the
@@ -421,36 +557,46 @@
 // matter. TestARelativeLinkIsItsWordsAndNoHyperlink is the pin, and
 // TestALinkWithASchemeOrAnAnchorIsStillALink holds the other side of it.
 //
-// # An anchor link is a jump to a bookmark on the heading it names
+// # Every heading carries a hidden bookmark, and a "#" link anchors at it
 //
 // A destination opening with "#" is a place in this document, not an address.
 // Written as a relationship, which is what every other link is, Word resolves
 // it against the document's own location, so "[see below](#scope)" published
 // as a link that opens nothing and said nothing about it. The OOXML form for
 // a jump is w:hyperlink w:anchor with no relationship at all, and it lands on
-// a w:bookmarkStart/w:bookmarkEnd pair, so the bookmarks come first. Only a
-// heading some "#" link in the note names carries one. Google Docs keeps a
-// bookmark on import and shows it as a flag on the heading, so a bookmark on
-// every heading is a flag on every heading for nothing, and a later edit to
-// the note goes out through a fresh publish, which writes the bookmarks from
-// the note as it then stands. Nail's call of 2026-09-19. There is no way to
-// keep a jump and hide the one flag it lands on.
+// a w:bookmarkStart/w:bookmarkEnd pair, so the bookmarks come first.
+//
+// Every heading carries one, whether a "#" link names it or not, as an empty
+// pair before the heading's first run. Drive's import mints a Google heading
+// id for a heading paragraph only when that paragraph carries a bookmark
+// whose name opens with an underscore, which is the convention Google's own
+// docx export uses. A contents entry is a link to a heading by that id, so a
+// document whose headings carry no bookmark gets a contents list where every
+// entry resolves to the start of the tab. Measured on 2026-10-16 across every
+// document gdoc had published: 0 heading ids in all of them. Word treats a
+// name opening with an underscore as hidden, so it shows in no bookmark list
+// there, and Docs mints the id instead of keeping the bookmark, so no flag
+// sits beside any heading either. That retires the 2026-09-19 call, that only
+// a linked heading carries one to keep the flags down: the flag was the cost
+// of a visible name, and there is none here.
+// TestEveryHeadingCarriesAHiddenBookmark is the pin on the pair and its
+// place before the runs.
 //
 // The name is goldmark's own auto heading id, which parser.WithAutoHeadingID
 // already computes and keeps unique across the file, rewritten by bookmarkName
 // into what Word takes: letters, digits and underscores, opening with a
-// letter, at most 40 characters. The leading "h_" is what makes a heading
-// called "1.1 Purpose" open with a letter; every character outside
-// [A-Za-z0-9_] becomes an underscore, which is wider than the lower-case
-// letters, digits and hyphens goldmark emits, on purpose, because the ids are
-// the generator's and this package does not get to notice when it widens; and
-// a name over the ceiling keeps its first 32 characters, so it reads in Word's
-// bookmark list, and takes seven hex digits of the FNV-1a hash of the id as it
-// arrived, so two long headings sharing a prefix keep two names.
-// TestBookmarkNameIsWordSafe pins all four cases,
-// TestOnlyALinkedHeadingCarriesABookmark pins the pair around the runs and
-// its absence on a heading nothing names, and
-// TestANoteWithNoAnchorLinkCarriesNoBookmark is the common case.
+// letter, at most 40 characters. The leading "_h_" is the underscore the
+// import reads, and the "h_" after it is what makes a heading called
+// "1.1 Purpose" open with a letter once Word strips the underscore; every
+// character outside [A-Za-z0-9_] becomes an underscore, which is wider than
+// the lower-case letters, digits and hyphens goldmark emits, on purpose,
+// because the ids are the generator's and this package does not get to notice
+// when it widens; and a name over the ceiling keeps its first 32 characters,
+// so it reads where a name is read at all, and takes seven hex digits of the
+// FNV-1a hash of the id as it arrived, so two long headings sharing a prefix
+// keep two names. TestBookmarkNameIsWordSafe pins all four cases, and
+// TestAnAnchorLinkIsAJumpAndNotARelationship pins that a "#" link anchors at
+// the name bookmarkName gave that heading.
 //
 // A "#" naming no heading in the note is warned about by line and its words
 // are printed as plain text, which is how a code block is already refused: a
