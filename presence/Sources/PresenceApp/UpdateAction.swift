@@ -81,7 +81,7 @@ public actor UpdateAction {
   /// leaves the row and its button where they were, and the reason it wrote
   /// nothing is not a sentence this panel has anywhere to put. Saying it
   /// would be a word on a row, which is a decision and not a refactor:
-  /// docs/backlog/install-extension-says-nothing-when-the-run-did-nothing.md.
+  /// docs/backlog/neither-update-button-says-anything-when-the-run-did-nothing.md.
   public func installExtension() async -> Bool {
     guard let outcome = try? await answer(.updateDesktop), outcome.envelope.ok,
       let data = outcome.envelope.data, let report = try? UpdateReport.decode(data)
@@ -130,6 +130,14 @@ public actor UpdateAction {
   }
 
   /// One child, and what its one object says about what it did.
+  ///
+  /// The reading is whole and the saying is not: `.failed` and `.unchanged`
+  /// carry their sentence and no row has anywhere to put it, so a press that
+  /// installed nothing leaves the version where `help --json` drew it and
+  /// says nothing about why. The word belongs on the same quiet line the
+  /// extension's half of
+  /// docs/backlog/neither-update-button-says-anything-when-the-run-did-nothing.md
+  /// asks for, which is a decision about the panel's words.
   private func ran(_ call: Call) async -> UpdateStanding {
     guard let outcome = try? await answer(call) else {
       return .failed(UpdateWords.didNotRun)

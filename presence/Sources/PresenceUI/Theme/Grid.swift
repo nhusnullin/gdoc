@@ -17,6 +17,10 @@ public enum Grid {
 
   /// The heights: the header, a section label, and a row in its three forms.
   public static let headerHeight: CGFloat = 36
+  /// The gap the header leaves under itself, which the body has to take off
+  /// the cap as well: a body that only subtracts the header is laid out this
+  /// much past the frame, and the clip takes it off the bottom edge.
+  public static let headerGap: CGFloat = 4
   public static let sectionLabelHeight: CGFloat = 28
   public static let rowHeight: CGFloat = 32
   public static let twoLineRowHeight: CGFloat = 44

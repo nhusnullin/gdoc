@@ -118,6 +118,23 @@ final class RenderTests: XCTestCase {
     }
   }
 
+  /// The parts add up to the cap. `.frame(maxHeight:)` with a clip under it
+  /// reads 600 whatever was laid out inside, so a body one gap too tall is
+  /// 600 on the probe and a bottom edge, corner and fade cut off the screen.
+  func testTheHeaderAndTheBodyAddUpToTheCap() throws {
+    for id in ["e1", "e3"] {
+      let scene = try XCTUnwrap(Scenes.all.first { $0.id == id })
+      let drawn = try probeList(try scene.view(), scheme: .dark)
+      let header = try XCTUnwrap(drawn.first { $0.name == "header" }).size.height
+      let body = try XCTUnwrap(
+        drawn.filter { $0.name == "scrollbox" }.map { $0.size.height }.max(),
+        "\(id) drew no scroll box")
+      XCTAssertEqual(
+        header + body + 2 * Grid.unit, Grid.panelMaxHeight,
+        "\(id) laid out \(header + body + 2 * Grid.unit) pt inside the 600 pt frame")
+    }
+  }
+
   /// The two busiest screens. The cap is the panel's own frame: a section a
   /// person opens scrolls inside itself and never grows the window.
   func testThePanelNeverPassesSixHundred() throws {

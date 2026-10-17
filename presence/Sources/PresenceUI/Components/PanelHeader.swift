@@ -56,7 +56,7 @@ public struct PanelHeader: View {
     }
     .padding(.horizontal, Grid.rowInset)
     .frame(maxWidth: .infinity, minHeight: Grid.headerHeight, alignment: .leading)
-    .padding(.bottom, 4)
+    .padding(.bottom, Grid.headerGap)
     .metricProbe("header")
   }
 }

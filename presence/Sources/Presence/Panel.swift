@@ -36,6 +36,9 @@ private final class KeyPanel: NSPanel {
 final class Panel: NSObject, NSWindowDelegate {
   private let panel: KeyPanel
   private let host: NSHostingView<AnyView>
+  /// The button the open panel hangs from, so a redraw that changes the
+  /// height can hang it there again. Weak because the status item owns it.
+  private weak var anchor: NSStatusBarButton?
 
   override init() {
     self.panel = KeyPanel(
@@ -73,10 +76,17 @@ final class Panel: NSObject, NSWindowDelegate {
 
   /// Redraw an open panel. A closed one is left closed: a new line in the
   /// record is not a reason to put a window over somebody's work.
+  ///
+  /// It is placed again, because `setContentSize` keeps the frame's bottom
+  /// left corner: a redraw that opened a fold would move the top edge up
+  /// over the menu bar, and one that lost a row would leave a gap under the
+  /// button. The placement is the one `show` uses, so an open panel hangs
+  /// where it would if it had just been opened.
   func refresh<Content: View>(_ content: Content) {
     guard isOpen else { return }
     host.rootView = AnyView(content)
     size()
+    place(under: anchor)
   }
 
   func close() {
@@ -88,6 +98,7 @@ final class Panel: NSObject, NSWindowDelegate {
   }
 
   private func show<Content: View>(_ content: Content, under button: NSStatusBarButton?) {
+    anchor = button
     host.rootView = AnyView(content)
     size()
     place(under: button)

@@ -35,10 +35,15 @@ public struct PanelView: View {
     self.actions = actions
   }
 
-  /// What is left for the sections once the header and the panel's own
-  /// padding have taken theirs.
+  /// What is left for the sections once the header, the gap under it and
+  /// the panel's own padding have taken theirs.
+  ///
+  /// Every part of the panel is in this sum, because the cap is a frame with
+  /// a clip under it: a body that left the header's gap out would read 600
+  /// on the probe and lose 4 pt of the bottom edge, its corner and the
+  /// scroll fade off the screen.
   public static var bodyHeight: CGFloat {
-    Grid.panelMaxHeight - Grid.headerHeight - 2 * Grid.unit
+    Grid.panelMaxHeight - Grid.headerHeight - Grid.headerGap - 2 * Grid.unit
   }
 
   public var body: some View {
