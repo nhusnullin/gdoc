@@ -1,0 +1,468 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<meta charset="utf-8">
+<title>gdoc в трее: экраны</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one day with gdoc as a sequence of scenes; each scene = a macOS screen mock + a feedback box. */
+:root{
+  --bg:#f4f2ec; --card:#ffffff; --fg:#1f1e1a; --muted:#6c695f; --line:#dedbd1; --line-strong:#c9c5b8;
+  --okp:#2f7a3d; --okp-bg:#e4f1e4; --badp:#b23a3a; --badp-bg:#f6e3e3; --accent:#3b5f8a; --wall:#3b4352;
+  --font:"IBM Plex Sans",-apple-system,"Segoe UI",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  /* macOS mock tokens, from the design spec */
+  --mf:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+  --s0:#1C1C1E; --s1:#242426; --s2:#2C2C2E;
+  --t1:#F2F2F7; --t2:rgba(235,235,245,.60); --t3:rgba(235,235,245,.32);
+  --hair:rgba(255,255,255,.08); --hair-strong:rgba(255,255,255,.14);
+  --ok:#5CC489; --hold:#D9A03C; --bad:#E5484D; --r:6px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#1a1a18; --card:#232320; --fg:#ebe8df; --muted:#9d9a8f; --line:#35342f; --line-strong:#4a4841;
+  --okp:#8fd19a; --okp-bg:#213a26; --badp:#f0a0a0; --badp-bg:#432424; --accent:#8fb3dc; --wall:#2a3039; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1a1a18; --card:#232320; --fg:#ebe8df; --muted:#9d9a8f; --line:#35342f; --line-strong:#4a4841;
+  --okp:#8fd19a; --okp-bg:#213a26; --badp:#f0a0a0; --badp-bg:#432424; --accent:#8fb3dc; --wall:#2a3039; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;line-height:1.5;margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 64px}
+.wrap{max-width:900px;margin:0 auto}
+header.top{padding:22px 0 14px;border-bottom:1px solid var(--line)}
+.top h1{font-size:22px;font-weight:600;margin:0 0 4px;letter-spacing:-0.01em;text-wrap:balance}
+.top p{margin:0 0 6px;color:var(--muted);font-size:14px;max-width:70ch}
+.rule{margin-top:12px;padding:12px 14px;background:var(--card);border:1px solid var(--line);border-radius:10px;font-size:14px;max-width:70ch}
+.rule b{font-weight:600}
+.rule ol{margin:6px 0 0;padding-left:20px}
+.status{font-size:12px;color:var(--muted);font-family:var(--mono);margin-top:8px}
+.scene{margin-top:52px}
+.scene .time{font-family:var(--mono);font-size:12.5px;color:var(--muted);letter-spacing:.04em}
+.scene h2{font-size:19px;font-weight:600;margin:2px 0 6px;letter-spacing:-0.01em}
+.scene .story{margin:0 0 14px;max-width:70ch;font-size:14.5px}
+.cap{font-size:12.5px;color:var(--muted);margin:10px 0 0;max-width:70ch}
+.cap b{color:var(--fg);font-weight:600}
+.fb{margin-top:14px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:start}
+.vote{display:inline-flex;border:1px solid var(--line-strong);border-radius:9px;overflow:hidden}
+.vote button{appearance:none;border:0;background:transparent;color:var(--muted);font:inherit;font-size:13px;padding:7px 12px;cursor:pointer;min-height:36px}
+.vote button+button{border-left:1px solid var(--line-strong)}
+.vote button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.vote button[aria-pressed="true"].y{background:var(--okp-bg);color:var(--okp);font-weight:600}
+.vote button[aria-pressed="true"].n{background:var(--badp-bg);color:var(--badp);font-weight:600}
+.fb textarea{width:100%;min-height:64px;font:inherit;font-size:13.5px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg);resize:vertical}
+.fb textarea:focus-visible{outline:2px solid var(--accent);outline-offset:-1px}
+.foot{margin-top:40px;color:var(--muted);font-size:13px;max-width:62ch}
+
+/* ---------- macOS screen mock ---------- */
+.screen{background:var(--wall);border-radius:12px;overflow:hidden;position:relative;border:1px solid var(--line);padding-bottom:24px;-webkit-font-smoothing:antialiased}
+.mbar{height:24px;display:flex;align-items:center;gap:8px;padding:0 8px 0 14px;background:#1f1f1f;font:500 13px/1 var(--mf);color:rgba(255,255,255,.85)}
+.mbar .l{margin-right:auto;display:flex;gap:18px;align-items:center}
+.mbar .l .apple{font-size:15px;line-height:1}
+.mbar .l .app{font-weight:600}
+.mbar .l span:not(.apple):not(.app){font-weight:400;color:rgba(255,255,255,.78)}
+.mbar .sys{display:flex;align-items:center;gap:16px}
+.mbar .sys svg{width:16px;height:16px;display:block}
+.mbar .clock{font-weight:400;font-variant-numeric:tabular-nums;color:rgba(255,255,255,.88)}
+.status-item{display:inline-flex;align-items:center;gap:3px;height:22px;padding:0 8px;border-radius:4px;color:rgba(255,255,255,.85)}
+.status-item.is-open{background:rgba(255,255,255,.18)}
+.status-item .mark{font-size:15px;font-weight:500;line-height:1;transform:translateY(-.5px)}
+.status-item .badge{font:500 11px/1 var(--mf);font-variant-numeric:tabular-nums;opacity:.78;margin-left:2px}
+.status-item .g{width:10px;height:10px;opacity:.8;border-width:1px;margin-left:2px}
+.status-item .ring{--size:10px;--stroke:1.25px;margin-left:2px;opacity:.9}
+
+.panel{position:relative;margin:5px 8px 0 auto;width:320px;max-width:calc(100% - 20px);padding:8px;background:var(--s0);border-radius:12px;border:.5px solid var(--hair-strong);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 12px 40px rgba(0,0,0,.45),0 1px 2px rgba(0,0,0,.4);font:400 13px/16px var(--mf);letter-spacing:-.006em;color:var(--t1)}
+.panel-header{display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;margin-bottom:4px}
+.panel-header .mark{font-size:16px;font-weight:500}
+.panel-header .name{font-weight:500}
+.panel-header .account{margin-left:auto;font-size:11px;letter-spacing:0;color:var(--t3)}
+.section{margin-top:8px;padding-top:4px;border-top:.5px solid var(--hair)}
+.section:first-of-type{margin-top:0;padding-top:0;border-top:0}
+.section-label{height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;font:500 11px/1 var(--mf);letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
+.section-label span{letter-spacing:0;text-transform:none;font-weight:400}
+.row{display:grid;grid-template-columns:16px 1fr auto;column-gap:8px;align-items:center;min-height:32px;padding:0 12px;border-radius:var(--r)}
+.row.two{min-height:44px;padding:6px 12px;align-content:center}
+.row.compact{min-height:28px}
+.row.hov{background:var(--s2)}
+.row-title{grid-column:2;grid-row:1;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-value{grid-column:3;grid-row:1;font-size:12px;letter-spacing:0;color:var(--t2);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.row-sub{grid-column:2/4;grid-row:2;font-size:11px;line-height:14px;letter-spacing:0;color:var(--t3);white-space:normal}
+.row-actions{grid-column:2/4;grid-row:3;display:flex;gap:6px;margin-top:6px}
+.row.acts{grid-template-rows:auto auto auto}
+.row-more{min-height:28px;font-size:12px}
+.row-more .row-title{color:var(--t3);font-size:12px}
+.quiet{padding:4px 12px 8px 44px;font-size:12px;color:var(--t3)}
+.glyph{grid-column:1;grid-row:1;width:16px;height:16px;position:relative;border:1.25px solid currentColor;border-radius:50%;color:var(--t2);flex:none;display:inline-block}
+.glyph-ok{color:var(--ok)}.glyph-hold{color:var(--hold)}.glyph-bad{color:var(--bad)}.glyph-live{color:var(--t1)}.glyph-dim{color:var(--t3)}
+.glyph-check::after{content:"";position:absolute;left:4.5px;top:2.5px;width:3px;height:6px;border:solid currentColor;border-width:0 1.25px 1.25px 0;transform:rotate(45deg)}
+.glyph-excl::before{content:"";position:absolute;left:6.4px;top:3px;width:1.25px;height:5px;background:currentColor;border-radius:1px}
+.glyph-excl::after{content:"";position:absolute;left:6.4px;top:9.5px;width:1.25px;height:1.25px;background:currentColor;border-radius:50%}
+.glyph-pause::before,.glyph-pause::after{content:"";position:absolute;top:4.5px;width:1.25px;height:5px;background:currentColor;border-radius:1px}
+.glyph-pause::before{left:5px}.glyph-pause::after{right:5px}
+.glyph-dot{border-color:transparent}
+.glyph-dot::after{content:"";position:absolute;inset:5px;border-radius:50%;background:currentColor}
+.glyph-empty{border-color:var(--t3)}
+.status-item .glyph{width:10px;height:10px;border-width:1px}
+.status-item .glyph-pause::before,.status-item .glyph-pause::after{top:2.5px;width:1px;height:3.5px}
+.status-item .glyph-pause::before{left:2.8px}.status-item .glyph-pause::after{right:2.8px}
+.status-item .glyph-check::after{left:2.6px;top:1.2px;width:2px;height:4px;border-width:0 1px 1px 0}
+.status-item .glyph-excl::before{left:3.9px;top:1.6px;width:1px;height:3px}
+.status-item .glyph-excl::after{left:3.9px;top:5.6px;width:1px;height:1px}
+.btn{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:var(--r);border:.5px solid var(--hair-strong);background:transparent;color:var(--t1);font:500 12px/1 var(--mf);letter-spacing:-.005em;white-space:nowrap}
+.btn-primary{background:rgba(255,255,255,.92);color:#111;border-color:transparent}
+.btn-danger{border-color:transparent;color:var(--t2)}
+.hold{margin:2px 0;padding:10px 12px;border-radius:8px;background:rgba(217,160,60,.07);box-shadow:inset 0 0 0 .5px rgba(217,160,60,.22)}
+.hold .row{padding:0;min-height:0}
+.hold .row-title{font-weight:500}
+.hold .row-actions{margin-top:10px}
+.stuck{margin:2px 0;padding:10px 12px;border-radius:8px;background:rgba(229,72,77,.07);box-shadow:inset 0 0 0 .5px rgba(229,72,77,.22)}
+.stuck .row{padding:0;min-height:0;grid-template-rows:auto auto;grid-template-columns:16px minmax(0,1fr) auto}
+.stuck .row-title{font-weight:500;grid-column:2}
+.stuck .row-sub{grid-column:2/4;margin-top:2px;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.stuck .acts{grid-column:3;grid-row:1;align-self:start;margin:-4px -4px 0 0}
+.screen.light .stuck{background:rgba(201,56,56,.07);box-shadow:inset 0 0 0 .5px rgba(201,56,56,.28)}
+.ring{--p:0;--size:16px;--stroke:1.5px;grid-column:1;grid-row:1;width:var(--size);height:var(--size);border-radius:50%;background:conic-gradient(var(--t1) calc(var(--p)*1%),rgba(255,255,255,.10) 0);-webkit-mask:radial-gradient(farthest-side,#0000 calc(100% - var(--stroke) - .5px),#000 calc(100% - var(--stroke)));mask:radial-gradient(farthest-side,#0000 calc(100% - var(--stroke) - .5px),#000 calc(100% - var(--stroke)));display:inline-block;flex:none}
+.ring.lg{--size:28px;--stroke:2px}
+.now-job{display:grid;grid-template-columns:28px 1fr;column-gap:12px;align-items:center;padding:4px 12px 8px}
+.now-job .jt{font-weight:500}
+.now-job .js{font-size:11px;line-height:14px;color:var(--t3);letter-spacing:0;margin-top:2px}
+.acts{grid-column:3;grid-row:1/3;align-self:center;display:flex;gap:4px;margin-right:-4px}
+.act{width:24px;height:24px;display:grid;place-items:center;padding:0;border:0;border-radius:var(--r);background:none;color:var(--t3)}
+.act.is-done{color:var(--ok)}
+.act svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.25;stroke-linecap:round;stroke-linejoin:round}
+.row.docrow{grid-template-rows:auto auto;grid-template-columns:16px minmax(0,1fr) 108px}
+.row.docrow .row-sub{grid-column:2;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.row.docrow .row-title{grid-column:2}
+/* light appearance: the same tokens, light values */
+.screen.light{--wall:#7e93ad;--s0:#ffffff;--s1:#dfdfe4;--s2:#ececef;--t1:#111113;--t2:#6b6b70;--t3:#96969c;--hair:#0000001a;--hair-strong:#00000029;--ok:#1b9e4b;--hold:#e6870a;--bad:#e0312e;--hold-ink:#8a5500}
+.screen.light .mbar{background:#ffffffb8;color:#000000d9;border-bottom:.5px solid #00000024}
+.screen.light .mbar .l span:not(.apple):not(.app){color:#000000b8}
+.screen.light .mbar .clock{color:#000000d9}
+.screen.light .status-item{color:#000000d9}
+.screen.light .status-item.is-open{background:#00000021}
+.screen.light .panel{border-color:transparent;box-shadow:0 0 0 .5px #00000029,0 1px 2px #0000001f,0 12px 36px #00000029,inset 0 .5px 0 #ffffff}
+.screen.light .section-label{color:var(--t2);font-weight:600}
+.screen.light .glyph{border-width:1.5px}
+.screen.light .ring{background:conic-gradient(var(--t1) calc(var(--p)*1%),#0000001f 0)}
+.screen.light .btn{background:var(--s0)}
+.screen.light .btn-primary{background:#111113;color:#ffffff;border-color:#111113;box-shadow:inset 0 .5px 0 #ffffff26}
+.screen.light .btn-danger{color:var(--bad);border-color:#e0312e33;background:transparent}
+.screen.light .hold{background:#fff6e5;box-shadow:0 0 0 .5px #e6870a66}
+.screen.light .hold .row-title,.screen.light .hold .row-sub,.screen.light .hold .quiet{color:var(--hold-ink)}
+.screen.light .act{color:#7b7b81}
+.screen.light .win{box-shadow:0 8px 24px rgba(0,0,0,.22),0 0 0 .5px #00000024}
+.scrollbox{position:relative;max-height:236px;overflow:hidden}
+.scrollbox::after{content:"";position:absolute;right:3px;top:6px;width:4px;height:88px;border-radius:2px;background:rgba(255,255,255,.22)}
+.screen.light .scrollbox::after{background:rgba(0,0,0,.22)}
+.scrollbox .fade{position:absolute;left:0;right:0;bottom:0;height:28px;background:linear-gradient(to bottom,transparent,var(--s0))}
+.row-title.gone{text-decoration:line-through;color:var(--t2)}
+.act.off{opacity:.38}
+.strip{display:flex;justify-content:flex-end;gap:4px;padding:0 12px 6px 44px;font:400 10px/12px var(--mf);letter-spacing:0;color:var(--t3)}
+.strip span{width:24px;text-align:center}
+.tip{position:absolute;background:#111113;color:#f2f2f7;font:400 11px/14px var(--mf);padding:4px 7px;border-radius:5px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.screen.light .tip{background:#f8f8f8;color:#111113;box-shadow:0 0 0 .5px #00000029,0 2px 8px rgba(0,0,0,.18)}
+.btn.confirm{border-color:transparent;color:var(--bad);background:rgba(229,72,77,.10)}
+.bigmail{padding:4px 12px 2px 44px;font:500 15px/20px var(--mf);letter-spacing:-.01em;color:var(--t1)}
+.bigmail small{display:block;font:400 11px/14px var(--mf);color:var(--t2);letter-spacing:0;margin-top:2px}
+.urlline{margin:4px 12px 6px 44px;padding:5px 8px;border-radius:6px;background:rgba(255,255,255,.06);font:400 11px/14px var(--mono);color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.screen.light .urlline{background:#00000008}
+.collapsed{opacity:.45}
+.row.is-busy .acts{display:none}
+.ring.wait{--p:28;animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(1turn)}}
+@media (prefers-reduced-motion:reduce){.ring.wait{animation:none}}
+.row-chevron{min-height:28px}
+.row-chevron .row-title{font-size:12px;color:var(--t3);grid-column:2}
+.row-chevron svg{grid-column:3;width:12px;height:12px;fill:none;stroke:var(--t3);stroke-width:1.25;stroke-linecap:round;stroke-linejoin:round}
+.row-chevron.is-open svg{transform:rotate(180deg)}
+.switch{grid-column:3;grid-row:1;position:relative;width:26px;height:16px;border-radius:8px;background:rgba(255,255,255,.24);display:inline-block;justify-self:end}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.switch.is-on{background:var(--t1)}
+.switch.is-on::after{left:12px;background:var(--s0)}
+.screen.light .switch{background:rgba(0,0,0,.12)}
+.confirm{grid-column:3;grid-row:1/3;align-self:center;display:flex;gap:2px}
+.confirm .btn{height:20px;padding:0 8px;border-color:transparent;font-size:12px}
+.confirm .btn.dz{color:var(--bad)}
+.row:has(.confirm) .row-sub{grid-column:2}
+.row:has(.confirm) .row-title{grid-column:2}
+.empty{padding:28px 12px 20px;text-align:center}
+.empty .mark{display:block;font-size:28px;font-weight:500;margin-bottom:8px}
+.empty p{margin:0 0 14px;font-size:12px;color:var(--t2)}
+.acts.one{grid-row:1}
+.act-close{margin-left:4px}
+.act,.row-title{position:relative}
+[data-tip]::after{content:attr(data-tip);position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);white-space:nowrap;padding:3px 7px;border-radius:4px;background:#2c2c2e;color:var(--t1);font:400 11px/14px var(--mf);letter-spacing:0;box-shadow:0 0 0 .5px rgba(255,255,255,.12),0 2px 8px rgba(0,0,0,.4);opacity:0;pointer-events:none;z-index:2}
+.show-tip::after{opacity:1}
+.acts [data-tip]::after{left:auto;right:0;transform:none}
+.row-title[data-tip]::after{left:0;transform:none;top:calc(100% + 4px)}
+.screen.light [data-tip]::after{background:#f2f2f3;box-shadow:0 0 0 .5px rgba(0,0,0,.14),0 2px 8px rgba(0,0,0,.14)}
+.row-title{display:flex;min-width:0}
+.row-title .head{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row-title .tail{flex:none;white-space:pre}
+.board{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0}
+.bcell{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;grid-template-columns:40px minmax(0,1fr);gap:4px 10px;align-items:center}
+.bcell.pick{border-color:var(--fg)}
+.row.hasact{grid-template-columns:16px minmax(0,1fr) auto auto}
+.row.hasact .acts{grid-column:4;grid-row:1}
+.bcell .bi{width:40px;height:40px;border-radius:9px;background:#1c1c1e;display:grid;place-items:center;grid-row:1/3}
+.bcell .bi svg{width:22px;height:22px;fill:none;stroke:#c9c9cf;stroke-width:1.25;stroke-linecap:round;stroke-linejoin:round}
+.bcell .bn{font-size:13px;font-weight:500}
+.bcell .bs{font-size:12px;color:var(--muted);font-family:var(--mono)}
+.bgroup{margin:18px 0 8px;font-size:13px;font-weight:600}
+.row.compact .acts{grid-row:1;align-self:center}
+.row-live{grid-template-rows:auto auto}
+.row-live .btn{grid-column:3;grid-row:1/3;align-self:center}
+.win{position:absolute;left:16px;top:36px;width:300px;background:#f6f5f0;color:#2a2a28;border-radius:8px;padding:10px 12px;font:400 11.5px/1.45 var(--mf);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.win .wt{font-weight:600;font-size:12px;margin-bottom:4px;color:#555}
+.win .q{background:#e9e6dc;border-radius:6px;padding:6px 8px;margin:6px 0 0;border-left:3px solid #ba7517}
+@media (max-width:640px){.win{display:none}.fb{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:no-preference){.vote button{transition:background .12s}}
+</style>
+
+<div class="wrap">
+<header class="top">
+  <h1>Один день с gdoc в трее, третья версия</h1>
+  <p>Та же логика, что во второй версии, но перерисовано по спецификации дизайнеров: панель 320 px на 8-точечной сетке, два веса шрифта, цвет только в глифах состояния, числа табличные и выровнены вправо, холд как тонированная карточка, а не янтарный блок.</p>
+  <div class="rule"><b>Правило иконки, когда идёт несколько вещей сразу.</b> Иконка одна, показывает самое срочное. Меню показывает всё.
+  <ol><li>Восклицательный знак: что-то застряло и ждёт твоего взгляда.</li><li>Пауза: холд ждёт твоего «да».</li><li>Кольцо: идёт конечное задание (publish, restyle, export, align).</li><li>⁘: идёт лайв, ничего не ждёт.</li><li>Ничего: gdoc ничего не делает.</li></ol>
+  В строке меню цвета нет никогда, как у всех системных значков. Галочка на пять секунд после любой подтверждённой записи, потом иконка возвращается к тому, что было. Цвет живёт только в меню, в глифах слева от строк.</div>
+  <div class="status" id="status">сохраняю в браузере</div>
+</header>
+<main id="main"></main>
+<p class="foot">Меню из четырёх разделов: NOW, DOCUMENTS, TODAY, HEALTH. У документа четыре действия значками: Google Docs в Chrome, md в Obsidian, ветка сессии Claude в Desktop, копировать ссылку. Открытые вопросы: нужен ли таймер холда и что показывать в тишине.</p>
+</div>
+
+<script>
+const wifi='<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 6a9.5 9.5 0 0 1 13 0M3.8 8.5a6.3 6.3 0 0 1 8.4 0M6.1 11a3 3 0 0 1 3.8 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="13.2" r="1.1" fill="currentColor"/></svg>';
+const batt='<svg viewBox="0 0 26 12" aria-hidden="true" style="width:26px"><rect x="0.75" y="0.75" width="21" height="10.5" rx="2.6" fill="none" stroke="currentColor" stroke-width="1.1" opacity=".55"/><rect x="2.3" y="2.3" width="16.5" height="7.4" rx="1.4" fill="currentColor"/><rect x="23" y="3.8" width="1.8" height="4.4" rx="0.9" fill="currentColor" opacity=".5"/></svg>';
+const cc='<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="2.5" width="14" height="4.5" rx="2.25" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="11.5" cy="4.75" r="1.4" fill="currentColor"/><rect x="1" y="9" width="14" height="4.5" rx="2.25" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="4.5" cy="11.25" r="1.4" fill="currentColor"/></svg>';
+const G=(k,extra)=>`<span class="glyph ${k}${extra?' '+extra:''}"></span>`;
+const RING=(p,lg)=>`<span class="ring${lg?' lg':''}" style="--p:${p}"></span>`;
+const BAR=(status,time,open)=>`<div class="mbar"><div class="l"><span class="apple"></span><span class="app">Claude</span><span>File</span><span>Edit</span><span>View</span><span>Window</span></div><div class="sys">${status?`<span class="status-item${open?' is-open':''}">${status}</span>`:''}${cc}${wifi}${batt}<span class="clock">Thu 16 Oct&nbsp;&nbsp;${time}</span></div></div>`;
+const ST=(badge)=>`<span class="mark">⁘</span>${badge||''}`;
+const P=(inner,account)=>`<div class="panel"><div class="panel-header"><span class="mark">⁘</span><span class="name">gdoc</span><span class="account">${account===undefined?'nail@example.com':account}</span></div>${inner}</div>`;
+const SEC=(label,right,rows)=>`<div class="section"><div class="section-label">${label}${right?`<span>${right}</span>`:''}</div>${rows||''}</div>`;
+const ROW=(glyph,title,value,sub,opts)=>{opts=opts||{};const two=sub?' two':'';const acts=opts.acts?' acts':'';return `<div class="row${two}${acts}${opts.cls?' '+opts.cls:''}">${glyph}<span class="row-title">${title}</span><span class="row-value">${value||''}</span>${sub?`<span class="row-sub">${sub}</span>`:''}${opts.acts?`<div class="row-actions">${opts.acts.map(b=>`<span class="btn${b.p?' btn-primary':''}${b.d?' btn-danger':''}">${b.t}</span>`).join('')}</div>`:''}</div>`;};
+const LIVE=(title,sub)=>`<div class="row two row-live">${G('glyph-dot glyph-live')}<span class="row-title">${title}</span><span class="row-sub">${sub}</span><div class="acts" style="grid-row:1/3"><span class="act" data-tip="Stop watching">${IC.stop}</span></div></div>`;
+const MORE=(t,open)=>`<div class="row row-chevron${open?' is-open':''}"><span class="row-title">${t}</span>${IC.chev}</div>`;
+const QUIET=(t)=>`<div class="quiet">${t}</div>`;
+const HOLD=(age,sub,sub2,bs)=>`<div class="hold"><div class="row two">${G('glyph-pause glyph-hold')}<span class="row-title">Waiting for you · ${age}</span><span class="row-sub">${sub}</span></div><div class="quiet" style="padding:6px 0 0 24px;color:var(--t2)">${sub2}</div><div class="row-actions" style="margin-top:10px;padding-left:24px">${bs.map(b=>`<span class="btn${b.p?' btn-primary':''}">${b.t}</span>`).join('')}</div></div>`;
+const STUCK=(title,reason,noteTip,actsHtml)=>`<div class="stuck"><div class="row two">${G('glyph-excl glyph-bad')}${TT(title)}${actsHtml!==undefined?actsHtml:`<div class="acts"><span class="act" data-tip="${noteTip||'Open md in Obsidian'}">${IC.md}</span><span class="act" data-tip="Continue with Claude">${IC.branch}</span><span class="act act-close" data-tip="Dismiss">${IC.xmark}</span></div>`}<span class="row-sub">${reason}</span></div></div>`;
+const JOB=(p,title,sub)=>`<div class="now-job">${RING(p,true)}<div><div class="jt">${title}</div><div class="js">${sub}</div></div></div>`;
+const IC={
+ gdocs:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8.5 2.5H4.5a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V9"/><path d="M9.5 2.5h3v3M12.5 2.5 8 7"/></svg>',
+ md:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2h7.5a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4.5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M2.5 5h3M2.5 8h3M2.5 11h3"/><path d="M7.5 6.5h3M7.5 9.5h3"/></svg>',
+ branch:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5h8a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H7.5L4.5 14v-2.5H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2z"/><path d="M8 4.25C8 6.25 9 7 11 7C9 7 8 7.75 8 9.75C8 7.75 7 7 5 7C7 7 8 6.25 8 4.25z"/></svg>',
+ link:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 5.5V3.5a1.5 1.5 0 0 1 1.5-1.5h5.5A1.5 1.5 0 0 1 14 3.5V9a1.5 1.5 0 0 1-1.5 1.5h-2"/><path d="M3.5 5.5h5.5A1.5 1.5 0 0 1 10.5 7v5.5A1.5 1.5 0 0 1 9 14H3.5A1.5 1.5 0 0 1 2 12.5V7a1.5 1.5 0 0 1 1.5-1.5z"/></svg>',
+ chain:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6.7 8.7a3.3 3.3 0 0 0 5 .4l2-2a3.3 3.3 0 0 0-4.7-4.7L7.8 3.5"/><path d="M9.3 7.3a3.3 3.3 0 0 0-5-.4l-2 2a3.3 3.3 0 0 0 4.7 4.7l1.2-1.1"/></svg>',
+ gitbranch:'<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="4" cy="3" r="1.5"/><circle cx="4" cy="13" r="1.5"/><circle cx="12" cy="4.5" r="1.5"/><path d="M4 4.5v7M12 6c0 3.5-8 2-8 5.5"/></svg>',
+ gem:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5l5 3.2-1.4 9.8H4.4L3 4.7z"/><path d="M3 4.7l5 2.4 5-2.4M8 7.1v7.4"/></svg>',
+ page:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1.75h5l3 3v9.5H4z"/><path d="M9 1.75v3h3"/><path d="M6 8h4M6 10.5h4"/></svg>',
+ browser:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h9A1.5 1.5 0 0 1 14 4.5v7a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"/><path d="M2 6.5h12"/></svg>',
+ mdbadge:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4h11a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M3.5 10V6l2 2.5L7.5 6v4"/><path d="M9.5 8.5 11 10l1.5-1.5M11 10V6"/></svg>',
+ hashpage:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1.75h5l3 3v9.5H4z"/><path d="M9 1.75v3h3"/><path d="M6 8h4.5M6 10.5h4.5M7.75 6.75l-.75 5M9.75 6.75l-.75 5"/></svg>',
+ playbubble:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5h8a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H7.5L4.5 14v-2.5H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2z"/><path d="M6.75 4.75v4.5L10.25 7z"/></svg>',
+ twobubbles:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 5.5h6.5a1.5 1.5 0 0 1 1.5 1.5v3.5a1.5 1.5 0 0 1-1.5 1.5H6l-2.5 2.25V12H3a1.5 1.5 0 0 1-1.5-1.5V7A1.5 1.5 0 0 1 3 5.5z"/><path d="M5.5 5V3a1.5 1.5 0 0 1 1.5-1.5h6A1.5 1.5 0 0 1 14.5 3v4a1.5 1.5 0 0 1-1.5 1.5h-2"/></svg>',
+ copyrect:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 5.5V3.5a1.5 1.5 0 0 1 1.5-1.5h5.5A1.5 1.5 0 0 1 14 3.5V9a1.5 1.5 0 0 1-1.5 1.5h-2"/><path d="M3.5 5.5h5.5A1.5 1.5 0 0 1 10.5 7v5.5A1.5 1.5 0 0 1 9 14H3.5A1.5 1.5 0 0 1 2 12.5V7a1.5 1.5 0 0 1 1.5-1.5z"/></svg>',
+ share:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 6H4.75A1.25 1.25 0 0 0 3.5 7.25v5.5A1.25 1.25 0 0 0 4.75 14h6.5a1.25 1.25 0 0 0 1.25-1.25v-5.5A1.25 1.25 0 0 0 11.25 6H10.5"/><path d="M8 1.75V10"/><path d="M5.5 4.25 8 1.75l2.5 2.5"/></svg>',
+ done:'<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.25"/><path d="M5.25 8.25l1.9 1.9 3.6-4"/></svg>',
+ down:'<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.25"/><path d="M8 4.75v6.5M5.25 8.5 8 11.25l2.75-2.75"/></svg>',
+ signin:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9 2.75h3a1.5 1.5 0 0 1 1.5 1.5v7.5a1.5 1.5 0 0 1-1.5 1.5H9"/><path d="M2.5 8h7M7 5.5 9.5 8 7 10.5"/></svg>',
+ signout:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M7 2.75H4a1.5 1.5 0 0 0-1.5 1.5v7.5a1.5 1.5 0 0 0 1.5 1.5h3"/><path d="M6.5 8h7M11 5.5 13.5 8 11 10.5"/></svg>',
+ x:'<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.25"/><path d="M5.75 5.75l4.5 4.5M10.25 5.75l-4.5 4.5"/></svg>',
+ stop:'<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.25"/><rect x="5.5" y="5.5" width="5" height="5" rx="1"/></svg>',
+ xmark:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/></svg>',
+ chev:'<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5l3-3"/></svg>'};
+const A1=(icon,tip,off)=>`<div class="acts one"><span class="act${off?' off':''}" data-tip="${tip}">${icon}</span></div>`;
+const A2=(a,b)=>`<div class="acts one"><span class="act" data-tip="${a[1]}">${a[0]}</span><span class="act" data-tip="${b[1]}">${b[0]}</span></div>`;
+const ACTS=(opts)=>{opts=opts||{};const off=opts.off||{};const a=(k,ic,tip,offTip)=>`<span class="act${off[k]?' off':''}" data-tip="${off[k]?offTip:tip}">${ic}</span>`;return `<div class="acts">${a('gdocs',IC.gdocs,'Open in Google Docs','No Google Doc yet')}${a('md',IC.md,'Open the note in Obsidian','No note is paired with this document')}${a('branch',IC.branch,'Continue with Claude','Install the Desktop extension in Health')}${off.link?a('link',IC.link,'','No link yet'):`<span class="act${opts.copied?' is-done show-tip':''}" data-tip="${opts.copied?'Copied':'Copy link'}">${opts.copied?IC.done:IC.link}</span>`}</div>`;};
+const TT=(t)=>{if(t.length<=26)return `<span class="row-title" data-tip="${t}"><span class="head">${t}</span></span>`;const i=t.lastIndexOf(' ');const tail=t.slice(i);const head=tail.length<=14?t.slice(0,i):t;return `<span class="row-title" data-tip="${t}"><span class="head">${head}</span>${tail.length<=14?`<span class="tail">${tail}</span>`:''}</span>`;};
+const DOC=(g,t,v,s,opts)=>{opts=Object.assign({},opts||{});const off=Object.assign({},opts.off||{});if(/not in the hub/.test(s))off.md=1;if(/no doc yet/.test(s)){off.gdocs=1;off.link=1;}opts.off=off;return `<div class="row two docrow">${g}${TT(t)}<span class="row-sub">${v?v+' · ':''}${s}</span>${ACTS(opts)}</div>`;};
+
+const LOG=[
+ ['09:05',ROW(G('glyph-excl glyph-bad'),'Publish · Chapter 4','09:05','stopped at an SVG picture, line 41 · nothing created')],
+ ['10:12',ROW(G('glyph-check glyph-ok'),'Restyle · Partner bank setup','10:12','38 paragraphs · cover proposed, waiting for the author')],
+ ['11:38',ROW(G('glyph-check glyph-ok'),'Comment · Northwind × Altery','11:38','on “A business relationship…” · from Claude Code · verified')],
+ ['11:40',ROW(G('glyph-check glyph-ok'),'Reply · Chapter 5, “the issuer in 4.2”','11:40','your ai? · verified')],
+ ['13:10',ROW(G('glyph-dot glyph-dim'),'Live started · Chapter 5 storyline','13:10')],
+ ['14:31',ROW(G('glyph-check glyph-ok'),'Publish · Chapter 4','14:31','7 pages · Falcon / Drafts · link written into the note')],
+ ['15:02',ROW(G('glyph-check glyph-ok'),'Proposal · Chapter 5, section 4.2','15:02','your ai! · 2 suggestions · verified')],
+ ['16:20',ROW(G('glyph-pause glyph-hold'),'Hold · Group Channel Policy','16:20','reply held by rule Dictated · waiting in Desktop chat')],
+ ['16:41',ROW(G('glyph-check glyph-ok'),'Reply · Group Channel Policy','16:41','approved by you in chat · verified')],
+ ['18:55',ROW(G('glyph-dot glyph-dim'),'Live stopped · Chapter 5','18:55','5 h 45 min · answered 4 · proposed 2 · 1 waiting for the author')],
+];
+const log=(upto,max)=>{const rows=LOG.filter(r=>r[0]<=upto).reverse();const n=max||6;return rows.slice(0,n).map(r=>r[1]).join('')+(rows.length>n?MORE(`Show ${rows.length-n} more`):'');};
+const HROW=(g,t,v,acts)=>`<div class="row compact${acts?' hasact':''}">${g}<span class="row-title">${t}</span><span class="row-value">${v}</span>${acts||''}</div>`;
+const HEALTH_TAIL=HROW('<span class="glyph" style="border-color:transparent"></span>','Launch at login','<span class="switch"></span>')+HROW('<span class="glyph" style="border-color:transparent"></span>','Quit','⌘Q');
+const HEALTH_ALL=HROW(G('glyph-check glyph-ok'),'Account','nail@example.com',A1(IC.signout,'Sign out'))+HROW(G('glyph-excl glyph-bad'),'Network','Google not reachable')+QUIET('the internet is up, the handshake with Google fails')+HROW(G('glyph-check glyph-ok'),'gdoc','v2.12.0 · v2.13.0 available',A1(IC.down,'Update to v2.13.0'))+HROW(G('glyph-check glyph-ok'),'Skills','v2.12.0 · altery plugin')+HROW(G('glyph-check glyph-ok'),'Claude Desktop','extension connected')+HROW('<span class="glyph" style="border-color:transparent"></span>','Thread mark','⁘')+HEALTH_TAIL;
+const HEALTH_OK=ROW(G('glyph-check glyph-ok'),'All good','v2.12.0','',{cls:'compact'});
+
+const SCENES=[
+{id:"r1",time:"09:04",title:"Публикуешь Chapter 4",story:"Ты сказал в Claude Code «опубликуй главу». В строке меню знак и кольцо. Кликнул: в NOW шаг и факты, в DOCUMENTS первый документ дня, лог пока пуст.",
+ screen:BAR(ST(RING(50)),'09:04',true)+P(
+  SEC('Now','',JOB(50,'Publishing · Chapter 4','step 2 of 4 · started 09:03 · Falcon / Drafts')+ROW(G('glyph-check glyph-ok'),'Built the docx','7 pages · 3 pictures','',{cls:'compact'})+ROW(G('glyph-check glyph-ok'),'Uploaded','1.2 MB','',{cls:'compact'})+ROW(RING(66),'Reading back','2 of 3','',{cls:'compact'})+ROW(G('glyph-empty'),'<span style="color:var(--t3)">Link into the note</span>','','',{cls:'compact'}))
+ +SEC('Documents','',DOC(G('glyph-empty'),'Chapter 4','publishing','falcon/chapters/04.md · no doc yet'))
+ +SEC('Today','',QUIET('nothing yet'))),
+ cap:"У строки документа четыре значка справа, всегда видны, в третичном цвете, без рамок. Слева направо: <b>Google Docs</b> открывает документ в Chrome; <b>md</b> открывает заметку в Obsidian, в том vault, где она лежит; <b>ветка</b> делает ответвление той сессии Claude Code, где это публиковали, и открывает его в Claude Desktop, чтобы продолжить работу над документом; <b>ссылка</b> копирует ссылку на Google Doc для коллег и на секунду становится зелёной галочкой. В NOW и TODAY значков нет: лог это факты, а не кнопки."},
+{id:"r2",time:"09:05",title:"Публикация встала",story:"Сборка упёрлась в SVG. В строке меню восклицательный знак, без цвета, как у системных значков. В NOW красная карточка: причина с местом, потом состояние мира, в две строки. Кнопок нет: два живых значка, заметка на строке 41 и сессия, и крестик, как ты просил: карточка уходит из NOW, восклицательный знак в строке меню гаснет, строка в TODAY остаётся. Подсказка показана на значке заметки: так выглядит наведение, через полсекунды.",
+ screen:BAR(ST(G('glyph-excl')),'09:05',true)+P(
+  SEC('Now','',STUCK('Publish stopped · Chapter 4','SVG picture at line 41. Nothing was created; the note is unchanged.','Open note at line 41').replace('class="act" data-tip="Open note at line 41"','class="act show-tip" data-tip="Open note at line 41"'))
+ +SEC('Documents','',DOC(G('glyph-excl glyph-bad'),'Chapter 4','stopped','falcon/chapters/04.md · no doc yet'))
+ +SEC('Today','',log('09:05'))),
+ cap:"Дизайнер убрал «Got it»: крестик приглашает закрыть проблему, не открыв заметку. Значков только два, потому что документа ещё нет: Google Docs и ссылка были бы мёртвыми, и именно мёртвые кнопки делали карточку «снова кнопками». Правило для текста причины: сначала причина с местом, потом состояние, не больше 80 знаков."},
+{id:"r3",time:"11:40",title:"gdoc оставил комментарий и ответил в тред",story:"Из Claude Code ты попросил оставить комментарий на цитату в документе Elliptic. Потом в ревью Chapter 5 gdoc ответил на твой ai?. Обе записи прочитаны обратно. Галочка на пять секунд поверх восклицательного знака, в логе две строки: что, где, по чьей просьбе. Карточка «застряло» в NOW остаётся: публикацию Chapter 4 ты ещё не перезапустил.",
+ screen:BAR(ST(G('glyph-check')),'11:40',false)+P(
+  SEC('Now','',STUCK('Publish stopped · Chapter 4','SVG picture at line 41. Nothing was created; the note is unchanged.','Open note at line 41'))
+ +SEC('Documents','',DOC(G('glyph-check glyph-ok'),'Ch 5. Commercial Model: review draft v0.1','replied 11:40','falcon/chapters/05.md ↔ Falcon / Drafts',{copied:true})+DOC(G('glyph-check glyph-ok'),'Northwind, Altery and a wallet partner call: screening quota and conversion rate','commented 11:38','not in the hub')+DOC(G('glyph-check glyph-ok'),'Partner bank setup','restyled 10:12','not in the hub')+DOC(G('glyph-excl glyph-bad'),'Chapter 4','stopped 09:05','falcon/chapters/04.md · no doc yet'))
+ +SEC('Today','',log('11:40'))),
+ cap:"<b>TODAY это лог всего, что gdoc сделал.</b> Каждая строка: что, в каком документе, по чьей просьбе, подтверждено ли. <b>DOCUMENTS</b> тот же лог, сгруппированный по документам. На строке Chapter 5 ссылка только что скопирована: значок «копировать» на секунду стал зелёной галочкой и вернётся сам, это единственный цвет, который заходит в ряд значков."},
+{id:"r3l",time:"11:40",title:"Тот же экран в светлой теме",story:"Элемент строки меню не выбирает тему сам, он следует за системной. Иконка в баре это шаблонное изображение, macOS красит её сам. Панель строится на семантических цветах, и те же три поверхности, три уровня текста и волосяные линии получают светлые значения. Цвета состояний чуть темнее, чтобы держать контраст.",
+ light:true,
+ screen:BAR(ST(G('glyph-check')),'11:40',false)+P(
+  SEC('Now','',STUCK('Publish stopped · Chapter 4','SVG picture at line 41. Nothing was created; the note is unchanged.','Open note at line 41'))
+ +SEC('Documents','',DOC(G('glyph-check glyph-ok'),'Ch 5. Commercial Model: review draft v0.1','replied 11:40','falcon/chapters/05.md ↔ Falcon / Drafts',{copied:true})+DOC(G('glyph-check glyph-ok'),'Northwind, Altery and a wallet partner call: screening quota and conversion rate','commented 11:38','not in the hub')+DOC(G('glyph-check glyph-ok'),'Partner bank setup','restyled 10:12','not in the hub')+DOC(G('glyph-excl glyph-bad'),'Chapter 4','stopped 09:05','falcon/chapters/04.md · no doc yet'))
+ +SEC('Today','',log('11:40'))),
+ cap:"Светлая тема не отдельная работа: это те же токены с другими значениями. Выбирать её не надо, она включается вместе с системной."},
+{id:"r4",time:"14:02",title:"Лайв идёт, ты в Miro",story:"С 13:10 ты запустил лайв на Chapter 5. В строке меню восклицательный знак всё ещё стоит: утренняя публикация так и не перезапущена, и карточка «застряло» по правилу живёт в NOW до перезапуска. Под ней лайв со значком Stop.",
+ screen:BAR(ST(G('glyph-excl')),'14:02',true)+P(
+  SEC('Now','',STUCK('Publish stopped · Chapter 4','SVG picture at line 41. Nothing was created; the note is unchanged.','Open note at line 41')+LIVE('Live · Chapter 5 storyline','since 13:10 · quiet 52 min · answered 1'))
+ +SEC('Documents','',DOC(G('glyph-dot glyph-live'),'Ch 5. Commercial Model: review draft v0.1','live','falcon/chapters/05.md ↔ Falcon / Drafts')+DOC(G('glyph-check glyph-ok'),'Northwind, Altery and a wallet partner call: screening quota and conversion rate','commented 11:38','not in the hub')+DOC(G('glyph-check glyph-ok'),'Partner bank setup','restyled 10:12','not in the hub')+DOC(G('glyph-excl glyph-bad'),'Chapter 4','stopped 09:05','falcon/chapters/04.md · no doc yet'))
+ +SEC('Today','',log('13:10'))
+ +SEC('Health','',HEALTH_OK)),
+ cap:"<b>Stop</b> теперь значок, квадрат в круге, по общему правилу: действие это значок. Останавливает сессию в Claude Code как Ctrl-C, без подтверждения: остановка дешёвая и обратимая. Cancel, крест в круге, это другое: бросить то, что должно было завершиться, например вход."},
+{id:"r5",time:"14:30",title:"Пересечение: лайв идёт, и ты публикуешь снова",story:"Ты сделал PNG и снова публикуешь Chapter 4, пока лайв продолжается. В строке меню кольцо: задание срочнее тихого лайва. В NOW обе строки. Когда публикация закончится: галочка пять секунд, потом снова ⁘.",
+ screen:BAR(ST(RING(75)),'14:30',true)+P(
+  SEC('Now','',JOB(75,'Publishing · Chapter 4','step 3 of 4 · reading back 1 of 3 · started 14:29')+LIVE('Live · Chapter 5 storyline','since 13:10 · quiet 1 h 20 min'))
+ +SEC('Documents','',DOC(G('glyph-empty'),'Chapter 4','publishing','falcon/chapters/04.md → Falcon / Drafts')+DOC(G('glyph-dot glyph-live'),'Ch 5. Commercial Model: review draft v0.1','live','falcon/chapters/05.md ↔ Falcon / Drafts'))
+ +SEC('Today','',log('13:10'))),
+ cap:"Ответ на «как всё пересекается»: иконка одна и показывает верхнее из правила наверху, меню показывает всё, что идёт."},
+{id:"r6",time:"16:34",title:"Пересечение: холд в Desktop поверх лайва",story:"Лайв идёт. В Desktop ты голосом попросил ответить в тред политики, правило Dictated задержало ответ, ты ушёл. Через 14 минут в строке меню пауза: холд важнее лайва. В NOW карточка холда и под ней лайв.",
+ screen:BAR(ST(G('glyph-pause')),'16:34',true)+P(
+  SEC('Now','',HOLD('14 min','Reply to a thread · Group Channel Policy · rule Dictated','Posts from nail@example.com with the ⁘ mark. The text is in the chat.',[{t:'Open chat',p:1},{t:'Release without writing'}])+LIVE('Live · Chapter 5 storyline','since 13:10 · quiet 2 h'))
+ +SEC('Documents','',DOC(G('glyph-pause glyph-hold'),'Altery Group Channel Management Policy','hold','05-rules/group-channel.md ↔ Policies')+DOC(G('glyph-dot glyph-live'),'Ch 5. Commercial Model: review draft v0.1','live','falcon/chapters/05.md')+DOC(G('glyph-check glyph-ok'),'Chapter 4','published 14:31','falcon/chapters/04.md ↔ Falcon / Drafts'))
+ +SEC('Today','',log('16:20',4)))+`<div class="win"><div class="wt">Claude Desktop · chat</div>Ready to reply in the thread “Who signs this for the second entity?”. The Dictated rule held the write: the reply repeats the comment's own words.<div class="q">Reply: The Dutch entity signs through its own board; see the delegation table in 05-rules.<br><br>Read it and say “yes” to post.</div></div>`,
+ cap:"«Open chat» не открывает новое окно: он выводит вперёд Claude Desktop на тот самый разговор, который поднял холд. Холд в логе тоже строка. Когда ты одобришь в чате, появится вторая: «Reply · approved by you in chat · verified»."},
+{id:"r7",time:"16:41",title:"Холд закрыт: ты одобрил в чате",story:"Ты открыл чат, прочитал, сказал «да». Галочка пять секунд, иконка снова ⁘, лайв продолжается. В логе: холд поднят в 16:20, ответ одобрен в 16:41.",
+ screen:BAR(ST(G('glyph-check')),'16:41',false)+P(
+  SEC('Now','',LIVE('Live · Chapter 5 storyline','since 13:10 · quiet 2 h'))
+ +SEC('Documents','',DOC(G('glyph-check glyph-ok'),'Altery Group Channel Management Policy','replied 16:41','05-rules/group-channel.md ↔ Policies')+DOC(G('glyph-dot glyph-live'),'Ch 5. Commercial Model: review draft v0.1','live','falcon/chapters/05.md'))
+ +SEC('Today','',log('16:41',5))),
+ cap:"Таймера у холда нет: он живёт, пока жив чат Desktop, который его поднял. Закрыл чат, холд исчез, в логе «Hold closed · chat ended · nothing written». Так gdoc устроен уже сейчас. Таймер как настройка, выключенная по умолчанию. Нужен?"},
+{id:"r8",time:"17:05",title:"Что-то не так с инструментом",story:"В офисе gdoc не достучался до Google. Иконка не меняется, ты так решил. Кликнул, в HEALTH видно что именно, и значок Update.",
+ screen:BAR(ST(),'17:05',true)+P(
+  SEC('Now','',LIVE('Live · Chapter 5 storyline','last poll failed 17:04 · network'))
+ +SEC('Health','',HEALTH_ALL)),
+ cap:"DOCUMENTS и TODAY здесь свёрнуты, чтобы показать HEALTH целиком. Update это значок со стрелкой вниз в круге у строки gdoc; по клику строка показывает кольцо и «Updating…», потом галочку и новую версию. Срок токена не показывается: строка Sign-in говорит OK, Needs sign-in или Missing scopes."},
+{id:"r9",time:"18:55",title:"Ты остановил лайв",story:"Нажал Stop. В логе итог сессии. Иконка исчезла: ничего не идёт. Лог и документы доступны, но кликать уже некуда.",
+ screen:BAR('','18:55',false)+P(
+  SEC('Documents','5 today',DOC(G('glyph-dot glyph-dim'),'Ch 5. Commercial Model: review draft v0.1','live stopped 18:55','falcon/chapters/05.md ↔ Falcon / Drafts')+DOC(G('glyph-check glyph-ok'),'Altery Group Channel Management Policy','replied 16:41','05-rules/group-channel.md ↔ Policies')+MORE('Show 3 more'))
+ +SEC('Today','',log('18:55',4)+MORE('Yesterday · 12 actions'))),
+ cap:"Если иконки нет, меню открыть неоткуда. Два варианта: серый ⁘ в тишине, или иконка исчезает и лог живёт в Claude Code. Скажи, какой."},
+
+// ---------- Part 2: edges, from the product owner's decisions ----------
+{id:"e1",time:"КРАЯ",title:"Документов больше пяти: «Show more» и скролл внутри",story:"Предложение продакта, не решение: DOCUMENTS показывает последние 5 по последнему действию, TODAY последние 8. «Show more» раскрывает раздел на месте, и раздел скроллится внутри себя, а вся панель не выше 600 px. Поиска и фильтра нет: двадцать документов помещаются в один скролл. Документ живёт в списке 14 дней после последнего действия, потом уходит.",
+ screen:BAR(ST(),'18:10',true)+P(
+  SEC('Documents','14 days · 12',`<div class="scrollbox">`+DOC(G('glyph-check glyph-ok'),'Ch 5. Commercial Model: review draft v0.1','replied 16:41','falcon/chapters/05.md')+DOC(G('glyph-check glyph-ok'),'Altery Group Channel Management Policy','replied 16:41','05-rules/group-channel.md')+DOC(G('glyph-check glyph-ok'),'Chapter 4','published 14:31','falcon/chapters/04.md')+DOC(G('glyph-check glyph-ok'),'Northwind, Altery and a wallet partner call: screening quota and conversion rate','commented 11:38','not in the hub')+DOC(G('glyph-check glyph-ok'),'Partner bank setup','restyled 10:12','not in the hub')+DOC(G('glyph-check glyph-ok'),'B2B2C payment card concept: the frozen vocabulary','published Mon','falcon/b2b2c-concept.md')+DOC(G('glyph-check glyph-ok'),'Proposal: Expansion of Project Falcon to two further regions, draft v1','exported Mon','falcon/proposal-mea-v1.md')+`<div class="fade"></div></div>`+MORE('Show less',true))
+ +SEC('Today','',log('18:55',3))),
+ cap:"В строке меню здесь знак ⁘, хотя ничего не идёт: вид в тишине твой открытый вопрос, серый знак или ничего. Раздел раскрыт, внутри скролл с полосой справа и затуханием снизу. «Show less» сворачивает обратно до пяти. Порядок один: по последнему действию, новые сверху, без закрепления и без сортировки по состоянию, иначе документ прыгает, когда задание кончилось."},
+{id:"e2",time:"КРАЯ",title:"Полночь: вчера сворачивается в одну строку",story:"TODAY в полночь уезжает под заголовок «Yesterday», свёрнутый в одну строку: сколько действий, сколько документов. Клик раскрывает на месте. Старше вчера в панели нет ничего: история это вопрос к Claude Code или к хабу.",
+ screen:BAR(ST(),'09:12',true)+P(
+  SEC('Documents','',DOC(G('glyph-check glyph-ok'),'Ch 5. Commercial Model: review draft v0.1','live stopped yesterday','falcon/chapters/05.md'))
+ +SEC('Today','',ROW(G('glyph-check glyph-ok'),'Export · Group Channel Policy','09:10','1 file, 2 pictures · 2 markers to resolve'))
+ +SEC('Yesterday','',MORE('12 actions · 4 documents'))),
+ cap:"Где живёт история дальше, продакт решил технически (файл-журнал рядом с токеном, который пишет бинарник). Ты просил технологию отложить, поэтому в документе решений это помечено как записанное, а не решённое."},
+{id:"e3",time:"КРАЯ",title:"Много всего сразу: порядок в NOW",story:"Два холда, застрявшая публикация, идущая публикация и два лайва одновременно. Порядок: холды первыми, потом застрявшее, потом идущие задания, потом лайвы. Внутри класса старшее выше: то, что ждёт дольше, скорее всего забыто. В строке меню одна пауза без числа: меню в одном клике.",
+ screen:BAR(ST(G('glyph-pause')),'17:20',true)+P(
+  SEC('Now','',HOLD('41 min','Reply to a thread · Group Channel Policy · rule Dictated','Posts from nail@example.com with the ⁘ mark.',[{t:'Open chat',p:1},{t:'Release without writing'}])+HOLD('6 min','Proposal · Chapter 5, 4.2 · rule Unread target','Posts from nail@example.com with the ⁘ mark.',[{t:'Open chat',p:1},{t:'Release without writing'}])+STUCK('Publish stopped · Chapter 4','SVG picture at line 41. Nothing was created; the note is unchanged.','Open note at line 41')+JOB(25,'Publishing · Chapter 6','step 1 of 4 · building the docx')+LIVE('Live · Chapter 5 storyline','since 13:10 · quiet 2 h')+LIVE('Live · Northwind × Altery','since 16:50 · quiet 30 min'))),
+ cap:"У каждого лайва свой Stop, кнопки «остановить все» нет: один человек, два документа, два клика. Stop не спрашивает подтверждения: остановка дешёвая и обратимая. Подтверждение есть только у «Release without writing», единственного необратимого выбора в панели."},
+{id:"e4",time:"КРАЯ",title:"Отпустить без записи: подтверждение на месте",story:"Кнопка на три секунды превращается в вопрос с последствием. Второй клик отпускает, бездействие возвращает кнопку.",
+ screen:BAR(ST(G('glyph-pause')),'16:34',true)+P(
+  SEC('Now','',`<div class="hold"><div class="row two">${G('glyph-pause glyph-hold')}<span class="row-title">Release this hold?</span><span class="row-sub">Nothing will be written. The thread stays as it is.</span><div class="confirm"><span class="btn dz">Release</span><span class="btn">Keep</span></div></div></div>`)),
+ cap:"Карточка на пять секунд меняет вопрос: заголовок спрашивает, строка ниже называет последствие, справа тихие «Release» и «Keep». Тот же приём для Sign out."},
+{id:"e5",time:"КРАЯ",title:"Первый запуск: gdoc запущен впервые, токена нет",story:"Это первый раз, когда панель открыта: установка не вошла в Google, или это новая машина. Без входа ничего не работает, поэтому HEALTH закреплён наверху, а под ним одной строкой сказано, откуда возьмутся документы. Значок входа на строке Account запускает gdoc auth login и открывает ссылку в браузере по умолчанию; та же ссылка показана строкой под Account, на случай не того профиля. Бинарник по-прежнему не запускает программ: ссылку открывает приложение панели.",
+ screen:BAR(ST(G('glyph-excl')),'10:00',true)+P(
+  `<div class="empty"><span class="mark">⁘</span><p>Not signed in. Sign in with the Google account that will post replies: the Account row below.</p></div>`
+ +SEC('Health','',HROW(G('glyph-excl glyph-bad'),'Account','Not signed in',A1(IC.signin,'Sign in with Google'))+HROW(G('glyph-check glyph-ok'),'gdoc','v2.12.0')+HROW(G('glyph-check glyph-ok'),'Skills','v2.12.0 · altery plugin')+HROW(G('glyph-empty'),'Claude Desktop','not installed',A1(IC.down,'Install extension'))+HEALTH_TAIL)
+ +SEC('Documents','',QUIET('Publish a note or review a document from Claude Code and it will appear here.')),''),
+ cap:"NOW и TODAY не показаны: пустой раздел не тратит место, как ты и просил. Два решения, если ты согласен: автозапуск при входе выключен по умолчанию и это переключатель, потому что это настройка; Quit лежит внизу HEALTH обычной строкой с ⌘Q. Install это тот же значок, что Update: та же команда. Большой залитой кнопки входа нет: одно действие, один контрол, значок на строке Account. Если тебе здесь нужна большая кнопка, это твоё решение."},
+{id:"e6",time:"КРАЯ",title:"Значки, которым нечего открывать, и первая подсказка",story:"Документ не из хаба: значок заметки приглушён, подсказка объясняет. На строке CIS приглушён значок сессии: этот документ рестайлили из чата, сессии Claude Code у него нет. Удалённый Google Doc: название зачёркнуто, открыть нельзя, скопировать ссылку всё ещё можно, это факт, а не ошибка. Под первой строкой один раз показана полоска подписей, она исчезает после первого клика по любому значку.",
+ screen:BAR(ST(),'11:00',true)+P(
+  SEC('Documents','',DOC(G('glyph-check glyph-ok'),'Ch 5. Commercial Model: review draft v0.1','replied 11:40','falcon/chapters/05.md')+`<div class="strip"><span>Doc</span><span>Note</span><span>Chat</span><span>Link</span></div>`+DOC(G('glyph-check glyph-ok'),'Northwind, Altery and a wallet partner call: screening quota and conversion rate','commented 11:38','not in the hub').replace('class="act off" data-tip="No note is paired with this document"','class="act off show-tip" data-tip="No note is paired with this document"')+DOC(G('glyph-check glyph-ok'),'Partner bank setup','restyled 10:12','not in the hub',{off:{branch:1}})+`<div class="row two docrow">${G('glyph-dot glyph-dim')}<span class="row-title gone" data-tip="B2B2C payment card concept: the frozen vocabulary"><span class="head">B2B2C crypto card concept: the frozen</span><span class="tail"> vocabulary</span></span><span class="row-sub">Google returned 404 on the last read · Mon</span><div class="acts"><span class="act off" data-tip="The document is gone">${IC.gdocs}</span><span class="act" data-tip="Open the note in Obsidian">${IC.md}</span><span class="act" data-tip="Continue with Claude">${IC.branch}</span><span class="act" data-tip="Copy link">${IC.link}</span></div></div>`)),
+ cap:"Подсказки появляются через полсекунды на каждом значке, здесь одна показана на приглушённом значке заметки. Для одного пользователя онбординг не нужен, нужно один раз не гадать."},
+{id:"e8",time:"КРАЯ",title:"Ждём Google, и только что вошёл",story:"Пока идёт вход: обратный отсчёт на три минуты, строка со ссылкой, которую можно скопировать, Cancel, в строке меню кольцо. После входа почта крупно на пять секунд с «Not you? Sign out»: один взгляд ловит личный аккаунт раньше, чем первый ответ унесёт его имя в документ.",
+ screen:BAR(ST(RING(40)),'09:01',true)+P(
+  SEC('Health','',HROW(`<span class="ring wait"></span>`,'Account','Waiting for Google',A2([IC.link,'Copy sign-in link'],[IC.x,'Cancel']))+`<div class="urlline">https://accounts.google.com/o/oauth2/v2/auth?client_id=…</div>`+HROW(G('glyph-check glyph-ok'),'gdoc','v2.12.0')+HEALTH_TAIL)
+ +SEC('Signed in','',`<div class="row two hasact" style="min-height:48px">${G('glyph-check glyph-ok')}<span class="row-title" style="font-size:15px;font-weight:500">nail@example.com</span><span class="row-sub">Signed in just now. Not you? Sign out and sign in again.</span>${A1(IC.signout,'Sign out')}</div>`)),
+ cap:"Два состояния на одном экране, чтобы не плодить сцены: сверху ожидание, снизу первые пять секунд после входа. Срок истечения токена в панели не показывается никогда: «обновится в 23:40» это обещание, которое приложение не может сдержать. Строка аккаунта говорит одно из трёх: OK, Needs sign-in, Missing scopes."},
+{id:"e9",time:"КРАЯ",title:"Токен протух посреди лайва",story:"Обновление не прошло. В строке меню восклицательный знак. В NOW карточка над лайвом: вход истёк, лайв на Chapter 5 на паузе, Sign in или Stop watch. Приложение лайв не убивает: после входа он продолжает с того же места. Холд, если есть, всё равно выше: долг тебе старше.",
+ screen:BAR(ST(G('glyph-excl')),'15:30',true)+P(
+  SEC('Now','',STUCK('Sign-in expired','Live watch on Chapter 5 is paused. Sign in to resume; the cursor is kept.','',A1(IC.signin,'Sign in with Google'))+LIVE('Live · Chapter 5 storyline','paused 15:29 · sign-in expired'))
+ +SEC('Health','',HROW(G('glyph-excl glyph-bad'),'Account','Needs sign-in',A1(IC.signin,'Sign in with Google'))+HROW(G('glyph-check glyph-ok'),'gdoc','v2.12.0')+HROW(G('glyph-check glyph-ok'),'Claude Desktop','extension connected')+HEALTH_TAIL)),
+ cap:"Если бинарник сегодня выходит на 401, карточка скажет «stopped», а продолжить это снова набрать live. Продакт пометил это как догадку о текущем поведении."},
+{id:"e10",time:"КРАЯ",title:"Выход и смена аккаунта",story:"Sign out лежит в HEALTH рядом с почтой и зовёт новую команду gdoc auth logout: приложение не удаляет файл, которым не владеет. Подтверждение на месте называет последствие: два лайва и один холд остановятся, холд отпускается без записи, чтобы не стать записью под следующим аккаунтом. Лог и документы выход переживают, уходит только токен. Смена аккаунта это выход и вход, переключателя нет: два токена это ответ не с того аккаунта в одно нажатие.",
+ screen:BAR(ST(),'18:00',true)+P(
+  SEC('Health','',`<div class="row two">${G('glyph-empty')}<span class="row-title">Sign out?</span><span class="row-sub">2 live watches and 1 hold will stop.</span><div class="confirm"><span class="btn dz">Sign out</span><span class="btn">Keep</span></div></div>`+QUIET('Account changed today: nail@gmail.com → nail@example.com')+HROW(G('glyph-check glyph-ok'),'gdoc','v2.12.0')+HROW(G('glyph-check glyph-ok'),'Claude Desktop','extension connected')+HEALTH_TAIL)),
+ cap:"Подтверждение на месте: строка вырастает до двух строк на пять секунд, снизу последствие, справа тихие «Sign out» и «Keep». Строка «Account changed» живёт до конца дня и ничего не блокирует: бинарник пишет, скилл судит, панель сообщает. Новая команда logout это изменение бинарника и твоё решение."},
+];
+// Light renders of the two tinted cards, so the light palette's own inks are shown.
+(function(){
+  const clone=(id,newId,title,story,cap)=>{const i=SCENES.findIndex(s=>s.id===id);const c=Object.assign({},SCENES[i],{id:newId,light:true,title,story,cap});SCENES.splice(i+1,0,c);};
+  clone('r2','r2l','Карточка «застряло» в светлой теме','Та же карточка днём: красный оттенок на белом, свой чернильный цвет для текста причины, значки серые плотнее, чем в тёмной.','Светлые цвета состояний это второй набор, не инверсия: красный глубже, чтобы читаться на белом.');
+  clone('r6','r6l','Холд в светлой теме','Та же карточка холда днём: янтарный уходит в коричневый, иначе на белом он читается как маркер. Текст на оттенке своим чернильным цветом.','Единственное место в панели, где принцип 8 даёт тексту свой цвет: чернила холда на светлом оттенке.');
+})();
+const BC=(ic,name,alone,ctx,win)=>`<div class="bcell${win?' pick':''}"><div class="bi">${ic}</div><div class="bn">${name}</div><div class="bs">одни ${alone}/5 · в ряду ${ctx}/5</div></div>`;
+const BOARD=`<div class="bgroup">A. Открыть в Google Docs</div><div class="board">${BC(IC.page,'Страница с текстом',3,3)}${BC(IC.gdocs,'Стрелка из окна',4,4,1)}${BC(IC.browser,'Окно браузера',3,4)}</div>
+<div class="bgroup">B. Открыть заметку в Obsidian</div><div class="board">${BC(IC.mdbadge,'Значок Markdown',2,3)}${BC(IC.hashpage,'Страница с #',1,2)}${BC(IC.md,'Блокнот',4,4,1)}${BC(IC.page,'Страница с текстом (SF text.document)',3,3)}${BC(IC.gem,'Кристалл (отклонён)',1,3)}</div>
+<div class="bgroup">C. Продолжить разговор с Claude</div><div class="board">${BC(IC.branch,'Пузырь с искрой',2,3,1)}${BC(IC.playbubble,'Пузырь с play',0,1)}${BC(IC.twobubbles,'Два пузыря (SF bubble.left.and.text.bubble.right)',2,2)}${BC(IC.gitbranch,'Ветка git (отклонён)',2,2)}</div>
+<div class="bgroup">D. Скопировать ссылку</div><div class="board">${BC(IC.chain,'Цепочка',3,4)}${BC(IC.copyrect,'Два прямоугольника (твой выбор)',2,3,1)}${BC(IC.share,'Поделиться',3,2)}</div>`;
+
+const main=document.getElementById("main");
+const fb={};let db=null;
+function esc(s){return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function build(){
+  const frag=document.createDocumentFragment();
+  for(const s of SCENES){
+    const sec=document.createElement("section");sec.className="scene";sec.dataset.id=s.id;
+    sec.innerHTML=`<div class="time">${s.time}</div><h2>${esc(s.title)}</h2><p class="story">${s.story}</p>
+      <div class="screen${s.light?' light':''}">${s.screen}</div><p class="cap">${s.cap}</p>
+      <div class="fb"><div class="vote" role="group" aria-label="Оценка экрана: ${esc(s.title)}"><button class="y" data-v="yes" aria-pressed="false">Подходит</button><button class="n" data-v="no" aria-pressed="false">Не так</button></div>
+      <textarea id="fb-${s.id}" placeholder="Что не так, чего не хватает, что лишнее" aria-label="Замечания к экрану ${esc(s.title)}"></textarea></div>`;
+    frag.appendChild(sec);
+  }
+  const bsec=document.createElement("section");bsec.className="scene";bsec.dataset.id="r-icons";
+  bsec.innerHTML=`<div class="time">ЗНАЧКИ</div><h2>Кандидаты и тест узнавания</h2><p class="story">Иконограф дал по три кандидата на действие. Тестировщик узнавания «показал» их пятерым участникам, похожим на тебя: двое с git каждый день, трое без. Балл: сколько из пяти угадали смысл по одному значку и сколько в ряду из четырёх. Победители в рамке, они уже стоят на экранах выше. Слабое место у всех: «продолжить разговор», этот смысл не имеет выученной формы ни у кого, кроме пользователей git. Лечится одноразовой полоской подписей Doc · Note · Chat · Link под первой строкой.</p>${BOARD}
+    <div class="fb" style="margin-top:16px"><div class="vote" role="group" aria-label="Оценка набора значков"><button class="y" data-v="yes" aria-pressed="false">Набор подходит</button><button class="n" data-v="no" aria-pressed="false">Не так</button></div>
+    <textarea id="fb-r-icons" placeholder="Какой значок заменить и на что" aria-label="Замечания к значкам"></textarea></div>`;
+  frag.appendChild(bsec);
+  const last=document.createElement("section");last.className="scene";last.dataset.id="r-all";
+  last.innerHTML=`<div class="time">ИТОГО</div><h2>Общее</h2><p class="story">Стиль, пропорции, что оставить из отклонённого, какие действия нужны у документа.</p>
+    <div class="fb"><div class="vote" role="group" aria-label="Общая оценка"><button class="y" data-v="yes" aria-pressed="false">В целом да</button><button class="n" data-v="no" aria-pressed="false">Переделать</button></div>
+    <textarea id="fb-r-all" placeholder="Свободный фидбэк" aria-label="Общие замечания"></textarea></div>`;
+  frag.appendChild(last);
+  main.appendChild(frag);
+}
+function paint(){
+  for(const sec of main.querySelectorAll(".scene")){
+    const v=fb[sec.dataset.id]||{};
+    sec.querySelectorAll(".vote button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===v.vote)));
+    const ta=sec.querySelector("textarea");
+    if(document.activeElement!==ta) ta.value=v.note||"";
+  }
+}
+async function save(id,patch){
+  const cur=Object.assign({},fb[id]||{},patch,{at:new Date().toISOString()});
+  fb[id]=cur;paint();
+  try{localStorage.setItem("fb:"+id,JSON.stringify(cur));}catch(e){}
+  if(db){try{await db.doc("screens/"+id).set(cur);setStatus("сохранено");}catch(e){setStatus("не сохранилось: "+(e&&e.code||"ошибка"));}}
+}
+function setStatus(s){document.getElementById("status").textContent=s;}
+build();
+try{for(const sec of main.querySelectorAll(".scene")){const raw=localStorage.getItem("fb:"+sec.dataset.id);if(raw)fb[sec.dataset.id]=JSON.parse(raw);}}catch(e){}
+paint();
+main.addEventListener("click",e=>{const b=e.target.closest(".vote button");if(!b)return;const id=b.closest(".scene").dataset.id;const cur=fb[id]&&fb[id].vote;save(id,{vote:cur===b.dataset.v?null:b.dataset.v});});
+main.addEventListener("change",e=>{const ta=e.target.closest("textarea");if(!ta)return;save(ta.closest(".scene").dataset.id,{note:ta.value.trim()});});
+(async()=>{
+  const d=window.claude&&window.claude.use?await window.claude.use("db"):null;
+  if(!d){setStatus("сохраняю в браузере");return;}
+  db=d;setStatus("подключаю хранилище…");
+  db.collection("screens").onSnapshot(snap=>{for(const doc of snap.docs){if(doc.id.startsWith("r"))fb[doc.id]=doc.data();}paint();setStatus(snap.metadata.hasPendingWrites?"сохраняю…":"сохранено");},err=>{setStatus("хранилище недоступно, сохраняю в браузере");db=null;});
+})();
+</script>
+
+</body></html>

@@ -339,3 +339,23 @@ by the spec.
 5. A broken Swift build fails the whole release.
 6. No discard of a hold from the panel, so decisions 31, 47 and 48 wait.
 7. The name `GdocPresence`.
+
+## M24, the morning after
+
+Nail opened the M23 panel at 09:17 and said it looks nothing like the design.
+Two seats prepared the full panel the same morning: the macOS engineer with
+the visual designer's brief read the nineteen scenes of the third screens
+version into a token sheet, a component list, the fold the panel needs, the
+bar images, the outbound acts and a 24-task breakdown; the trust guardian
+with the binary's owner found that publish writes no document id, that a
+hold already survives a change of account, that a live watch is signalable
+only while a wait is in flight, and that six things the screens draw are
+forbidden in the record. The project manager's choices are in the M24
+specification's decision table and the DECISIONS.md entry of the same date;
+the ones most likely to be reversed: no note path in the record (the app
+reads the hub's front matter instead), Dismiss instead of Release, the dim
+mark when idle, launch at login on by default, and the stuck rule that keeps
+`verified: false` a hollow check against the vote. The two seats' reports are
+in the session's scratch folder, the two plans are M24a and M24b, and the
+swap-under-a-running-instance measurement that self-relaunch rests on was
+taken at 09:25.

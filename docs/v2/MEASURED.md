@@ -761,6 +761,18 @@ Recheck on every macOS major version, on the first CI-built bundle, which is
 signed by the same `codesign -s -` on a different machine, and on the day a
 Developer ID appears.
 
+**The launch, measured 2026-10-17 at 09:17 on Nail's machine, macOS 26.3.1.**
+`gdoc update` under `presence: true` installed `~/Applications/GdocPresence.app`
+(2.14.0, universal, ad-hoc, `codesign --verify --deep --strict` valid, no
+`com.apple.quarantine` on any file) out of the v2.14.0 darwin-arm64 zip, and
+Nail opened it with `open ~/Applications/GdocPresence.app`. It launched with
+no dialog; `pgrep -x GdocPresence` showed one process out of that path, and
+`log show --last 2m --predicate 'process == "syspolicyd"'` carried no line
+about it. So the Go route holds on this machine: a bundle gdoc's own code
+wrote is not assessed on first launch, and the ad-hoc signature is enough.
+The browser route (a quarantined copy) was not run on this machine; the
+negative control from the section above stands as it was measured.
+
 ## Twenty thousand presence lines from two binaries into one file
 
 Measured 2026-10-17. The channel's one promise is that two gdoc processes may
@@ -860,6 +872,19 @@ Recheck the live half, which is not measured and is Nail's: with the app
 running, `gdoc update` into a newer release, then watch for the reopen row and
 a single instance afterwards. If the app does not reopen itself, the swap is
 still safe and the person restarts it by hand, and the self-relaunch is M24's.
+
+**The live half, measured 2026-10-17 at 09:25.** The installed 2.14.0 was
+running (pid 84014, started 09:24:42). A 2.14.1 bundle built by
+`presence/bundle.sh` replaced it by two renames, `GdocPresence.app` to
+`GdocPresence.app.previous` and the new tree into place, at 09:25:01. Eight
+seconds later the old process was still alive, `pgrep` counted one instance,
+and `plutil -extract CFBundleShortVersionString raw` on the path read 2.14.1
+while the process out of it was 2.14.0. The unified log carried no fault for
+the process. So a rename swap under a running instance is safe, and an
+instance that reads its own path's plist sees the new version: that is the
+fact a self-relaunch rests on, and M24 builds it on this measurement. The
+2.14.0 bundle was put back and the app quit afterwards.
+
 ## Drive's import of a heading's bookmark
 
 Measured 2026-10-16 by hand, from one probe note of three headings, one `#`

@@ -126,6 +126,18 @@ exports no reader and nothing it decides depends on the file. A separate
 application, `GdocPresence.app`, travels in the darwin zips and is installed
 by `gdoc update` under the same setting; gdoc never launches it. Off is
 today's bytes. Decided 2026-10-17, DECISIONS.md.
+
+**The panel, the same day.** The app draws the screens Nail chose and runs
+four fixed argv lists for the binary, `help --json`, `auth status`, `auth
+login`, `auth logout`, `update` and `update --desktop`, and nothing else; it
+signals one SIGINT to a `comments --wait` it has proved is gdoc's. The record
+gains `made`, `step`, `stop` with `line`, `via: code`, `interrupted` and the
+`dropped` hold ending, still no path, sentence, count or account. A hold
+remembers a hash of the refresh token it was held under and is dropped when
+the sign-in changes, so no account ever posts another's held write. `gdoc
+auth logout` removes the token and nothing else. The app registers itself to
+start at login on its first run and relaunches itself after an update; gdoc
+launches nothing. Decided 2026-10-17, DECISIONS.md, the panel entry.
 `auth login` is a real desktop flow: a loopback redirect with PKCE, hand-rolled.
 
 **Two scopes:** Drive, and `https://www.googleapis.com/auth/documents`, the Docs

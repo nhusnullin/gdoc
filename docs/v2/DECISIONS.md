@@ -100,6 +100,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-10-17 | What the fourth M20 review closed: an escaped opener refused as a comment the line never closes | holds |
 | 2026-10-17 | The logo lives in Drive, not in the tree | holds |
 | 2026-10-17 | The presence: gdoc appends one fact line per run to a file it never reads, and a separate menu bar app reads it | holds |
+| 2026-10-17 | The panel: the presence as the screens draw it, the app runs six argv lists, a hold dies with the sign-in it was held under | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -5265,3 +5266,71 @@ and TODAY; the panel the design files draw is the next milestone.
 and gains a pointer. Product decisions 8, 31, 47 and 48 of the design pass
 are reversed or deferred as the mechanism document says. `gdoc auth logout`
 waits.
+
+## 2026-10-17. The panel: the presence as the screens draw it, the app runs six argv lists, a hold dies with the sign-in it was held under.
+
+Nail's instruction the morning after M23 shipped: the panel looks nothing
+like the design discussed the evening before, run the next milestone now,
+and make the app start by itself. The M23 scoping that deferred the drawn
+panel was the project manager's, and this entry undoes it in one milestone
+run as two halves, the Swift panel and what the binary adds for it. The
+rules are in `docs/plans/2026-10-17-gdoc-v2-m24-the-panel-spec.md`; the
+visual source is `docs/design/2026-10-17-presence-screens-v3.html`, the
+third version of the screens Nail reviewed. Serves principle 4, the screens
+are the reader's own choice, and principle 3 in three places named below.
+Strains 1 and 2 no further than the M23 entry; one M23 sentence is reversed
+and said so here.
+
+**The app launches six argv lists and nothing else.** The M23 rule "the app
+launches no process" is reversed: the panel needs the account, the mark, the
+version, a sign-in, a sign-out and an update, and each is one fixed argv for
+the gdoc binary at an absolute path, `help --json`, `auth status`, `auth
+login`, `auth logout`, `update` and `update --desktop`, under one runner
+file with stdin the null device and four environment variables. No setting
+flag, no flag only the app uses, no PATH lookup, one child per kind at a
+time, and a source scan that enumerates the set. The app also signals one
+kind of process: one SIGINT to a `comments --wait` it has proved is gdoc's,
+alive, the user's and the one the record names, which is what the review
+skill already reads as "you stopped it". gdoc itself still runs the one
+program it ran, and never the app.
+
+**The record gains fields, never words.** At schema version 1, because the
+M23 app ignores unknown fields and skips unknown kinds: `made`, the document
+a publish created; a `step` event for publish with a fixed name and index;
+`stop`, a fixed code for why a run failed, with `line` where the cause has
+one; `via: code` under Claude Code; `interrupted` on a wait; and `dropped`
+as a hold's fourth ending. Refused, each by name: a path to the note, a Drive
+folder name, an error sentence, a count from the document, a judgement on
+thread state, the mark, the account. Open md needs no path: the app reads
+the front matter of the hub the person chose, one read the M23 entry did not
+grant and this one does.
+
+**A hold dies with the sign-in it was held under.** Found this morning: a
+release checked only that a token exists, so a held write would post under
+whatever account signed in next, which is the fear product decision 48
+named. `mcpHolds` keeps a hash of the refresh token beside the hold, in
+memory, never in `internal/chat`; a release or a sweep that finds another
+token or none drops the hold and says so; a token that cannot be read keeps
+it and sends nothing. No email is compared, so identity is still no gate.
+With that, a sign-out needs no channel from the app, and the panel's hold
+card carries "Open chat" and an app-local "Dismiss", never "Release".
+
+**`gdoc auth logout`** removes the token file and nothing else, reads the
+absence back, refuses a symlink, a file that is not the token and a waiting
+sign-in, is no chat tool, and is a visible seventeenth command.
+
+**The app starts by itself.** Launch at login is on by default, registered
+by the app on its first run ever and never re-registered over a person's
+"off", which reverses product decision 32 at Nail's word. After `gdoc
+update` replaces the bundle the app relaunches itself into its own path,
+once per on-disk version, never while an update runs, quitting only after
+the new instance is up; the swap under a running instance was measured on
+2026-10-17 at 09:25 (MEASURED.md). gdoc registers nothing and launches
+nothing.
+
+**What yields to a principle.** The vote's "a failed read-back is red"
+yields to principle 5 of the design: `verified: false` is a hollow check and
+never stuck. The screens' "Release without writing" yields to the no-channel
+rule. The screens' per-step counts and folder names yield to the allowlist.
+Idle keeps the dim mark so the panel stays reachable, until Nail says
+otherwise.
