@@ -278,12 +278,12 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Sources/PresenceUI/Words.swift`
 - Create: `presence/Tests/PresenceUITests/WordsTests.swift`
 
-- [ ] `testTheVerbsAreTheSevenWords`, `testTimesAreClockYesterdayWeekdayThenDate`,
+- [x] `testTheVerbsAreTheSevenWords`, `testTimesAreClockYesterdayWeekdayThenDate`,
       `testDurationsAreMinutesAndHours`,
       `testViaIsFromTheTerminalOrFromDesktopChat`,
       `testVerifiedIsVerifiedOrNotReadBack`, `testNothingPredictsATime`
-- [ ] the functions; `Rows.swift` and its `PanelModel` stay until Task 13
-- [ ] `make app-lint`, `make app-test`
+- [x] the functions; `Rows.swift` and its `PanelModel` stay until Task 13
+- [x] `make app-lint`, `make app-test`
 
 ### Task 13: the panel model, the panel view, the scenes
 
