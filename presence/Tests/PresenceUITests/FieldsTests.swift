@@ -63,6 +63,55 @@ final class FieldsTests: XCTestCase {
     }
   }
 
+  // The second half of the sentence is a claim, so it is said only where
+  // the record carries it. A restyle is a dozen batches, a propose is a
+  // suggestion and then its own comment, and an export writes a file for
+  // every tab, so a run of any of the three may have written part of what
+  // it was going to; internal/restyle refuses the same sentence on gdoc's
+  // own side. A request that never got an answer is the same whatever the
+  // command, because a deadline may have passed over a request Google had
+  // already taken.
+  func testAStoppedWriteClaimsTheWorldOnlyWhereItCan() throws {
+    func reason(_ command: String, stop: String) throws -> String {
+      let panel = try drawn(
+        [
+          event("2026-10-17T09:03:10Z", .start, command: command, doc: chapter5),
+          event(
+            "2026-10-17T09:05:00Z", .end, command: command, doc: chapter5, ok: false, stop: stop),
+        ], at: "2026-10-17T09:06:00Z")
+      return try XCTUnwrap(panel.reasons.first, "a failed \(command) is a stuck card")
+    }
+
+    // The three writes that are one request each say it in the document's
+    // words, and a publish says it in the note's.
+    for command in ["reply", "annotate", "withdraw"] {
+      XCTAssertEqual(
+        try reason(command, stop: "refused"),
+        "Refused by the guard. Nothing was written; the document is unchanged.",
+        "a \(command) that never left the machine wrote nothing")
+    }
+    XCTAssertEqual(
+      try reason("publish", stop: "refused"),
+      "Refused by the guard. Nothing was created; the note is unchanged.")
+
+    // The three that write more than once say where the reason is instead.
+    for command in ["restyle", "propose", "export"] {
+      let said = try reason(command, stop: "refused")
+      XCTAssertEqual(said, "Refused by the guard. The terminal that ran it has the reason.")
+      XCTAssertFalse(said.contains("unchanged"), "a \(command) cannot make that claim")
+      XCTAssertTrue(StuckCard.fits(said), "and the card still has the room")
+    }
+
+    // And a request with no answer behind it claims nothing at all, not
+    // even for the writes that are one request.
+    for command in ["reply", "publish", "restyle"] {
+      XCTAssertEqual(
+        try reason(command, stop: "network"),
+        "Network. The terminal that ran it has the reason.",
+        "the deadline may have passed over a request Google had taken")
+    }
+  }
+
   // The place a person is sent to look is the record's own `via`, and the
   // record writes three of them. A run from Claude Code left nothing in a
   // terminal, so naming one would be a sentence that is not true.

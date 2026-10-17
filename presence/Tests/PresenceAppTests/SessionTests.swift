@@ -359,8 +359,14 @@ final class SessionTests: XCTestCase {
       line(
         kind: "held", command: "reply", call: nil, doc: Self.doc,
         extra: "\"hold\":\"h_ab12\",\"rule\":\"echo\",\"until\":\"\(stamp(inAnHour: true))\""))
+    // Pinned to the middle of a UTC day, because the two folds below are
+    // ten minutes apart and this calendar carries the machine's own zone: a
+    // moment the real clock handed over would move from TODAY to Yesterday
+    // between them for the ten minutes before every local midnight.
     let over = try Event.decode(
-      line(kind: "end", command: "reply", call: 4, doc: Self.doc, extra: "\"ok\":true"))
+      line(
+        kind: "end", command: "reply", call: 4, doc: Self.doc, extra: "\"ok\":true",
+        at: "2026-10-17T12:00:00Z"))
 
     for (what, events) in [("a watch", [watching]), ("a hold", [held])] {
       let now = Drawn(

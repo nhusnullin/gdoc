@@ -134,10 +134,42 @@ struct Phrases {
     "code": "Claude Code session",
   ]
 
+  /// What the world looks like after a write stopped, in the words of the
+  /// thing that write was handed: a publish was handed a note, and the
+  /// three writes that are one request each were handed a document.
+  ///
+  /// A restyle is a dozen batches, a propose is a suggestion and then its
+  /// own comment, and an export writes a file for every tab, so none of
+  /// the three can say nothing was written: a restyle that stopped at the
+  /// twelfth batch left a part-styled document. internal/restyle holds
+  /// that rule on gdoc's own side, where
+  /// TestAFailedRequestNeverSaysTheDocumentIsAsItWas pins it, and the
+  /// panel is not the place it stops being true:
+  /// testAStoppedWriteClaimsTheWorldOnlyWhereItCan.
+  private static let worlds: [String: String] = [
+    "publish": "Nothing was created; the note is unchanged.",
+    "reply": "Nothing was written; the document is unchanged.",
+    "annotate": "Nothing was written; the document is unchanged.",
+    "withdraw": "Nothing was written; the document is unchanged.",
+  ]
+
+  /// The world clause for one stopped write, or none where the record does
+  /// not carry the claim.
+  ///
+  /// `network` is gdoc's word for a request that never got an answer, which
+  /// internal/emit says is a dial, a handshake or a deadline: the first two
+  /// never reached Google and the last may have been taken and applied, and
+  /// the record cannot tell them apart. So a request with no answer behind
+  /// it is a write nobody can call undone, whatever the command was.
+  private static func world(_ write: StuckWrite) -> String? {
+    guard write.stop != "network" else { return nil }
+    return worlds[write.command]
+  }
+
   /// One sentence, under eighty characters: the cause with its place, then
-  /// the state of the world. That is scene r2's rule, and the two halves
-  /// are both the record's: `stop` is one of gdoc's seven words and `line`
-  /// is where the cause sits.
+  /// the state of the world where the record carries it. That is scene r2's
+  /// rule, and the halves are all the record's: `stop` is one of gdoc's
+  /// seven words and `line` is where the cause sits.
   ///
   /// A run whose process went away wrote neither, and so does a code this
   /// version has never seen: then the panel says where the reason is and
@@ -152,16 +184,13 @@ struct Phrases {
   /// carding, and NOW keeps such a card for fourteen days:
   /// testACardWithNoRowBehindItCarriesTheMoment.
   private func stuckReason(_ write: StuckWrite) -> String {
+    let place = Self.places[write.via ?? ""] ?? "terminal"
+    let look = "The \(place) that ran it has the reason."
     guard let cause = Words.cause(write.stop, line: write.line) else {
-      let place = Self.places[write.via ?? ""] ?? "terminal"
-      let look = "The \(place) that ran it has the reason."
       guard write.cause == .stopped else { return look }
       return "Started \(clockInSentence(write.at)). \(look)"
     }
-    let world =
-      write.command == "publish"
-      ? "Nothing was created; the note is unchanged."
-      : "Nothing was written; the document is unchanged."
+    guard let world = Self.world(write) else { return "\(Words.opening(cause)). \(look)" }
     return "\(Words.opening(cause)). \(world)"
   }
 
