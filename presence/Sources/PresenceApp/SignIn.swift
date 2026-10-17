@@ -154,9 +154,16 @@ public actor SignIn {
     // The whole of what the child said is read once more at the end: a child
     // that printed its link and its object in the same breath may have been
     // waited on before the live sink was ever called.
+    //
+    // This reading opens nothing. The child has already gone, so the
+    // listener the link redirects to is gone with it, and a browser sent
+    // there would land on a page nobody is answering: the link is taken for
+    // what the result carries and for the refusal below, and the window
+    // stays shut. testALinkFoundAfterTheChildWentOpensNoBrowser.
     if link == nil {
-      said = []
-      await printed(all: outcome.standardError)
+      said = outcome.standardError.split(separator: "\n", omittingEmptySubsequences: false)
+        .map(String.init)
+      link = Self.link(inStandardError: outcome.standardError)
     }
 
     guard outcome.envelope.ok else {
@@ -175,12 +182,6 @@ public actor SignIn {
   }
 
   // MARK: what the child said
-
-  private func printed(all text: String) async {
-    for line in text.split(separator: "\n", omittingEmptySubsequences: false) {
-      await printed(String(line))
-    }
-  }
 
   /// One line, as it arrives. The candidate is recomputed over everything
   /// said so far rather than read off this line, so the live path and the

@@ -441,6 +441,29 @@ final class SessionTests: XCTestCase {
       "both are in the one store that writes anything down")
   }
 
+  /// The copied check and the question share one redraw, and they are not
+  /// the same length. A Copy link pressed inside the question's three
+  /// seconds may not move that redraw forward to its own second: nothing
+  /// would then be scheduled for the moment the question ran out, and the
+  /// expired question would sit on the screen until some fact moved, where a
+  /// press on it asks again instead of acting.
+  func testACopiedCheckDoesNotCutTheQuestionsRedrawShort() throws {
+    let now = Date()
+    XCTAssertTrue(
+      Session.takesTheSlot(waiting: nil, due: now.addingTimeInterval(Timing.doneFlash)),
+      "an empty slot is taken")
+    XCTAssertFalse(
+      Session.takesTheSlot(
+        waiting: now.addingTimeInterval(Timing.confirmRevert),
+        due: now.addingTimeInterval(Timing.doneFlash)),
+      "the question's three seconds outlive the copied second, so the question keeps the slot")
+    XCTAssertTrue(
+      Session.takesTheSlot(
+        waiting: now.addingTimeInterval(Timing.doneFlash),
+        due: now.addingTimeInterval(Timing.confirmRevert)),
+      "and a question asked inside a copied second takes it, because it is the later moment")
+  }
+
   /// Sign out asks first, and the answer runs `auth logout` and asks gdoc
   /// again. Every argv the session ran is the log the fake gdoc kept.
   func testSigningOutAsksFirstAndThenRunsTheLogout() throws {

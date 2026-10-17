@@ -65,9 +65,15 @@ extension PanelModel {
     }
   }
 
-  static func stopping(_ items: [NowItem], sessions: [LiveSession]) -> Stopping {
-    let holds = items.filter { if case .hold = $0 { return true } else { return false } }
-    return Stopping(live: sessions.filter(\.isOpen).count, holds: holds.count)
+  /// It counts the holds the record has open and not the cards NOW draws: a
+  /// dismissed card is a card nobody can see and a hold the sign-out still
+  /// drops, and a hold whose life ran out is waiting for nobody, so it is
+  /// not one the sign-out stops either:
+  /// testTheSignOutCountsTheHoldsTheRecordHasOpen.
+  static func stopping(_ fold: NowFold, sessions: [LiveSession]) -> Stopping {
+    Stopping(
+      live: sessions.filter(\.isOpen).count,
+      holds: fold.everyHold.filter { !$0.ranOut }.count)
   }
 
   static func account(
@@ -83,7 +89,16 @@ extension PanelModel {
         ])
     }
 
-    let changed = facts.previousAccount.map { "Account changed: \($0) → \(facts.account ?? "")" }
+    // Both addresses or neither: the memory of the one before is kept for
+    // the life of the app, so a sign-out would otherwise leave the line
+    // "Account changed: someone@example.com → " with nothing after the
+    // arrow: testASignOutLeavesNoHalfSentenceAboutTheAccount.
+    let changed: String? =
+      if let previous = facts.previousAccount, let account = facts.account {
+        "Account changed: \(previous) → \(account)"
+      } else {
+        nil
+      }
 
     if ui.isAsking(.signOut, now: now) {
       return HealthRowModel(
@@ -92,9 +107,16 @@ extension PanelModel {
           title: "Sign out?", consequence: stopping.sentence, danger: .signOut))
     }
 
-    guard facts.auth.isWorking else {
+    // Nobody has asked yet, which is every panel's first draw and the whole
+    // of a machine with no gdoc on it: the row is a ring, as the gdoc row
+    // is, and it offers no Sign out for a token nobody read.
+    guard let auth = facts.auth else {
+      return HealthRowModel(.account, value: facts.account ?? "", waiting: true, quiet: changed)
+    }
+
+    guard auth.isWorking else {
       return HealthRowModel(
-        .account, value: facts.account ?? facts.auth.rawValue, glyph: .exclamation, tone: .bad,
+        .account, value: facts.account ?? auth.rawValue, glyph: .exclamation, tone: .bad,
         quiet: changed,
         actions: [ActionModel(.signIn, icon: .signin, tip: Tips.signIn, target: "auth")])
     }

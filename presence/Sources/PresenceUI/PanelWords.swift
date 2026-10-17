@@ -25,6 +25,10 @@ public enum Tips {
   public static let openChat = "Continue with Claude"
   public static let noExtension = "Install the Desktop extension in Health"
   public static let copyLink = "Copy link"
+  /// The link icon's own off word, which the screens file writes beside
+  /// "No Google Doc yet": there is no link to copy for the same reason
+  /// there is no document to open.
+  public static let noLink = "No link yet"
   public static let copied = "Copied"
   public static let dismiss = ButtonWord.dismiss.rawValue
   public static let cannotStop = "This watch is not one gdoc presence can stop"
@@ -196,7 +200,12 @@ struct Phrases {
   /// is wrong off the end of it. Scene r8 is that line, and it carries no
   /// word for why, because the record has none.
   func liveRow(_ session: LiveSession) -> LiveRowModel {
-    let expired = facts.auth.isWorking ? nil : "sign-in expired"
+    // The watch's own ending and never the machine's word: a token short a
+    // scope stops one watch and leaves another polling, and a fact about
+    // the computer written over every row would take since, quiet and the
+    // two counts off a watch that is still live and still has its Stop:
+    // testAnOpenWatchKeepsItsFactsWhenAnotherOneLostTheSignIn.
+    let expired = session.stoppedBySignIn ? "sign-in expired" : nil
     let failed = session.lastPollFailed.map { moment in
       // A poll Google refused the token on is the end of the watch and not
       // a watch in trouble: the skill's next wait cannot start without a

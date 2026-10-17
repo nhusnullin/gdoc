@@ -163,7 +163,123 @@ final class StateTests: XCTestCase {
     XCTAssertTrue(desktop.actions.isEmpty, "and there is nothing on it to press")
   }
 
+  /// The one fact the panel may not invent is whose account this is. `auth`
+  /// is nothing until `gdoc auth status` has answered, which is every
+  /// panel's first draw and the whole of a machine with no gdoc on it: the
+  /// row is a ring over no value, and it offers no Sign out.
+  func testTheAccountRowClaimsNothingBeforeTheFirstAnswer() throws {
+    let launching = Facts(versions: Versions(app: "2.15.0"), gdocPath: Scenes.gdocPath)
+    XCTAssertNil(launching.auth, "nobody has asked")
+
+    let first = try accountRow(of: try drawn([], at: "2026-10-17T10:00:00Z", facts: launching))
+    XCTAssertTrue(first.waiting, "the ring says the question is out")
+    XCTAssertEqual(first.value, "", "and no sign-in is claimed")
+    XCTAssertEqual(first.glyph, .blank, "no green check over a token nobody read")
+    XCTAssertTrue(first.actions.isEmpty, "there is nothing to sign out of yet")
+
+    let answered = try accountRow(
+      of: try drawn([], at: "2026-10-17T10:00:00Z", facts: Scenes.machine()))
+    XCTAssertFalse(answered.waiting)
+    XCTAssertEqual(answered.glyph, .check)
+    XCTAssertEqual(answered.value, Scenes.account)
+    XCTAssertEqual(answered.actions.map(\.kind), [.signOut], "now there is")
+  }
+
+  /// A sign-out drops every hold the chat is keeping, so the one destructive
+  /// confirm in the panel counts what the record has open and not the cards
+  /// on the screen: a dismissed card is a hold all the same, and a hold
+  /// whose life ran out is waiting for nobody.
+  func testTheSignOutCountsTheHoldsTheRecordHasOpen() throws {
+    let asking = UIState(question: .signOut, questionAt: try at("2026-10-17T10:00:00Z"))
+    let hidden = try drawn(
+      [held("2026-10-17T09:50:00Z", hold: "h_1", until: "2026-10-17T10:50:00Z")],
+      at: "2026-10-17T10:00:00Z",
+      ui: UIState(
+        dismissed: ["h_1"], question: .signOut,
+        questionAt: try at("2026-10-17T10:00:00Z")))
+    XCTAssertTrue(hidden.now.isEmpty, "the card was dismissed, so NOW draws nothing")
+    XCTAssertEqual(
+      try question(of: hidden).consequence, "1 hold will stop.",
+      "the hold is still waiting in the chat, and the sign-out drops it")
+
+    let ranOut = try drawn(
+      [held("2026-10-17T08:00:00Z", hold: "h_2", until: "2026-10-17T09:00:00Z")],
+      at: "2026-10-17T10:00:00Z", ui: asking)
+    XCTAssertEqual(ranOut.now.count, 1, "the card is on the screen")
+    XCTAssertEqual(
+      try question(of: ranOut).consequence, "Nothing is running. Only the token goes.",
+      "a hold whose life ran out is waiting for nobody, so the sign-out stops nothing")
+  }
+
+  /// An id Drive could not have written is a line gdoc did not write. Both
+  /// icons that would build a URL out of it say so before the press, because
+  /// `Opener` refuses to build one and a live icon that does nothing says
+  /// nothing.
+  func testAnIdDriveCouldNotHaveWrittenGreysItsTwoIcons() throws {
+    let planted = "not-a-drive-id"
+    let panel = try drawn(
+      [event("2026-10-17T09:00:00Z", .end, command: "reply", doc: planted, ok: true)],
+      at: "2026-10-17T09:10:00Z")
+
+    let row = try XCTUnwrap(panel.documents?.rows.first, "the row is drawn, as the record says")
+    XCTAssertEqual(row.doc, planted)
+    XCTAssertEqual(
+      row.actions.first { $0.kind == .openDoc }?.state, .off(Tips.noDoc),
+      "there is no document behind it to open")
+    XCTAssertEqual(
+      row.actions.first { $0.kind == .copyLink }?.state, .off(Tips.noLink),
+      "and no link to copy")
+
+    let real = try drawn(
+      [event("2026-10-17T09:00:00Z", .end, command: "reply", doc: chapter4, ok: true)],
+      at: "2026-10-17T09:10:00Z")
+    XCTAssertEqual(
+      real.documents?.rows.first?.actions.first { $0.kind == .openDoc }?.state, .live,
+      "an id of Drive's own shape is live")
+  }
+
+  /// "Account changed" is a sentence about two addresses, so it is written
+  /// only where there are two. The memory of the one before is kept for the
+  /// life of the app, and a sign-out leaves no address at all: the line
+  /// would end at the arrow with nothing after it.
+  func testASignOutLeavesNoHalfSentenceAboutTheAccount() throws {
+    let before = "first@example.com"
+    let signedIn = Facts(
+      account: "second@example.com", auth: .ok, previousAccount: before,
+      versions: Versions(app: "2.15.0"), gdocPath: Scenes.gdocPath)
+    XCTAssertEqual(
+      try accountRow(of: try drawn([], at: "2026-10-17T10:00:00Z", facts: signedIn)).quiet,
+      "Account changed: first@example.com → second@example.com")
+
+    let signedOut = Facts(
+      auth: .signedOut, previousAccount: before, versions: Versions(app: "2.15.0"),
+      gdocPath: Scenes.gdocPath)
+    XCTAssertNil(
+      try accountRow(of: try drawn([], at: "2026-10-17T10:00:00Z", facts: signedOut)).quiet,
+      "there is no second address, so there is no sentence")
+  }
+
   // MARK: - The pieces a test states
+
+  private func accountRow(of panel: PanelModel) throws -> HealthRowModel {
+    try XCTUnwrap(panel.health.first { $0.kind == .account }, "HEALTH opens with the account")
+  }
+
+  private func question(of panel: PanelModel) throws -> QuestionModel {
+    try XCTUnwrap(try accountRow(of: panel).question, "the row is the question for three seconds")
+  }
+
+  /// A write a rule held, as gdoc writes it: one line, and no call.
+  private func held(_ at: String, hold: String, until: String) -> Event {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime]
+    return Event(
+      schema: 1, at: formatter.date(from: at) ?? Date(timeIntervalSince1970: 0),
+      gdoc: "v2.15.0", pid: 7101, run: "3000000000000002", call: nil, kind: .held,
+      command: "reply", via: "chat", doc: chapter4, wait: false, title: nil, ok: nil,
+      verified: nil, ms: nil, hold: hold, rule: "dictated",
+      until: formatter.date(from: until))
+  }
 
   /// A machine with an update to take and no extension written, with and
   /// without a child of the app's own up.

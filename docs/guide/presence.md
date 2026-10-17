@@ -104,8 +104,10 @@ Four icons sit on the right of every document row, always visible:
 | Link | Copies the document's link, and turns into a green check for a second |
 
 An icon with nothing to do is greyed, and resting the pointer on it says why:
-"No Google Doc yet", "No note is paired with this document", "Note moved or
-deleted", "Install the Desktop extension in Health". "Note moved or deleted"
+"No Google Doc yet", "No link yet", "No note is paired with this document",
+"Note moved or deleted", "Install the Desktop extension in Health". The first
+two are one case: a row whose id is not one Drive could have written has no
+document to open and no link to copy. "Note moved or deleted"
 is the one a click produces: Obsidian refused the note the index still names.
 A greyed icon cannot be clicked, so that one lasts as long as the panel is up,
 and the next time you open the panel it is live again. The first time Documents

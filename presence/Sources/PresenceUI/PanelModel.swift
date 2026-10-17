@@ -322,7 +322,7 @@ extension PanelModel {
     let today = todaySection(days, ui: ui, words: words)
     let yesterday = yesterdaySection(days, ui: ui, words: words)
     let health = healthRows(
-      facts: facts, ui: ui, now: now, stopping: stopping(items, sessions: sessions))
+      facts: facts, ui: ui, now: now, stopping: stopping(nowFold, sessions: sessions))
 
     // HEALTH is last, where a person looks for it, except on the three
     // screens where it is the whole of what the panel is for: a machine
@@ -426,7 +426,7 @@ extension PanelModel {
   /// without the second half every one of them would come back into NOW
   /// the next time a token stopped working.
   private static func watched(_ sessions: [LiveSession], facts: Facts) -> [LiveSession] {
-    sessions.filter { $0.isOpen || ($0.waitsForTheSignIn && !facts.auth.isWorking) }
+    sessions.filter { $0.isOpen || ($0.waitsForTheSignIn && facts.auth?.isWorking == false) }
   }
 
   /// The card a token that stopped working raises, which is the one card in
@@ -438,7 +438,9 @@ extension PanelModel {
     // is the same request twice, and its button is the one call
     // `signInWithGoogle` refuses while one is running.
     guard facts.signIn == nil else { return nil }
-    guard facts.auth == .needsSignIn || facts.auth == .missingScopes else { return nil }
+    guard let auth = facts.auth, auth == .needsSignIn || auth == .missingScopes else {
+      return nil
+    }
     // A watch whose token Google refused is stopped: the skill's next wait
     // cannot start, so the sentence asks for the sign-in and for the watch
     // to be started again. It never says the watch will carry on by itself,
@@ -458,7 +460,7 @@ extension PanelModel {
         : "\(stopped) live watches stopped. Sign in and start them again."
     return .stuck(
       id: "auth",
-      card: StuckCardModel(title: facts.auth.rawValue, reason: reason),
+      card: StuckCardModel(title: auth.rawValue, reason: reason),
       actions: [
         ActionModel(.signIn, icon: .signin, tip: Tips.signIn, target: "auth")
       ])
@@ -607,10 +609,24 @@ extension PanelModel {
 
   // MARK: the four document icons
 
+  /// Open in Google Docs, greyed where the id is not one Drive could have
+  /// written.
+  ///
+  /// `Opener` refuses to build a URL out of it, so the press opens nothing
+  /// either way; what the state adds is the row saying why before the click
+  /// rather than after it. A line carrying an id of that shape is a line
+  /// gdoc did not write: testAnIdDriveCouldNotHaveWrittenGreysItsTwoIcons.
   private static func openDoc(_ doc: String, forced: String? = nil) -> ActionModel {
     ActionModel(
-      .openDoc, icon: .gdocs, tip: Tips.openDoc, target: doc,
+      .openDoc, icon: .gdocs, tip: Tips.openDoc, state: documentState(doc, missing: Tips.noDoc),
+      target: doc,
       forcedTooltip: forced == "\(doc)|openDoc")
+  }
+
+  /// Whether there is a document behind an id at all, in the word of the
+  /// icon that is asking.
+  private static func documentState(_ doc: String, missing: String) -> ActionState {
+    LinkLine.isDocumentID(doc) ? .live : .off(missing)
   }
 
   /// Open md, greyed with the reason where there is one.
@@ -655,6 +671,6 @@ extension PanelModel {
     let done = ui.copied == doc && ActionButton.isDone(copiedAt: ui.copiedAt, now: now)
     return ActionModel(
       .copyLink, icon: .link, tip: done ? Tips.copied : Tips.copyLink,
-      state: done ? .done : .live, target: doc)
+      state: done ? .done : documentState(doc, missing: Tips.noLink), target: doc)
   }
 }

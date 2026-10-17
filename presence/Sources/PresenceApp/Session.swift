@@ -348,7 +348,6 @@ public final class Session {
   /// not signal.
   private func machine() -> Facts {
     Facts(
-      auth: .ok,
       versions: Versions(app: version),
       hub: preferences.hub,
       extensionState: extensionState(),
@@ -453,11 +452,30 @@ public final class Session {
   }
 
   /// One redraw, that many seconds from now. It is what takes a copied icon,
-  /// a question and a green check back off the screen, and there is one of
-  /// them at a time because there is one question at a time.
+  /// a question and a green check back off the screen.
+  ///
+  /// The later of the two moments wins, because the slot is shared by two
+  /// things that are not the same length: the copied check lasts a second
+  /// and a question three. A Copy link pressed inside those three seconds
+  /// would otherwise move the one redraw forward to its own second, and
+  /// nothing would be scheduled for the moment the question ran out: the
+  /// expired question would sit there until some fact moved, and a press on
+  /// it would ask again instead of acting:
+  /// testACopiedCheckDoesNotCutTheQuestionsRedrawShort.
   func revert(after seconds: TimeInterval) {
+    let waiting = (revertTimer?.isValid ?? false) ? revertTimer?.fireDate : nil
+    guard Session.takesTheSlot(waiting: waiting, due: Date().addingTimeInterval(seconds)) else {
+      return
+    }
     revertTimer?.invalidate()
     revertTimer = redraw(after: seconds)
+  }
+
+  /// Whether a redraw due at this moment takes the slot from the one already
+  /// waiting in it. The later moment wins, and an empty slot is taken.
+  static func takesTheSlot(waiting: Date?, due: Date) -> Bool {
+    guard let waiting else { return true }
+    return due >= waiting
   }
 
   /// One redraw when the signed-in banner's five seconds are up. The banner

@@ -162,7 +162,12 @@ struct Release: Comparable {
 public struct Facts: Sendable, Equatable {
   /// The signed-in address, or nothing where the token carries none.
   public let account: String?
-  public let auth: AuthWord
+  /// What `gdoc auth status` last said, or nothing because nobody has asked
+  /// yet. A machine with no gdoc on it is asked nothing at all, so this
+  /// stays nothing there: the panel draws a ring over the row rather than a
+  /// green check over a token nobody read.
+  /// testTheAccountRowClaimsNothingBeforeTheFirstAnswer.
+  public let auth: AuthWord?
   /// The address the app saw before this one, which is its own memory and
   /// never a line of the log.
   public let previousAccount: String?
@@ -205,7 +210,7 @@ public struct Facts: Sendable, Equatable {
 
   public init(
     account: String? = nil,
-    auth: AuthWord = .ok,
+    auth: AuthWord? = nil,
     previousAccount: String? = nil,
     versions: Versions,
     mark: String = "⁘",
@@ -246,7 +251,7 @@ public struct Facts: Sendable, Equatable {
   /// What the app knows before it has asked anything: its own version, and
   /// nothing else. The shell starts here and the pollers fill it in.
   public static func launching(appVersion: String) -> Facts {
-    Facts(auth: .ok, versions: Versions(app: appVersion))
+    Facts(versions: Versions(app: appVersion))
   }
 
   /// Whether gdoc itself was there to be asked. It is the HEALTH row's own

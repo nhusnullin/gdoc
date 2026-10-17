@@ -96,6 +96,26 @@ final class SignInTests: XCTestCase {
     }
   }
 
+  /// A child that printed its link and its object in one breath is read
+  /// once more at the end, and that reading opens nothing: the child has
+  /// gone, so the listener its link redirects to has gone with it, and a
+  /// browser sent there would sit on a page nobody answers. The link is
+  /// still taken, because the result carries it.
+  func testALinkFoundAfterTheChildWentOpensNoBrowser() async {
+    let desk = NoteDesk()
+    let child = HeldChild(
+      lines: [SignIn.linkAsk, Self.real], envelope: Envelope(ok: true), endsAtOnce: true)
+    let signIn = SignIn(start: { child }, open: { desk.open($0) })
+
+    let result = await signIn.run()
+
+    guard case .signedIn = result else {
+      return XCTFail("the envelope says ok, so this is a sign-in: \(result)")
+    }
+    XCTAssertTrue(
+      desk.opened.isEmpty, "the child is already gone, so there is nothing to open for")
+  }
+
   func testOnlyGooglesSignInURLIsRefusedFromAChild() async {
     let desk = NoteDesk()
     let child = HeldChild(

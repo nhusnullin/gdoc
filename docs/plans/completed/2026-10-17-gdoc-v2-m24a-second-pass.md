@@ -79,10 +79,15 @@ branch.
 - [x] a test that a run whose `start` carries a title, or whose any event
       carries one, is named in the stuck card and in its TODAY row; the fold
       keeps the title from any event of the run, the latest one winning
-- [x] `r2.jsonl` to `r6.jsonl` carry the stopped publish's title the same
-      way `r1.jsonl` does, so the card reads "Publish stopped · Chapter 4"
-      and the TODAY row "Publish · Chapter 4"; `e3.jsonl`'s running publish
-      carries its title too (its step line has none)
+- [x] the stopped publish in `r2.jsonl` to `r6.jsonl`, and the running one
+      in `e3.jsonl`, carry what the record carries and no more. Not as
+      planned: the title went out of those fixtures instead of into them,
+      because `presence.Begin` writes no title and a publish that failed
+      inside the render printed none, so a card reading "Publish stopped ·
+      Chapter 4" would be the panel inventing a fact. The renders say
+      "Publish stopped" and "Publishing" alone, and naming them needs gdoc
+      to write the note's own title into the record:
+      `docs/backlog/a-publish-that-stopped-in-the-render-has-no-name.md`
 - [x] run `3000000000000003` is `via: code` in every fixture of that day
       (r3 to r9, e3, e6, e9, e10), one run, one source
 - [x] `r7.jsonl`, `r8.jsonl`, `r9.jsonl`: the approved hold is one write.

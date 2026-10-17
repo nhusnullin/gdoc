@@ -270,6 +270,33 @@ final class FieldsTests: XCTestCase {
       "the other watch is live on the screen, so the card may not call it stopped")
   }
 
+  // Whether the token works is a fact about the computer, and a watch's
+  // sub-line is a fact about that watch. A token short a scope stops the
+  // watch whose poll it was refused on and leaves the other polling, so the
+  // one still live keeps since, quiet and its two counts: writing the
+  // machine's word over every row would take four facts off a watch that is
+  // live on the screen with its Stop icon beside it.
+  func testAnOpenWatchKeepsItsFactsWhenAnotherOneLostTheSignIn() throws {
+    let panel = try drawn(
+      [
+        event("2026-10-17T15:10:00Z", .start, command: "comments", doc: chapter5, wait: true),
+        event(
+          "2026-10-17T15:29:00Z", .end, command: "comments", doc: chapter5, wait: true,
+          title: "Chapter 5 storyline", ok: false, stop: "auth"),
+        event(
+          "2026-10-17T15:20:00Z", .start, command: "comments", doc: policy, wait: true, call: 2),
+        event(
+          "2026-10-17T15:25:00Z", .end, command: "reply", doc: policy, ok: true, verified: true,
+          call: 3),
+      ], at: "2026-10-17T15:30:00Z", facts: Scenes.machine(auth: .missingScopes),
+      alive: [7101])
+
+    XCTAssertEqual(
+      panel.now.compactMap(liveSub),
+      ["15:29 · sign-in expired", "since 15:20 · quiet 5 min · replied 1"],
+      "the stopped watch says why it stopped, and the open one still says what it has done")
+  }
+
   // The hold the sign-in changed under: the card goes, and the one line in
   // TODAY says what happened to the text. It is the record's own word and
   // no reading on top of it.

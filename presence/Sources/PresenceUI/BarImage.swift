@@ -172,7 +172,12 @@ public enum BarImage {
     now fold: NowFold, sessions: [LiveSession], facts: Facts, checkShowing: Bool
   ) -> BarState {
     if checkShowing { return .check }
-    if !fold.stuck.isEmpty || !facts.auth.isWorking || !facts.gdocFound { return .stuck }
+    // A token nobody has read yet is not a token that failed: the first
+    // answer is seconds away and a badge before it would be red on every
+    // login: testTheBarIsNotStuckBeforeTheFirstAnswer.
+    if !fold.stuck.isEmpty || facts.auth?.isWorking == false || !facts.gdocFound {
+      return .stuck
+    }
     if fold.holds.contains(where: { !$0.ranOut }) { return .hold }
     // A sign-in in flight is a job as well, which is scene e8 of the screens
     // file: the app's own child is a command with an end, and the record

@@ -35,7 +35,7 @@ final class NowTests: XCTestCase {
       "holds, then stuck, then running jobs, then live watches")
     XCTAssertEqual(
       now.entries.count, 6,
-      "six rows: a chat run whose hold is open is the hold card and not a second row")
+      "six rows: two holds, the failed publish, the running one and the two watches")
 
     XCTAssertEqual(
       now.holds.map(\.id), ["h_aa11", "h_bb22"],
@@ -179,6 +179,47 @@ final class NowTests: XCTestCase {
       "the latest title wins, because that is what the person sees in Drive")
   }
 
+  /// A hold is one call of a chat session and not the session: `mcpJudge`
+  /// answers the hold before the command runs, so a held write leaves a
+  /// `held` line and no start at all. The calls that follow it in the same
+  /// run are their own rows, and the one whose process died is its own card:
+  /// a run-wide filter would hide both and leave a dead write in no section.
+  func testAHoldHidesNoOtherCallOfTheSameRun() throws {
+    let run = "cccc"
+    let events = [
+      held(at: "2026-10-17T15:00:00Z", command: "reply", run: run, doc: docA, hold: "h_1"),
+      start(
+        at: "2026-10-17T15:05:00Z", command: "publish", run: run, doc: docB, call: 2, pid: 6001),
+      start(
+        at: "2026-10-17T15:06:00Z", command: "propose", run: run, doc: docA, call: 3, pid: 6002),
+    ]
+    let now = try folded(events, alive: { $0 == 6001 })
+
+    XCTAssertEqual(now.holds.map(\.id), ["h_1"], "the held write is its card")
+    XCTAssertEqual(
+      now.jobs.map(\.command), ["publish"],
+      "the call still running in that session is a job of its own")
+    XCTAssertEqual(
+      now.stuck.map(\.command), ["propose"],
+      "and the call whose process went is a stuck card, not a row nobody draws")
+    XCTAssertEqual(now.stuck.map(\.cause), [.stopped])
+    XCTAssertTrue(now.unknown.isEmpty)
+  }
+
+  /// What a sign-out would stop is what the record has open, which is not
+  /// what NOW draws: a dismissed card is a hold all the same, and a hold
+  /// whose life ran out is waiting for nobody.
+  func testEveryHoldIsTheRecordsAndNotTheScreens() throws {
+    let whole = try scene()
+    XCTAssertEqual(whole.everyHold.map(\.id), ["h_aa11", "h_bb22"])
+
+    let dismissed = try scene(dismissed: ["h_aa11"])
+    XCTAssertEqual(dismissed.holds.map(\.id), ["h_bb22"], "one card is hidden")
+    XCTAssertEqual(
+      dismissed.everyHold.map(\.id), ["h_aa11", "h_bb22"],
+      "and both holds are still open in the chat")
+  }
+
   func testDismissalsAreAnInputAndTheRowStays() throws {
     let stopped = start(at: "2026-10-15T10:00:00Z", command: "propose", run: "aaaa", doc: docA)
     let dismissed = try folded([stopped], dismissed: ["aaaa|1"], alive: { _ in false })
@@ -315,11 +356,26 @@ final class NowTests: XCTestCase {
 
   private func start(
     at text: String, command: String, run: String, doc: String?, call: Int64 = 1,
-    wait: Bool = false, title: String? = nil
+    wait: Bool = false, title: String? = nil, pid: Int32 = 6000
   ) -> Event {
     event(
       at: text, kind: .start, command: command, run: run, doc: doc, call: call, wait: wait,
-      title: title)
+      title: title, pid: pid)
+  }
+
+  /// A write a rule held, as gdoc writes it: one line, no call, and no start
+  /// before it.
+  private func held(
+    at text: String, command: String, run: String, doc: String?, hold: String,
+    until: String? = nil
+  ) -> Event {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime]
+    return Event(
+      schema: 1, at: formatter.date(from: text) ?? Date(), gdoc: "v2.14.0", pid: 6000, run: run,
+      call: nil, kind: .held, command: command, via: "chat", doc: doc, wait: false, title: nil,
+      ok: nil, verified: nil, ms: nil, hold: hold, rule: "dictated",
+      until: until.flatMap(formatter.date(from:)))
   }
 
   private func end(
@@ -334,12 +390,12 @@ final class NowTests: XCTestCase {
   private func event(
     at text: String, kind: EventKind, command: String, run: String, doc: String?,
     call: Int64 = 1, wait: Bool = false, ok: Bool? = nil, verified: Bool? = nil,
-    title: String? = nil, made: String? = nil
+    title: String? = nil, made: String? = nil, pid: Int32 = 6000
   ) -> Event {
     let formatter = ISO8601DateFormatter()
     formatter.formatOptions = [.withInternetDateTime]
     return Event(
-      schema: 1, at: formatter.date(from: text) ?? Date(), gdoc: "v2.14.0", pid: 6000, run: run,
+      schema: 1, at: formatter.date(from: text) ?? Date(), gdoc: "v2.14.0", pid: pid, run: run,
       call: call, kind: kind, command: command, via: "terminal", doc: doc, wait: wait,
       title: title, made: made, ok: ok, verified: verified, ms: ok == nil ? nil : 1200,
       hold: nil, rule: nil, until: nil)

@@ -152,6 +152,11 @@ public struct NowFold: Sendable, Equatable {
   /// The starts whose process is gone that NOW does not keep.
   public let unknown: [UnknownOutcome]
   public let lastVerified: VerifiedWrite?
+  /// Every hold the record has open, the dismissed ones included. `holds` is
+  /// what the panel draws and this is what the record says is waiting, which
+  /// is what a sign-out would drop: a card nobody can see is a hold all the
+  /// same. testTheSignOutCountsTheHoldsTheRecordHasOpen.
+  public let everyHold: [HoldCard]
 
   public var holds: [HoldCard] {
     entries.compactMap { if case .hold(let card) = $0 { return card } else { return nil } }
@@ -233,17 +238,19 @@ public enum Now {
       }
     }
 
-    // A run with an open hold is the hold's card and never a second row: the
-    // chat process is still there, waiting for the person the card asks.
-    let holding = Set(held.values.map(\.run))
     let everyStart = ordered.filter { $0.kind == .start }
 
     var jobs: [NowRun] = []
     var watches: [NowRun] = []
     var unknown: [UnknownOutcome] = []
 
-    for (pairing, start) in starts
-    where !ended.contains(pairing) && !holding.contains(start.run) {
+    // A held write is never one of these: `mcpJudge` answers the hold before
+    // the command runs, so nothing wrote a start for it. The pairing is the
+    // whole of what keeps a run out of NOW, and a run is not one call: a
+    // chat session with a hold open goes on taking other calls, and dropping
+    // every start of that run would hide the one still running and the one
+    // whose process died: testAHoldHidesNoOtherCallOfTheSameRun.
+    for (pairing, start) in starts where !ended.contains(pairing) {
       if alive(start.pid) {
         let row = run(start, step: steps[pairing], titles: titles, calls: calls)
         if row.isWait { watches.append(row) } else { jobs.append(row) }
@@ -270,11 +277,11 @@ public enum Now {
       }
     }
 
-    let cards =
+    let everyHold =
       held.values
-      .filter { !dismissed.contains($0.hold ?? "") }
       .map { hold($0, now: now, titles: titles, calls: calls) }
       .sorted { $0.held < $1.held }
+    let cards = everyHold.filter { !dismissed.contains($0.id) }
 
     var entries = cards.map(NowEntry.hold)
     entries += open.sorted { $0.at < $1.at }.map(NowEntry.stuck)
@@ -282,7 +289,8 @@ public enum Now {
     entries += watches.sorted { $0.started < $1.started }.map(NowEntry.watch)
 
     return NowFold(
-      entries: entries, unknown: unknown.sorted { $0.started < $1.started }, lastVerified: verified)
+      entries: entries, unknown: unknown.sorted { $0.started < $1.started },
+      lastVerified: verified, everyHold: everyHold)
   }
 
   /// Whether a later start answers a stuck write. The same command on the
