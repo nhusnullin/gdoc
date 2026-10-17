@@ -183,7 +183,7 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Sources/PresenceUI/Components/HoldCard.swift`, `StuckCard.swift`, `LiveRow.swift`, `JobCard.swift`, `EmptyState.swift`, `SignedInBanner.swift`, `URLLine.swift`, `IconStrip.swift`, `HealthRows.swift`
 - Create: `presence/Tests/PresenceUITests/CardTests.swift`
 
-- [ ] `testTheHoldCardSaysOpenChatAndDismissAndNeverRelease`,
+- [x] `testTheHoldCardSaysOpenChatAndDismissAndNeverRelease`,
       `testTheStuckCardReasonFitsTwoLinesUnderEightyCharacters`,
       `testTheStuckCardDismissIsTheLastIcon`,
       `testTheLiveRowHasOneStopIconThatBecomesARingWhilePending`,
@@ -191,9 +191,9 @@ every box is ticked and its commit is on the branch.
       `testTheEmptyStateIsTheFirstRunText`, `testTheBannerLivesFiveSeconds`,
       `testTheStripLabelsAreDocNoteChatLink`,
       `testHealthRowsKeepTheirOrderOnEveryScreen`
-- [ ] the views as the blueprint draws them, each driven by a plain model
+- [x] the views as the blueprint draws them, each driven by a plain model
       struct and closures, no process and no file behind any of them
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 7: the scroll box
 
