@@ -32,7 +32,7 @@ the logs and the page. `SCRATCH` below is that directory.
    Launch scripts append to their log (`>>`): a relaunch after a Claude CLI
    sign-in expiry keeps the earlier iterations, which the board pairs tasks with.
 
-4. **Start the task phase, detached.** ralphex refuses to start inside a Claude
+3. **Start the task phase, detached.** ralphex refuses to start inside a Claude
    Code session unless the session variables are stripped:
 
    ```bash
