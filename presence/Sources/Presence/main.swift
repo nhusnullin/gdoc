@@ -1,87 +1,67 @@
 // gdoc presence: the app in the menu bar.
 //
 // It reads one directory of lines gdoc appended and shows what is happening
-// now and what happened today. It never writes to that directory, never
-// reaches the wire, never starts another program and never touches the token.
-// Everything it knows came out of a file gdoc wrote, and every line in that
-// file is treated as something a person could have planted there.
+// now and what happened today. It runs six argv lists of gdoc's own at a path
+// it resolved itself, sends one SIGINT to a wait a person asked it to stop,
+// and never reaches the wire, never writes into that directory and never
+// touches the token itself. Everything it knows came out of a file gdoc
+// wrote, and every line in that file is treated as something a person could
+// have planted there.
 //
 // There is no Dock tile and no window: an accessory application with one
 // status item, which is the whole of it.
+//
+// This file is the shell, and it holds no reading and no wording. The session
+// in PresenceApp knows the record, the children, the stores and what a press
+// means; here there is the status item, the panel's window, and the one
+// signal between them: something changed, so the glyph and an open panel are
+// redrawn.
 
 import AppKit
+import PresenceApp
 import PresenceUI
 import SwiftUI
 
-/// The shell. It holds the three objects and wires the one signal between
-/// them: the record changed, so the glyph and an open panel are redrawn.
 @MainActor
 final class Shell: NSObject, NSApplicationDelegate {
-  private var state: AppState?
+  private var session: Session?
   private var item: StatusItem?
   private let panel = Panel()
 
   func applicationDidFinishLaunching(_ notification: Notification) {
-    let bundle = ownBundle()
-    let state = AppState(
-      directory: recordDirectory(),
-      version: bundle.flatMap(BundleWatcher.versionOnDisk(of:)) ?? "0.0.0",
-      bundle: bundle)
+    let session = Session(places: .ofThisMachine(), quit: { NSApp.terminate(nil) })
     let item = StatusItem { [weak self] in self?.clicked() }
-    self.state = state
+    self.session = session
     self.item = item
 
-    state.start { [weak self] in self?.changed() }
+    session.start { [weak self] in self?.changed() }
     changed()
   }
 
   func applicationWillTerminate(_ notification: Notification) {
-    state?.stop()
+    session?.stop()
   }
 
-  /// The one click: the panel opens, or closes if it is already open.
+  /// The one click: the panel opens, or closes if it is already open. An
+  /// open is also the one moment the app asks gdoc about this machine.
   private func clicked() {
-    guard let state else { return }
-    panel.toggle(view(of: state), under: item?.button)
+    guard let session else { return }
+    panel.toggle(view(of: session), under: item?.button)
+    if panel.isOpen { session.opened() }
   }
 
-  /// The record moved. The glyph follows it always; the panel only while it
+  /// Something changed. The glyph follows it always; the panel only while it
   /// is open.
   private func changed() {
-    guard let state else { return }
-    item?.show(state.bar)
-    panel.refresh(view(of: state))
+    guard let session else { return }
+    item?.show(session.bar)
+    panel.refresh(view(of: session))
   }
 
-  private func view(of state: AppState) -> some View {
+  private func view(of session: Session) -> some View {
     PanelView(
-      model: state.model,
-      actions: PanelActions(perform: { kind, _ in
-        // The one action this milestone's shell performs. Tasks 17 to 21
-        // give the rest of the kinds a body, and Task 22 wires them here.
-        if kind == .quit { NSApp.terminate(nil) }
-      }))
-  }
-
-  /// The app's own bundle, when it is running from one. A bare executable
-  /// from `swift run` has no plist to compare against, and then the reopen
-  /// row is never shown.
-  private func ownBundle() -> URL? {
-    let url = Bundle.main.bundleURL
-    return url.pathExtension == "app" ? url : nil
-  }
-
-  /// Where gdoc keeps the record. GDOC_CONFIG_DIR first, which is the one
-  /// override the binary itself honours, so a person pointing gdoc at another
-  /// directory can point the app at the same one.
-  private func recordDirectory() -> URL {
-    let named = ProcessInfo.processInfo.environment["GDOC_CONFIG_DIR"] ?? ""
-    let base =
-      named.isEmpty
-      ? FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent(".config/gdoc-agent")
-      : URL(fileURLWithPath: named)
-    return base.appendingPathComponent("presence")
+      model: session.model,
+      actions: PanelActions(perform: session.perform, toggle: session.toggle))
   }
 }
 

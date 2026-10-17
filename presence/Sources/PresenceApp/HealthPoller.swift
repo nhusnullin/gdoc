@@ -13,6 +13,11 @@
 // published: a timer here would be this app asking GitHub on gdoc's behalf.
 // `auth status` is the one a live session needs to keep working, so it is
 // asked again every ten minutes while one is open.
+//
+// The third reason is the app's own doing: a sign-in, a sign-out or an
+// `update` that replaced the binary makes the last answer wrong, so both
+// questions are asked again at once. It is still not a timer, which is the
+// rule that matters: nothing here asks on a schedule of its own.
 
 import Foundation
 import PresenceCore
@@ -22,6 +27,10 @@ import PresenceUI
 public enum PollReason: Sendable, Equatable {
   case panelOpened
   case timer
+  /// The app itself changed one of the answers: it signed in, it signed out,
+  /// or its `update` child replaced the binary. Both questions are asked
+  /// whatever the gaps say, because the last answer is known to be wrong.
+  case changed
 }
 
 /// When each question is asked. Both gaps are counted from the last time the
@@ -37,15 +46,18 @@ public enum PollSchedule {
   public static func asksAuth(
     _ reason: PollReason, live: Bool, now: Date, lastAsked: Date?
   ) -> Bool {
+    guard reason != .changed else { return true }
     guard let lastAsked else { return reason == .panelOpened || live }
     let since = now.timeIntervalSince(lastAsked)
     switch reason {
+    case .changed: return true
     case .panelOpened: return since >= openGap
     case .timer: return live && since >= liveGap
     }
   }
 
   public static func asksHelp(_ reason: PollReason, now: Date, lastAsked: Date?) -> Bool {
+    guard reason != .changed else { return true }
     guard reason == .panelOpened else { return false }
     guard let lastAsked else { return true }
     return now.timeIntervalSince(lastAsked) >= openGap

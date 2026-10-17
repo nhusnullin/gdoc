@@ -460,14 +460,21 @@ every box is ticked and its commit is on the branch.
 ### Task 22: wiring the shell
 
 **Files:**
-- Modify: `presence/Sources/Presence/main.swift`, `AppState.swift`, `StatusItem.swift`, `Panel.swift`
+- Modify: `presence/Sources/Presence/main.swift`, `Package.swift`,
+  `presence/Sources/PresenceApp/HealthPoller.swift`
+- Create: `presence/Sources/PresenceApp/Session.swift`, `SessionActions.swift`,
+  `Places.swift`, `BundleWatch.swift`,
+  `presence/Tests/PresenceAppTests/SessionTests.swift`
+- Delete: `presence/Sources/Presence/AppState.swift`, whose holding moved into
+  the session, where a test can reach it. `StatusItem.swift` and `Panel.swift`
+  needed no change: both were already wiring.
 
-- [ ] `testTheShellOnlyWiresAndHoldsNoLogic` (a scan: the executable target's
+- [x] `testTheShellOnlyWiresAndHoldsNoLogic` (a scan: the executable target's
       files import `PresenceApp` and `PresenceUI` and define no function over
       events, processes or URLs)
-- [ ] the shell feeds `Facts` and `UIState` from the pollers, the tail, the
+- [x] the shell feeds `Facts` and `UIState` from the pollers, the tail, the
       stores and the actions, and nothing else
-- [ ] `make app-lint`, `make app-test`, `make app`
+- [x] `make app-lint`, `make app-test`, `make app`
 
 ### Task 23: the reviewer's pass, first round
 

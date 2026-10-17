@@ -1,0 +1,225 @@
+// What a press in the panel means.
+//
+// One function over the fifteen kinds, and nothing else in the app turns a
+// press into anything. Each case is one line of the specification's decision
+// table: the two icons that open something, the one that copies, the one that
+// dismisses a card, the one signal, sign in and sign out, the update and the
+// extension, the switch, and quit.
+//
+// Nothing here judges. A dismissal hides a card and rewrites no row, a stop
+// is refused by the process check and not by this file, and a sign-out stops
+// the watches before the token goes because a watch that lost its token stops
+// answering without saying so.
+//
+// The questions are the two the panel asks, and both of them are a second
+// press of the same kind inside three seconds: a hold's Dismiss and the
+// Account row's Sign out. Everything else happens at once.
+
+import Foundation
+import PresenceCore
+import PresenceUI
+
+extension Session {
+  /// One press, as the panel hands it over: the kind, and the document,
+  /// hold or run it was about.
+  public func perform(_ kind: ActionKind, _ target: String?) {
+    switch kind {
+    case .openDoc:
+      opener.openDocument(target)
+      sawTheStrip()
+    case .openNote:
+      _ = opener.openNote(document: target, hub: preferences.hub, pairing: index.notes)
+      sawTheStrip()
+    case .openChat:
+      opener.continueWithClaude()
+      sawTheStrip()
+    case .copyLink:
+      copyTheLink(target)
+    case .dismiss:
+      dismiss(target)
+    case .stopLive:
+      stopLive(target)
+    case .signIn:
+      signInWithGoogle()
+    case .signOut:
+      askThenSignOut()
+    case .cancelSignIn:
+      Task { [weak self] in await self?.signIn.cancel() }
+    case .copySignInLink:
+      copyTheSignInLink()
+    case .update:
+      install()
+    case .installExtension:
+      installTheExtension()
+    case .openLoginItems:
+      loginItem.openSettings()
+    case .toggleLoginItem:
+      switchLaunchAtLogin()
+    case .quit:
+      quit()
+    case .keep:
+      putTheQuestionAway()
+    }
+  }
+
+  /// One section opened or closed. A refold never closes it: what is open is
+  /// the person's and lives out here.
+  public func toggle(_ list: PanelList) {
+    ui = ui.toggling(list)
+    changed()
+  }
+
+  // MARK: the four icons on a row
+
+  /// The four labels under the first document row go after the first click
+  /// on any icon and never come back.
+  private func sawTheStrip() {
+    guard !ui.stripSeen else {
+      changed()
+      return
+    }
+    ui = ui.afterAnIconClick()
+    preferences.stripSeen = true
+    changed()
+  }
+
+  private func copyTheLink(_ doc: String?) {
+    guard let doc, opener.copyLink(doc) != nil else { return }
+    ui.copied = doc
+    ui.copiedAt = clock()
+    revert(after: Timing.doneFlash)
+    sawTheStrip()
+  }
+
+  /// The sign-in link, as the line under the Account row copies it. It was
+  /// held to Google's own sign-in address before it became that line, so
+  /// what is copied is what was opened.
+  private func copyTheSignInLink() {
+    guard let url = phase?.url else { return }
+    desk.copy(url)
+    changed()
+  }
+
+  // MARK: the cards
+
+  /// Hide one card. A hold asks first and a stuck write does not: a hold
+  /// lives on in the chat until its own `until` after the card goes, which
+  /// is worth one question, and a write that failed is over.
+  private func dismiss(_ key: String?) {
+    guard let key else { return }
+    if isAHold(key), !ui.isAsking(.dismissHold(key), now: clock()) {
+      asksFirst(.dismissHold(key))
+      return
+    }
+    preferences.dismiss(key, at: clock())
+    ui.dismissed.insert(key)
+    putTheQuestionAway()
+  }
+
+  private func isAHold(_ id: String) -> Bool {
+    Now.fold(events, now: clock(), dismissed: ui.dismissed, alive: alive)
+      .holds.contains { $0.id == id }
+  }
+
+  // MARK: the one signal
+
+  /// Stop one watch: the check, then one SIGINT, both the stopper's. A
+  /// signal that went leaves the row a ring until its end is in the record.
+  private func stopLive(_ doc: String?) {
+    guard let doc else { return }
+    if case .signalled = stopper.stop(doc: doc, in: events) {
+      ui.pendingStop.insert(doc)
+    }
+    changed()
+  }
+
+  // MARK: the token
+
+  private func signInWithGoogle() {
+    guard !signingIn else { return }
+    signingIn = true
+    retick()
+    Task { [weak self] in
+      guard let self else { return }
+      let result = await self.signIn.run()
+      self.signingIn = false
+      self.phase = nil
+      self.retick()
+      if case .signedIn(_, let at) = result { self.signedInAt = at }
+      await self.ask(.changed)
+    }
+  }
+
+  /// Sign out, once. The first press is the question, which reverts itself
+  /// after three seconds; the second is the sign-out.
+  private func askThenSignOut() {
+    guard ui.isAsking(.signOut, now: clock()) else {
+      asksFirst(.signOut)
+      return
+    }
+    putTheQuestionAway()
+    Task { [weak self] in await self?.signOut() }
+  }
+
+  private func signOut() async {
+    // The watches first: each of them is a wait that would go on asking
+    // Google with a token that is no longer there.
+    for session in Live.sessions(events, now: clock()) where session.isOpen {
+      if case .signalled = stopper.stop(doc: session.doc, in: events) {
+        ui.pendingStop.insert(session.doc)
+      }
+    }
+    changed()
+    _ = try? await runner.run(.authLogout)
+    signedInAt = nil
+    await ask(.changed)
+  }
+
+  // MARK: the two runs in HEALTH
+
+  /// `gdoc update`, with no flag: what the person would have typed. The row
+  /// draws a ring until the child's end, and the version beside it moves
+  /// only once `help --json` says what is installed.
+  private func install() {
+    guard !installing else { return }
+    installing = true
+    retick()
+    Task { [weak self] in
+      guard let self else { return }
+      _ = await self.updates.update()
+      self.installing = false
+      self.retick()
+      await self.ask(.changed)
+    }
+  }
+
+  private func installTheExtension() {
+    Task { [weak self] in
+      guard let self else { return }
+      _ = await self.updates.installExtension()
+      await self.recompose()
+    }
+  }
+
+  // MARK: the switch
+
+  private func switchLaunchAtLogin() {
+    _ = loginItem.set(facts.loginItem == .on ? .off : .on)
+    Task { [weak self] in await self?.recompose() }
+  }
+
+  // MARK: the question on the screen
+
+  private func asksFirst(_ question: PanelQuestion) {
+    ui.question = question
+    ui.questionAt = clock()
+    revert(after: Timing.confirmRevert)
+    changed()
+  }
+
+  private func putTheQuestionAway() {
+    ui.question = nil
+    ui.questionAt = nil
+    changed()
+  }
+}

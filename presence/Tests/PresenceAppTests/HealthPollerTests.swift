@@ -82,6 +82,23 @@ final class HealthPollerTests: XCTestCase {
     XCTAssertEqual(onTheNextOpen.count, 2, "the next open asks again")
   }
 
+  /// A sign-in, a sign-out or an update makes the last answer wrong, so the
+  /// app asks both questions again however little time has passed.
+  func testAChangeTheAppMadeItselfAsksBothWhateverTheGapsSay() async {
+    let open = Date(timeIntervalSince1970: 1_500_000)
+    XCTAssertTrue(PollSchedule.asksAuth(.changed, live: false, now: open, lastAsked: open))
+    XCTAssertTrue(PollSchedule.asksHelp(.changed, now: open, lastAsked: open))
+
+    let fake = FakeGdoc()
+    let poller = HealthPoller(location: Self.found, answer: fake.answer)
+    await poller.poll(.panelOpened, live: false, now: open)
+    await poller.poll(.changed, live: false, now: open.addingTimeInterval(1))
+    let calls = await fake.calls
+    XCTAssertEqual(
+      calls, [.help, .authStatus, .help, .authStatus],
+      "the open asked both, and the change asked both again a second later")
+  }
+
   // MARK: what the answers become
 
   func testThePolledFactsReachTheFacts() async throws {

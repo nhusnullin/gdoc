@@ -41,6 +41,22 @@ final class SourceRulesTests: XCTestCase {
   /// Where the one room that touches this machine's login items is.
   private static let loginItem = "Sources/PresenceApp/LoginItem.swift"
 
+  /// The executable target, which is the shell: the status item, the
+  /// window, and the one signal between them.
+  private static let shell = "Presence"
+
+  /// What a file of the shell may import. AppKit and SwiftUI because a
+  /// status item and a window are made of them, Foundation for a date, and
+  /// the two libraries it is wired out of.
+  private static let shellImports = [
+    "AppKit", "Foundation", "PresenceApp", "PresenceUI", "SwiftUI",
+  ]
+
+  /// What no declaration in the shell may be about. An event and a record
+  /// are the core's, a call and an outcome are a child the app library
+  /// started, and a URL is a path or an address somebody else resolved.
+  private static let notTheShells = ["Event", "Records", "Glance", "Call", "Outcome", "URL"]
+
   /// The question that signals nothing: a zero asks whether a process is
   /// there and is the whole of Liveness. Any other number is a signal.
   private static let asking = "0"
@@ -305,6 +321,62 @@ final class SourceRulesTests: XCTestCase {
 
     XCTAssertEqual(seenSchemes, Set(Self.schemes), "both schemes are named, and no third")
     XCTAssertEqual(seenHosts, Set(Self.hosts), "both hosts are named, and no third")
+  }
+
+  /// The shell wires and holds nothing.
+  ///
+  /// An executable target cannot be imported by a test target, so anything
+  /// in `Sources/Presence` is code no test can reach. The rule that keeps
+  /// that from mattering is this one: the shell imports the two libraries
+  /// and AppKit, and declares nothing over an event, a record, a call or a
+  /// URL. Every reading is the core's, every child and every store is the
+  /// app library's, and what is left here is three objects and one signal.
+  func testTheShellOnlyWiresAndHoldsNoLogic() throws {
+    var imported: Set<String> = []
+    var files = 0
+
+    try eachSwiftFile { path, text in
+      guard path.hasPrefix("Sources/\(Self.shell)/") else { return }
+      files += 1
+      for module in importsNamed(in: text) {
+        XCTAssertTrue(
+          Self.shellImports.contains(module), "\(path) imports \(module)")
+        imported.insert(module)
+      }
+      for line in text.split(separator: "\n") where declares(String(line)) {
+        for subject in Self.notTheShells {
+          XCTAssertFalse(
+            word(subject, isIn: String(line)),
+            "\(path) declares something over a \(subject): "
+              + line.trimmingCharacters(in: .whitespaces))
+        }
+      }
+    }
+
+    XCTAssertGreaterThan(files, 0, "the shell is not there, so this test guards nothing")
+    XCTAssertTrue(imported.contains("PresenceApp"), "the shell is made of the app library")
+    XCTAssertTrue(imported.contains("PresenceUI"), "and of the views")
+    XCTAssertFalse(
+      imported.contains("PresenceCore"),
+      "the shell reads nothing itself, so it never names the core")
+  }
+
+  /// Whether this line declares a function or an initialiser, which is where
+  /// a shell that had started reading something would say so.
+  private func declares(_ line: String) -> Bool {
+    let trimmed = line.trimmingCharacters(in: .whitespaces)
+    return word("func", isIn: trimmed) || trimmed.contains("init(")
+  }
+
+  /// The modules a file imports, each as its own name.
+  private func importsNamed(in text: String) -> [String] {
+    text.split(separator: "\n").compactMap { line in
+      let trimmed = line.trimmingCharacters(in: .whitespaces)
+      guard trimmed.hasPrefix("import ") else { return nil }
+      return String(trimmed.dropFirst("import ".count))
+        .split(separator: ".").first.map(String.init)?
+        .trimmingCharacters(in: .whitespaces)
+    }
   }
 
   /// Every `<scheme>://` in a file, as the scheme alone.

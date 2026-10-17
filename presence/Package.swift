@@ -61,8 +61,9 @@ let package = Package(
       // copy whose mode bits are not the ones git holds.
       exclude: ["Fixtures"]
     ),
-    // The shell: the status item, the panel's window, the tail's delivery and
-    // the watcher on its own bundle. It holds no reading and no wording.
-    .executableTarget(name: "Presence", dependencies: ["PresenceApp", "PresenceUI", "PresenceCore"]),
+    // The shell: the status item, the panel's window, and the one signal
+    // between them. It holds no reading and no wording, and it never names
+    // the core: everything it knows arrives as a session's two values.
+    .executableTarget(name: "Presence", dependencies: ["PresenceApp", "PresenceUI"]),
   ]
 )
