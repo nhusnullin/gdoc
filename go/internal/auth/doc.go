@@ -57,6 +57,85 @@
 // TestLoginRefusesABuildWithNoClientSecret runs the real login and finds
 // stderr empty.
 //
+// # The sign-out is one file removed, read back, and four refusals
+//
+// Logout removes the file at config.TokenPath() and nothing else. It takes no
+// argument, because there is nothing to hand it: a sign-out tells Google
+// nothing, and the grant stays in the person's account settings until they
+// take it away there. TestLogoutMakesNoRequest reads logout.go's own syntax
+// tree for that, and go/boundary's TestOnlyLogoutRemovesTheToken holds that
+// this is the one function in the tree that asks where the token is and takes
+// a file away.
+//
+// The removal is read back through its own Lstat, because nothing trusts a
+// success: removed: true is an answer somebody looked at the disk for. No
+// token at all is removed: false and no error, the way a status with no token
+// is a report rather than a failure: somebody asking to be signed out of a
+// computer nobody is signed in on has been answered.
+// TestLogoutRemovesTheTokenAndReadsItsAbsenceBack and
+// TestLogoutWithNoTokenIsOkAndRemovesNothing are the pins.
+//
+// Four things are refused, and each leaves the file exactly as it was:
+//
+//   - A waiting sign-in. It is asked first, before the file is looked at: a
+//     browser trip halfway through is about to write this file, and a sign-out
+//     in the middle of one takes away the token that trip is going to replace,
+//     leaving a person reading "Signed in" in a tab that signed them in to
+//     nothing. A lock that is there and will not parse is refused too, by the
+//     rule above it: not knowing must not resolve to taking a credential away.
+//     TestLogoutRefusesWhileASignInIsWaiting.
+//   - Anything at that path that is not a regular file. Lstat and not Stat, so
+//     a symlink is seen rather than followed: following one would remove a
+//     file at the other end of it that gdoc never wrote.
+//     TestLogoutRefusesASymlinkOrANonRegularFileAndRemovesNothing.
+//   - A file that will not parse as the token's JSON. It is the strict reading
+//     every input gets, and here reaching nothing means the bytes stay where
+//     whoever reads the refusal can look at them.
+//     TestLogoutRefusesATokenItCannotParseAndLeavesIt.
+//   - A path this process cannot look at, which is the same not-knowing. A
+//     config dir gdoc cannot read is refused at the first reading it cannot
+//     make, which is the waiting sign-in beside the token, and the Lstat below
+//     refuses the same way for a path that stops being readable between the
+//     two: TestLogoutRefusesAPathItCannotLookAtAndRemovesNothing.
+//
+// Load's own refusals are deliberately not borrowed. A token missing the
+// fields a refresh needs is exactly the file a person wants taken away, and
+// the one file gdoc refuses to remove must not be the one that no longer
+// works: TestLogoutRemovesATokenARefreshCouldNotUse.
+//
+// Nothing else in the config dir is touched. The settings, the release stamp,
+// the record and the waiting sign-in all sit beside the token, and a sign-out
+// is about the credential alone: TestLogoutTouchesNothingElseInTheConfigDir.
+// M17's Keychain is not shipped, and the day it lands is the day this function
+// learns a second place to remove from.
+//
+// # Which sign-in, without saying whose
+//
+// SignInMark is the hex SHA-256 of a fixed prefix and the refresh token, and
+// it answers one question: is this the same sign-in as that one. It reads the
+// refresh token because that is the field a sign-in as another account
+// changes and an ordinary access-token refresh usually leaves alone, which is
+// the field internal/gapi's newerLogin reads too.
+//
+// The two readings part on one case. Google sometimes rotates the refresh
+// token on a refresh this process made itself: gapi does not count that as a
+// newer sign-in and a mark either side of it does not match, so a hold raised
+// before the rotation is dropped and the person is asked again. cmd/gdoc's
+// package comment holds that strain and
+// TestARotatedRefreshTokenRefusesTheRelease pins it.
+//
+// It carries nothing of the token, and no account or email is compared
+// anywhere: TestTheSignInMarkCarriesNoWordOfTheToken. A token with no refresh
+// token has no mark, and an empty mark equals nothing, so whoever holds a mark
+// of nothing holds no permission: TestATokenWithNoRefreshTokenHasNoMark.
+//
+// Its one caller is cmd/gdoc's chat holds, which keep a mark beside each open
+// card and drop the card where the mark stops matching, so an approval a
+// person gave as one account never posts as the next. The prefix is in the
+// hash so this digest is this question's own, and nothing else that hashes the
+// same string can be read as an answer to it:
+// TestTheSignInMarkIsTheDomainPrefixedHashOfTheRefreshToken.
+//
 // # One waiting sign-in, written down beside the token
 //
 // Claude Desktop runs two gdoc processes, one per client

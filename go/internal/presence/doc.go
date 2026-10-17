@@ -1,7 +1,35 @@
 // Package presence is the channel gdoc reports what it is doing on: one
 // append-only JSONL file per month in the config directory, one line for a
-// command's start and one for its end, and one line for each way a chat hold
-// begins and leaves.
+// command's start and one for its end, one line for each part of the one
+// command that has parts, and one line for each way a chat hold begins and
+// leaves. Those are every kind there is, and the list of fields each may
+// carry is one struct: TestTheEventCarriesOnlyItsListedFields.
+//
+// A hold begins as held and leaves as released, expired, landed or dropped,
+// and a hold leaves at most once: cmd/gdoc's
+// TestEveryWayAHoldLeavesIsExactlyOneLine. dropped is the sign-in the hold was
+// raised under no longer being the sign-in on the computer, which cmd/gdoc
+// judges by comparing a hash of the refresh token it kept beside the hold. The
+// hash never reaches this package and no account ever does, so the line says
+// the card is gone and nothing about whose it was:
+// cmd/gdoc's TestTheSignInMarkReachesNoAnswerNoToolAndNoLine.
+//
+// A publish is the one command with parts, and between its start and its end
+// it writes one step line for each of them: build, upload, read_back, link,
+// each written immediately before that part begins, with the part's place in
+// that fixed list and the length of the list beside its name. The names are
+// this package's, so a caller that drifts from the four writes no line at all:
+// TestAStepNameThatIsNotOneOfTheFourWritesNothing, with cmd/gdoc's
+// TestAPublishStepsAreTheFixedNamesInOrder over a real run and go/boundary's
+// TestStepHasOnlyPublishAsCaller over the one room that calls it.
+//
+// The title reaches a step as soon as the render knows it, which is why the
+// build step carries none: cmd/gdoc's TestTheFirstStepsEndCarriesTheTitle.
+// Nothing else about a part is written, and there is nowhere to write it: no
+// percentage and no estimate, because what a part of a publish costs is not
+// something gdoc knows before it runs it, and the two numbers a step carries
+// are places in a list of four:
+// TestNoPercentageOrEstimateIsEverWritten.
 //
 // It exists because of the 2026-10-17 brief: gdoc must not change in kind,
 // and it may say what it is doing in real time. A live review is hours of
@@ -52,11 +80,54 @@
 // them, and cmd/gdoc's TestAHeldWriteRecordsTheRuleAndNoneOfItsWords looks for
 // them in the line a real held write wrote.
 //
+// via is who ran the command, in three words: terminal is a person typing,
+// chat is a tool call of gdoc mcp, and code is the binary run by Claude Code's
+// own tool. The first two are a mark on the context, and the third is one
+// environment variable cmd/gdoc reads once, in dispatch, because this package
+// is a file and a clock and reads no environment of its own. chat wins over
+// code, because a tool call of a chat session is a chat call whatever started
+// the process: TestChatWinsOverCode, with cmd/gdoc's
+// TestViaIsCodeUnderClaudeCode and TestViaChatWinsOverCodeInTheMcpSession.
+//
+// wait and interrupted are the two halves of one wait: the start says the run
+// is going to watch a document, and the end says a person stopped it. The
+// second is lifted out of the waited object `gdoc comments --wait` prints,
+// which is the only place in the binary that knows a wait ended early, and a
+// wait nobody stopped writes nothing at all rather than a false:
+// TestAnInterruptedWaitSaysSo, with cmd/gdoc's TestAStoppedWaitsEndSaysSo over
+// a real wait somebody stopped.
+//
 // The one document word is the title, capped at 200 runes, because without it
 // the app would run gdoc read to fill a row and pull a whole body through a
 // second process. It is lifted from the top level of the envelope's data only
 // where it is there as a string: TestTitleIsLiftedOnlyWhenPresentAsAString
 // and TestTheTitleIsCappedAtTwoHundredRunes.
+//
+// made is the one other id a line may carry: the document a run created,
+// which only a publish does. Every other command was handed its document and
+// the doc field names it, so made is never a second name for the same thing.
+// cmd/gdoc names the command and puts the id through the resolver a line's
+// first word goes through, so a path or a sentence under that key reaches no
+// file: cmd/gdoc's TestAPublishEndNamesTheDocumentItCreated,
+// TestARolledBackPublishNamesNoDocument and TestOnlyPublishCarriesMade.
+//
+// stop is why a failed run failed, in one of emit's seven fixed words, with
+// line beside it where the cause sits on a line of a note, which today is the
+// one picture the house style cannot carry. Both are set by cmd/gdoc, which
+// reads the typed failures the packages raise and never a sentence, and both
+// travel on emit.Result in fields the printed object does not carry, the way
+// Screen does: cmd/gdoc's stop.go holds the reading,
+// TestAStopIsOneOfTheSevenCodesAndNeverASentence, TestTheSVGRefusalCarriesItsLine
+// and TestAnUnknownFailureIsOther its rules.
+//
+// This package judges none of it. It writes a word that is one of the seven
+// and nothing otherwise, because a reader of the record could not tell a word
+// gdoc meant from a sentence that leaked out of English; it writes no stop
+// beside a run that worked, and no line without a code:
+// TestAStopIsOneOfTheSevenCodesAndNeverASentence and
+// TestAStopReachesNoSuccessfulEnd. A failure gdoc did not sort is other, which
+// cmd/gdoc fills in where the command named no word, so a failed end always
+// says something and never a guess.
 //
 // ok is the envelope's ok, and a start says nothing about it:
 // TestOkIsTheEnvelopesOk. verified is lifted only for the commands whose

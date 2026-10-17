@@ -58,8 +58,14 @@ var serveMCP = func(ctx context.Context, in io.Reader, out, errOut io.Writer, ar
 	errOut = lockedLog(errOut)
 	// The session's context is marked once, here, so every command a tool call
 	// dispatches under it records via: chat. internal/mcp builds each call's
-	// context from this one, and no other room in the binary marks it, so
-	// every other run is a terminal: TestAChatCallSaysViaChat.
+	// context from this one, so every other run is a terminal or, where the
+	// environment says Claude Code started the process, a code run:
+	// TestAChatCallSaysViaChat.
+	//
+	// The mark wins over that one. A session started by Claude Code's own MCP
+	// client is both at once, and what a reader of the record needs to know is
+	// that a model asked for the write rather than which program it was asking
+	// from: TestViaChatWinsOverCodeInTheMcpSession.
 	ctx = presence.WithChat(ctx)
 	// A directory left by a process that died is taken away before this
 	// session makes its own. Nothing here fails a start.

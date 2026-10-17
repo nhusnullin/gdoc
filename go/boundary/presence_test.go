@@ -193,6 +193,38 @@ func TestBeginHasOneCaller(t *testing.T) {
 	}
 }
 
+// presenceStep is the line a command writes about a part of its own work, and
+// the one room that writes one.
+const (
+	presenceStep = "Step"
+	stepRoom     = "cmd/gdoc/publish.go"
+)
+
+// TestStepHasOnlyPublishAsCaller holds the steps to the one command that has
+// them.
+//
+// A publish is four parts long and every other command is one piece of work,
+// so a step is publish's own fact. A second caller would be a command drawing
+// a progress bar out of parts nobody named, in a record whose four words are
+// fixed, and the panel would read it as a publish. internal/publish tells
+// cmd/gdoc a part is beginning through Options.OnStep and writes no line
+// itself, which is what keeps the record's one writer the one writer.
+func TestStepHasOnlyPublishAsCaller(t *testing.T) {
+	found, err := callsOf(presenceStep)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(found) == 0 {
+		t.Fatalf("presence.%s is called from nowhere, so this test guards nothing", presenceStep)
+	}
+	for _, c := range found {
+		if c.file != stepRoom {
+			t.Errorf("presence.%s is called from %s's %s, and %s is the one room with steps",
+				presenceStep, c.file, c.fn, stepRoom)
+		}
+	}
+}
+
 // TestNoSkillPassesThePresenceFlag holds the flag out of the five skills.
 //
 // --presence is experimental: one person turns it on for their own machine,

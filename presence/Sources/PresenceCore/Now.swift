@@ -190,8 +190,12 @@ public enum Now {
         }
       case .held:
         held[event.hold ?? ""] = event
-      case .released, .expired, .landed:
+      case .released, .expired, .landed, .dropped:
         held.removeValue(forKey: event.hold ?? "")
+      case .step:
+        // M24a Task 25 wires the steps into the job card; until then a step
+        // changes nothing here.
+        continue
       }
     }
 

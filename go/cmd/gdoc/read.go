@@ -358,11 +358,11 @@ type readData struct {
 func cmdRead(ctx context.Context, a *args) emit.Result {
 	r, err := open(a.target())
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	d, err := docs.Fetch(ctx, r.session, r.id)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}
+		return withStop(emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}, err)
 	}
 	text, notes := view.Text(d)
 	notes = append(unplacedWarnings(d), notes...)
@@ -500,7 +500,7 @@ func cmdComments(ctx context.Context, a *args) emit.Result {
 		// the call rather than something a read could fix.
 		parsed, err := comments.ParseCursor(a.flags["--since"])
 		if err != nil {
-			return emit.Result{OK: false, Error: err.Error()}
+			return failed(err)
 		}
 		since = parsed
 	}
@@ -515,13 +515,13 @@ func cmdComments(ctx context.Context, a *args) emit.Result {
 		}
 		parsed, err := parseWait(a.flags["--wait"])
 		if err != nil {
-			return emit.Result{OK: false, Error: err.Error()}
+			return failed(err)
 		}
 		deadline = parsed
 	}
 	r, err := open(a.target())
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 
 	// One poll is the two reads this command has always made: the comment
@@ -562,11 +562,11 @@ func cmdComments(ctx context.Context, a *args) emit.Result {
 		at := now()
 		raws, err := list(ctx)
 		if err != nil {
-			return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}
+			return withStop(emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}, err)
 		}
 		got, err := read(ctx)
 		if err != nil {
-			return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}
+			return withStop(emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}, err)
 		}
 		threads, unplaced := comments.Threads(raws, got, a.set.Mark)
 		return commentsResult(ctx, r, d, threads, unplaced,
@@ -617,7 +617,7 @@ func cmdComments(ctx context.Context, a *args) emit.Result {
 		// cursor it already had.
 		data := commentsBase(r, d, since)
 		data.Waited = waited
-		return emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: r.warnings()}
+		return withStop(emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: r.warnings()}, err)
 	}
 	// The deadline bounds the call, and a --witness export is part of the call.
 	// Left unbounded it runs on the guard's own client timeout, minutes on top
@@ -740,13 +740,13 @@ type suggestionsData struct {
 func cmdSuggestions(ctx context.Context, a *args) emit.Result {
 	r, err := open(a.target())
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	d, err := docs.Fetch(ctx, r.session, r.id)
 	if err != nil {
 		// The read failed, so the snapshot is not written. A snapshot taken now
 		// would report whatever this run could not see as gone on the next one.
-		return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}
+		return withStop(emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings()}, err)
 	}
 	pending := suggestions.List(d)
 	if pending == nil {
@@ -764,7 +764,7 @@ func cmdSuggestions(ctx context.Context, a *args) emit.Result {
 	path := a.flags["--md"]
 	gone, warns, err := recordSnapshot(path, r.id, suggestions.All(d), suggestions.IDs(d))
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: r.warnings()}
+		return withStop(emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: r.warnings()}, err)
 	}
 	data.Gone = &gone
 	data.FilesChanged = []string{path}

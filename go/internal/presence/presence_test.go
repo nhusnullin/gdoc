@@ -22,6 +22,7 @@ import (
 const (
 	version = "v2.13.0"
 	docID   = "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789"
+	madeID  = "1PuBl15h9876543210987654321098765432"
 	fixedID = "9f1cb3a7d2e45608"
 )
 
@@ -110,7 +111,9 @@ func TestOffTouchesNothing(t *testing.T) {
 	Released(false, version, "h_ab12", errOut)
 	Expired(false, version, "h_cd34", errOut)
 	Landed(false, version, "h_ef56", errOut)
+	Step(WithRun(ctx, r), "build", "")
 	var none *Run
+	none.Made(madeID)
 	none.End(emit.Result{OK: true})
 
 	if _, err := os.Stat(cfg); !os.IsNotExist(err) {
@@ -124,7 +127,8 @@ func TestOffTouchesNothing(t *testing.T) {
 func TestTheEventCarriesOnlyItsListedFields(t *testing.T) {
 	want := []string{
 		"v", "at", "gdoc", "pid", "run", "call", "event", "command", "via",
-		"doc", "wait", "title", "ok", "verified", "ms", "hold", "rule", "until",
+		"doc", "wait", "interrupted", "step", "index", "count", "title", "made",
+		"ok", "verified", "stop", "line", "ms", "hold", "rule", "until",
 	}
 	var got []string
 	ty := reflect.TypeOf(Event{})
@@ -146,6 +150,7 @@ func TestAnEventCarriesNoWordOfTheEnvelopeButTheTitle(t *testing.T) {
 		"someone@example.com",
 		"the warning about the mark",
 		"the quote \"was not found\"",
+		"line 5: /Users/nail/notes/supplier.md could not be embedded",
 	}
 	r := Begin(context.Background(), true, version, "reply", docID, false, true, errOut)
 	r.End(emit.Result{
@@ -156,10 +161,13 @@ func TestAnEventCarriesNoWordOfTheEnvelopeButTheTitle(t *testing.T) {
 			"threads": []string{canaries[1], canaries[2]},
 			"path":    canaries[3],
 			"account": canaries[4],
+			"quote":   canaries[6],
 		},
 		Warnings: []string{canaries[5]},
-		Error:    canaries[6],
+		Error:    canaries[7],
 		Version:  version,
+		Stop:     emit.StopSVGPicture,
+		StopLine: 5,
 	})
 
 	whole := strings.Join(written(t, dir, "2026-10.jsonl"), "\n")
@@ -171,6 +179,86 @@ func TestAnEventCarriesNoWordOfTheEnvelopeButTheTitle(t *testing.T) {
 	if !strings.Contains(whole, "Supplier register") {
 		t.Fatalf("the title is the one document word the record keeps:\n%s", whole)
 	}
+	// The one thing the refusal does leave: its code and its line, which name
+	// no file and quote nothing.
+	if !strings.Contains(whole, `"stop":"svg_picture"`) || !strings.Contains(whole, `"line":5`) {
+		t.Fatalf("the code and the line are what a failed end keeps:\n%s", whole)
+	}
+}
+
+// The record carries one of emit's seven words or no word at all. A sentence
+// under that key would be an error message in a file that lasts, and a word
+// nobody meant would be a code the app cannot place, so a caller that set
+// either writes neither.
+func TestAStopIsOneOfTheSevenCodesAndNeverASentence(t *testing.T) {
+	dir, errOut := scene(t)
+	ctx := context.Background()
+
+	for _, code := range emit.StopCodes() {
+		Begin(ctx, true, version, "read", docID, false, false, errOut).
+			End(emit.Result{OK: false, Stop: code})
+	}
+	for _, odd := range []emit.StopCode{
+		"", "SVG_PICTURE", "svg", "the picture could not be embedded",
+		"guard refused: the document is not in the reachable set",
+	} {
+		Begin(ctx, true, version, "read", docID, false, false, errOut).
+			End(emit.Result{OK: false, Stop: odd, StopLine: 5})
+	}
+
+	ends := endsOf(decoded(t, dir, "2026-10.jsonl"))
+	if len(ends) != len(emit.StopCodes())+5 {
+		t.Fatalf("got %d ends: %+v", len(ends), ends)
+	}
+	for i, code := range emit.StopCodes() {
+		if ends[i].Stop != string(code) {
+			t.Errorf("the end of a run that stopped at %q says %q", code, ends[i].Stop)
+		}
+	}
+	for _, end := range ends[len(emit.StopCodes()):] {
+		if end.Stop != "" || end.Line != 0 {
+			t.Errorf("a word that is not one of the seven reached the record: %+v", end)
+		}
+	}
+}
+
+// A run that worked says nothing about why it stopped, whatever its caller
+// set, and a line is written only beside a code.
+func TestAStopReachesNoSuccessfulEnd(t *testing.T) {
+	dir, errOut := scene(t)
+	ctx := context.Background()
+
+	Begin(ctx, true, version, "read", docID, false, false, errOut).
+		End(emit.Result{OK: true, Stop: emit.StopNetwork, StopLine: 12})
+	Begin(ctx, true, version, "read", docID, false, false, errOut).
+		End(emit.Result{OK: false, StopLine: 12})
+	Begin(ctx, true, version, "read", docID, false, false, errOut).
+		End(emit.Result{OK: false, Stop: emit.StopNotFound, StopLine: -3})
+
+	ends := endsOf(decoded(t, dir, "2026-10.jsonl"))
+	if len(ends) != 3 {
+		t.Fatalf("got %d ends: %+v", len(ends), ends)
+	}
+	if ends[0].Stop != "" || ends[0].Line != 0 {
+		t.Errorf("a run that worked carries %q and line %d", ends[0].Stop, ends[0].Line)
+	}
+	if ends[1].Line != 0 {
+		t.Errorf("a line with no code reached the record: %+v", ends[1])
+	}
+	if ends[2].Stop != string(emit.StopNotFound) || ends[2].Line != 0 {
+		t.Errorf("a line no note has reached the record: %+v", ends[2])
+	}
+}
+
+// endsOf is the end events of a run, in the order they were written.
+func endsOf(events []Event) []Event {
+	var out []Event
+	for _, e := range events {
+		if e.Event == "end" {
+			out = append(out, e)
+		}
+	}
+	return out
 }
 
 func TestOkIsTheEnvelopesOk(t *testing.T) {
@@ -517,7 +605,8 @@ func TestTheFixtureIsWhatTheWriterWrites(t *testing.T) {
 		clock = clock.Add(time.Second)
 		return when
 	}
-	elapsed := []time.Duration{540 * time.Second, 1200 * time.Millisecond, 0}
+	elapsed := []time.Duration{540 * time.Second, 1200 * time.Millisecond, 0, 9300 * time.Millisecond,
+		3100 * time.Millisecond, 4800 * time.Millisecond, 12 * time.Second}
 	since = func(time.Time) time.Duration {
 		d := elapsed[0]
 		elapsed = elapsed[1:]
@@ -537,9 +626,38 @@ func TestTheFixtureIsWhatTheWriterWrites(t *testing.T) {
 	Released(true, version, "h_ab12", errOut)
 	Expired(true, version, "h_cd34", errOut)
 	Landed(true, version, "h_ef56", errOut)
+	Dropped(true, version, "h_gh78", errOut)
 
 	upgrade := Begin(ctx, true, version, "update", "", false, false, errOut)
 	upgrade.End(emit.Result{OK: false, Error: "nothing newer than v2.13.0 is published", Version: version})
+
+	made := Begin(ctx, true, version, "publish", "", false, true, errOut)
+	made.Made(madeID)
+	made.End(emit.Result{OK: true, Data: map[string]any{"title": "Supplier register", "verified": true}, Version: version})
+
+	refused := Begin(ctx, true, version, "publish", "", false, true, errOut)
+	refused.End(emit.Result{OK: false, Error: "line 42: an inline picture could not be embedded",
+		Version: version, Stop: emit.StopSVGPicture, StopLine: 42})
+
+	// And the one command with parts: each of the four is a line of its own,
+	// written before that part begins, and the title reaches the record as
+	// soon as the render knows it.
+	stepped := Begin(ctx, true, version, "publish", "", false, true, errOut)
+	within := WithRun(ctx, stepped)
+	Step(within, "build", "")
+	for _, name := range publishSteps[1:] {
+		Step(within, name, "Supplier register")
+	}
+	stepped.End(emit.Result{OK: true, Data: map[string]any{"title": "Supplier register", "verified": true}, Version: version})
+
+	// And the run a person was watching from Claude Code and stopped by hand:
+	// the via the environment named, and the one word the wait's own answer
+	// puts on the end.
+	stopped := Begin(WithCode(ctx), true, version, "comments", docID, true, false, errOut)
+	stopped.End(emit.Result{OK: true, Version: version, Data: map[string]any{
+		"title":  "Supplier register",
+		"waited": map[string]any{"polls": 6, "seconds": 12, "interrupted": true},
+	}})
 
 	if errOut.Len() != 0 {
 		t.Fatalf("stderr: %q", errOut.String())
@@ -554,5 +672,81 @@ func TestTheFixtureIsWhatTheWriterWrites(t *testing.T) {
 	}
 	if !bytes.Equal(got, want) {
 		t.Fatalf("the writer wrote\n%s\nand testdata/events-v1.jsonl holds\n%s", got, want)
+	}
+}
+
+// A wait a person stopped says so on its end, and no other end does.
+//
+// The word comes out of the command's own data, where `comments --wait` wrote
+// it, the way the title and the verified do. A wait that ran to its deadline
+// says nothing, because false is not a fact a panel has anything to draw; a
+// listing that never waited has no waited at all; and a waited that is not an
+// object, or an interrupted that is not a bool, is not this field.
+func TestAnInterruptedWaitSaysSo(t *testing.T) {
+	dir, errOut := scene(t)
+	ctx := context.Background()
+
+	waited := func(interrupted bool) map[string]any {
+		return map[string]any{
+			"title":  "Supplier register",
+			"waited": map[string]any{"polls": 3, "seconds": 6, "interrupted": interrupted},
+		}
+	}
+	for _, data := range []map[string]any{
+		waited(true),
+		waited(false),
+		{"title": "Supplier register"},
+		{"waited": "the person stopped it"},
+		{"waited": map[string]any{"interrupted": "yes"}},
+	} {
+		Begin(ctx, true, version, "comments", docID, true, false, errOut).
+			End(emit.Result{OK: true, Data: data})
+	}
+
+	ends := endsOf(decoded(t, dir, "2026-10.jsonl"))
+	if len(ends) != 5 {
+		t.Fatalf("got %d ends: %+v", len(ends), ends)
+	}
+	if !ends[0].Interrupted {
+		t.Errorf("the wait the person stopped says nothing: %+v", ends[0])
+	}
+	for i, e := range ends[1:] {
+		if e.Interrupted {
+			t.Errorf("end %d says a person stopped it: %+v", i+1, e)
+		}
+	}
+	// And the word is in the line as the one bool it is, beside the title the
+	// same data carried.
+	first := written(t, dir, "2026-10.jsonl")[1]
+	if !strings.Contains(first, `"interrupted":true`) {
+		t.Errorf("the end reads %s", first)
+	}
+	for _, line := range written(t, dir, "2026-10.jsonl")[2:] {
+		if strings.Contains(line, "interrupted") {
+			t.Errorf("a line that stopped nothing reads %s", line)
+		}
+	}
+}
+
+// Chat wins over Claude Code, because a tool call of a chat session is a chat
+// call whatever started the process: the mark the session put on its context
+// is never taken off it. cmd/gdoc's TestViaChatWinsOverCodeInTheMcpSession is
+// the same rule over the session itself.
+func TestChatWinsOverCode(t *testing.T) {
+	ctx := context.Background()
+	for _, c := range []struct {
+		name string
+		ctx  context.Context
+		want string
+	}{
+		{"nobody marked it", ctx, viaTerminal},
+		{"Claude Code", WithCode(ctx), viaCode},
+		{"a chat session", WithChat(ctx), viaChat},
+		{"a chat session under Claude Code", WithCode(WithChat(ctx)), viaChat},
+		{"Claude Code under a chat session", WithChat(WithCode(ctx)), viaChat},
+	} {
+		if got := viaOf(c.ctx); got != c.want {
+			t.Errorf("%s is via %q, want %q", c.name, got, c.want)
+		}
 	}
 }

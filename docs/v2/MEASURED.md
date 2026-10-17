@@ -955,6 +955,41 @@ entry names its heading and opens it, no bookmark flag sits beside any heading,
 and the `#` jump lands. The decision is DECISIONS.md, 2026-10-16, "Every
 heading carries one hidden bookmark".
 
+## What Claude Code puts in a child's environment
+
+Measured 2026-10-17. The record says who ran a command, and the panel draws
+the answer. A terminal run and a chat call were already told apart by a mark on
+the context; a run Claude Code's own Bash tool starts is neither, and the only
+way to know it from inside the process is the environment it was handed.
+
+How it was taken. One line through the Bash tool of a Claude Code session, the
+desktop app at 2.42304.0 running the CLI at 2.1.289, from the M24b worktree:
+`env | grep -i -E "claude|anthropic"`, with the values of anything token-shaped
+dropped before they were read. The session was the ralphex run of this
+milestone, so the child was a plain `/bin/zsh` the tool started, not a shell a
+person had typed in.
+
+| What was asked | Answer |
+|---|---|
+| is `CLAUDECODE` in the child's environment | yes, `CLAUDECODE=1` |
+| what else names Claude Code | `CLAUDE_CODE_ENTRYPOINT=sdk-cli`, `CLAUDE_CODE_SESSION_ID`, `CLAUDE_CODE_EXECPATH`, `AI_AGENT=claude-code_2-1-289_agent` and a dozen more `CLAUDE_CODE_*` |
+| is the account in there | yes, `CLAUDE_CODE_USER_EMAIL`, which gdoc reads nothing from and never will: no account reaches the record |
+| is a token in there | `CLAUDE_CODE_MESSAGING_TOKEN` and `CLAUDE_CODE_OAUTH_SCOPES` are, so nothing but the one variable is read |
+
+**`CLAUDECODE` is the one variable gdoc reads, and any value of it counts.**
+It is the shortest of the set and the only one whose whole meaning is "Claude
+Code started this", so a release that renames an entrypoint or bumps a version
+does not move it. gdoc compares it with the empty string rather than with `1`:
+the variable is Claude Code's own, and a record that said terminal because the
+value had become `true` would be wrong about the one thing the field is for.
+`cmd/gdoc`'s `TestViaIsCodeUnderClaudeCode` states both halves, and
+`internal/presence` reads no environment at all.
+
+**What this does not say.** It is one session on one machine on one day. A
+Claude Code release that stops setting the variable makes every run a terminal
+run again, which is the state before M24b and costs the panel one word, not a
+wrong one. Nothing gdoc does depends on the answer: the variable decides one
+field of one line of a file the binary never reads back.
 ## What ImageRenderer draws for a SwiftUI ScrollView
 
 Measured 2026-10-17 while building the panel's scroll box (M24a Task 7). The

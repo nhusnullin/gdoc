@@ -1,5 +1,5 @@
 gdoc needs a command.
-┌─ gdoc v2.9.0 ────────────────────────────── 18 commands ─┐
+┌─ gdoc v2.9.0 ────────────────────────────── 19 commands ─┐
 │ Usage  gdoc <command> [words] [flags]                    │
 ├─ Read ───────────────────────────────────────────────────┤
 │ read                                                     │
@@ -43,6 +43,10 @@ gdoc needs a command.
 │ auth login                                               │
 │   Print the Google sign-in URL and wait for the browser  │
 │   to come back.                                          │
+│ auth logout                                              │
+│   Remove the token from this computer. The grant stays   │
+│   at Google until you take it away in your account       │
+│   settings.                                              │
 │ probe                                                    │
 │   Create a throwaway document and say whether Docs       │
 │   honours a suggestion today.                            │

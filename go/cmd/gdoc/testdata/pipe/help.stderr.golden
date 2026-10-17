@@ -6,6 +6,7 @@ Usage: gdoc <command> [words] [flags]
 
   auth status  Say whether gdoc has a token, when it expires, and what it may reach.
   auth login   Print the Google sign-in URL and wait for the browser to come back.
+  auth logout  Remove the token from this computer. The grant stays at Google until you take it away in your account settings.
   read         Print the document as text, with the ids a comment or a suggestion is named by.
   comments     List the comment threads with their ranges, their replies and the next cursor.
   suggestions  List the suggestions pending in the document.

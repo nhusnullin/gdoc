@@ -58,9 +58,19 @@ def read_logs(paths):
     return [ANSI.sub("", p.read_text(errors="replace")) for p in paths if p.exists()]
 
 
+def ref_for(repo, branch):
+    """The branch when the worktree has it, else HEAD: a worktree made with
+    `git worktree add --detach` has no branch until somebody creates one, and
+    a board that reads a ref that is not there says 0/N all run long."""
+    if sh("git", "rev-parse", "--verify", "--quiet", f"refs/heads/{branch}", cwd=repo):
+        return branch
+    return "HEAD"
+
+
 def plan_text(repo, branch, plan_rel):
     done_rel = str(Path(plan_rel).parent / "completed" / Path(plan_rel).name)
-    for ref in (f"{branch}:{plan_rel}", f"{branch}:{done_rel}"):
+    ref = ref_for(repo, branch)
+    for ref in (f"{ref}:{plan_rel}", f"{ref}:{done_rel}"):
         out = sh("git", "show", ref, cwd=repo)
         if out:
             return out
@@ -96,7 +106,7 @@ def parse_tasks(plan):
 
 
 def commits(repo, branch, base="main"):
-    out = sh("git", "log", "--reverse", f"{base}..{branch}", "--format=%h|%ad|%s", "--date=format:%H:%M", cwd=repo)
+    out = sh("git", "log", "--reverse", f"{base}..{ref_for(repo, branch)}", "--format=%h|%ad|%s", "--date=format:%H:%M", cwd=repo)
     return [tuple(l.split("|", 2)) for l in out.splitlines()]
 
 

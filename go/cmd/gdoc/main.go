@@ -287,6 +287,12 @@ func dispatch(ctx context.Context, args []string, errOut io.Writer, set settings
 		return emit.Result{OK: false, Error: err.Error()}
 	}
 	a.set = set
+	// Who is running this, where the environment says so. It is one read, here,
+	// because internal/presence is a file and a clock and reads no environment
+	// of its own, and a session of gdoc mcp has already marked its context,
+	// which this leaves alone: TestViaIsCodeUnderClaudeCode and
+	// TestViaChatWinsOverCodeInTheMcpSession.
+	ctx = viaOfEnv(ctx, os.Getenv)
 	// And the record, after the parse and before the work: a line that was
 	// refused is no run, so nothing is written for it, and the document the
 	// event names is the one the parsed line named. The two calls are the same
@@ -295,8 +301,47 @@ func dispatch(ctx context.Context, args []string, errOut io.Writer, set settings
 	// TestTheFlagChangesNoByteOfTheObject.
 	rec := presence.Begin(ctx, set.Presence && c.report, releaseVersion(),
 		c.name, presenceDoc(*c, a), a.has("--wait"), c.readsBack, errOut)
-	defer func() { rec.End(r) }()
-	return c.run(ctx, a, errOut)
+	defer func() {
+		// And the one word a failed run says why in, where the command that
+		// failed named none: a failure gdoc did not sort is other rather than
+		// nothing, because an absent stop reads as a run that failed for no
+		// reason at all. stop.go holds the words and what names each of them;
+		// the field never reaches the object, so this changes no byte a caller
+		// reads: TestAnUnknownFailureIsOther.
+		if !r.OK && !r.Stop.Known() {
+			r.Stop, r.StopLine = emit.StopOther, 0
+		}
+		rec.Made(presenceMade(*c, r))
+		rec.End(r)
+	}()
+	// The run goes on the context, so the one command with parts can say which
+	// of them it is on without a run threaded through every room between here
+	// and the work: presence.WithRun and publish.go's three calls.
+	return c.run(presence.WithRun(ctx, rec), a, errOut)
+}
+
+// claudeCodeEnv is the one variable that says Claude Code started this
+// process. Measured 2026-10-17 from the Bash tool of a Claude Code session,
+// which hands a child CLAUDECODE=1 beside its other CLAUDE_CODE_* variables;
+// the measurement and its method are in docs/v2/MEASURED.md.
+//
+// Any value counts, and not the literal 1: the variable is Claude Code's own
+// and a release that writes true or 2 in it is still Claude Code, while a
+// record that said terminal in that case would be wrong about the one thing
+// the field is for.
+const claudeCodeEnv = "CLAUDECODE"
+
+// viaOfEnv marks the run's context for the record where the environment says
+// Claude Code started this process, and leaves every other run as it found it.
+//
+// getenv is handed in, as internal/tty takes it, so the rule is measured
+// without a test setting a variable of the real process:
+// TestViaIsCodeUnderClaudeCode.
+func viaOfEnv(ctx context.Context, getenv func(string) string) context.Context {
+	if getenv(claudeCodeEnv) == "" {
+		return ctx
+	}
+	return presence.WithCode(ctx)
 }
 
 // presenceDoc is the document an event names: the id the first word of the line
@@ -316,6 +361,33 @@ func presenceDoc(c command, a *args) string {
 		return ""
 	}
 	id, err := documentID(a.target())
+	if err != nil {
+		return ""
+	}
+	return id
+}
+
+// presenceMade is the document a run created: the id in publish's own answer,
+// for the one command that creates a document, and nothing for every other
+// command, whose document was handed in and is already the event's doc.
+//
+// The id goes through documentID, the resolver the first word of a line goes
+// through, so only something shaped like a Drive id reaches a file that lasts.
+// A publish that took its document back clears the id in its data and so
+// names nothing here: TestARolledBackPublishNamesNoDocument.
+//
+// The command is named here rather than in the table, because this is the one
+// command it is true of and a column with one true row says less than a line
+// that names it: TestOnlyPublishCarriesMade.
+func presenceMade(c command, r emit.Result) string {
+	if c.name != "publish" {
+		return ""
+	}
+	data, ok := r.Data.(publishData)
+	if !ok {
+		return ""
+	}
+	id, err := documentID(data.DocumentID)
 	if err != nil {
 		return ""
 	}
@@ -368,7 +440,8 @@ func authStatus(ctx context.Context, withAccount bool) emit.Result {
 		// still learns which file was being read and what else is in the way,
 		// and the error names what was wrong with it. The run that fails is the
 		// one where the extra fact is worth most.
-		return emit.Result{OK: false, Error: err.Error(), Data: statusReport(report, gapi.Account{}), Warnings: warnings}
+		return withStop(emit.Result{OK: false, Error: err.Error(),
+			Data: statusReport(report, gapi.Account{}), Warnings: warnings}, err)
 	}
 	acc, read := accountFor(ctx, report, withAccount)
 	warnings = append(warnings, read...)
@@ -468,7 +541,25 @@ func statusWarnings(r *auth.StatusReport) []string {
 // come back to the loopback listener.
 func authLogin(ctx context.Context, errOut io.Writer) emit.Result {
 	if err := login(errOut); err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return failed(err)
 	}
 	return authStatus(ctx, false)
+}
+
+// cmdAuthLogout is the token removed from this computer, and nothing else.
+//
+// It takes no context and opens no session, because there is nothing to ask
+// anybody: internal/auth removes one file and reads its absence back. The
+// report goes out beside a refusal as well as beside an answer, so a caller
+// that was refused still reads which file was left alone.
+//
+// What it is not is a sign-out at Google. The grant lives in the person's
+// account settings until they take it away there, which is what the command's
+// own sentence says: TestTheLogoutSummarySaysTheGrantStaysAtGoogle.
+func cmdAuthLogout() emit.Result {
+	report, err := auth.Logout()
+	if err != nil {
+		return withStop(emit.Result{OK: false, Error: err.Error(), Data: report}, err)
+	}
+	return emit.Result{OK: true, Data: report}
 }

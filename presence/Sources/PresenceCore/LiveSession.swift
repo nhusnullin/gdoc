@@ -125,7 +125,7 @@ public enum Live {
         guard let at = polls[event.pairing] else { continue }
         found[at].ended = event.at
         found[at].ok = event.ok ?? false
-      case .held, .released, .expired, .landed:
+      case .step, .held, .released, .expired, .landed, .dropped:
         continue
       }
     }
