@@ -391,6 +391,57 @@ func TestABadFileRefusesEvenWithAGoodCache(t *testing.T) {
 	}
 }
 
+// A file whose PNG header is right and whose picture is not all there is a
+// file gdoc half understands, so it reaches a document by no route: not out of
+// Drive, and not out of the cache. A header check alone would pass it, which
+// is why hold decodes the whole image.
+func TestAHalfPNGIsRefusedByBothRoutes(t *testing.T) {
+	whole := pngOf(t, 8, 4)
+	// The signature and the IHDR chunk, and none of the picture.
+	half := whole[:40]
+
+	t.Run("out of Drive", func(t *testing.T) {
+		configDir(t)
+		f := &fake{raw: half}
+
+		got, err := Fetch(context.Background(), f, theID, housePNG)
+
+		if err == nil {
+			t.Fatalf("Fetch() = %+v, want a refusal", got)
+		}
+		if !strings.Contains(err.Error(), "not a PNG") {
+			t.Errorf("the refusal is %q, want %q named in it", err, "not a PNG")
+		}
+		if got.Raw != nil {
+			t.Error("a refusal carries no bytes")
+		}
+		if readCacheFile(t) != nil {
+			t.Error("a half file reached the cache")
+		}
+	})
+
+	t.Run("out of the cache", func(t *testing.T) {
+		configDir(t)
+		seedCache(t, half, time.Hour, true)
+		f := &fake{raw: whole}
+
+		got, err := Fetch(context.Background(), f, theID, housePNG)
+
+		if err != nil {
+			t.Fatalf("want the bytes rather than a refusal: %v", err)
+		}
+		if f.calls != 1 {
+			t.Errorf("Drive was asked %d times, want once: a half cache is no cache", f.calls)
+		}
+		if got.Source != FromDrive {
+			t.Errorf("Source = %q, want %q", got.Source, FromDrive)
+		}
+		if !bytes.Equal(got.Raw, whole) {
+			t.Error("the bytes are not the ones Drive answered with")
+		}
+	})
+}
+
 // A cache nothing can write is a slower build, not a failed one: the bytes are
 // in hand and the document is the job.
 func TestACacheWriteFailureStillBuilds(t *testing.T) {

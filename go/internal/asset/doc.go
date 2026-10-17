@@ -56,7 +56,9 @@
 // can fix it. Falling back there would hide a broken file for as long as a
 // cache survives. The same check runs over the cached bytes, so a cache
 // somebody corrupted is no cache: a file gdoc half understands reaches a
-// document by no route.
+// document by no route. The check decodes the whole picture and not its
+// header, because a header states a size a file cut off after it does not
+// carry: TestAHalfPNGIsRefusedByBothRoutes holds both routes.
 //
 // Want is the caller's statement, and image/png is the only mime this room
 // checks, because it is the only one it can decode. A statement naming
