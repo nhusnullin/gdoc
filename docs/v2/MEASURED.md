@@ -1001,6 +1001,46 @@ says so and the drawn mode can go.
 Recheck on a macOS or Xcode upgrade, by that one assertion: it fails when the
 answer changes.
 
+## What LaunchServices says about a `claude://` handler
+
+2026-10-17, M24a Task 17. The panel's "Continue with Claude" is one
+activation of Claude Desktop and no URL, because the spec holds the prefill
+back until a scheme is measured. This is the measurement, taken by reading the
+LaunchServices database and launching nothing:
+
+```
+/System/Library/Frameworks/CoreServices.framework/Frameworks/\
+LaunchServices.framework/Support/lsregister -dump
+```
+
+macOS 26.3.1 (25D771280a), Claude 2.42304.0 at `/Applications/Claude.app`,
+bundle identifier `com.anthropic.claudefordesktop`.
+
+| What | Answer |
+|---|---|
+| Is a `claude:` scheme claimed? | yes, by Claude.app: `claimed schemes: claude:, msauth.com.anthropic.claudefordesktop:` |
+| Its rank and role | `rank: Default`, `roles: Viewer (0000000000000002)`, `flags: url-type` |
+| Its bindings | one, `claude:` |
+| What the bundle's own plist says | `CFBundleURLTypes` holds two entries, `Claude` with scheme `claude` and `MSAL` with scheme `msauth.com.anthropic.claudefordesktop` |
+| Does anything say what a `claude:` URL means? | no: the plist names the scheme and nothing else, and no host, path or parameter of it is documented |
+
+**A handler exists and a grammar does not.** The scheme is registered, so a
+`claude://...` URL would reach Claude Desktop rather than nothing. What it
+would then do is unknown: nothing in the bundle, and nothing published, says
+which host or path opens a chat, let alone one with text already in it. A URL
+built on a guess is a URL that may do something else on the next release.
+
+So "Continue with Claude" stays one activation: `NSRunningApplication.activate`
+where it is up, and `NSWorkspace.open` on its bundle where it is not, in
+`presence/Sources/PresenceApp/Opener.swift`, with no argument, no file and no
+URL. `OpenerTests.testContinueWithClaudeOnlyActivatesTheApp` holds that, and
+`SourceRulesTests.testTheOnlySchemesAndHostsAreGooglesAndTheVaults` holds that
+`claude` is not one of the two schemes the sources may name.
+
+Recheck when Anthropic documents the scheme, or when a release note names a
+URL that opens a chat. The prefill is then one decision entry and one line in
+the opener, and the scheme becomes the third the source scan admits.
+
 ## Not measured yet
 
 One of the M14 measurements stayed open on 2026-10-03: whether Google emails an

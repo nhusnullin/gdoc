@@ -376,7 +376,7 @@ every box is ticked and its commit is on the branch.
 - Modify: `presence/Tests/PresenceCoreTests/SourceRulesTests.swift` (`NSWorkspace` and `NSPasteboard` only in `Opener.swift`, schemes https and obsidian, hosts docs.google.com and accounts.google.com)
 - Modify: `docs/v2/MEASURED.md`
 
-- [ ] `testTheDocsURLIsBuiltFromAValidIdOnly`, `testCopyLinkIsThePlainURL`,
+- [x] `testTheDocsURLIsBuiltFromAValidIdOnly`, `testCopyLinkIsThePlainURL`,
       `testNoTitleEverReachesAURLOrThePasteboard`,
       `testTheHubIndexReadsOnlyTheFrontMattersGdocBlock`,
       `testTheIndexRescansOnAFileEvent`,
@@ -390,12 +390,12 @@ every box is ticked and its commit is on the branch.
       from `login.go:25`; http, a lookalike host, userinfo, `javascript:` and
       the `/v2/` path each refused), `testTheCountdownIs180Seconds`,
       `testCancelTerminatesTheChild`, `testTheBannerFollowsAnOkEnvelope`
-- [ ] the opener, the index with FSEvents and a debounce, the Obsidian URL,
+- [x] the opener, the index with FSEvents and a debounce, the Obsidian URL,
       the sign-in flow; measured and written into MEASURED.md: whether
       LaunchServices lists a `claude://` handler on this machine (read with
       `lsregister -dump`, no launch), so Continue with Claude's prefill stays
       out until it does
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 18: stop live
 

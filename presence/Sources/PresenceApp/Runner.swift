@@ -271,7 +271,11 @@ public final class Runner: @unchecked Sendable {
 
   /// Launch one child. The kind is reserved before the launch, in one locked
   /// step, so two callers cannot both pass the one-child rule.
-  public func start(_ call: Call) throws -> Child {
+  ///
+  /// The deadline is the runner's own unless the caller names another. A
+  /// sign-in is the one call that waits longer than the runner's default,
+  /// because the thing it waits for is a person opening a browser.
+  public func start(_ call: Call, timeout: TimeInterval? = nil) throws -> Child {
     guard let gdoc = location.path else { throw RunFailure.notFound(tried: location.tried) }
 
     lock.lock()
@@ -286,7 +290,7 @@ public final class Runner: @unchecked Sendable {
       return try Child(
         call: call, executable: gdoc,
         environment: Runner.childEnvironment(from: parentEnvironment),
-        timeout: timeout,
+        timeout: timeout ?? self.timeout,
         release: { [weak self] in self?.free(call) })
     } catch {
       free(call)
@@ -338,6 +342,7 @@ public final class Child: @unchecked Sendable {
   private let lock = NSLock()
   private var expired = false
   private var taken = false
+  private var errorLines: (@Sendable (String) -> Void)?
 
   init(
     call: Call,
@@ -375,6 +380,20 @@ public final class Child: @unchecked Sendable {
 
   /// How long after the deadline's terminate the end is still waited for.
   public static let grace: TimeInterval = 5
+
+  /// Hear each line of standard error as it is written, rather than at the
+  /// end.
+  ///
+  /// One caller: a sign-in, which needs the link while the child is still
+  /// waiting for the browser. Set it before the outcome is taken; a sink
+  /// registered after that reading has begun hears nothing, which is why
+  /// this is a method on the child the starter holds and not a notice
+  /// anybody can subscribe to.
+  public func onStandardErrorLine(_ sink: @escaping @Sendable (String) -> Void) {
+    lock.lock()
+    errorLines = sink
+    lock.unlock()
+  }
 
   public var isRunning: Bool { process.isRunning }
 
@@ -414,8 +433,11 @@ public final class Child: @unchecked Sendable {
     lock.unlock()
     defer { release() }
 
+    lock.lock()
+    let sink = errorLines
+    lock.unlock()
     let out = Collector(output.fileHandleForReading.fileDescriptor)
-    let said = Collector(errors.fileHandleForReading.fileDescriptor)
+    let said = Collector(errors.fileHandleForReading.fileDescriptor, line: sink)
     let deadline = DispatchWorkItem { [weak self] in self?.ranOut() }
     DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: deadline)
     // The grace is for the end to arrive after the terminate the deadline
@@ -455,18 +477,29 @@ final class Collector: @unchecked Sendable {
   private let lock = NSLock()
   private var collected = Data()
 
-  init(_ descriptor: Int32) {
+  init(_ descriptor: Int32, line: (@Sendable (String) -> Void)? = nil) {
     group.enter()
     DispatchQueue.global().async { [self] in
       var buffer = [UInt8](repeating: 0, count: 1 << 16)
       var all = Data()
+      var partial = Data()
       while true {
         let read = buffer.withUnsafeMutableBytes { raw in
           Darwin.read(descriptor, raw.baseAddress, raw.count)
         }
         if read <= 0 { break }
         all.append(contentsOf: buffer[0..<read])
+        guard let line else { continue }
+        partial.append(contentsOf: buffer[0..<read])
+        while let newline = partial.firstIndex(of: 0x0A) {
+          let whole = Data(partial[partial.startIndex..<newline])
+          partial = Data(partial[partial.index(after: newline)...])
+          line(String(decoding: whole, as: UTF8.self))
+        }
       }
+      // A child that died mid-line leaves bytes with no newline after them.
+      // They are still what it said, so the last of them is a line too.
+      if let line, !partial.isEmpty { line(String(decoding: partial, as: UTF8.self)) }
       lock.lock()
       collected = all
       lock.unlock()

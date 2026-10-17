@@ -1,0 +1,188 @@
+// What the app reads of somebody's notes, and what it refuses to.
+//
+// The hub is a folder of Markdown. The app reads one block of one note's
+// front matter and nothing else, so a note's text never reaches the app at
+// all. Fixtures/hub holds four notes: three gdoc published or exported, and
+// one that names a document id in its body and under another key, which is
+// the thing this index must not see.
+
+import Foundation
+import XCTest
+
+@testable import PresenceCore
+
+final class HubIndexTests: XCTestCase {
+
+  private static let supplier = "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd"
+  private static let treasury = "2BcDeFgHiJkLmNoPqRsTuVwXyZ0123456789bcde"
+  private static let treasuryTab = "3CdEfGhIjKlMnOpQrStUvWxYzA0123456789cdef"
+  private static let archived = "4DeFgHiJkLmNoPqRsTuVwXyZaB0123456789defa"
+  private static let neverPaired = "5EfGhIjKlMnOpQrStUvWxYzaBc0123456789efab"
+  private static let inATextFile = "6FgHiJkLmNoPqRsTuVwXyZaBcD0123456789fabc"
+
+  private func hub() throws -> String {
+    let url = try XCTUnwrap(
+      Bundle.module.url(forResource: "hub", withExtension: nil, subdirectory: "Fixtures"),
+      "Fixtures/hub is not in the test bundle")
+    return url.path
+  }
+
+  func testTheHubIndexReadsOnlyTheFrontMattersGdocBlock() throws {
+    let index = HubIndex.scan(hub: try hub())
+
+    XCTAssertEqual(index.notes[Self.supplier], "notes/supplier-register.md", "schema 1")
+    XCTAssertEqual(index.notes[Self.treasury], "notes/treasury-policy.md", "schema 2, first entry")
+    XCTAssertEqual(
+      index.notes[Self.treasuryTab], "notes/treasury-policy.md", "schema 2, second entry")
+    XCTAssertEqual(index.notes[Self.archived], "archive/old-note.md", "a note in a subfolder")
+
+    XCTAssertNil(
+      index.notes[Self.neverPaired],
+      "an id in the body and under another front-matter key is not a pairing")
+    XCTAssertNil(index.notes[Self.inATextFile], "a .txt is not a note")
+    XCTAssertEqual(index.notes.count, 4, "four ids over three notes, and nothing else")
+    XCTAssertEqual(index.vault, "hub", "the vault is the hub folder's own name")
+
+    // And the reading itself, over the text, so the rule is stated once.
+    XCTAssertEqual(
+      HubIndex.documentIDs(
+        inFrontMatterOf: """
+          ---
+          gdoc:
+            schema: 1
+            document_id: \(Self.supplier)
+          ---
+
+          gdoc:
+            document_id: \(Self.neverPaired)
+          """),
+      [Self.supplier], "nothing past the closing fence is front matter")
+    XCTAssertEqual(
+      HubIndex.documentIDs(inFrontMatterOf: "# No front matter at all\n"), [],
+      "a note with no front matter is unpaired")
+    XCTAssertEqual(
+      HubIndex.documentIDs(inFrontMatterOf: "---\ntitle: unterminated\ngdoc:\n  schema: 1\n"), [],
+      "front matter that never closes is front matter the app does not have")
+    XCTAssertEqual(
+      HubIndex.documentIDs(
+        inFrontMatterOf: """
+          ---
+          gdoc:
+            schema: 1
+            document_id: ../../etc/passwd
+          ---
+          """),
+      [], "a path in the id field is refused by the id's own shape")
+  }
+
+  /// Two notes naming one document is somebody's own mistake, not a crash:
+  /// the index takes one of them and takes the same one every time.
+  func testOneDocumentTakesTheFirstNoteByPath() throws {
+    let hub = try temporaryHub()
+    try note(in: hub, at: "b-second.md", id: Self.supplier)
+    try note(in: hub, at: "a-first.md", id: Self.supplier)
+
+    XCTAssertEqual(HubIndex.scan(hub: hub).notes[Self.supplier], "a-first.md")
+  }
+
+  func testTheIndexRescansOnAFileEvent() throws {
+    let hub = try temporaryHub()
+    XCTAssertTrue(HubIndex.scan(hub: hub).notes.isEmpty, "an empty hub pairs nothing")
+
+    let rescanned = expectation(description: "the watcher said something changed")
+    rescanned.assertForOverFulfill = false
+    let latest = Latest()
+    let watcher = HubWatcher(hub: hub, debounce: 0.1) {
+      let next = HubIndex.scan(hub: hub)
+      latest.put(next)
+      if next.notes[Self.supplier] != nil { rescanned.fulfill() }
+    }
+    watcher.start()
+    defer { watcher.stop() }
+
+    try note(in: hub, at: "notes/new-note.md", id: Self.supplier)
+    wait(for: [rescanned], timeout: 20)
+
+    XCTAssertEqual(latest.read().notes[Self.supplier], "notes/new-note.md")
+  }
+
+  func testOpenMdStaysInsideTheChosenVaultAndNeedsARegularMdFile() throws {
+    let hub = try temporaryHub()
+    try note(in: hub, at: "notes/supplier register.md", id: Self.supplier)
+    try FileManager.default.createDirectory(
+      at: URL(fileURLWithPath: hub).appendingPathComponent("notes/folder.md"),
+      withIntermediateDirectories: true)
+
+    XCTAssertEqual(
+      try HubIndex.noteURL(hub: hub, relative: "notes/supplier register.md").get().absoluteString,
+      "obsidian://open?vault=hub&file=notes%2Fsupplier%20register.md",
+      "the vault and the relative path, percent-encoded, and no line parameter")
+
+    XCTAssertEqual(
+      HubIndex.noteURL(hub: hub, relative: "notes/gone.md").fault, .movedOrDeleted)
+    XCTAssertEqual(
+      HubIndex.noteURL(hub: hub, relative: "notes/folder.md").fault, .movedOrDeleted,
+      "a directory named .md is not a note")
+    XCTAssertEqual(
+      HubIndex.noteURL(hub: hub, relative: "../outside.md").fault, .outsideTheHub)
+    XCTAssertEqual(
+      HubIndex.noteURL(hub: hub, relative: "notes/../../outside.md").fault, .outsideTheHub,
+      "a relative path that climbs out is out")
+    XCTAssertEqual(
+      HubIndex.noteURL(hub: hub, relative: "/etc/passwd").fault, .outsideTheHub,
+      "an absolute path is not a path inside the hub")
+    XCTAssertEqual(
+      HubIndex.noteURL(hub: hub, relative: "notes/supplier register.txt").fault, .notMarkdown)
+  }
+
+  // MARK: a hub of this test's own
+
+  private func temporaryHub() throws -> String {
+    let base = URL(fileURLWithPath: NSTemporaryDirectory())
+      .appendingPathComponent("hub-\(UUID().uuidString)")
+      .appendingPathComponent("hub")
+    try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+    addTeardownBlock {
+      try? FileManager.default.removeItem(at: base.deletingLastPathComponent())
+    }
+    // Resolved, because a temporary directory on this machine is reached
+    // through a symlink and the paths under test are compared whole.
+    return base.resolvingSymlinksInPath().path
+  }
+
+  private func note(in hub: String, at relative: String, id: String) throws {
+    let url = URL(fileURLWithPath: hub).appendingPathComponent(relative)
+    try FileManager.default.createDirectory(
+      at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+    try "---\ngdoc:\n  schema: 1\n  document_id: \(id)\n---\n\n# A note\n"
+      .write(to: url, atomically: true, encoding: .utf8)
+  }
+}
+
+/// The last index a watcher handed over, where a thread that is not this
+/// test's own can put it.
+final class Latest: @unchecked Sendable {
+  private let lock = NSLock()
+  private var index = HubIndex.empty
+
+  func put(_ next: HubIndex) {
+    lock.lock()
+    index = next
+    lock.unlock()
+  }
+
+  func read() -> HubIndex {
+    lock.lock()
+    defer { lock.unlock() }
+    return index
+  }
+}
+
+/// Why a result failed, where it did. One line so a table of refusals reads
+/// as a table.
+extension Result {
+  var fault: Failure? {
+    guard case .failure(let why) = self else { return nil }
+    return why
+  }
+}

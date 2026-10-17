@@ -723,6 +723,9 @@ public enum Tips {
   public static let noDoc = "No Google Doc yet"
   public static let openNote = "Open the note in Obsidian"
   public static let noNote = "No note is paired with this document"
+  /// The index named a note that is not there any more. It is a fact about
+  /// the hub and never a complaint about the person who moved it.
+  public static let noteMoved = "Note moved or deleted"
   public static let openChat = "Continue with Claude"
   public static let noExtension = "Install the Desktop extension in Health"
   public static let copyLink = "Copy link"

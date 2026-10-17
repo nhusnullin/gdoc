@@ -25,9 +25,10 @@ let package = Package(
     .executable(name: "GdocPresence", targets: ["Presence"])
   ],
   targets: [
-    // Foundation only: the decoding, the fold, the tail, liveness and the
-    // bundle-version check. No window, no view, and nothing that could reach
-    // the wire or start a program.
+    // The decoding, the folds, the tail, liveness, the hub index and the
+    // bundle-version check. Foundation, and CoreServices for the one
+    // FSEvents stream the hub is watched with. No window, no view, and
+    // nothing that could reach the wire or start a program.
     .target(name: "PresenceCore"),
     .testTarget(
       name: "PresenceCoreTests",

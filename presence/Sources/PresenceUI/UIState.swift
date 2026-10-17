@@ -78,6 +78,19 @@ public struct UIState: Sendable, Equatable {
   /// Whether a list is open.
   public func isOpen(_ list: PanelList) -> Bool { expanded.contains(list) }
 
+  /// The same state with the icon strip gone.
+  ///
+  /// The four labels under the first document row are there to be read once.
+  /// The first click on any icon is the proof they were read, so they go
+  /// then and never come back; Task 19 writes the flag down so a later
+  /// launch does not show them again.
+  public func afterAnIconClick() -> UIState {
+    guard !stripSeen else { return self }
+    var next = self
+    next.stripSeen = true
+    return next
+  }
+
   /// The same state with one list the other way round.
   public func toggling(_ list: PanelList) -> UIState {
     var next = self
