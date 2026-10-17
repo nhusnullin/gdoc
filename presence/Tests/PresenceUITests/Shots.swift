@@ -166,6 +166,69 @@ func pixel<V: View>(
   return try XCTUnwrap(sampled, "the renderer drew nothing in \(scheme)")
 }
 
+/// Where a view's ink ends, as a point in the width it was laid out in.
+///
+/// The view is drawn over nothing, so a pixel with no alpha is a pixel
+/// nothing drew on: what comes back is the right edge of the last thing
+/// drawn. It is the one way to ask whether two rows in two sections line
+/// their values up, because the answer is a layout's and not a constant's.
+@MainActor
+func inkEnds<V: View>(_ view: V, scheme: ColorScheme, width: CGFloat = Grid.panelWidth) throws
+  -> CGFloat
+{
+  let renderer = ImageRenderer(
+    content: view.frame(width: width).environment(\.colorScheme, scheme))
+  renderer.scale = 2
+  var found: CGFloat?
+  let appearance = NSAppearance(named: scheme == .dark ? .darkAqua : .aqua)
+  appearance?.performAsCurrentDrawingAppearance {
+    guard let image = renderer.cgImage else { return }
+    let rep = NSBitmapImageRep(cgImage: image)
+    for x in stride(from: rep.pixelsWide - 1, through: 0, by: -1) {
+      for y in 0..<rep.pixelsHigh {
+        guard (rep.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.05 else { continue }
+        found = CGFloat(x + 1) / 2
+        return
+      }
+    }
+  }
+  return try XCTUnwrap(found, "the view drew nothing in \(scheme)")
+}
+
+/// Where the ink lies vertically inside one column of a view, as points in
+/// the box it was laid out in.
+///
+/// Two pieces of one row are two bands: the words on the left and whatever
+/// sits at the trailing edge. A row reads as one row when the two bands have
+/// the same middle, which is a question only the drawing can answer.
+@MainActor
+func inkBand<V: View>(
+  _ view: V, scheme: ColorScheme, width: CGFloat = Grid.panelWidth,
+  from: CGFloat, to: CGFloat
+) throws -> ClosedRange<CGFloat> {
+  let renderer = ImageRenderer(
+    content: view.frame(width: width).environment(\.colorScheme, scheme))
+  renderer.scale = 2
+  var top: Int?
+  var bottom: Int?
+  let appearance = NSAppearance(named: scheme == .dark ? .darkAqua : .aqua)
+  appearance?.performAsCurrentDrawingAppearance {
+    guard let image = renderer.cgImage else { return }
+    let rep = NSBitmapImageRep(cgImage: image)
+    for y in 0..<rep.pixelsHigh {
+      for x in Int(from * 2)..<min(Int(to * 2), rep.pixelsWide) {
+        guard (rep.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.05 else { continue }
+        if top == nil { top = y }
+        bottom = y
+        break
+      }
+    }
+  }
+  let first = try XCTUnwrap(top, "nothing is drawn between \(from) and \(to) in \(scheme)")
+  let last = try XCTUnwrap(bottom)
+  return (CGFloat(first) / 2)...(CGFloat(last + 1) / 2)
+}
+
 /// How many lines a sentence takes in the panel's own font at a width,
 /// which is the one thing a clamp cannot be read off the code for.
 ///
@@ -294,7 +357,31 @@ enum SheetPieces {
     return try XCTUnwrap(model.empty, "r1's DOCUMENTS says nothing about being empty")
   }
 
-  /// Every string the two sheets draw, which is what the vocabulary test
+  /// Scene e10's question: the words, what follows from them, and the loud
+  /// word. The controls sheet draws the one inline confirm the panel has
+  /// beside the Account row, so the sheet's question is that row's own.
+  static func signOut() throws -> QuestionModel {
+    let health = try scene("e10").model().health
+    let asked = health.compactMap(\.question)
+    return try XCTUnwrap(asked.first, "scene e10 asked nothing")
+  }
+
+  /// The words on two of a document row's icons, one live and one with
+  /// nothing to open: scene e6's first two rows, which is where the panel
+  /// holds a tooltip open of its own accord.
+  static func tips() throws -> (live: String, dead: (words: String, state: ActionState)) {
+    let rows = try documentRows()
+    let open = try XCTUnwrap(
+      rows[0].actions.first { $0.kind == .openDoc }, "no row opens a document")
+    let note = try XCTUnwrap(
+      rows[1].actions.first { $0.kind == .openNote }, "no row opens a note")
+    guard case .off(let reason) = note.state else {
+      throw XCTSkip("scene e6's second row has a note after all")
+    }
+    return (open.tip, (reason, note.state))
+  }
+
+  /// Every string the three sheets draw, which is what the vocabulary test
   /// reads. A piece that gains a line gains it here too, or the test is
   /// checking a page that is no longer the page.
   static func words() throws -> [String] {
@@ -314,8 +401,12 @@ enum SheetPieces {
       job.title,
       documents.count, documents.more,
       try quiet(),
-      EmptyState.firstRun, SignedInBanner.words, Scenes.signInURL,
+      SignedInBanner.words, Scenes.signInURL,
     ]
+    let question = try signOut()
+    words += [question.title, question.consequence, question.danger.rawValue]
+    let tips = try self.tips()
+    words += [tips.live, tips.dead.words]
     words += stuck.actions.map(\.tip)
     words += [job.sub].compactMap { $0 }
     words += job.steps.flatMap { [$0.title] + [$0.value].compactMap { $0 } }
@@ -358,7 +449,7 @@ func panelVocabulary() throws -> Set<String> {
             .title.map { [$0] } ?? [])
         for row in documents.rows {
           words.formUnion([row.title, row.sub])
-          words.formUnion(row.actions.map(\.tip))
+          words.formUnion(row.actions.flatMap(actionWords))
         }
       case .today(let log):
         words.formUnion([log.empty].compactMap { $0 })
@@ -390,6 +481,14 @@ func panelVocabulary() throws -> Set<String> {
   words.formUnion(StripLabel.allCases.map(\.rawValue))
   words.insert(EmptyState.firstRun)
   return words.filter { !$0.isEmpty }
+}
+
+/// One action's own strings: the words under the pointer, and the reason an
+/// icon with nothing to open gives instead. Both are drawn, so both are the
+/// panel's words.
+private func actionWords(_ action: ActionModel) -> [String] {
+  if case .off(let reason) = action.state { return [action.tip, reason] }
+  return [action.tip]
 }
 
 /// One NOW item's own strings.

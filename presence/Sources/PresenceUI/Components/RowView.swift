@@ -68,6 +68,21 @@ public enum RowShape: String, Sendable, CaseIterable {
     self == .more ? palette.textTertiary : nil
   }
 
+  /// Where the row's three columns meet.
+  ///
+  /// A two-line row hangs them from the top, so the glyph sits against the
+  /// title and not between the two lines. A one-line row has nothing to
+  /// hang from: its words, its glyph and whatever is at its trailing edge
+  /// are one line, and a 24 pt icon beside a 16 pt line of words put the
+  /// chevron of every Show more 6 pt under the words it opens.
+  /// testTheChevronIsLevelWithItsWords.
+  public var crossAlignment: VerticalAlignment {
+    switch self {
+    case .two, .doc: return .top
+    case .plain, .compact, .more: return .center
+    }
+  }
+
   /// `-webkit-line-clamp`: a two-line row's sub-line wraps to a second
   /// line before it is cut, which is what the two-line shapes are for. The
   /// one-line shapes have no second line to wrap into.
@@ -89,6 +104,10 @@ public struct RowView<Leading: View, Trailing: View>: View {
   public let title: String
   public let value: String?
   public let sub: String?
+  /// The title's colour, where the row is not drawn on the panel's own
+  /// surface: a question inside the hold card's tint is the plate's ink and
+  /// not the panel's. `nil` is the shape's own.
+  public let titleInk: Swatch?
   public let gone: Bool
   public let hovering: Bool
   public let busy: Bool
@@ -103,6 +122,7 @@ public struct RowView<Leading: View, Trailing: View>: View {
     title: String,
     value: String? = nil,
     sub: String? = nil,
+    titleInk: Swatch? = nil,
     gone: Bool = false,
     hovering: Bool = false,
     busy: Bool = false,
@@ -113,6 +133,7 @@ public struct RowView<Leading: View, Trailing: View>: View {
     self.title = title
     self.value = value
     self.sub = sub
+    self.titleInk = titleInk
     self.gone = gone
     self.hovering = hovering
     self.busy = busy
@@ -122,7 +143,7 @@ public struct RowView<Leading: View, Trailing: View>: View {
 
   public var body: some View {
     let palette = Palette.of(scheme)
-    return HStack(alignment: .top, spacing: Grid.columnGap) {
+    return HStack(alignment: shape.crossAlignment, spacing: Grid.columnGap) {
       // The glyph column, 16 pt wide and as tall as the title's own line, so
       // a glyph beside a two-line row sits against the title and not
       // between the two lines.
@@ -132,7 +153,8 @@ public struct RowView<Leading: View, Trailing: View>: View {
       VStack(alignment: .leading, spacing: 0) {
         HStack(alignment: .firstTextBaseline, spacing: Grid.columnGap) {
           MiddleTitle(
-            title, role: shape.titleRole, gone: gone, quietInk: shape.titleInk(in: palette))
+            title, role: shape.titleRole, gone: gone,
+            quietInk: titleInk ?? shape.titleInk(in: palette))
           Spacer(minLength: 0)
           if let value {
             Text(value)
@@ -150,7 +172,7 @@ public struct RowView<Leading: View, Trailing: View>: View {
             .lineLimit(shape.subLines)
             .multilineTextAlignment(.leading)
             .fixedSize(horizontal: false, vertical: true)
-            .foregroundStyle(palette.textTertiary.color)
+            .foregroundStyle((subInk ?? palette.textTertiary).color)
             .frame(maxWidth: .infinity, alignment: .leading)
             .metricProbe("row.sub")
         }
@@ -175,6 +197,12 @@ public struct RowView<Leading: View, Trailing: View>: View {
     )
     .onHover { pointerInside = $0 }
     .metricProbe("row.\(shape.rawValue)")
+  }
+
+  /// The sub-line's colour on a tinted row, which is the plate's quiet ink.
+  var subInk: Swatch? {
+    guard titleInk != nil else { return nil }
+    return Palette.of(scheme).holdInkQuiet
   }
 
   /// `.row.hov{background:var(--s2)}`. The caller can state it, so a still
@@ -210,13 +238,15 @@ extension RowView where Leading == StatusGlyph {
     title: String,
     value: String? = nil,
     sub: String? = nil,
+    titleInk: Swatch? = nil,
     gone: Bool = false,
     hovering: Bool = false,
     busy: Bool = false,
     @ViewBuilder trailing: () -> Trailing
   ) {
     self.init(
-      shape, title: title, value: value, sub: sub, gone: gone, hovering: hovering, busy: busy,
+      shape, title: title, value: value, sub: sub, titleInk: titleInk, gone: gone,
+      hovering: hovering, busy: busy,
       leading: { StatusGlyph(glyph, tone: tone) }, trailing: trailing)
   }
 }

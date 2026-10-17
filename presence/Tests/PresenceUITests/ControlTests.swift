@@ -298,8 +298,21 @@ final class ControlTests: XCTestCase {
 
   /// The sheet: the four controls in both appearances, so they are looked at
   /// once rather than trusted from a pixel count.
+  ///
+  /// Every word on it is a scene's, through `SheetPieces`. This page had
+  /// four strings typed into it by hand, which is the one way a sentence the
+  /// app cannot print reaches a screen Nail reads: the question is scene
+  /// e10's own and the two tooltips are scene e6's row icons.
+  ///
+  /// A tooltip is drawn under the icon it belongs to, so the sheet draws it
+  /// that way: a bubble with no control under it says nothing about where
+  /// the panel puts one, and a bubble over its own icon hides the dead
+  /// control it is explaining.
   func testTheControlSheetRenders() throws {
     let shots = try shotsDirectory()
+    let question = try SheetPieces.signOut()
+    let tips = try SheetPieces.tips()
+
     for scheme in [ColorScheme.dark, .light] {
       let palette = Palette.of(scheme)
       let sheet = VStack(alignment: .leading, spacing: Grid.unit) {
@@ -310,11 +323,25 @@ final class ControlTests: XCTestCase {
           TextButton(.dismiss, kind: .plain)
         }
         ConfirmRow(
-          title: "Sign out?", sub: "2 live watches and 1 hold will stop.", danger: .signOut)
-        TooltipBubble("Open in Google Docs")
-        ActionButton(.md, tip: "Open the note in Obsidian", forcedTooltip: true)
+          title: question.title, sub: question.consequence, danger: question.danger)
+        // One icon per band, each with its own layer: the panel draws one
+        // bubble at a time, so two icons under one layer is one bubble.
+        // The band is tall enough for the bubble under the icon, because
+        // a layer with no room below flips the bubble over the icon it is
+        // explaining. The icon is at the trailing edge, which is where a
+        // row carries its actions and the only place a bubble that hangs
+        // off its own right edge lands under it:
+        // testTheSheetDrawsEachTooltipUnderItsOwnIcon.
+        ActionButton(.gdocs, tip: tips.live, forcedTooltip: true)
+          .metricProbe("sheet.icon")
+          .padding(.trailing, Grid.unit)
+          .frame(width: Grid.panelWidth, height: Self.tooltipBand, alignment: .topTrailing)
           .tooltipLayer()
-          .frame(height: 48)
+        ActionButton(.md, tip: tips.dead.words, state: tips.dead.state, forcedTooltip: true)
+          .metricProbe("sheet.icon")
+          .padding(.trailing, Grid.unit)
+          .frame(width: Grid.panelWidth, height: Self.tooltipBand, alignment: .topTrailing)
+          .tooltipLayer()
       }
       .frame(width: Grid.panelWidth)
       .padding(Grid.unit)
@@ -324,6 +351,53 @@ final class ControlTests: XCTestCase {
       let name = scheme == .dark ? "controls-dark.png" : "controls-light.png"
       try data.write(to: shots.appendingPathComponent(name))
       XCTAssertGreaterThan(data.count, 1_000, "\(name) is too small to be the sheet")
+    }
+  }
+
+  /// How much room one icon and the bubble under it take on the sheet: the
+  /// icon's own box, the gap the bubble keeps, and a line of words with its
+  /// padding either side.
+  static let tooltipBand =
+    Grid.actionSize + TooltipAlign.trailing.gap + 3 * Grid.unit
+    + Typography.caption.lineHeight
+
+  /// A sheet of a tooltip has one thing to show: where the panel puts it.
+  ///
+  /// The page drew one bubble over two icons, which is both halves of the
+  /// thing going wrong: the layer draws one bubble at a time, and a layer
+  /// with no room below the anchor flips the bubble on top of it. So the
+  /// dead control the words were explaining was the one thing hidden.
+  func testTheSheetDrawsEachTooltipUnderItsOwnIcon() throws {
+    let tips = try SheetPieces.tips()
+    for (words, state) in [(tips.live, ActionState.live), (tips.dead.words, tips.dead.state)] {
+      let band =
+        ActionButton(.gdocs, tip: words, state: state, forcedTooltip: true)
+        .metricProbe("sheet.icon")
+        .padding(.trailing, Grid.unit)
+        .frame(width: Grid.panelWidth, height: Self.tooltipBand, alignment: .topTrailing)
+        .tooltipLayer()
+      let drawn = try probeList(band, scheme: .dark)
+      let icon = try XCTUnwrap(drawn.first { $0.name == "sheet.icon" }, "the icon drew nothing")
+      let bubble = try XCTUnwrap(
+        drawn.first { $0.name == "tooltip" }, "the words were not drawn at all")
+      XCTAssertGreaterThanOrEqual(
+        bubble.origin.y, icon.origin.y + icon.size.height,
+        "the bubble covers the icon it belongs to")
+      XCTAssertLessThanOrEqual(
+        bubble.origin.x + bubble.size.width, Grid.panelWidth,
+        "and hangs off the panel")
+      // The bubble hangs off its icon's own right edge and stops at the
+      // panel's margin, which is the rule that keeps the last of four
+      // icons' words inside the panel. On the sheet that only reads as
+      // pointing at the icon if the icon is where a row keeps it, so the
+      // two have to overlap: a bubble 173 pt to the right of its icon
+      // points at nothing.
+      XCTAssertLessThanOrEqual(
+        bubble.origin.x, icon.origin.x + icon.size.width,
+        "the bubble starts right of the icon it explains")
+      XCTAssertGreaterThanOrEqual(
+        bubble.origin.x + bubble.size.width, icon.origin.x,
+        "and ends left of it")
     }
   }
 

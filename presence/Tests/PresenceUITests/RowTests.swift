@@ -178,6 +178,59 @@ final class RowTests: XCTestCase {
     XCTAssertNil(busyMeasured["row.trailing"], "a busy row draws no action column")
   }
 
+  // A chevron sits in the middle of the row its words are in.
+  //
+  // `.row-chevron` is one 28 pt row with the words on the left and a 12 pt
+  // chevron on the right, and a chevron a quarter of a row below the line it
+  // belongs to reads as a mark on an empty line.
+  func testTheChevronIsLevelWithItsWords() throws {
+    for scheme in [ColorScheme.dark, .light] {
+      let row = ChevronRow("Show 3 more")
+      let words = try inkBand(row, scheme: scheme, from: 0, to: 160)
+      let chevron = try inkBand(row, scheme: scheme, from: 280, to: Grid.panelWidth)
+      let middle = { (band: ClosedRange<CGFloat>) in (band.lowerBound + band.upperBound) / 2 }
+      XCTAssertEqual(
+        middle(chevron), middle(words), accuracy: 1,
+        "the chevron is \(middle(chevron) - middle(words)) pt off its words in \(scheme)")
+    }
+  }
+
+  // One right edge for every value in the panel.
+  //
+  // `.row.compact` puts its value at the content edge, the same edge as a
+  // log row's time; only a row with something on its right pulls the value
+  // in to make room for it. HEALTH's rows with no icon were handing the
+  // layout an empty action column, and 8 pt of nothing moved every version,
+  // mark and keystroke left of every time in TODAY.
+  func testAValueEndsWhereEveryOtherValueEnds() throws {
+    let value = "v2.14.0"
+    for scheme in [ColorScheme.dark, .light] {
+      let log = try inkEnds(
+        RowView(.plain, glyph: .check, tone: .ok, title: "Reply", value: value), scheme: scheme)
+      let health = try inkEnds(
+        HealthRows(rows: [HealthRow(.gdoc, value: value, glyph: .check, tone: .ok)]),
+        scheme: scheme)
+      XCTAssertEqual(health, log, "the HEALTH value is not on the log's edge in \(scheme)")
+
+      // A row that does carry an icon keeps its value clear of it, which is
+      // the Account row and the one in flight.
+      let withIcon = try probes(
+        HealthRows(
+          rows: [
+            HealthRow(
+              .account, value: Scenes.account, glyph: .check, tone: .ok,
+              action: IconAction(.signout, tip: SignedInBanner.signOutTip))
+          ]), scheme: scheme)
+      XCTAssertNotNil(
+        withIcon["row.trailing"], "a row with an icon draws the column in \(scheme)")
+
+      let bare = try probes(
+        HealthRows(rows: [HealthRow(.gdoc, value: value, glyph: .check, tone: .ok)]),
+        scheme: scheme)
+      XCTAssertNil(bare["row.trailing"], "a row with nothing on its right draws no column")
+    }
+  }
+
   // `.section-label{height:28px;text-transform:uppercase}` with its count
   // on the right in ordinary letters.
   func testASectionLabelIs28AndUppercaseWithTheCount() throws {
@@ -293,29 +346,39 @@ final class RowTests: XCTestCase {
 
     for scheme in [ColorScheme.dark, .light] {
       let palette = Palette.of(scheme)
+      // The five row shapes, and the two labels as components of their own.
+      //
+      // A label over rows is a section, and a section's header makes a claim
+      // about what is under it: NOW over a log row and a HEALTH row, or
+      // "14 days · 12" over two rows and a Show more, is this page saying
+      // something no panel says. The pieces here are pieces, in the order
+      // `RowShape` names them, and the labels stand at the foot with nothing
+      // under them: testASheetPutsNoLabelOverRowsFromAnotherScene.
       let sheet = VStack(alignment: .leading, spacing: 0) {
         PanelHeader(mark: mark.value, account: Scenes.account)
-        SectionView(labels.now, isFirst: true) {
-          RowView(.two, glyph: .dot, tone: .live, title: live.title, sub: live.sub)
-          RowView(.plain, glyph: .check, tone: .ok, title: log.title, value: log.value)
-          RowView(.compact, glyph: .blank, title: mark.kind.label, value: mark.value)
-        }
-        SectionView(labels.documents, count: documents.count) {
-          ForEach(rows) { row in
-            RowView(
-              .doc, glyph: row.glyph, tone: row.tone, title: row.title, sub: row.sub,
-              gone: row.gone,
-              trailing: {
-                HStack(spacing: Grid.actionGap) {
-                  ForEach(row.actions) { action in
-                    ActionButton(action.icon, tip: action.tip, state: action.state)
-                  }
+        RowView(.two, glyph: .dot, tone: .live, title: live.title, sub: live.sub)
+        RowView(.plain, glyph: .check, tone: .ok, title: log.title, value: log.value)
+        RowView(.compact, glyph: .blank, title: mark.kind.label, value: mark.value)
+        ForEach(rows) { row in
+          RowView(
+            .doc, glyph: row.glyph, tone: row.tone, title: row.title, sub: row.sub,
+            gone: row.gone,
+            trailing: {
+              HStack(spacing: Grid.actionGap) {
+                ForEach(row.actions) { action in
+                  ActionButton(action.icon, tip: action.tip, state: action.state)
                 }
-              })
-          }
-          ChevronRow(documents.more, isOpen: false)
-          QuietLine(quiet)
+              }
+            })
         }
+        ChevronRow(documents.more, isOpen: false)
+        QuietLine(quiet)
+        // The two labels, each on its own and with air around it: stacked,
+        // the first reads as a header over the second.
+        Spacer(minLength: 2 * Grid.unit)
+        SectionLabel(labels.now)
+        Spacer(minLength: 2 * Grid.unit)
+        SectionLabel(labels.documents, count: documents.count)
       }
       .frame(width: Grid.panelWidth)
       .padding(Grid.unit)

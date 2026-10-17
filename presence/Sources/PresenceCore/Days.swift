@@ -173,6 +173,7 @@ public enum Days {
     var ended: Set<String> = []
     var held: [String: Event] = [:]
     let landed = landings(ordered)
+    let closings = endings(ordered)
 
     for event in ordered {
       if event.kind == .end {
@@ -182,7 +183,9 @@ public enum Days {
           action(event, titles: titles, calls: calls, ending: landed.byWrite[event.pairing]))
       } else if event.kind == .held {
         held[event.hold ?? ""] = event
-        rows.append(raised(event, titles: titles, calls: calls))
+        rows.append(
+          raised(
+            event, titles: titles, calls: calls, ending: closings[event.hold ?? ""]))
       } else if let ending = HoldEnding(event.kind) {
         // The write this one approved carries it, so the closing line is
         // not a second row: scene r7 draws one Reply and no Hold closed.
@@ -279,10 +282,23 @@ public enum Days {
     row(.outcomeUnknown, event, titles: titles, calls: calls)
   }
 
+  /// How each hold stopped waiting, by its id, so the row that raised one
+  /// knows whether it is still waiting. The row is written in the present
+  /// tense, and a hold the person approved an hour ago is not waiting for
+  /// anybody: testAHoldThatClosedStopsSayingItIsWaiting.
+  private static func endings(_ ordered: [Event]) -> [String: HoldEnding] {
+    var found: [String: HoldEnding] = [:]
+    for event in ordered {
+      guard let ending = HoldEnding(event.kind) else { continue }
+      found[event.hold ?? ""] = ending
+    }
+    return found
+  }
+
   private static func raised(
-    _ event: Event, titles: [String: String], calls: [String: String]
+    _ event: Event, titles: [String: String], calls: [String: String], ending: HoldEnding?
   ) -> DayRow {
-    row(.holdRaised, event, titles: titles, calls: calls, rule: event.rule)
+    row(.holdRaised, event, titles: titles, calls: calls, rule: event.rule, ending: ending)
   }
 
   /// A hold that stopped waiting, with the held line's own words on it.

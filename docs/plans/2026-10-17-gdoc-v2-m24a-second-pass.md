@@ -184,14 +184,14 @@ branch.
 **Files:**
 - Modify: whatever the pass finds, under `presence/` and `docs/design/`
 
-- [ ] render every scene (`PRESENCE_SHOTS=... make app-test`), then run the
+- [x] render every scene (`PRESENCE_SHOTS=... make app-test`), then run the
       checklist of the principles file over `index.html` and the PNGs as a
       reviewer who drew nothing (a subagent that reads images), against the
       mockup scene by scene; every finding it rates as blocking or should-fix
       is fixed in this task, and the findings and fixes are listed in the
       commit message; a finding that is a product choice goes to the "Still
       your call" list instead
-- [ ] `make app-lint`, `make app-test`, `make app`, and
+- [x] `make app-lint`, `make app-test`, `make app`, and
       `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`
 
 ### Task 6: the close

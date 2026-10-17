@@ -20,13 +20,19 @@ import SwiftUI
 public struct LiveRowModel: Equatable, Sendable {
   /// `Live · Chapter 5 storyline`.
   public let title: String
-  /// Since when, how long it has been quiet, what it answered, and whether
+  /// Since when, how long it has been quiet, what it replied, and whether
   /// the last poll failed. Facts, never a prediction.
   public let sub: String
+  /// Whether the watch is over. NOW keeps a watch the sign-in stopped,
+  /// because signing in does not start it again, and the dot goes dim with
+  /// the word: a live dot beside the word stopped is the panel saying two
+  /// things about one watch. Scene e9.
+  public let stopped: Bool
 
-  public init(title: String, sub: String) {
+  public init(title: String, sub: String, stopped: Bool = false) {
     self.title = title
     self.sub = sub
+    self.stopped = stopped
   }
 }
 
@@ -37,13 +43,15 @@ public struct LiveRow: View {
 
   public let model: LiveRowModel
   /// `.live`, or `.off` with the words the process check refuses by.
-  public let state: ActionState
+  /// Absent where there is nothing to stop at all, which is a watch the
+  /// sign-in ended: no process is polling and no later one will be.
+  public let state: ActionState?
   /// Whether the signal has gone and the end has not arrived.
   public let pending: Bool
   public let onStop: () -> Void
 
   public init(
-    model: LiveRowModel, stop: ActionState = .live, pending: Bool = false,
+    model: LiveRowModel, stop: ActionState? = .live, pending: Bool = false,
     onStop: @escaping () -> Void = {}
   ) {
     self.model = model
@@ -52,9 +60,14 @@ public struct LiveRow: View {
     self.onStop = onStop
   }
 
-  /// The icons the row carries: the one, or none while it is pending.
-  public static func icons(pending: Bool) -> [Icon] {
-    pending ? [] : [.stop]
+  /// The icons the row carries: the one, none while it is pending, and none
+  /// where there is nothing to stop.
+  ///
+  /// A row handed no state drew the liveliest icon in the panel for a watch
+  /// nobody can stop, because the view filled the absence in with `.live`:
+  /// testE9SaysTheWatchIsStoppedInEverySectionAndDrawsNoStop.
+  public static func icons(pending: Bool, stoppable: Bool = true) -> [Icon] {
+    pending || !stoppable ? [] : [.stop]
   }
 
   /// Whether the ring stands where the icon was.
@@ -62,7 +75,7 @@ public struct LiveRow: View {
 
   public var body: some View {
     RowView(
-      .two, glyph: .dot, tone: .live, title: model.title, sub: model.sub,
+      .two, glyph: .dot, tone: model.stopped ? .dim : .live, title: model.title, sub: model.sub,
       trailing: {
         if Self.showsRing(pending: pending) {
           // The ring is the glyph's 16 pt in the action's 24 pt box, so the
@@ -70,7 +83,7 @@ public struct LiveRow: View {
           RingView()
             .metricProbe("live.ring")
             .frame(width: Grid.actionSize, height: Grid.actionSize)
-        } else {
+        } else if let state {
           ActionButton(.stop, tip: Self.stopTip, state: state, action: onStop)
             .metricProbe("live.stop")
         }

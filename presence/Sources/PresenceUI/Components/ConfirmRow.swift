@@ -27,6 +27,10 @@ public struct ConfirmRow: View {
   public let glyph: GlyphKind
   public let tone: GlyphTone
   public let danger: ButtonWord
+  /// The question's colour where it is asked inside a tint, which is the
+  /// hold card's: the plate has its own ink on white, and the panel's
+  /// neutral greys on it are two ink systems on one tint.
+  public let titleInk: Swatch?
   public let onConfirm: () -> Void
   public let onKeep: () -> Void
 
@@ -36,6 +40,7 @@ public struct ConfirmRow: View {
     glyph: GlyphKind = .empty,
     tone: GlyphTone = .quiet,
     danger: ButtonWord,
+    titleInk: Swatch? = nil,
     onConfirm: @escaping () -> Void = {},
     onKeep: @escaping () -> Void = {}
   ) {
@@ -44,6 +49,7 @@ public struct ConfirmRow: View {
     self.glyph = glyph
     self.tone = tone
     self.danger = danger
+    self.titleInk = titleInk
     self.onConfirm = onConfirm
     self.onKeep = onKeep
   }
@@ -61,8 +67,13 @@ public struct ConfirmRow: View {
   }
 
   public var body: some View {
+    // A question with no second line is a one-line row. The two-line shape
+    // reserved the sub-line it was not drawing, which left a 21 pt hole
+    // between the hold card's question and the consequence under it:
+    // testTheConfirmDrawsNoLineItHasNoWordsFor.
     RowView(
-      .two, glyph: glyph, tone: tone, title: title, sub: sub,
+      sub == nil ? .plain : .two, glyph: glyph, tone: tone, title: title, sub: sub,
+      titleInk: titleInk,
       trailing: {
         HStack(spacing: Self.gap) {
           TextButton(danger, kind: .danger, size: .compact, action: onConfirm)

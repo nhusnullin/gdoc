@@ -288,6 +288,48 @@ final class RenderTests: XCTestCase {
     XCTAssertEqual(documents.count, "14 days · 4")
   }
 
+  /// The green check of scene r3 is on the screen the caption names.
+  ///
+  /// The check lasts one second, and the scene was drawn exactly one second
+  /// after the press: the render showed the plain link icon under a caption
+  /// that said it was a second into its green check. A caption that names
+  /// something the render does not draw is the one thing on the index page
+  /// a reviewer cannot check against anything.
+  func testTheCopyCheckOfR3IsOnTheScreen() throws {
+    for id in ["r3", "r3l"] {
+      let scene = try XCTUnwrap(Scenes.all.first { $0.id == id })
+      let documents = try XCTUnwrap(try scene.model().documents, "\(id) drew no DOCUMENTS")
+      let row = try XCTUnwrap(
+        documents.rows.first { $0.doc == SceneDocuments.chapter5 }, "\(id) lost the document")
+      let copy = try XCTUnwrap(
+        row.actions.first { $0.kind == .copyLink }, "\(id) drew no Copy link")
+      XCTAssertEqual(copy.state, .done, "\(id)'s check is not on the screen")
+      XCTAssertEqual(copy.tip, Tips.copied)
+      XCTAssertTrue(
+        scene.caption.contains("green check") || id == "r3l",
+        "the caption no longer names the check")
+    }
+  }
+
+  /// One day, one update notice.
+  ///
+  /// The check found v2.15.0 at 17:05, which is scene r8. A release is not
+  /// unpublished by 18:59 with the binary still at v2.14.0 and no update in
+  /// the log, so the row says the same thing on every later still of that
+  /// day: a fact that comes and goes reads as the panel losing it.
+  func testTheUpdateNoticeStaysOnTheRestOfTheDay() throws {
+    for id in ["r8", "r9"] {
+      let scene = try XCTUnwrap(Scenes.all.first { $0.id == id })
+      let gdoc = try XCTUnwrap(
+        try scene.model().health.first { $0.kind == .gdoc }, "\(id) drew no gdoc row")
+      XCTAssertTrue(
+        gdoc.value.contains("v2.15.0"),
+        "\(id)'s gdoc row says “\(gdoc.value)”, which forgets the release r8 found")
+      XCTAssertTrue(
+        gdoc.actions.contains { $0.kind == .update }, "\(id) drew no way to take it")
+    }
+  }
+
   /// Scene e9: the sign-in expired in the middle of a watch.
   ///
   /// The last poll came back with gdoc's `auth` code, so no poll follows it
@@ -301,7 +343,12 @@ final class RenderTests: XCTestCase {
     guard case .live(_, let row, let stop, _)? = model.now.last else {
       return XCTFail("e9 draws its watch as a live row")
     }
-    XCTAssertEqual(row.sub, "stopped 15:29 · sign-in expired")
+    // The title carries the word and the sub-line carries the moment and
+    // the cause, which is the stuck card's own rule: "Live" over a line
+    // that said the watch had stopped was the row saying both.
+    XCTAssertEqual(row.title, "Live stopped · Ch 5. Commercial Model: review draft v0.1")
+    XCTAssertEqual(row.sub, "15:29 · sign-in expired")
+    XCTAssertTrue(row.stopped, "the dot goes dim with the word")
     XCTAssertNil(stop, "nothing is polling, so there is nothing to stop")
 
     guard case .stuck(_, let card, _)? = model.now.first else {
@@ -315,6 +362,80 @@ final class RenderTests: XCTestCase {
       scene.caption.contains("unmeasured"),
       "whether gdoc carries on from the same cursor after a sign-in is nobody's measurement yet")
     XCTAssertFalse(scene.caption.contains("paused"), "the caption says what the row says")
+  }
+
+  /// The same watch in the three sections that name it.
+  ///
+  /// A reader of one screen compares them, so a watch the sign-in stopped is
+  /// stopped in DOCUMENTS and in TODAY as well, and no Stop icon is drawn
+  /// anywhere on the screen: the model saying there is nothing to stop and
+  /// the view drawing a live icon anyway is the one bug a probe catches and
+  /// a field test does not.
+  func testE9SaysTheWatchIsStoppedInEverySectionAndDrawsNoStop() throws {
+    let scene = try XCTUnwrap(Scenes.all.first { $0.id == "e9" })
+    let model = try scene.model()
+
+    let documents = try XCTUnwrap(model.documents, "e9 drew no DOCUMENTS")
+    let watched = try XCTUnwrap(
+      documents.rows.first { $0.doc == SceneDocuments.chapter5 }, "the watched document is gone")
+    XCTAssertEqual(
+      watched.sub, "live stopped 15:29 · falcon/chapters/05.md",
+      "DOCUMENTS said live while NOW said stopped")
+    XCTAssertEqual(watched.tone, .dim, "and drew the live dot for a watch that is over")
+
+    let today = try XCTUnwrap(model.today, "e9 drew no TODAY")
+    let stops = today.rows.filter { $0.title.hasPrefix("Live stopped") }
+    XCTAssertEqual(
+      stops.map(\.value), ["15:29", "14:40"],
+      "the watch the sign-in stopped is a row of the day like any other")
+
+    for scheme in [ColorScheme.dark, .light] {
+      let drawn = try probes(try scene.view(.whole), scheme: scheme)
+      XCTAssertNil(drawn["live.stop"], "e9 draws a Stop icon in \(scheme)")
+      XCTAssertNil(drawn["live.ring"], "and nothing is pending")
+    }
+  }
+
+  /// A watch's counts, in the words the rest of the panel uses for those
+  /// writes. TODAY says Reply and DOCUMENTS says replied, so "answered" was
+  /// a third word for one thing, and the specification's own sentence names
+  /// the two it allows: "since, replied and proposed counts".
+  func testAWatchCountsItsWritesInTheWordsForThem() throws {
+    let scene = try XCTUnwrap(Scenes.all.first { $0.id == "r4" })
+    guard case .live(_, let row, _, _)? = try scene.model().now.last else {
+      return XCTFail("r4 draws a live row")
+    }
+    XCTAssertEqual(row.sub, "since 13:10 · quiet 38 min · replied 1")
+    XCTAssertFalse(row.stopped, "r4's watch is polling")
+
+    // And the same words where the watch is over, on the row that says so.
+    let stopped = try XCTUnwrap(Scenes.all.first { $0.id == "r9" })
+    let today = try XCTUnwrap(try stopped.model().today, "r9 drew no TODAY")
+    let last = try XCTUnwrap(
+      today.rows.first { $0.title.hasPrefix("Live stopped") }, "r9 drew no stopped watch")
+    XCTAssertEqual(last.sub, "5 h 30 min · replied 1")
+  }
+
+  /// A hold that stopped waiting is a moment and not a state.
+  ///
+  /// The row that raised it is written in the present tense, and scene r7
+  /// draws it under the write the person approved 21 minutes later: two rows
+  /// about one hold, one of them saying it is still waiting.
+  func testAHoldThatClosedStopsSayingItIsWaiting() throws {
+    let waiting = try XCTUnwrap(Scenes.all.first { $0.id == "r6" })
+    let open = try XCTUnwrap(
+      try waiting.model().today?.rows.first { $0.title.hasPrefix("Hold") },
+      "r6 drew no hold row")
+    XCTAssertEqual(open.sub, "Reply held by rule Dictated · waiting in Desktop chat")
+
+    let approved = try XCTUnwrap(Scenes.all.first { $0.id == "r7" })
+    let rows = try XCTUnwrap(try approved.model().today, "r7 drew no TODAY").rows
+    let closed = try XCTUnwrap(
+      rows.first { $0.title.hasPrefix("Hold") }, "r7 drew no hold row")
+    XCTAssertEqual(closed.sub, "Reply held by rule Dictated")
+    XCTAssertEqual(
+      rows.first?.sub, "approved by you in chat · verified",
+      "the row above it is the one that says how it ended")
   }
 
   /// One title as a row draws it: the head cut to what the column shows,
@@ -354,13 +475,63 @@ final class RenderTests: XCTestCase {
       "Watching", "\"Mark\"", "In the trash", "Proposed 2", "Nothing since",
       "14 days · 3 today",
     ]
-    for file in ["RowTests.swift", "CardTests.swift"] {
+    for file in Self.sheetFiles {
       let source = try testSource(file)
       for word in invented {
         XCTAssertFalse(
           source.contains(word), "\(file) still draws \(word), which no scene says")
       }
     }
+  }
+
+  /// The three files that draw a page with no record behind it. A fourth
+  /// sheet is a fourth page nobody is holding to the scenes' words.
+  static let sheetFiles = ["RowTests.swift", "CardTests.swift", "ControlTests.swift"]
+
+  /// The six sheets are on the page.
+  ///
+  /// They are written by the files that measure their components, so a run
+  /// of the whole suite leaves all six beside the scenes. The page did not
+  /// name them at all, and a reviewer who has to find a PNG in a directory
+  /// and guess what it is of is a reviewer reading something nobody wrote
+  /// down.
+  func testTheIndexCarriesTheComponentSheets() throws {
+    XCTAssertEqual(Scenes.sheets.count, 6)
+    let page = html([])
+    for sheet in Scenes.sheets {
+      XCTAssertTrue(page.contains("\(sheet.name)-dark.png"), "the page misses \(sheet.name)")
+      XCTAssertTrue(page.contains("\(sheet.name)-light.png"), "in light as well")
+      XCTAssertTrue(page.contains(escaped(sheet.about)), "and says nothing about it")
+    }
+  }
+
+  /// A sheet puts no label over rows that are not that section's.
+  ///
+  /// A section label is a claim about what is under it: the count says how
+  /// many rows the list has, and the name says what they are. The sheets
+  /// borrow their rows from the scene that has the shape they want to show,
+  /// so a label over them read NOW over a log row and a HEALTH row, and
+  /// "14 days · 12" over two rows and a Show more. The labels are drawn as
+  /// what they are, components with nothing under them.
+  func testASheetPutsNoLabelOverRowsFromAnotherScene() throws {
+    for file in Self.sheetFiles {
+      let drawing = try sheetFunction(in: file)
+      XCTAssertFalse(
+        drawing.contains("SectionView("),
+        "\(file)'s sheet draws a section, which claims the rows under it are its own")
+    }
+  }
+
+  /// The body of one file's sheet-drawing function, which is the page with
+  /// no record behind it. The rest of the file measures components, and a
+  /// section measured is not a section drawn on a page Nail reads.
+  private func sheetFunction(in file: String) throws -> String {
+    let source = try testSource(file)
+    let opening = try XCTUnwrap(
+      source.range(of: "SheetRenders() throws {"), "\(file) draws no sheet")
+    let rest = source[opening.upperBound...]
+    let closing = try XCTUnwrap(rest.range(of: "\n  }"), "\(file)'s sheet never ends")
+    return String(rest[..<closing.lowerBound])
   }
 
   /// One test file's own text, read from this file's path.
@@ -458,6 +629,19 @@ final class RenderTests: XCTestCase {
       """
   }
 
+  /// One component sheet on the page, in both appearances.
+  private func sheet(_ page: (name: String, about: String)) -> String {
+    """
+      <figure>
+        <figcaption>\(escaped(page.name)) · \(escaped(page.about))</figcaption>
+        <div class="pair">
+          <img src="\(page.name)-dark.png" width="320">
+          <img src="\(page.name)-light.png" width="320">
+        </div>
+      </figure>
+    """
+  }
+
   private func html(_ entries: [String]) -> String {
     """
     <!doctype html>
@@ -491,7 +675,17 @@ final class RenderTests: XCTestCase {
     600 pt with the rest under a scroll. The second pair is the same panel
     with nothing hidden, which is the one to review: a PNG cannot be
     scrolled.</p>
+    <p>One record per scene, and each of them its own day: the nine r
+    screens are one Saturday told nine times and agree with each other, and
+    every e screen is a record of its own, written for the one thing it
+    shows. Two counts from two e scenes are two days and not a sum.</p>
     \(entries.joined(separator: "\n"))
+    <section>
+      <h2>The component sheets</h2>
+      <p>Six pages of pieces rather than panels. Every word on them comes
+      out of a scene, so a sheet says what the app says and nothing else.</p>
+    \(Scenes.sheets.map(sheet).joined(separator: "\n"))
+    </section>
     """
   }
 

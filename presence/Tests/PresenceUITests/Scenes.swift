@@ -109,17 +109,40 @@ enum Scenes {
     + "the record's own network stop, and no extension beside the binary. There is no "
     + "Skills row at all, because nothing gdoc prints names a version of the skills."
 
+  /// The six pages of components, by the name they are written under and
+  /// what each of them is. They are drawn by the files that measure those
+  /// components, so a run of the whole suite writes all six beside the
+  /// scenes; a reviewer who had to find them in the directory by hand is a
+  /// reviewer who did not read them.
+  static let sheets: [(name: String, about: String)] = [
+    ("bar-states", "The menu bar: the five states and the check, monochrome, at the item's size."),
+    ("glyphs", "The 16 px status glyph in every kind and tone, and the ring in its two sizes."),
+    ("icons", "The action icons at 16 px, live and dimmed, and the Copy check."),
+    ("rows", "The five row shapes, the chevron, the quiet line, and the two labels as pieces."),
+    ("cards", "The hold card asking and offering, the stuck card, the live row, the job card."),
+    (
+      "controls",
+      "The switch, the two text buttons, the one inline confirm, and two tooltips: an "
+        + "icon's own words, and the reason an icon with nothing to open gives instead."
+    ),
+  ]
+
   static let account = "nail@example.com"
   static let hub = "/Users/nail/hub"
   static let gdocPath = "/Users/nail/.local/bin/gdoc"
   static let signInURL =
     "https://accounts.google.com/o/oauth2/auth?client_id=…&redirect_uri=http://127.0.0.1:0"
 
-  /// A second before r3's own moment, 2026-10-17T11:40:30Z, which is what
-  /// its caption claims: Copy link one second into its green check. A
-  /// document with no moment is nothing pressed, so the moment is the whole
-  /// of the state.
-  static let copiedOnR3 = Date(timeIntervalSince1970: 1_792_237_229)
+  /// Half a second before r3's own moment, 2026-10-17T11:40:30Z, which is
+  /// what its caption claims: Copy link half a second into its green check.
+  /// A document with no moment is nothing pressed, so the moment is the
+  /// whole of the state.
+  ///
+  /// The check lasts one second, and a second before the moment is the
+  /// moment the check goes back: the render drew the link icon under a
+  /// caption that said it was green.
+  /// testTheCopyCheckOfR3IsOnTheScreen.
+  static let copiedOnR3 = Date(timeIntervalSince1970: 1_792_237_229.5)
 
   /// A machine that is signed in and up to date, which most scenes are.
   static func machine(
@@ -165,8 +188,10 @@ enum Scenes {
       id: "r2", title: "The publish stopped",
       caption:
         "The write failed. The reason is the cause with its place first and the state of "
-        + "the world second, in one sentence under eighty characters, out of the record's "
-        + "own stop code and the line it names.",
+        + "the world second, two short sentences under eighty characters, out of the "
+        + "record's own stop code and the line it names. The card carries the two icons "
+        + "something can be done with: a publish that created nothing has no document to "
+        + "open and no link to copy.",
       fixture: "r2", moment: "2026-10-17T09:05:30Z", alive: [],
       facts: machine(), ui: UIState(), appearance: nil),
     Scene(
@@ -174,7 +199,7 @@ enum Scenes {
       caption:
         "Two writes landed and were verified, the comment from Claude Code and the reply "
         + "from the terminal. The stuck card stays until the publish is run again, and "
-        + "Copy link on the first row is a second into its green check.",
+        + "Copy link on the first row is half a second into its green check.",
       fixture: "r3", moment: "2026-10-17T11:40:30Z", alive: [],
       facts: machine(),
       ui: UIState(copied: SceneDocuments.chapter5, copiedAt: copiedOnR3), appearance: nil),
@@ -230,19 +255,23 @@ enum Scenes {
         + "its end named the one it created. The day's log is behind Show more and "
         + "yesterday is one row.",
       fixture: "r9", moment: "2026-10-17T18:59:00Z", alive: [],
-      facts: machine(), ui: UIState(), appearance: nil),
+      facts: machine(latestStable: "v2.15.0"), ui: UIState(), appearance: nil),
     Scene(
       id: "e1", title: "More than five documents",
       caption:
         "DOCUMENTS opened: the list scrolls inside its own box with the thumb and the "
-        + "fade, and the panel stays under 600 pt.",
+        + "fade, and the panel stays under 600 pt. The panel scrolls as well on this "
+        + "screen, and its own indicator is hidden while the inner box carries one: two "
+        + "thumbs in one column is the panel saying which of them a drag would move, "
+        + "which it cannot.",
       fixture: "e1", moment: "2026-10-17T18:10:00Z", alive: [],
       facts: machine(), ui: UIState(expanded: [.documents]), appearance: nil),
     Scene(
       id: "e2", title: "Midnight: yesterday folds into one row",
       caption:
         "The local day decides. Yesterday is one chevron row with its two counts, and "
-        + "nothing older is in the panel at all.",
+        + "nothing older is in the log at all. DOCUMENTS keeps its own fourteen days, "
+        + "which is why two rows there are older than yesterday.",
       fixture: "e2", moment: "2026-10-18T09:12:00Z", alive: [],
       facts: machine(), ui: UIState(), appearance: nil),
     Scene(

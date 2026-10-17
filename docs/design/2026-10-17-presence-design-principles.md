@@ -143,6 +143,13 @@ in code are in the commit; these are the rules that had to move.
 
 Left as they are, with the reason:
 
+- **NOW and TODAY name the stopped watch the same way.** On scene e9 both
+  read "Live stopped · Chapter 5", one over "15:29 · sign-in expired" and
+  one over "19 min · nothing written". It reads as one thing said twice,
+  which is what it is: NOW says what is waiting on the person and the log
+  says what the watch did. One vocabulary for one watch is the rule that
+  put the word in both.
+
 - **The live dot is 3.5 pt, not 6.** The screens file sets `box-sizing:
   border-box`, so `inset:5px` is measured inside the 13.5 pt padding box. The
   file's own value is what is drawn.
@@ -217,6 +224,121 @@ The rules that moved with them:
 Left to Nail, on the index page rather than in a task: the six lines of
 "Still your call". A reviewer who rates one of them blocking is rating a
 decision, not a drawing.
+
+## Amendments, 2026-10-17, after the third reviewer's pass
+
+Five reviewers who drew nothing read every rendered screen and every
+component sheet of this branch against the checklist above: four scenes
+each, and one on the sheets. Three findings were blocking, fifteen were to
+fix, the rest were notes. Every blocking and should-fix one is closed in the
+pass's own commit except two, which are at the foot of this section with the
+reason. These are the lines that moved.
+
+- **A model that says there is nothing to stop is a row that draws no Stop.**
+  The panel's one dead-looking live control was a view filling an absent
+  state in with `.live`: scene e9 drew the brightest Stop icon in the panel
+  for a watch no process is polling. A row is handed the state or nothing,
+  and nothing draws nothing.
+- **A watch Google refused the token on is over in every section.** It is
+  the end of the watch and not a watch in trouble, because the skill's next
+  wait cannot start without a sign-in, so DOCUMENTS says "live stopped" and
+  TODAY carries the stopped row. NOW keeps it while the token is still
+  broken, because signing in does not start it again, and the panel's own
+  NOW is where what waits on the person lives. Once the token works the row
+  leaves: by then the log is the whole of it.
+- **A card drops a dead icon; a row dims one.** Principle 4's second
+  sentence is the rule and the render was the exception: the stuck card of a
+  publish that created nothing carried a dimmed note icon that can never
+  resolve a note, because no field of the record names the file a publish
+  was built from. A row in a list keeps the column the same on every row and
+  says why an icon is off. A card is one plate about one write.
+- **One word per write, everywhere.** A watch's counts are "replied 1" and
+  "proposed 2", which is what TODAY and DOCUMENTS call those writes and what
+  the specification's own sentence says. "answered" was a third word for the
+  one thing.
+- **A row written in the present tense says so only while it is true.** The
+  row that raised a hold said "waiting in Desktop chat" under the row that
+  approved it twenty-one minutes later. It now says what it is: the moment
+  the write was held, and by which rule.
+- **One right edge for every value in the panel.** A row with nothing at its
+  trailing edge draws no column there. An empty box is not nothing: its
+  8 pt gap put every version, mark and keystroke in HEALTH 8 pt left of
+  every time in TODAY.
+- **A one-line row meets its columns in the middle.** The two-line shapes
+  hang from the top, so a glyph sits against the title. A one-line row has
+  nothing to hang from, and a 24 pt control beside a 16 pt line of words put
+  the chevron of every Show more 6 pt under the words it opens.
+- **A card's title is cut by the row's own rule.** The second line was left
+  to the system's middle truncation, which knows where the middle is and not
+  where a word ends: scene e3 drew "Proposal: Expansio…her regions, draft
+  v1", and "her regions" is a word in nobody's title.
+- **A confirm draws no line it has no words for.** The question is one line
+  and its consequence is a line of the card's, so the row is the one-line
+  shape. The two-line shape reserved a sub-line it never drew and left 21 pt
+  of nothing, which reads as a line that failed to render.
+- **A row inside a tint is written in that plate's ink.** Principle 8 gives
+  the light hold tint its own ink, and the card's question and consequence
+  were in the panel's neutral greys: two ink systems on one colour, one card
+  apart.
+- **There are three sheets, not two, and a sheet draws no section.** The
+  controls sheet had four strings typed into it by hand, outside the rule
+  and outside its test; it now takes its question from scene e10 and its two
+  tooltips from scene e6's rows, and the test reads all three files. A
+  section label over borrowed rows is a claim about them: the rows sheet
+  said "14 days · 12" over two rows and a Show more, and put a log row and a
+  HEALTH row under NOW. The labels are drawn as the pieces they are.
+- **A caption names what the render draws.** Scene r3 was drawn one second
+  after Copy link was pressed, which is the moment the check goes back, under
+  a caption that said it was green: it is half a second now. Scene r2's
+  caption said one sentence where the principle asks for two. Scene e2's said
+  nothing older than yesterday is in the panel, where DOCUMENTS keeps its own
+  fourteen days.
+- **One day, one set of facts.** The check found a release at 17:05, so the
+  gdoc row says so on every later still of that day. A fact that comes and
+  goes between two screens reads as the panel losing it.
+- **The index page carries the six component sheets and says the e screens
+  are each their own record.** The sheets were written beside the scenes and
+  named on no page, so the one reviewer who read them found them by
+  guessing; and two counts from two e scenes are two days, not a sum.
+- **A watch that is over says so in its title too.** The row read "Live ·
+  Chapter 5" over a sub-line that said the watch had stopped. The title
+  carries the word, as a stuck card's does, and the sub-line carries the
+  moment and the cause: "Live stopped · Chapter 5" over "15:29 · sign-in
+  expired", with the dot dim.
+- **A sheet of a tooltip shows where the panel puts one.** The page drew one
+  bubble over two icons, which is both halves of the thing going wrong: the
+  layer draws one bubble at a time, and a layer with no room under the
+  anchor flips the bubble on top of it. So the dead control the words were
+  explaining was the one thing hidden. One icon per band, each with its own
+  layer and the room for it, and the icon at the trailing edge where a row
+  keeps its actions: the bubble hangs off its icon's own right edge, so an
+  icon drawn on the left of a sheet gets a bubble 173 pt away from it.
+
+Left as they are, with the reason:
+
+- **The bar of scene e8 is the ring and not the exclamation.** The scene's
+  facts say the token works and a sign-in is in flight, which is a job; the
+  specification's "not signed in counts as stuck" is about `auth`, and that
+  is scene e5, which draws the exclamation. The reviewer read the Account
+  row's "Waiting for Google" as a machine with no token, which is the other
+  half of the two moments that render stacks.
+- **On white, the confirm's two halves keep the panel's surface behind
+  them.** The screens file gives every text button the surface colour on
+  light, and the code's reason is the amendment's own: on the hold card's
+  tint a transparent button would read as a hole. On the tint the two
+  plates do read as two buttons, which is what "borderless" was for, so the
+  visual designer's seat has one call to make here. Neither reading is a
+  drawing error.
+- **The stuck card's reason stays in the panel's tertiary grey on its
+  tint.** Principle 8 names one tinted ink, the amber's, because the amber
+  is the tint a neutral grey disappears into. The red tint is 7 percent and
+  the grey reads on it, and giving every tint its own ink is a palette
+  decision rather than a fix.
+- **The hold card names what Dismiss leaves behind when it is pressed, not
+  before.** The offer says where the text is ("The text is in the chat."),
+  and the question that follows the press says the rest: "The hold stays in
+  the chat until it runs out. Nothing is written." A consequence on the offer
+  as well is the same sentence twice on one plate.
 
 ## The render for review
 

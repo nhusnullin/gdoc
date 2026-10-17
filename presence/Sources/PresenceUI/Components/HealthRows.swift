@@ -188,11 +188,17 @@ struct HealthRowView: View {
     }
   }
 
+  /// `.row.hasact` pulls a row's value in to make room; a row with nothing
+  /// on its right keeps the content edge, which is the edge every time in
+  /// TODAY is on. An empty box here is not nothing: the row's own 8 pt
+  /// column gap goes with it, and every version, mark and keystroke in
+  /// HEALTH sat 8 pt left of every other value in the panel.
+  /// testAValueEndsWhereEveryOtherValueEnds.
   @ViewBuilder
   private var trailing: some View {
     if let isOn = row.isOn {
       SwitchView(isOn: isOn, action: row.onToggle)
-    } else {
+    } else if !row.actions.isEmpty {
       HStack(spacing: Grid.actionGap) {
         ForEach(row.actions) { action in
           ActionButton(

@@ -187,7 +187,10 @@ final class FieldsTests: XCTestCase {
           title: "Chapter 5 storyline", ok: false, stop: "auth"),
       ], at: "2026-10-17T15:30:00Z", facts: Scenes.machine(auth: .needsSignIn))
     XCTAssertEqual(
-      expired.now.compactMap(liveSub), ["stopped 15:29 · sign-in expired"],
+      expired.now.compactMap(liveSub), ["15:29 · sign-in expired"],
+      "the moment and the cause, with the word in the title above them")
+    XCTAssertEqual(
+      expired.now.compactMap(liveTitle), ["Live stopped · Chapter 5 storyline"],
       "nothing is polling that document any more, so the row says stopped")
   }
 
@@ -335,6 +338,11 @@ final class FieldsTests: XCTestCase {
   /// The sub-line of a live row, where an item is one.
   private func liveSub(_ item: NowItem) -> String? {
     if case .live(_, let row, _, _) = item { return row.sub }
+    return nil
+  }
+
+  private func liveTitle(_ item: NowItem) -> String? {
+    if case .live(_, let row, _, _) = item { return row.title }
     return nil
   }
 }

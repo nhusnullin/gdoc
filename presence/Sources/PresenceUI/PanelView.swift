@@ -138,7 +138,7 @@ struct NowList: View {
           JobCard(model: card)
         case .live(_, let row, let stop, let pending):
           LiveRow(
-            model: row, stop: stop?.state ?? .live, pending: pending,
+            model: row, stop: stop?.state, pending: pending,
             onStop: { actions.perform(.stopLive, stop?.target) })
         }
       }

@@ -12,8 +12,10 @@
 // title column in the panel, the document row's, so one title reads the same
 // in every section it appears in.
 //
-// One line of a row is the whole of this file. A card's title is two lines
-// and no split at all, which is StuckCard's own rule.
+// One line of a row is the whole of this file. Where a card's title takes
+// two lines, which is StuckCard's own rule, each of them is drawn by this
+// one at its own width: a line left to the system's middle truncation cut
+// inside a word and showed "her regions" of "further regions".
 //
 // RowTests holds the floor; TitlesTests holds the split.
 
@@ -33,6 +35,10 @@ public struct MiddleTitle: View {
 
   public let title: String
   public let role: TypeRole
+  /// The room the line has. A row's is the narrowest column in the panel,
+  /// so one title reads the same in every section; a card's two lines are
+  /// each their own width.
+  public let column: CGFloat
   public let gone: Bool
   /// The colour the title is drawn in when it is not gone. `nil` is
   /// `.row-title`'s own `--t1`; the quiet rows hand over `--t3`.
@@ -42,10 +48,12 @@ public struct MiddleTitle: View {
 
   public init(
     _ title: String, role: TypeRole = Typography.rowTitle,
+    column: CGFloat = MiddleTitle.narrowestColumn,
     gone: Bool = false, quietInk: Swatch? = nil
   ) {
     self.title = title
     self.role = role
+    self.column = column
     self.gone = gone
     self.quietInk = quietInk
   }
@@ -129,7 +137,7 @@ public struct MiddleTitle: View {
 
   /// The head and the tail, which is what one line of a row gets.
   private var split: some View {
-    let pieces = Self.fitted(title, role: role)
+    let pieces = Self.fitted(title, role: role, column: column)
     return HStack(spacing: 0) {
       Text(pieces.head)
         .lineLimit(1)

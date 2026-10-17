@@ -79,7 +79,9 @@ final class DaysTests: XCTestCase {
     XCTAssertEqual(raised.title, "Group Channel Policy: the frozen vocabulary")
     XCTAssertEqual(raised.rule, "dictated")
     XCTAssertEqual(raised.via, "chat")
-    XCTAssertNil(raised.ending)
+    // How the hold ended, on the row that raised it: the row is read in the
+    // present tense until it has one, and this hold was approved at 10:20.
+    XCTAssertEqual(raised.ending, .landed)
 
     // The ending line carries the hold's id and nothing else, so everything
     // a person reads on this row comes off the held line it closes. A row
@@ -193,6 +195,14 @@ final class DaysTests: XCTestCase {
       alive: { _ in false })
     XCTAssertEqual(alone.today.map(\.kind), [.holdClosed, .holdRaised])
     XCTAssertEqual(alone.today.first?.ending, .landed)
+    XCTAssertEqual(alone.today.last?.ending, .landed, "the raised row knows it is over")
+
+    // A hold still waiting carries no ending, which is the only state the
+    // row says "waiting in Desktop chat" in.
+    let waiting = Days.fold(
+      [raised], now: try seventeenTwenty(), calendar: try amsterdam(), alive: { _ in false })
+    XCTAssertEqual(waiting.today.map(\.kind), [.holdRaised])
+    XCTAssertNil(waiting.today.first?.ending)
   }
 
   func testAWriteNowIsCardingIsNotAlsoARowInToday() throws {

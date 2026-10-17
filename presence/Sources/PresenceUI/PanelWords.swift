@@ -196,8 +196,12 @@ struct Phrases {
       // would be the panel saying it will carry on, which is a forecast and
       // nobody has measured whether gdoc resumes from the same cursor.
       // That is scene e9.
-      session.lastPollStop == "auth"
-        ? "stopped \(clock(moment))" : "last poll failed \(clock(moment))"
+      //
+      // The word is the title's, as it is on a stuck card: the row says
+      // "Live stopped" above and the moment and the cause below, rather
+      // than "stopped" twice on one row.
+      session.lastPollStop == Live.signInStop
+        ? clock(moment) : "last poll failed \(clock(moment))"
     }
 
     let parts: [String?] =
@@ -205,14 +209,32 @@ struct Phrases {
       ? [
         "since \(clock(session.since))",
         "quiet \(Words.duration(now.timeIntervalSince(session.quietSince)))",
-        session.replied > 0 ? "answered \(session.replied)" : nil,
-        session.proposed > 0 ? "proposed \(session.proposed)" : nil,
+        count(session.replied, of: "reply"),
+        count(session.proposed, of: "propose"),
       ]
       : [failed, expired ?? Words.cause(session.lastPollStop)]
 
+    // A watch that is over says so in its title, which is the word TODAY
+    // and DOCUMENTS use for it. The row kept opening with "Live" over a
+    // sub-line that said the watch had stopped:
+    // testE9SaysTheWatchIsStoppedInEverySectionAndDrawsNoStop.
     return LiveRowModel(
-      title: sentence(["Live", session.title ?? session.doc]),
-      sub: sentence(parts))
+      title: sentence([session.isOpen ? "Live" : "Live stopped", session.title ?? session.doc]),
+      sub: sentence(parts),
+      stopped: !session.isOpen)
+  }
+
+  /// How many writes of one kind a watch has to its name, in the word the
+  /// rest of the panel uses for that write.
+  ///
+  /// A count of nothing is left out. The word is the command's own past:
+  /// TODAY says Reply and DOCUMENTS says replied, so a third word here is a
+  /// second vocabulary for one thing, which is what the specification's own
+  /// sentence says ("since, replied and proposed counts"):
+  /// testAWatchCountsItsWritesInTheWordsForThem.
+  private func count(_ many: Int, of command: String) -> String? {
+    guard many > 0 else { return nil }
+    return "\(Words.verb(command)?.past ?? command) \(many)"
   }
 
   // MARK: the lists
@@ -263,12 +285,17 @@ struct Phrases {
         key: "\(index)", glyph: .empty, tone: .quiet, title: sentence([what, title]),
         value: clock(row.at), sub: sentence([Words.via(row.via), "outcome unknown"]))
     case .holdRaised:
+      // Where the hold is still open the row says so. Where it closed, the
+      // row is the moment it was raised and nothing else: the row above it
+      // carries how it ended, and a present tense under it says the write
+      // is still waiting half an hour after the person approved it.
+      // testAHoldThatClosedStopsSayingItIsWaiting.
       return LogRowModel(
         key: "\(index)", glyph: .pause, tone: .hold, title: sentence(["Hold", title]),
         value: clock(row.at),
         sub: sentence([
           row.rule.map { "\(held(row.command)) held by rule \($0)" },
-          "waiting in Desktop chat",
+          row.ending == nil ? "waiting in Desktop chat" : nil,
         ]))
     case .holdClosed:
       return LogRowModel(
@@ -314,7 +341,7 @@ struct Phrases {
   }
 
   /// What a watch came to. A count of nothing is left out and the two of
-  /// them together are said once: "answered 0 · proposed 0" is three words
+  /// them together are said once: "replied 0 · proposed 0" is three words
   /// for one fact.
   private func totals(_ totals: LiveTotals?) -> String? {
     guard let totals else { return nil }
@@ -322,8 +349,8 @@ struct Phrases {
     return sentence([
       Words.duration(totals.ran),
       wrote == 0 ? "nothing written" : nil,
-      totals.replied > 0 ? "answered \(totals.replied)" : nil,
-      totals.proposed > 0 ? "proposed \(totals.proposed)" : nil,
+      count(totals.replied, of: "reply"),
+      count(totals.proposed, of: "propose"),
     ])
   }
 

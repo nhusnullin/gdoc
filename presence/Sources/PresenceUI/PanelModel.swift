@@ -400,7 +400,7 @@ extension PanelModel {
       items.insert(expired, at: holds.count)
     }
 
-    for session in sessions where session.isOpen {
+    for session in watched(sessions, facts: facts) {
       items.append(
         .live(
           id: session.doc, row: words.liveRow(session),
@@ -408,6 +408,18 @@ extension PanelModel {
           pending: ui.pendingStop.contains(session.doc)))
     }
     return items
+  }
+
+  /// The watches NOW draws: the open ones, and the ones a sign-in that
+  /// stopped working ended, while it is still not working.
+  ///
+  /// A watch Google refused the token on is over, and DOCUMENTS and TODAY
+  /// say so, but it is the one ending nobody asked for: signing in does not
+  /// start it again, and NOW is where the panel keeps what is waiting on the
+  /// person. Once the token works the row leaves, because then the day's log
+  /// is the whole of it: testE9SaysTheWatchIsStoppedInEverySectionAndDrawsNoStop.
+  private static func watched(_ sessions: [LiveSession], facts: Facts) -> [LiveSession] {
+    sessions.filter { $0.isOpen || ($0.stoppedBySignIn && !facts.auth.isWorking) }
   }
 
   /// The card a token that stopped working raises, which is the one card in
@@ -424,7 +436,7 @@ extension PanelModel {
     // cannot start, so the sentence asks for the sign-in and for the watch
     // to be started again. It never says the watch will carry on by itself,
     // which is a forecast nobody measured.
-    let stopped = sessions.filter(\.isOpen).count
+    let stopped = watched(sessions, facts: facts).count
     let reason =
       stopped == 0
       ? "Nothing can reach Google until you sign in."
@@ -449,12 +461,13 @@ extension PanelModel {
       actions.append(openChat(doc, facts: facts))
       actions.append(copyLink(doc, ui: ui, now: now))
     } else {
-      // A write that created nothing has nothing to open or to copy, and a
-      // dead icon is what made this card read as buttons again.
-      actions.append(
-        ActionModel(
-          .openNote, icon: .md, tip: Tips.openNote, state: .off(Tips.noNote),
-          target: write.key, forcedTooltip: ui.forcedTooltip == "\(write.key)|openNote"))
+      // A write that created nothing has nothing to open and nothing to
+      // copy, so the card carries neither: a row in a list dims an icon and
+      // says why, because the row is one of many and the column is the same
+      // on all of them, but a card never carries an icon that would do
+      // nothing. The note is not an exception, because no field of the
+      // record names the file a publish was built from:
+      // testACardCarriesNoIconThatWouldDoNothing.
       actions.append(openChat(write.doc, facts: facts, target: write.key))
     }
     actions.append(

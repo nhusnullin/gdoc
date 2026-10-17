@@ -77,6 +77,103 @@ final class CardTests: XCTestCase {
       "the consequence was squeezed onto one line and cut")
   }
 
+  /// A card cuts a title by the row's own rule.
+  ///
+  /// Scene e3's export stopped on "Proposal: Expansion of Project Falcon to
+  /// two further regions, draft v1". The second line was left to the
+  /// system's middle truncation, which knows nothing about words and drew
+  /// "Proposal: Expansio…her regions, draft v1": a reader sees the word
+  /// "her regions", which is in no title of anybody's. The row's rule keeps
+  /// the tail a whole word group, so the ellipsis is the only thing between
+  /// the two halves.
+  func testACardCutsATitleByTheRowsOwnRule() throws {
+    let title =
+      "Export stopped · Proposal: Expansion of Project Falcon to two further regions, draft v1"
+    let lines = StuckCard.titleSplit(title, actions: 5)
+    XCTAssertEqual(lines.count, 2, "the card takes two lines for it")
+    XCTAssertEqual(lines[0], "Export stopped")
+
+    let second = try XCTUnwrap(lines.last)
+    let column = StuckCard.column(line: 1, actions: 5)
+    XCTAssertEqual(column, StuckCard.reasonColumn, "the second line has the card's full body")
+
+    let split = MiddleTitle.fitted(second, role: Typography.titleEmphasis, column: column)
+    let tail = try XCTUnwrap(split.tail, "the rule kept no tail at all")
+    XCTAssertTrue(
+      second.hasSuffix(tail), "the tail is the title's own ending and nothing else")
+    XCTAssertTrue(
+      tail.hasPrefix(" ") || tail.hasPrefix(","),
+      "the tail starts at a word: it is “\(tail)”")
+    XCTAssertFalse(
+      tail.contains("her regions"), "the tail starts inside a word of the title")
+
+    // The first line is cut by the same rule, at the width the icons leave.
+    XCTAssertEqual(StuckCard.column(line: 0, actions: 5), StuckCard.titleColumn(actions: 5))
+  }
+
+  /// A confirm draws no line it has no words for.
+  ///
+  /// The question is one line and its consequence is a line of the card's,
+  /// so the row is the one-line shape: the two-line shape reserved a
+  /// sub-line it never drew, and the card showed 21 pt of nothing between
+  /// the question and the sentence under it, which reads as a line that
+  /// failed to draw.
+  func testTheConfirmDrawsNoLineItHasNoWordsFor() throws {
+    let bare = try probes(
+      ConfirmRow(title: ButtonWord.dismiss.rawValue + " this card?", danger: .dismiss),
+      scheme: .dark, width: cardWidth)
+    XCTAssertNil(bare["row.two"], "a question with no second line is not a two-line row")
+    XCTAssertEqual(bare["row.plain"]?.height, Grid.rowHeight)
+
+    // A confirm that does carry a sub-line keeps the two-line shape, which
+    // is HEALTH's Sign out with the count of what will stop.
+    let withSub = try probes(
+      ConfirmRow(title: "Sign out?", sub: "2 live watches and 1 hold will stop.", danger: .signOut),
+      scheme: .dark, width: cardWidth)
+    XCTAssertGreaterThanOrEqual(
+      withSub["row.two"]?.height ?? 0, Grid.twoLineRowHeight,
+      "a question with a sentence under it keeps the two-line shape")
+
+    // The card is shorter than the two lines it was drawing, and nothing
+    // between the question and the consequence is empty.
+    let asking = try probes(
+      HoldCard(model: try hold(), asking: true), scheme: .dark, width: cardWidth)
+    let plate = try XCTUnwrap(asking["hold.card"], "the card drew no plate")
+    let question = try XCTUnwrap(asking["row.plain"], "the question is not a one-line row")
+    let quiet = try XCTUnwrap(asking["quiet"], "the consequence has no line of its own")
+    XCTAssertEqual(
+      plate.height, question.height + quiet.height + 2 * Grid.rowInset,
+      "the plate is its padding, the question and the consequence, and nothing else")
+  }
+
+  /// A question inside the hold's tint is written in the plate's own ink.
+  ///
+  /// Principle 8 gives the light hold tint its own ink, and the offer card
+  /// uses it for every line it draws. The question and its consequence sat
+  /// on the same tint in the panel's neutral greys: two ink systems on one
+  /// colour, one card apart.
+  func testTheHoldConfirmUsesThePlatesOwnInk() throws {
+    XCTAssertEqual(
+      HoldCard.titleInk(in: .light), Palette.light.holdInk,
+      "the plate's ink on white is the brown one")
+    XCTAssertEqual(HoldCard.quietInk(in: .light), Palette.light.holdInk)
+
+    for scheme in [ColorScheme.dark, .light] {
+      let palette = Palette.of(scheme)
+      let asking = HoldCard(model: try hold(), asking: true)
+      let offer = HoldCard(model: try hold())
+      // The same ink reaches both, which is the only way a reader of one
+      // card after another sees one plate and not two.
+      XCTAssertEqual(
+        asking.questionInk(in: palette), HoldCard.titleInk(in: palette),
+        "the question is not the plate's ink in \(scheme)")
+      XCTAssertEqual(
+        asking.consequenceInk(in: scheme), HoldCard.quietInk(in: scheme),
+        "the consequence is not the plate's ink in \(scheme)")
+      XCTAssertEqual(offer.questionInk(in: palette), HoldCard.titleInk(in: palette))
+    }
+  }
+
   // The consequence of the hold's question sits inside the card's padding
   // and starts where the question above it starts: the card negates its own
   // padding so the confirm row's 12 pt lines the question up with the
@@ -206,6 +303,40 @@ final class CardTests: XCTestCase {
       StuckCard(model: StuckCardModel(title: "Publish stopped", reason: long.reason), actions: []),
       scheme: .dark, width: cardWidth)
     XCTAssertNil(short["stuck.title.second"], "a title that fits draws one line")
+  }
+
+  /// Principle 4's second sentence: a card never carries an icon that would
+  /// do nothing.
+  ///
+  /// A row in a list dims an icon and says why, because the column is the
+  /// same on every row of the list. A card is one plate about one write, and
+  /// a dead icon on it is what made the card read as buttons again. A publish
+  /// that created nothing has no document to open, no link to copy and no
+  /// note either: no field of the record names the file it was built from.
+  func testACardCarriesNoIconThatWouldDoNothing() throws {
+    let stopped = try SheetPieces.stuck()
+    XCTAssertEqual(
+      stopped.actions.map(\.icon), [.branch, .xmark],
+      "scene r2's publish made nothing, so the card is Continue with Claude and the cross")
+    for action in stopped.actions {
+      if case .off(let reason) = action.state {
+        XCTFail("the card carries a dead \(action.icon.rawValue): \(reason)")
+      }
+    }
+
+    // A write that did name a document carries the four of a row and the
+    // cross, each of them live: scene e3's export.
+    let named = try XCTUnwrap(
+      try SheetPieces.scene("e3").model().now.compactMap { item -> [ActionModel]? in
+        if case .stuck(_, _, let actions) = item { return actions }
+        return nil
+      }.first, "e3 drew no stuck card")
+    XCTAssertEqual(named.map(\.icon), [.gdocs, .md, .branch, .link, .xmark])
+    for action in named {
+      if case .off(let reason) = action.state {
+        XCTFail("e3's card carries a dead \(action.icon.rawValue): \(reason)")
+      }
+    }
   }
 
   // `.stuck .acts` holds Open md, Continue with Claude and the bare cross,
@@ -444,16 +575,25 @@ final class CardTests: XCTestCase {
         isOn: row.isOn)
     }
     let icons = stuck.actions.map { IconAction($0.icon, tip: $0.tip, state: $0.state) }
-    let mark = try XCTUnwrap(
-      SheetPieces.health().first { $0.kind == .mark }, "no scene drew the mark row"
-    ).value
+    // The scene's own list ends with the cross, so the sheet hands over no
+    // second one: a card with two crosses is the sheet inventing a control.
+    XCTAssertEqual(
+      StuckCard(model: stuck.card, actions: icons).actions.filter { $0.icon == .xmark }.count,
+      1, "the sheet drew the dismiss twice")
+    // HEALTH is drawn with every row a fact reaches, which no one screen
+    // has. The first-run sentence is not on this page: it names "the Account
+    // row below", and the row below it here is an account that is signed in,
+    // so the sheet would say signed out and signed in at once. Scene e5 is
+    // where that sentence belongs, and the index page draws it whole.
+    XCTAssertTrue(
+      health.contains { $0.kind == .mark }, "no scene drew the mark row")
 
     for scheme in [ColorScheme.dark, .light] {
       let palette = Palette.of(scheme)
       let sheet = VStack(alignment: .leading, spacing: Grid.unit) {
         HoldCard(model: hold)
         HoldCard(model: hold, asking: true)
-        StuckCard(model: stuck.card, actions: icons, onDismiss: {})
+        StuckCard(model: stuck.card, actions: icons)
         LiveRow(model: live)
         LiveRow(model: live, pending: true)
         JobCard(model: job)
@@ -461,7 +601,6 @@ final class CardTests: XCTestCase {
         URLLine(url: Scenes.signInURL)
         SignedInBanner(account: Scenes.account)
         HealthRows(rows: health)
-        EmptyState(mark: mark, words: EmptyState.firstRun)
       }
       .frame(width: cardWidth)
       .padding(Grid.unit)

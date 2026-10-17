@@ -84,6 +84,11 @@ public struct LiveSession: Sendable, Equatable {
 
   public var isOpen: Bool { ended == nil }
 
+  /// Whether the watch stopped because Google refused the token. The skill's
+  /// next wait cannot start without a sign-in, so nothing is polling that
+  /// document, and the panel says stopped rather than paused: scene e9.
+  public var stoppedBySignIn: Bool { lastPollStop == Live.signInStop }
+
   /// What the panel's "quiet" counts from: the last write, and the watch's
   /// own start where nothing has been written yet.
   public var quietSince: Date { lastWrite ?? since }
@@ -94,6 +99,11 @@ public enum Live {
   /// the same watch. The skill starts the next wait in a second or two, so a
   /// gap this long is a person who stopped.
   public static let gap: TimeInterval = 3 * 60
+
+  /// gdoc's own word for a poll Google refused the token on. A wait that
+  /// ends with it is the end of the watch, because the skill cannot start
+  /// another one until somebody signs in.
+  public static let signInStop = "auth"
 
   /// Every live watch the events hold, oldest first.
   ///
@@ -207,7 +217,14 @@ public enum Live {
       // `waited.interrupted`, prints its totals and stops. Every other end
       // waits, because there the next poll may be a second away:
       // testAnInterruptedWaitEndsTheWatchAtOnce.
-      if last.interrupted || now.timeIntervalSince(close) >= gap {
+      //
+      // A poll Google refused the token on is the same kind of ending: the
+      // skill's next wait cannot start without a sign-in, so the watch is
+      // over at that poll and every section of the panel says so. Waiting
+      // out the gap would leave DOCUMENTS calling it live for three minutes
+      // after NOW said it stopped:
+      // testAPollGoogleRefusedTheTokenOnEndsTheWatch.
+      if last.interrupted || last.stop == signInStop || now.timeIntervalSince(close) >= gap {
         ended = close
       } else {
         ended = nil

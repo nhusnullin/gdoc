@@ -107,6 +107,15 @@ public struct HoldCard: View {
     return scheme == .dark ? palette.textSecondary : palette.holdInk
   }
 
+  /// What the question is drawn in, which is the plate's own ink and the
+  /// same ink the offer's title uses. Named so a test reads what the card
+  /// hands over rather than what it hopes:
+  /// testTheHoldConfirmUsesThePlatesOwnInk.
+  func questionInk(in palette: Palette) -> Swatch { Self.titleInk(in: palette) }
+
+  /// And the consequence's, which is the quiet line's.
+  func consequenceInk(in scheme: ColorScheme) -> Swatch { Self.quietInk(in: scheme) }
+
   public var body: some View {
     let palette = Palette.of(scheme)
     return Group {
@@ -126,10 +135,12 @@ public struct HoldCard: View {
         VStack(alignment: .leading, spacing: 0) {
           ConfirmRow(
             title: model.question, glyph: .pause, tone: .hold,
-            danger: .dismiss, onConfirm: onConfirm, onKeep: onKeep
+            danger: .dismiss, titleInk: Self.titleInk(in: palette),
+            onConfirm: onConfirm, onKeep: onKeep
           )
           .padding(.horizontal, -Grid.rowInset)
-          QuietLine(model.consequence, inset: Self.bodyInset)
+          QuietLine(
+            model.consequence, inset: Self.bodyInset, ink: Self.quietInk(in: scheme))
         }
       } else {
         offer(in: palette)

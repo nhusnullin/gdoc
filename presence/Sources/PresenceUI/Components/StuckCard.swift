@@ -87,6 +87,15 @@ public struct StuckCard: View {
   /// How many lines the title may take on a card.
   public static let titleLines = 2
 
+  /// The room one line of the title has: the column beside the icons for
+  /// the first, and the card's full body width for the second, which is
+  /// drawn under them. The row's own rule cuts each of them at that width,
+  /// so a card and a row never show one title two ways:
+  /// testACardCutsATitleByTheRowsOwnRule.
+  public static func column(line: Int, actions: Int) -> CGFloat {
+    line == 0 ? titleColumn(actions: actions) : reasonColumn
+  }
+
   /// What the title's first line is drawn in: the reason's own width less
   /// the gap and the icons beside it, which is as little as 112 pt under
   /// five of them. A card with no icon has the whole width.
@@ -183,7 +192,7 @@ public struct StuckCard: View {
       HStack(alignment: .top, spacing: Grid.columnGap) {
         StatusGlyph(.exclamation, tone: .bad)
           .frame(width: Grid.glyphSize, height: Typography.rowTitle.lineHeight)
-        line(title[0], in: palette)
+        line(title[0], column: Self.column(line: 0, actions: actions.count), in: palette)
           .frame(maxWidth: .infinity, alignment: .leading)
           .metricProbe("stuck.title")
         HStack(spacing: Grid.actionGap) {
@@ -199,7 +208,7 @@ public struct StuckCard: View {
       }
 
       if title.count > 1 {
-        line(title[1], in: palette)
+        line(title[1], column: Self.column(line: 1, actions: actions.count), in: palette)
           .frame(maxWidth: .infinity, alignment: .leading)
           .metricProbe("stuck.title.second")
           .padding(.leading, Self.reasonInset)
@@ -224,12 +233,13 @@ public struct StuckCard: View {
   /// what is cut here is a line that ran out of room on its own, and what
   /// is cut out of it is the middle: the end of a document's name is the
   /// part that tells two drafts apart.
-  private func line(_ text: String, in palette: Palette) -> some View {
-    Text(text)
-      .font(Typography.titleEmphasis.font)
-      .lineLimit(1)
-      .truncationMode(.middle)
-      .foregroundStyle(palette.text.color)
+  ///
+  /// The cut is the row's own, through `MiddleTitle` at this line's width.
+  /// The system's middle truncation does not know where a word ends, and on
+  /// scene e3 it drew "Proposal: Expansio…her regions, draft v1", where
+  /// "her regions" is a word that is not in the title.
+  private func line(_ text: String, column: CGFloat, in palette: Palette) -> some View {
+    MiddleTitle(text, role: Typography.titleEmphasis, column: column)
       .accessibilityLabel(model.title)
   }
 }
