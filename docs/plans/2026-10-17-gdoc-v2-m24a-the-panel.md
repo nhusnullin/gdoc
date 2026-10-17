@@ -169,13 +169,13 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Sources/PresenceUI/Components/TooltipLayer.swift`, `SwitchView.swift`, `ConfirmRow.swift`, `ButtonStyles.swift`
 - Create: `presence/Tests/PresenceUITests/ControlTests.swift`
 
-- [ ] `testATooltipAppearsAfterHalfASecondAndFlipsInsideThePanel`,
+- [x] `testATooltipAppearsAfterHalfASecondAndFlipsInsideThePanel`,
       `testATooltipCanBeForcedForARender`, `testTheSwitchIsDrawnNotToggle`,
       `testAConfirmRowRevertsAfterThreeSeconds`,
       `testTheOnlyTextButtonsAreOpenChatAndTheConfirmPair` (a scan over the
       component sources for `Button(` with a text label)
-- [ ] the views; the tooltip anchored by `anchorPreference`
-- [ ] `make app-lint`, `make app-test`
+- [x] the views; the tooltip anchored by `anchorPreference`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 6: the cards and the small pieces
 

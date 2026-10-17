@@ -12,8 +12,8 @@
 // the caller hands one over.
 //
 // The tooltip is not drawn here. The panel draws one layer of its own after
-// half a second, which is Task 5's TooltipLayer; this button carries the
-// words and the rule for which words.
+// half a second, which is TooltipLayer; this button carries the words, the
+// rule for which words, and the request that puts them on that layer.
 //
 // IconTests states the sizes, the dimming, the words and the second.
 
@@ -42,17 +42,22 @@ public struct ActionButton: View {
   public let icon: Icon
   public let tip: String
   public let state: ActionState
+  /// Held open with no pointer, which is what a still of the panel needs and
+  /// `.show-tip` is in the screens file.
+  public let forcedTooltip: Bool
   public let action: () -> Void
 
   @Environment(\.colorScheme) private var scheme
   @State private var hovering = false
 
   public init(
-    _ icon: Icon, tip: String, state: ActionState = .live, action: @escaping () -> Void = {}
+    _ icon: Icon, tip: String, state: ActionState = .live, forcedTooltip: Bool = false,
+    action: @escaping () -> Void = {}
   ) {
     self.icon = icon
     self.tip = tip
     self.state = state
+    self.forcedTooltip = forcedTooltip
     self.action = action
   }
 
@@ -118,6 +123,12 @@ public struct ActionButton: View {
     }
     .buttonStyle(.plain)
     .onHover { hovering = $0 }
+    // `.acts [data-tip]::after{right:0}`: an action's words hang off its own
+    // right edge, so the last of four icons keeps them inside the panel.
+    .tooltip(
+      Self.tooltip(tip, state: state), align: .trailing,
+      forced: forcedTooltip || Self.showsTooltipAlways(state)
+    )
     .accessibilityLabel(Self.tooltip(tip, state: state))
   }
 }
