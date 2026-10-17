@@ -17,7 +17,7 @@ prepared this, a macOS engineer with the visual designer's brief and the
 trust guardian with the Go binary's owner; their reports are summarised in
 `docs/design/2026-10-17-presence-mechanism.md` under M24. The decision entry
 is in `docs/v2/DECISIONS.md` under 2026-10-17, and the task lists are
-`docs/plans/2026-10-17-gdoc-v2-m24a-the-panel.md` and
+`docs/plans/completed/2026-10-17-gdoc-v2-m24a-the-panel.md` and
 `docs/plans/completed/2026-10-17-gdoc-v2-m24b-what-the-panel-needs.md`.
 
 ## Principles
@@ -126,8 +126,8 @@ Into `docs/v2/MEASURED.md`, each with its method, Nail confirming:
 
 ## Acceptance
 
-Filled in when both runs finish, one row per rule above, pass or the test
-that says otherwise.
+Both runs finished on 2026-10-17. One row per rule above, pass or the test
+that says otherwise, in the order the two halves merged.
 
 ### M24b, the Go half
 
@@ -177,3 +177,86 @@ The one measurement this half could take alone is in `docs/v2/MEASURED.md`,
 "What Claude Code puts in a child's environment", with its method. The six
 numbered measurements above are M24a's or Nail's; measurement 4, a SIGINT from
 the app to a wait, needs both halves merged and is Nail's.
+
+### M24a, the Swift half
+
+Done 2026-10-17, one commit per task from the token sheet to this table,
+with one merge of `main` before Task 25. One row per rule this half owns,
+each naming the test that holds it. Every row passes. `make app-lint`,
+`make app-test` (205 tests) and `make app` are green at every commit, and
+`env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test` with them, because
+`go/boundary` reads `presence/`. No test launches a GUI app, asks the
+machine for scene data or runs the real gdoc: the child tests run a
+`/bin/sh` fixture, and the renders go under `PRESENCE_SHOTS`, outside the
+repository.
+
+| Clause of the rule | Test |
+|---|---|
+| The token sheet is the screens file's CSS as Swift literals, each value stated as a literal, and no semantic NSColor stands in | `testTheDarkPaletteIsTheScreensFileLiterals`, `testTheLightPaletteIsTheScreensFileLiterals`, `testASwatchIsItsStylesheetChannels`, `testACSSBlurIsTwiceTheRadius`, `testTrackingIsEmTurnedIntoPoints` |
+| chosen by the colour scheme and never by a setting | `testThePaletteIsTheColourSchemeAndNothingElse` |
+| the twelve type roles, with the light label's third weight | `testTheTypeRolesAreTwelveStylesheetLiterals`, `testTheLightSectionLabelIsTheThirdWeight` |
+| 320 px on the 8 pt grid, radius 12, header 36, section label 28, rows 32, 44 and 28, action column 108 | `testTheGridIsTheScreens`, `testTheLayoutNumbersAreTheStylesheets`, `testRowHeightsAreTheGrid`, `testTheDocRowActionColumnIs108`, `testASectionLabelIs28AndUppercaseWithTheCount`, `testTheHeaderIs36WithTheMarkTheNameAndTheAccount` |
+| capped at 600 px with the expanded section scrolling inside | `testThePanelNeverPassesSixHundred`, `testTheBoxCapsItsHeightAndScrollsInsideWithTheThumbAndTheFade`, `testTheWholeRenderCarriesWhatTheCapCuts`; `ImageRenderer` and `ScrollView` measured first, in `docs/v2/MEASURED.md` under "What ImageRenderer draws for a SwiftUI ScrollView" |
+| the delays and counts of the decisions as literals | `testTheTimingsAreTheDecisions` |
+| the status glyph in seven kinds and six tones, colour only there | `testEveryGlyphKindAndToneRenders`, `testTheHollowCheckIsNeutral`, `testThePauseIsTwoBarsAtTheBadgeSizeToo` |
+| the ring in two sizes, static in a render and under reduce motion | `testTheRingIsTwoSizes`, `testAnIndeterminateRingIsStaticUnderReduceMotionAndInRenderMode` |
+| the action icons as `Path` ports of the SVG, not SF Symbols | `testTheIconSheetRenders`, `testAnOffIconIsDimmedWithItsOwnTooltip`, `testADoneIconIsGreenForOneSecondThenReturns` |
+| the middle-ellipsis title, the screens file's split rule | `testTheSplitIsTheScreensRule`, `testNoHeadUnderEightCharactersAtPanelWidth`, `testAGoneTitleIsStruckThrough` |
+| the tooltip drawn by the app after half a second, the drawn switch, the three-second inline confirm | `testATooltipAppearsAfterHalfASecondAndFlipsInsideThePanel`, `testATooltipCanBeForcedForARender`, `testTheSwitchIsDrawnNotToggle`, `testAConfirmRowRevertsAfterThreeSeconds` |
+| actions as icons, words only for questions | `testTheOnlyTextButtonsAreOpenChatAndTheConfirmPair` |
+| the cards, the live row, the step rows, the empty state, the strip, the banner, the health rows | `testTheStuckCardReasonFitsTwoLinesUnderEightyCharacters`, `testTheStuckCardDismissIsTheLastIcon`, `testTheLiveRowHasOneStopIconThatBecomesARingWhilePending`, `testTheJobCardShowsStepRowsOnlyWhenStepsAreKnown`, `testTheEmptyStateIsTheFirstRunText`, `testTheStripLabelsAreDocNoteChatLink`, `testTheBannerLivesFiveSeconds`, `testHealthRowsKeepTheirOrderOnEveryScreen`, `testHealthKeepsItsOrderOnEveryScene` |
+| NOW orders holds, then stuck, then running jobs, then live watches, oldest first inside a class | `testNowOrdersHoldsStuckJobsThenWatchesOldestFirst` over scene e3, and `testNowIsHiddenWhenEmpty` for the section that is not there |
+| stuck is a failed end of the seven writers, gone when its key clears or when dismissed | `testAFailedWriteIsStuckUntilItsKeyClearsOrIsDismissed`, with `testDismissalsAreAnInputAndTheRowStays` |
+| a failed read is not stuck, and `verified: false` is never stuck | `testAFailedReadIsNotStuck`, `testVerifiedFalseIsNeverStuck`, with `testTheLastVerifiedWriteIsReportedForTheCheck` for the check it does drive |
+| a dead pid is stuck for a write inside 14 days and otherwise "outcome unknown" in TODAY | `testADeadPidWriteWithinFourteenDaysIsStuckAndOlderIsUnknownInToday`, which closed `docs/backlog/now-keeps-a-dead-run-for-two-months.md` |
+| a live session is one document's waits with gaps under three minutes, with its counts, its quiet anchor and its failed poll | `testWaitsWithinThreeMinutesAreOneSession`, `testRepliedAndProposedCountTheDocumentsOkEnds`, `testTheLastWriteTimeIsTheQuietAnchor`, `testAFailedPollIsAFact`, `testAFailedPollCarriesItsCode` |
+| never "waiting for the author" | `testNoSessionSaysWaitingForTheAuthor`, a scan over the words |
+| DOCUMENTS groups by document inside 14 days, newest first, no pinning, a read alone making no row, five by default | `testDocumentsGroupByIdInsideFourteenDaysNewestFirst`, `testAReadAloneMakesNoRow`, `testTheDefaultIsFiveWithShowMore`, `testTheLabelCountsTheHorizonAndToday`, `testTheStateIsTheOpenActionThenTheLatestFinishedOne` |
+| TODAY is the local day, newest first, eight by default, with the four synthetic rows and no reads | `testTodayIsTheLocalDayNewestFirstDefaultEight`, `testTodayCarriesTheSyntheticRows`, `testReadsAreLeftOutOfToday`, `testAMonthBoundaryIsNotADayBoundary` |
+| Yesterday is one chevron row that opens inline, and nothing older appears | `testYesterdayIsOneSummaryThatOpensInline`, `testNothingOlderAppears`, `testShowMoreAndShowLessToggleTheList` |
+| the verbs, the times, the durations, the via words, the verified words | `testTheVerbsAreTheSevenWords`, `testTheSevenRunningWordsAreTheParticiples`, `testTimesAreClockYesterdayWeekdayThenDate`, `testDurationsAreMinutesAndHours`, `testViaIsFromTheTerminalDesktopChatOrClaudeCode`, `testVerifiedIsVerifiedOrNotReadBack` |
+| facts and never predictions | `testNothingPredictsATime`, which reads the words it makes and the file that makes them, and `testACountAgreesWithItsNoun` |
+| one template image per state, the mark alone for live and a badge for the four | `testOneTemplateImagePerState`, `testEveryBarPixelIsMonochrome` |
+| priority stuck, hold, job, live, idle, with idle the dim mark at 0.45 | `testThePriorityIsStuckHoldJobLiveIdle`, `testAHoldThatRanOutLeavesTheMenuBar` |
+| not signed in, expired and gdoc not found count as stuck; network trouble does not change the icon | `testNotSignedInExpiredAndGdocNotFoundAreStuck`, `testNetworkTroubleDoesNotChangeTheIcon` |
+| the green check lasts five seconds after a live `verified: true` end, never for a replayed line | `testTheCheckLastsFiveSecondsAfterALiveVerifiedEndAndNeverForAReplay` |
+| the bar's tooltip names the state and no document | `testTheTooltipNamesTheStateAndNoDocument` |
+| exactly six argv lists under one runner file, and a source scan over the set | `testTheArgvSetIsExactlyTheSix`, `testTheArgvEnumIsClosedAtSix`, `testProcessAppearsOnlyInTheRunner`, `testUpdateNeverPassesAFlag`, `testInstallExtensionIsUpdateDesktop` |
+| the resolved absolute path, `~/.local/bin/gdoc` first and beside the bundle second, never PATH | `testGdocIsResolvedAtLocalBinThenBesideTheBundleNeverFromPATH`, with `testAMissingBinaryIsRefusedByName` and `testAGdocThatIsNotThereIsAFactAndNotACrash` for the HEALTH fact |
+| stdin the null device, an environment of the four variables, one child per kind, a strict envelope, a timeout that terminates | `testStdinIsTheNullDevice`, `testTheChildEnvironmentIsTheFourVariables`, `testOneChildPerKindAtATime`, `testTheEnvelopeIsDecodedStrictly`, `testATimeoutTerminatesTheChild` |
+| `auth status` on open, at most once a minute, every ten minutes while live; `help --json` on open and never on a timer | `testThePollIsOnOpenAtMostOnceAMinuteAndEveryTenMinutesWhileLive`, `testHelpIsAskedOnOpenAndNeverOnATimer`, `testAChangeTheAppMadeItselfAsksBothWhateverTheGapsSay` |
+| the three words, the mark, the two versions, and "signed in, account not read" | `testAuthStatusGivesTheThreeWordsAndTheEmail`, `testHelpJSONGivesTheMarkTheVersionAndTheLatest`, `testATokenWithNoAccountReadsSignedInAccountNotRead`, `testAFailedAuthStatusAsksForASignInAndGuessesNothingElse` |
+| the expected domain is a hint that blocks nothing, and "Account changed" is the app's own memory | `testTheExpectedDomainIsAHintThatBlocksNothing`, `testAccountChangedIsTheAppsOwnMemory` |
+| sign in takes the one URL from the child's stderr and accepts only Google's sign-in URL | `testTheURLIsTakenOnlyFromTheChildsStderrAfterTheSentence`, `testOnlyGooglesSignInURLIsAccepted` over the literal `/o/oauth2/auth` path, `testOnlyGooglesSignInURLIsRefusedFromAChild` |
+| the 180 s countdown, Cancel that terminates the child, the banner on an ok envelope | `testTheCountdownIs180Seconds`, `testCancelTerminatesTheChild`, `testTheBannerFollowsAnOkEnvelope`, and `testHealthIsPinnedFirstWhenSignedOut` with `testHealthIsPinnedWhileASignInIsInFlight` for where it sits |
+| sign out confirms inline, stops the watches it names, then runs the logout | `testSigningOutAsksFirstAndThenRunsTheLogout` |
+| Open in Google Docs is the Drive URL from a valid id only; Copy link is the plain string, with the check for a second | `testTheDocsURLIsBuiltFromAValidIdOnly`, `testCopyLinkIsThePlainURL`, `testADoneIconIsGreenForOneSecondThenReturns`, and `testAnUnpairedDocumentGreysTheIconWithItsTooltip` for the grey |
+| no title ever reaches a URL or the pasteboard | `testNoTitleEverReachesAURLOrThePasteboard` |
+| the hub index is the `gdoc:` block of a note's front matter and nothing else in the file, rescanned on a file event | `testTheHubIndexReadsOnlyTheFrontMattersGdocBlock`, `testOneDocumentTakesTheFirstNoteByPath`, `testTheIndexRescansOnAFileEvent` |
+| Open md proves a regular `.md` under the chosen hub, and says "Note moved or deleted" when it is not | `testOpenMdStaysInsideTheChosenVaultAndNeedsARegularMdFile`, `testAMovedNoteSaysMovedOrDeleted` |
+| the only schemes and hosts are Google's and the vault's, through the one room that asks the system | `testTheOnlySchemesAndHostsAreGooglesAndTheVaults`, `testTheSystemIsAskedOnlyThroughTheOpenerAndTheRelauncher`, `testEachIconLeavesThroughTheOneRoomThatDoesIt` |
+| Continue with Claude only activates the app, and the strip shows once until an icon is clicked | `testContinueWithClaudeOnlyActivatesTheApp`, `testTheStripShowsOnceUntilAnIconIsClicked`; the prefill scheme stays out until it is measured, in `docs/v2/MEASURED.md` under "What LaunchServices says about a `claude://` handler" |
+| Stop live sends one SIGINT, after every check, never a second signal and never SIGKILL | `testStopSendsOneSIGINTOnlyAfterTheProcessCheck`, `testStopNeverSendsAnotherSignal`, `testASignalIsSentOnlyByTheStopper` |
+| the check is path, uid, start time, a live pid, no end and not a chat call | `testAWaitIsStoppableOnlyWhenEveryCheckHolds`, `testPreviousCountsAsGdocAndPathsAreResolvedBeforeComparing`; what `proc_pidpath` says after `gdoc update` renames the binary is in `docs/v2/MEASURED.md` |
+| anything else greys the icon with its sentence, and the card rings until the end arrives | `testAFailedCheckGreysStopWithItsTooltip`, `testTheCardShowsARingUntilTheEndArrives` |
+| Update runs `update` with no flag and rings the gdoc row until the end | `testUpdateNeverPassesAFlag`, `testTheGdocRowShowsTheRingUntilTheEndThenTheNewVersion`, `testOnlyAnUpdatedActionWritesANewVersion` |
+| the hold card carries "Open chat" and "Dismiss" and the panel never says "Release" | `testTheHoldCardSaysOpenChatAndDismissAndNeverRelease`, `testAHoldIsAskedAboutAndAFailedWriteIsNot`, and `testReleaseWithoutWritingIsNotAScene` over the scenes |
+| the six keys are the app's whole state, pruned past 62 days, and nothing else persists | `testOnlyTheSixKeysPersist`, `testDismissalsAreKeyedByRunAndCallOrHoldId`, `testDismissalsArePrunedPastSixtyTwoDays`, `testOnlyThePreferencesPersist` over the tree |
+| launch at login registers once on the first run ever, records "on", and never overrides a person's "off" | `testTheFirstEverRunRegistersOnceAndRecordsOn`, `testAPersonsOffIsNeverOverridden`, `testARelaunchNeverRegisters`, `testTheSwitchRecordsThePersonsAnswer` |
+| `requiresApproval` shows the row and is not retried | `testRequiresApprovalShowsTheRowAndIsNotRetried`, `testARefusedRegistrationIsAnOffRowAndNotARetry`, `testLoginItemsAreTouchedOnlyByTheLoginItem` |
+| self-relaunch once per on-disk version in ten minutes, with the three guards and the launcher handshake | `testRelaunchHappensOncePerOnDiskVersionInTenMinutes`, `testNoRelaunchWhileAnUpdateRunsOrAChildLives`, `testNoRelaunchIntoAnotherIdentifierOrAnInvalidSignature`, `testANewInstanceWaitsForItsLauncherThenASecondInstanceQuits`, `testOnlyTheRelauncherOpensAnApplication` |
+| `.gone` never relaunches, and a failed open leaves the reopen row | `testGoneNeverRelaunches`, `testAFailedOpenLeavesTheReopenRow`, `testTheBundleVersionCheckIsAPureFunction` |
+| every scene of the screens file renders in both appearances at 2x with an index page, outside the repository | `testEveryScreenRendersInBothAppearances`, `testTheMetricProbesHoldOnEveryScene`, `testEveryReasonLineIsUnderEightyCharacters`, `testTheShadowStackFallsUnderThePlateAndNotUnderWhatIsOnIt`; e4 is not built and the test says so |
+| a reviewer who drew nothing ran the principles' checklist over the index before any screen reached Nail, and its findings became fixes first | Task 23's commit lists each finding and its fix; Task 25 ran the pass again over the scenes the new fields changed |
+| the shell only wires, and the logic a test needs lives in a library | `testTheShellOnlyWiresAndHoldsNoLogic`, `testTheFactsComeFromThePollsTheStoresAndTheRecord`, `testThePolledFactsReachTheFacts`, `testASectionAPersonOpenedStaysOpen`, `testQuitIsTheShellsClosure` |
+| no source file reaches the wire | `testNoSourceFileReachesTheWire`, the M23 rule kept through every new API this half introduced |
+| M24b merges first, then M24a resolves the decoder and the fixture | Task 25 ran on the merge of `main` with M24b in it and says so in its commit: `testAPublishedRowTakesItsIdFromMade`, `testADroppedHoldLeavesNoCardAndOneRow`, `testADroppedHoldEndsTheCard`, `testTheStuckReasonIsTheCodesWordsAndTheLine`, `testStepEventsDriveTheJobCardAndTheBarRing`, `testViaCodeReadsFromClaudeCode`, `testAnInterruptedWaitIsLiveStoppedByYou` |
+| CLAUDE.md's presence invariant gains the six argv lists and the hold's sign-in rule, the file at or under 300 | `TestCLAUDEmdIsUnderTheCeiling` at 300 of 300, `TestTheTaskMapNamesFilesThatExist`, and `docs/guide/presence.md` carrying the panel for a colleague |
+
+Three of the six measurements were this half's and are in
+`docs/v2/MEASURED.md` with their method: what `ImageRenderer` draws for a
+SwiftUI `ScrollView` (Task 7), what LaunchServices says about a `claude://`
+handler (Task 17), and what `proc_pidpath` says after the binary is renamed
+(Task 18). Measurements 1, 2 and 4, the twenty self-relaunches, the login
+item through a log out, and a SIGINT from the panel to a wait under Claude
+Code, need a person at the machine and are Nail's, after the merge.

@@ -521,10 +521,10 @@ every box is ticked and its commit is on the branch.
 **Files:**
 - Modify: `docs/plans/2026-10-17-gdoc-v2-m24-the-panel-spec.md`, `docs/v2/PLAN.md`
 
-- [ ] the Swift rows of the spec's acceptance table under a heading "M24a",
+- [x] the Swift rows of the spec's acceptance table under a heading "M24a",
       pass or the test that says otherwise
-- [ ] the M24a half of the M24 row in `docs/v2/PLAN.md`'s Done table
-- [ ] this plan and the spec move to `docs/plans/completed/`
+- [x] the M24a half of the M24 row in `docs/v2/PLAN.md`'s Done table
+- [x] this plan and the spec move to `docs/plans/completed/`
 
 ## Post-completion
 

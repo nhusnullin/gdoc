@@ -96,7 +96,7 @@ public enum Words {
   /// code this version has not heard of has no word at all: the panel says
   /// where the reason is rather than guessing at one.
   ///
-  /// The seventh code is `other`, and it is left out on purpose. It is gdoc
+  /// The seventh code is `other`, and it has no word on purpose. It is gdoc
   /// saying that nothing it knows about matched, and a panel that turned
   /// that into "something went wrong" would be saying more than the record.
   public static let stops: [String: String] = [
