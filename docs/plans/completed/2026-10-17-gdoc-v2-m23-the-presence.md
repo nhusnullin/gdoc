@@ -1,8 +1,9 @@
 # gdoc v2 Milestone 23: the presence. The channel, the flag, the delivery, the first glance. Plan
 
 2026-10-17. The task list for the specification beside it,
-`docs/plans/2026-10-17-gdoc-v2-m23-the-presence-spec.md`, whose six brief
-rules are Nail's and whose design rules are listed there for him to strike.
+`docs/plans/completed/2026-10-17-gdoc-v2-m23-the-presence-spec.md`, whose six
+brief rules are Nail's and whose design rules are listed there for him to
+strike.
 One commit per task. The spec holds the rules. This plan repeats none of them.
 Where the code, the spec or this plan disagree, the task stops and says so
 rather than choosing. The design record
@@ -491,12 +492,12 @@ every box in it is ticked and its commit is on the branch.
 ### Task 12: the acceptance table and the close
 
 **Files:**
-- Modify: `docs/plans/2026-10-17-gdoc-v2-m23-the-presence-spec.md`, `docs/v2/PLAN.md`
+- Modify: `docs/plans/completed/2026-10-17-gdoc-v2-m23-the-presence-spec.md`, `docs/v2/PLAN.md`
 
-- [ ] one row per rule in the spec, pass or the test that says otherwise,
+- [x] one row per rule in the spec, pass or the test that says otherwise,
       written into the spec's Acceptance section
-- [ ] the M23 row in `docs/v2/PLAN.md`'s Done table, in the shape of M19's
-- [ ] both plan files move to `docs/plans/completed/`
+- [x] the M23 row in `docs/v2/PLAN.md`'s Done table, in the shape of M19's
+- [x] both plan files move to `docs/plans/completed/`
 
 ## Post-completion
 

@@ -8,8 +8,8 @@
 // silence in a chat window, and alive and dead look the same there. The
 // presence app reads this file and answers "is it alive" and "is it waiting
 // on me" in a menu bar glyph. docs/v2/DECISIONS.md holds the decision, and
-// docs/plans/2026-10-17-gdoc-v2-m23-the-presence-spec.md the rules this
-// package implements.
+// docs/plans/completed/2026-10-17-gdoc-v2-m23-the-presence-spec.md the rules
+// this package implements.
 //
 // # The binary never reads it
 //

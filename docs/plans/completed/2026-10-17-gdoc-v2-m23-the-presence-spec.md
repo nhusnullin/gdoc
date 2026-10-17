@@ -10,8 +10,8 @@ compatible. Four seats designed the mechanism in parallel and the project
 manager resolved their disagreements; Nail has not reviewed the result, and
 the seven decisions he is most likely to reverse are listed in that file. The
 decision entry is in `docs/v2/DECISIONS.md` under 2026-10-17, and the task
-list is `docs/plans/2026-10-17-gdoc-v2-m23-the-presence.md`. It starts from
-`main` after M22 and M21 merged.
+list is `docs/plans/completed/2026-10-17-gdoc-v2-m23-the-presence.md`. It
+starts from `main` after M22 and M21 merged.
 
 ## Principles
 
@@ -170,5 +170,77 @@ between the browser route with "Open Anyway" and waiting for M17's signing.
 
 ## Acceptance
 
-Filled in when the run finishes, one row per rule above, pass or the test
-that says otherwise.
+Verified 2026-10-17 at the end of the run, on `d050dc4` plus this commit, with
+`make test` (race), `make vet`, `make app-test` and `make app-lint` green and
+`make app` building the universal bundle. One row per rule above, in the order
+the two tables state them: six rules Nail gave, then the twenty-four the design
+pass took. Three rows are pass with a note, and the notes are below the table.
+
+Nail's six, from the brief:
+
+| Rule | Held by | Result |
+|---|---|---|
+| gdoc does not change in kind; it reports what it is doing | `TestTheFlagChangesNoByteOfTheObject`, `TestOffTouchesNothing`, `TestWithThePresenceOffAnUpdateIsTodaysUpdate`, and the suite as it stood before the milestone | pass |
+| the presence is a separate application | its own Swift package at `presence/`, built by `make app` and tested by `make app-test`; nothing under `go/` reads it, and the one word both sides share is pinned by `TestTheBundleNameIsOneWordInThreePlaces` | pass |
+| `gdoc update` updates the application too | `TestAnUpToDateRunWithThePresenceOnInstallsItFromTheReleaseHere`, `TestTheSwapKeepsThePreviousBundle`, `TestRollbackWithThePresenceOnSwapsBoth`, `TestTheResultSaysToOpenTheAppOnce` | pass |
+| a flag in settings, also settable by an argument | `TestPresenceIsOffByDefault`, `TestTheFileTurnsPresenceOn`, `TestThePresenceArgumentOverridesTheFile`, `TestPresenceFromSaysWhichSourceWon` | pass |
+| every existing function keeps working exactly as today | `TestAnExperimentalFlagIsInTheTableAndInNoScreen` over the 15 help screens and both completion scripts, `TestTheHelpObjectCarriesThePresenceOnlyWhenItIsOn`, `TestTheFlagChangesNoByteOfTheObject`, and every golden in the tree unchanged | pass |
+| plan, TDD, review, run board, release | twelve tasks, one commit each, the test first in every task that builds; the release is the nightly after the merge | pass, note 1 |
+
+The twenty-four the design pass took:
+
+| Rule | Held by | Result |
+|---|---|---|
+| one append-only JSONL file per month, 0700 and 0600, one open-write-close, a symlink refused, the UTC month, local disk only | `TestPresenceDirIsInTheConfigFolder`, `TestTheMonthNamesTheFile`, `TestTheFileIsReadableByItsOwnerAlone`, `TestASymlinkOrANonRegularFileAtThePathIsRefusedAndNothingIsWritten`, `TestAShortWriteIsAFailure`, `TestTwoWritersNeverTearALine`; the volume sentence is in `docs/guide/presence.md` and `go/internal/presence/doc.go` | pass |
+| the binary never reads the file, and no decision depends on a line in it | `TestPresenceExportsNoReader`, `TestOnlyPresenceAppends`, `TestBeginHasOneCaller` | pass |
+| the event is a fixed allowlisted struct, schema `v: 1`, never the envelope | `TestTheEventCarriesOnlyItsListedFields`, `TestAnEventCarriesNoWordOfTheEnvelopeButTheTitle`, `TestOkIsTheEnvelopesOk`, `TestTitleIsLiftedOnlyWhenPresentAsAString`, `TestVerifiedIsLiftedOnlyWhenTheCallerSaysTheCommandReadsBack`, `TestOnlyTheReadBackWritersCarryVerified`, `TestTheDurationIsMonotonic`, `TestAnUpdateAndALoginWriteNoDoc` | pass |
+| `title` is the one document word, capped at 200 runes | `TestTheTitleIsCappedAtTwoHundredRunes`; measured at 200 bytes a line at most in MEASURED.md's 20,000-line section | pass |
+| `start` and `end` for the reporting commands, `held` then exactly one ending for a hold, and nothing from `help`, `completion`, `auth status`, `build`, `probe`, the session itself or chat work before `safeDispatch` | `TestAReportingCommandWritesAStartAndAnEnd`, `TestAHelpRunWritesNoEvent`, `TestAnAuthStatusRunWritesNoEvent`, `TestAChatCallSaysViaChat`, `TestAChatRefusalBeforeDispatchWritesNothing`, `TestAHeldWriteRecordsTheRuleAndNoneOfItsWords`, `TestEveryWayAHoldLeavesIsExactlyOneLine` | pass |
+| the end is deferred, so a recovered panic still writes `ok: false`, and a start with no end from a dead pid is an unknown outcome | `TestAPanicInACommandStillWritesAnEndWithOkFalse`; the app half is `testAStartWithNoEndFromALivePidIsRunning` and `testAStartWithNoEndFromADeadPidIsOutcomeUnknown` | pass |
+| a failed write changes no byte of the envelope and no exit code, one line to stderr once | `TestAnUnwritableLogChangesNoByteOfTheObject`, `TestAFailedWriteSaysSoOnceOnStderrAndReturnsNothing` | pass |
+| the current and the previous month kept, exact names only, and nothing removed with the flag off | `TestOnlyTheCurrentAndPreviousMonthSurviveAndOnlyExactNamesAreRemoved`, `TestOffRemovesNothing` | pass |
+| one fixture, written by the Go writer and held equal in both languages | `TestTheFixtureIsWhatTheWriterWrites`, `TestTheSwiftFixtureIsTheGoFixture` | pass |
+| the setting `presence: true`, the argument `--presence true`, the same refusals, the argument over the file, chat from the file | `TestABadPresenceValueIsRefusedNamingWhereItCameFrom`, `TestAPresenceKeyWithNoValueIsRefused`, `TestPresenceFromIsSetOnlyWhenTheFlagIsOn`, `TestTheMarkAndThePresenceComeOutOfOneFile`, `TestMcpTakesTheSettingFlagsAndNothingElse` | pass, note 2 |
+| in the table, marked experimental: no screen line, no completion line, `help --json` only when it is on | `TestTheTableNamesTheOneExperimentalFlag`, `TestAnExperimentalFlagIsInTheTableAndInNoScreen`, `TestTheHelpObjectCarriesThePresenceOnlyWhenItIsOn` | pass |
+| off means today's bytes, proven by byte compare | `TestTheFlagChangesNoByteOfTheObject`, `TestOffTouchesNothing`, `TestOffRemovesNothing`, `TestWithThePresenceOffAnUpdateIsTodaysUpdate`, `TestCheckNeverInstallsTheApp` | pass |
+| no skill passes the flag | `TestNoSkillPassesThePresenceFlag` | pass |
+| the app travels in both darwin zips only, one universal bundle, under the one `SHA256SUMS`, and a repack keeps the signature | `TestTheZipCarriesThePresenceForDarwinOnly`, `TestThePresenceJobProvesTheZipRoundTripKeepsTheSignature`, `TestTheBundleComesOutOfAZipPackedByZipItself`, `TestTheReleaseNamesTheFilesTheUpdaterFetches` | pass |
+| `release.yml` gains the macOS job the ubuntu job needs, and `go.yml` gains the same job on every push | `TestTheReleaseWaitsForThePresenceBuild`, `TestThePresenceIsStampedWithTheTag`, `TestThePresenceJobProvesTheZipRoundTripKeepsTheSignature`, `TestTheCIBuildsThePresenceOnEveryPush`, `TestTheReleaseWalksThePlatformsFileRatherThanASecondList` | pass, note 3 |
+| the install at `~/Applications`, the previous one kept, every refusal by name, the stage read back and summed, the rename after the binary's, every app failure a warning, and the rollback an involution | `TestABundleIsTakenOutOfTheVerifiedZipOnly`, `TestOnlyEntriesUnderTheBundlePathAreTaken`, `TestAPathOutsideTheBundleASymlinkAndAnAppleDoubleEntryAreRefusedByName`, `TestTooManyEntriesOrTooManyBytesAreRefusedByName`, `TestAnotherIdentifierOrAnotherVersionIsRefusedByName`, `TestModesComeFromTheZip`, `TestTheStageIsReadBackAndSummed`, `TestAStaleStageIsRemovedFirst`, `TestTheSwapKeepsThePreviousBundle`, `TestAFailedSwapPutsTheOldBundleBack`, `TestRollbackOfTheBundleRunTwiceIsWhereItStarted`, `TestRollbackOfTheBundleWithNoPreviousIsRefusedByName`, `TestADestinationThatIsASymlinkAFileOrAnotherAppMovesNothing`, `TestAMissingApplicationsFolderIsMade`, `TestAPresenceFailureIsAWarningNamingBothPathsAndTheBinaryIsUpdated`, `TestRollbackWithNoPreviousAppWarnsAndKeepsIt`, `TestCheckNeverInstallsTheApp` | pass |
+| gdoc never launches the app, and the app shows a reopen row instead of relaunching | `TestTheResultSaysToOpenTheAppOnce`, `TestNothingRunsAnExternalProgram`, `TestOnlyDesktopRunsAProgram`, `TestTheOneProgramOpensOnlyTheExtension`, `testTheReopenRowAppearsWhenThePlistVersionDiffers`, `testTheBundleVersionCheckIsAPureFunction` | pass |
+| `release/install.sh` ignores `presence/`, and a non-darwin platform gets one warning | `TestTheReleaseInstallerLeavesThePresenceAlone`, `TestThePresenceOffMacOSWritesNothingAndNamesThePlatform` | pass |
+| native Swift, three targets, macOS 14, XCTest over fixtures, render tests to PNG, no UI tests | `presence/Package.swift` with `PresenceCore`, `PresenceUI` and `Presence`; 23 tests under `make app-test`, `make app-lint` clean, and `testThePanelRendersNowAndTodayInLightAndDark` writing the two PNGs | pass |
+| the tail: two months, the month boundary, reopen on replace, newline-terminated records, a bounded partial buffer, a skipped record, an unknown `v` refused, unknown fields ignored, every line forgeable data, liveness by `kill(pid, 0)` | `testTheTailReadsAppendsWaitsForTheNewlineAndFollowsRotation`, `testTheTailReopensWhenTheFileIsReplacedOrRemoved`, `testTheTailReadsThisAndLastMonthAtLaunchAndRescansAtTheMonthBoundary`, `testOnlyNewlineTerminatedRecordsAreParsedAndTheTailIsBounded`, `testAnUndecodableRecordIsSkippedAndTailingGoesOn`, `testAnUnknownVersionIsRefusedAsNewer`, `testAVersionOneLineDecodesAndAnUnknownFieldIsIgnored`, `testAMissingRequiredFieldSkipsTheRecord`, the two liveness tests | pass |
+| the app launches no process and opens only the event files and its own plist | `testNoSourceFileImportsNetworkOrLaunchesAProcess` over every `.swift` file in `Sources` and `Tests`, and `TestPresenceOpensNoWireAndRunsNothing` on the Go side | pass |
+| the first glance: the four glyph states, NOW and TODAY, the stopped row, the two version rows, the reopen row, Quit, and dismissals the only state | `testTheGlyphIsOneOfFourStatesByPriority`, `testNowIsHoldsThenLiveStartsThenStopped`, `testTodayIsTheLocalDayNewestFirst`, `testADuplicateRecordCountsOnce`, `testAWaitThatIsRunningIsAWatch`, `testAHeldEventIsAHoldUntilReleasedExpiredOrLanded`, `testAHoldPastItsUntilIsShownAsRanOutEvenWithNoEvent`, `testAStoppedRunWithUnknownOutcomeIsItsOwnRow`, `testTheVersionRowsNameTheAppAndTheLastGdoc`, `testThePanelRendersNowAndTodayInLightAndDark` | pass |
+| no channel into `gdoc mcp`, and the panel never says "Release" | `testNoSourceFileImportsNetworkOrLaunchesAProcess`; the panel's one control is Quit, and the hold row is a row with no action, so the "Open chat" words wait for M24's card with the rest of it | pass |
+| no macOS notifications | no file in `presence/` names `UserNotifications` or any notification API; the surfaces are the glyph, its tooltip and the panel, and `presence/Info.plist` carries `LSUIElement` so there is no Dock item either | pass |
+| CLAUDE.md gains the rows and the two invariants, stays under 300 lines, and the `~/.local/bin/gdoc` sentence is corrected | `TestCLAUDEmdIsUnderTheCeiling` at 297 of 300 lines, `TestTheTaskMapNamesFilesThatExist`, and the corrected paragraph at `CLAUDE.md:264` | pass |
+
+The three notes:
+
+1. **The release is Nail's step, as every milestone's is.** The plan, the TDD,
+   the reviews and the board ran here; the nightly after the merge
+   (`gh workflow run nightly.yml --ref main`) and the tag it cuts are the
+   Post-completion list of the plan beside this file.
+2. **`gdoc mcp` takes `--presence` on its launch line, like `--mark` and
+   `--config`.** The rule's sentence, "chat gets it from the file only", holds
+   where it matters: no tool call can carry the flag, and a chat tool call
+   never sets it. What a session is given is resolved once, before the session
+   starts, from the file or from the line that started it, which is how the two
+   older setting flags already work. Reading it any other way would have made
+   `mcp` the one command that refuses a setting flag.
+3. **The release job is proven by reading the workflow, not by running it.**
+   `TestTheReleaseWaitsForThePresenceBuild` and its four neighbours parse
+   `release.yml` and `go.yml`; the first CI-built bundle, the first darwin zip
+   carrying it and the first `gdoc update` that installs from a real release
+   are Nail's, the morning after. The locally built bundle was measured instead,
+   and MEASURED.md says which half is which.
+
+The three measurements the Measurement section asks for are in `docs/v2/MEASURED.md`:
+"The presence app built, rendered and unzipped", "What Gatekeeper says about a
+bundle gdoc's own code unzipped", "Twenty thousand presence lines from two
+binaries into one file" and "The bundle swapped under a process running out of
+it". Each names how it was taken and which half is Nail's, because nothing here
+launches a GUI app. Measurement 2 did not fail on the Go route, so the run did
+not stop and M17 did not move up.
