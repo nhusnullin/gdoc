@@ -381,6 +381,27 @@ final class SessionTests: XCTestCase {
     XCTAssertEqual(register.settingsOpened, 1, "the approval row opens the pane")
   }
 
+  /// macOS took the registration and is waiting for the person to allow it
+  /// in System Settings. The switch is drawn off, because the item is not
+  /// running yet, and the one thing a press may do is open that pane:
+  /// registering again is a second notice in somebody's menu bar for a
+  /// choice this app already wrote down, which LoginItem's own page says is
+  /// never retried.
+  func testTheSwitchInTheApprovalStateOpensThePaneAndRegistersNothingAgain() throws {
+    try writeTheRecord([])
+    let register = FakeRegister(after: .requiresApproval)
+    let session = made(loginService: register)
+    answered(session)
+    XCTAssertEqual(session.facts.loginItem, .needsApproval, "the row macOS left")
+    XCTAssertEqual(register.registrations, 1, "the first run ever registers once")
+
+    session.perform(.toggleLoginItem, nil)
+
+    XCTAssertEqual(register.registrations, 1, "the press registered nothing again")
+    XCTAssertEqual(register.unregistrations, 0, "and unregistered nothing")
+    XCTAssertEqual(register.settingsOpened, 1, "it opened the pane that allows it")
+  }
+
   /// A section a person opened stays open, because what is open lives outside
   /// every view.
   func testASectionAPersonOpenedStaysOpen() throws {
@@ -426,6 +447,29 @@ final class SessionTests: XCTestCase {
         extra: "\"step\":\"upload\",\"index\":2,\"count\":4"),
     ])
     wait(for: [moved], timeout: 20)
+  }
+
+  /// The sign-in's countdown is read off an actor, so the answer comes back
+  /// after a hop. A sign-in that finished during that hop has already put
+  /// the row away, and writing the phase it asked about back would put a
+  /// frozen countdown and a dead Cancel on the Account row that nothing
+  /// clears: the next read returns at the `signingIn` guard for ever.
+  func testAPhaseThatCameBackAfterTheSignInEndedIsDropped() throws {
+    let session = made()
+    answered(session)
+    let read = SignInPhase(url: "https://accounts.google.com/o/oauth2/auth", secondsLeft: 142)
+
+    session.signingIn = true
+    XCTAssertTrue(session.tookThePhase(read), "a sign-in is running, so the read is the row")
+    XCTAssertEqual(session.phase, read)
+
+    // What the sign-in's own closure does when the child comes back.
+    session.signingIn = false
+    session.phase = nil
+
+    XCTAssertFalse(
+      session.tookThePhase(read), "the sign-in it asked about is over, so the read is dropped")
+    XCTAssertNil(session.phase, "and the Account row keeps no countdown")
   }
 
   // MARK: a session over this test's own machine
@@ -577,16 +621,22 @@ final class SessionTests: XCTestCase {
   private final class FakeRegister: LoginService, @unchecked Sendable {
     private let lock = NSLock()
     private var state: LoginRegistration = .notRegistered
+    /// What macOS says once it has taken the registration.
+    private let after: LoginRegistration
     private(set) var registrations = 0
     private(set) var unregistrations = 0
     private(set) var settingsOpened = 0
+
+    init(after: LoginRegistration = .enabled) {
+      self.after = after
+    }
 
     var registration: LoginRegistration { lock.withLock { state } }
 
     func register() throws {
       lock.withLock {
         registrations += 1
-        state = .enabled
+        state = after
       }
     }
 

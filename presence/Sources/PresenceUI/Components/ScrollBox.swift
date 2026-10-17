@@ -108,6 +108,12 @@ public struct ScrollBox<Content: View>: View {
           decoration(palette, measured: measured)
         }
       }
+      // The key stops here, so a box inside this one reports its list to
+      // itself and not upwards: the reduce is a max, and the panel's own
+      // body would otherwise take the length of an opened section's list
+      // for its own and draw a thumb and a fade over rows that all fit:
+      // testABoxInsideABoxDecoratesOnlyItsOwnContent.
+      .preference(key: ScrollContentHeight.self, value: 0)
       .metricProbe("scrollbox")
   }
 

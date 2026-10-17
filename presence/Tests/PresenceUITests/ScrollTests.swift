@@ -107,6 +107,34 @@ final class ScrollTests: XCTestCase {
     XCTAssertNotEqual(try png(bare, scheme: .dark), try png(faded, scheme: .dark))
   }
 
+  // The panel's own body is a box, and an opened section inside it is a
+  // second one: DOCUMENTS with forty rows is a box inside a box. What a box
+  // measures is its own content and never the content of the box it holds,
+  // or an outer box whose rows all fit draws a thumb and a fade that say
+  // there is more below where there is nothing, and a box that really does
+  // overflow draws a thumb the length of somebody else's list.
+  func testABoxInsideABoxDecoratesOnlyItsOwnContent() throws {
+    // Forty rows measure far past the outer box's own 548 pt cap, while the
+    // outer box holds nothing but the inner box's 236 pt.
+    let inner = ScrollBox { plainRows(rows(40)) }
+    let outer = ScrollBox(height: 548) { VStack(spacing: 0) { inner } }
+
+    let drawn = try probeList(outer.rendering(), scheme: .dark)
+
+    XCTAssertEqual(drawn.filter { $0.name == "scrollbox" }.count, 2, "two boxes drew")
+    XCTAssertEqual(
+      drawn.filter { $0.name == "scrollbox.thumb" }.count, 1,
+      "only the box whose own content overflows carries a thumb")
+    XCTAssertEqual(
+      drawn.filter { $0.name == "scrollbox.fade" }.count, 1,
+      "and only that box fades at its foot")
+    XCTAssertEqual(
+      drawn.first { $0.name == "scrollbox.thumb" }?.size.height,
+      ScrollBox<EmptyView>.thumbLength(
+        box: Grid.scrollBoxHeight, measured: 40 * Grid.rowHeight),
+      "the thumb is as much of the inner box's track as that box is of its own list")
+  }
+
   // `MORE('Show 3 more')` closed, `MORE('Show less',true)` open: one row
   // changes how much of a section is on the screen, and nothing else moves.
   func testShowMoreAndShowLessToggleTheList() throws {

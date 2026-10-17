@@ -158,6 +158,34 @@ final class DocumentsTests: XCTestCase {
       "a hold waits for a person, so it wins over everything else on that document")
   }
 
+  func testAnOpenWatchIsOrderedByItsLastPollAndNotItsFirst() throws {
+    // The screens file's r6 draws the live watch above a publish that
+    // finished after the watch began, because a watch polling right now
+    // acted a second ago: its first poll is where it started and not what
+    // it last did. One session, because the second poll began inside the
+    // three-minute gap, and it is in flight.
+    let watch = [
+      start(at: "2026-10-17T11:10:00Z", command: "comments", run: "aaaa", doc: docA, wait: true),
+      end(at: "2026-10-17T11:11:00Z", command: "comments", run: "aaaa", doc: docA, wait: true),
+      start(
+        at: "2026-10-17T11:13:00Z", command: "comments", run: "aaaa", doc: docA, call: 2,
+        wait: true),
+    ]
+    let published = pair(
+      at: "2026-10-17T11:11:40Z", command: "publish", run: "bbbb", doc: docB)
+
+    let fold = try folded(watch + published, alive: { _ in true })
+
+    XCTAssertEqual(fold.rows.map(\.state), [.live, .done])
+    XCTAssertEqual(
+      fold.rows.map(\.doc), [docA, docB],
+      "the watch polling now is above the publish that finished a minute ago")
+    XCTAssertEqual(
+      fold.rows.map(\.at),
+      [try moment("2026-10-17T11:13:00Z"), try moment("2026-10-17T11:12:00Z")],
+      "the watch's moment is its last poll, not its first")
+  }
+
   // MARK: - The pieces a test states
 
   private let chapter5 = "1Ch5AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp"
@@ -169,6 +197,7 @@ final class DocumentsTests: XCTestCase {
   private let old = "1OldAaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp"
   private let readOnly = "1RedAaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp"
   private let docA = "1AaaAaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp"
+  private let docB = "1BbbAaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp"
 
   private func folded(
     _ events: [Event], alive: @escaping (Int32) -> Bool = { _ in false }

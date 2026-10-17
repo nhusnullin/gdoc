@@ -57,6 +57,16 @@ public struct LiveSession: Sendable, Equatable {
   /// end at once where the wait says a person stopped it. Absent while the
   /// watch is still going.
   public let ended: Date?
+  /// Where the last poll stands: its end, or its own start while it is
+  /// still in flight.
+  ///
+  /// It is what DOCUMENTS orders an open watch by, because a watch polling
+  /// right now acted a second ago and not when it began, and ordering it by
+  /// `since` would put an hour-old publish above it and drop a watch left
+  /// open past the horizon out of the list while NOW still drew it live:
+  /// testAnOpenWatchIsOrderedByItsLastPollAndNotItsFirst. For a watch that
+  /// is over it is `ended`, which is that same moment.
+  public let lastPoll: Date
   public let replied: Int
   public let proposed: Int
   /// The last write on this document inside the session.
@@ -225,6 +235,7 @@ public enum Live {
       title: titles[doc],
       since: since,
       ended: ended,
+      lastPoll: last.until,
       replied: mine.filter { $0.command == "reply" }.count,
       proposed: mine.filter { $0.command == "propose" }.count,
       lastWrite: mine.filter { Now.stuckCommands.contains($0.command ?? "") }.map(\.at).max(),

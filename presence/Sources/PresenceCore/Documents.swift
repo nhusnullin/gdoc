@@ -204,9 +204,14 @@ public enum Documents {
     }
 
     for session in Live.sessions(ordered, now: now, alive: alive) {
+      // The watch's moment is its last poll and never its first: a watch
+      // polling right now acted a second ago, and `since` would sort it
+      // under every write that finished since it began and would age it out
+      // of the horizon while NOW still drew it live. For a watch that is
+      // over, `lastPoll` is `ended`.
       found.append(
         Action(
-          doc: session.doc, at: session.ended ?? session.since, command: "comments",
+          doc: session.doc, at: session.lastPoll, command: "comments",
           state: session.isOpen ? .live : .liveStopped))
     }
 

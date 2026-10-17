@@ -215,10 +215,9 @@ refresh token and never an email, and a hold whose sign-in changed is dropped
 rather than sent. Sign out, then sign in as somebody else, and the words you
 held yesterday are not posted under the new account.
 
-The app keeps room for one domain you expect, as a quiet line under the account
-row that blocks nothing, and it ships with none set. "Account changed" is the
-app's own memory of the addresses it has read, never a line in the record: the
-record carries no account, and a line in it would be forgeable.
+"Account changed" is the app's own memory of the addresses it has read, never a
+line in the record: the record carries no account, and a line in it would be
+forgeable.
 
 ### Launch at login
 

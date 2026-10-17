@@ -106,6 +106,20 @@ func presencePackageRoot() -> URL {
 func probes<V: View>(_ view: V, scheme: ColorScheme, width: CGFloat = Grid.panelWidth) throws
   -> [String: CGSize]
 {
+  var byName: [String: CGSize] = [:]
+  for probe in try probeList(view, scheme: scheme, width: width) where byName[probe.name] == nil {
+    byName[probe.name] = probe.size
+  }
+  return byName
+}
+
+/// The same measurements in the order they were drawn, so a test can tell
+/// two reports of one name apart: a box inside a box is two `scrollbox`
+/// probes, and which of them carries a thumb is the thing under test.
+@MainActor
+func probeList<V: View>(_ view: V, scheme: ColorScheme, width: CGFloat = Grid.panelWidth) throws
+  -> [MetricProbe]
+{
   let collector = ProbeCollector()
   let framed =
     view
@@ -121,11 +135,7 @@ func probes<V: View>(_ view: V, scheme: ColorScheme, width: CGFloat = Grid.panel
     _ = renderer.cgImage
   }
   XCTAssertFalse(collector.reported.isEmpty, "nothing reported a size in \(scheme)")
-  var byName: [String: CGSize] = [:]
-  for probe in collector.reported where byName[probe.name] == nil {
-    byName[probe.name] = probe.size
-  }
-  return byName
+  return collector.reported
 }
 
 /// The box a render writes its measurements into.

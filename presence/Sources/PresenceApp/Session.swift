@@ -70,6 +70,16 @@ public final class Session {
   var facts: Facts
   var drawn: Drawn
   var bundle: BundleState = .same
+  /// Whether a reopen was held by one of the two guards that clear by
+  /// themselves, so the next tick asks again.
+  ///
+  /// `bundleMoved` asks once per change of `BundleState`, and `gdoc update`
+  /// swaps the bundle before it writes its run's end, so the ask the change
+  /// makes lands while the update is still live in the record almost every
+  /// time. Without a second ask the person is left with "Quit and reopen",
+  /// which is the fallback and not what the app decided to do:
+  /// testAHeldReopenCostsNothingAndTheNextAskOpensTheNewInstance.
+  var reopenHeld = false
   var index = HubIndex.empty
   var hubWatcher: HubWatcher?
 
@@ -381,7 +391,20 @@ public final class Session {
   private func tick() {
     if refolded() { changed() }
     readThePhase()
+    reaskTheReopen()
     Task { [weak self] in await self?.ask(.timer) }
+  }
+
+  /// The reopen asked again, once the guard that held it is gone.
+  ///
+  /// The two cheap questions come before the fold, and the flag before both,
+  /// so an ordinary tick asks nothing: a reopen is held for a few seconds in
+  /// the life of an app. The policy's own ten-minute stamp bounds what
+  /// follows, so this asks at most once per hold.
+  private func reaskTheReopen() {
+    guard reopenHeld, !aChildIsUp(), !updateIsRunning() else { return }
+    reopenHeld = false
+    Task { [weak self] in await self?.reopenIfTheBundleMoved() }
   }
 
   /// The sign-in's countdown, read off the child's own start. It is a value
@@ -392,10 +415,24 @@ public final class Session {
     Task { [weak self] in
       guard let self else { return }
       let now = await self.signIn.phase(now: self.clock())
-      guard now != self.phase else { return }
-      self.phase = now
+      guard self.tookThePhase(now) else { return }
       await self.recompose()
     }
+  }
+
+  /// The phase a read came back with, kept only while the sign-in it asked
+  /// about is still running.
+  ///
+  /// The read hops to an actor and back, and the sign-in may finish inside
+  /// that hop: its own closure puts the flag down and the row away. Writing
+  /// the phase that read asked about back after that would leave a frozen
+  /// countdown and a Cancel the child is already gone from, and nothing
+  /// would clear it, because every later read returns at the guard above:
+  /// testAPhaseThatCameBackAfterTheSignInEndedIsDropped.
+  func tookThePhase(_ read: SignInPhase?) -> Bool {
+    guard signingIn, read != phase else { return false }
+    phase = read
+    return true
   }
 
   /// One redraw, that many seconds from now. It is what takes a copied icon,
@@ -456,9 +493,16 @@ public final class Session {
   /// only once that open succeeded. Every guard is the policy's.
   private func reopenIfTheBundleMoved() async {
     guard let relauncher else { return }
+    let updateRunning = updateIsRunning()
+    let childAlive = aChildIsUp()
     let after = await relauncher.reopen(
-      bundle: bundle, updateRunning: updateIsRunning(), childAlive: aChildIsUp(),
+      bundle: bundle, updateRunning: updateRunning, childAlive: childAlive,
       remembering: preferences)
+    // These two are the only guards that clear on their own: every other
+    // one is about what the bundle on the disk is, and a bundle that is not
+    // this app does not become it while the app waits. A hold on either is
+    // the tick's to ask about again.
+    reopenHeld = after == .keepTheReopenRow && (updateRunning || childAlive)
     if after == .quit { quit() }
   }
 

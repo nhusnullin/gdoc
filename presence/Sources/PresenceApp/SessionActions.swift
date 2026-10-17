@@ -231,6 +231,17 @@ extension Session {
   // MARK: the switch
 
   private func switchLaunchAtLogin() {
+    // macOS took the registration and is waiting for the person to allow
+    // it, which the row draws as an off switch because the item is not
+    // running yet. The choice is written down already, so the one thing a
+    // press may do here is open the pane that allows it: registering again
+    // is a second notice in somebody's menu bar for an answer nobody
+    // changed, and LoginItem's own page says it is never retried:
+    // testTheSwitchInTheApprovalStateOpensThePaneAndRegistersNothingAgain.
+    guard facts.loginItem != .needsApproval else {
+      loginItem.openSettings()
+      return
+    }
     _ = loginItem.set(facts.loginItem == .on ? .off : .on)
     Task { [weak self] in await self?.recompose() }
   }
