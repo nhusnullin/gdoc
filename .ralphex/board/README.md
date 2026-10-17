@@ -112,6 +112,18 @@ the logs and the page. `SCRATCH` below is that directory.
   hourly `noop` wake-ups until the reset, then start `--external-only` again on
   the same branch. It resumes with a fresh round and re-finds anything the
   killed round left unevaluated.
+- The Claude CLI's OAuth session expires mid-run too ("Failed to
+  authenticate: OAuth session expired" in the log, the run dead a line
+  later). `claude login` from a shell only sends the word "login" as a prompt;
+  the fix is `/login` inside an interactive `claude`, then the launch line
+  again. `claude -p "say ok"` is the probe.
+- A task worker can finish its task, commit, print its summary and still not
+  exit: `claude -p` waits for the worker's own background shells, and a worker
+  that idled on reviewers with `until [ -f /tmp/never-exists-... ]; do sleep;
+  done` loops leaves them running. The log goes quiet after a "Validation:"
+  paragraph and the next iteration never starts. Kill the loops
+  (`pgrep -P <worker pid> -f never-exists-sentinel`), the worker exits and
+  ralphex moves on. M24a Task 23 sat like that for 35 minutes.
 - The Monitor's log filter matches prose too (`OAuth` in a finding's text, for
   instance). A noise event is a `noop` reschedule, nothing more.
 - Commit prefixes the board counts as task commits: `feat`, `fix`, `test`,
