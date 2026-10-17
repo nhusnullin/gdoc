@@ -81,7 +81,7 @@ func cmdBuild(ctx context.Context, a *args) emit.Result {
 	}
 	doc, err := renderNote(ctx, source, md, a)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error(), Warnings: doc.Warnings}
+		return buildFailed(doc, err.Error())
 	}
 	// The note's pictures are inputs too, and which files they are is only
 	// known once the walk has read them. Asked before the walk, the check
@@ -89,11 +89,10 @@ func cmdBuild(ctx context.Context, a *args) emit.Result {
 	// picture it had just embedded. Nothing has been written yet, because the
 	// render zips into memory.
 	if err := notAnInput(out, pictures(doc.Sources)...); err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return buildFailed(doc, err.Error())
 	}
 	if err := atomicfile.Replace(out, doc.Docx, atomicfile.ModeOf(out, buildMode)); err != nil {
-		return emit.Result{OK: false, Error: fmt.Sprintf("the document could not be written: %v", err),
-			Warnings: doc.Warnings}
+		return buildFailed(doc, fmt.Sprintf("the document could not be written: %v", err))
 	}
 
 	return emit.Result{OK: true, Warnings: doc.Warnings, Data: buildData{
@@ -105,6 +104,17 @@ func cmdBuild(ctx context.Context, a *args) emit.Result {
 		Logo:        doc.Logo,
 		Body:        doc.Counts,
 	}}
+}
+
+// buildFailed is a build that read the style and reached for the logo before
+// it failed. What the run earned on the way is still the caller's to read: a
+// logo fetched and not cached is a line whatever happened next, and publish
+// prints the same block on its own failure. A skill should not have to read
+// the two envelopes differently. TestAFailedBuildStillPrintsTheLogoBlock is
+// the pin. No file was written, so Out and Bytes stay empty.
+func buildFailed(doc *noteDocx, why string) emit.Result {
+	return emit.Result{OK: false, Error: why, Warnings: doc.Warnings,
+		Data: buildData{House: doc.House, Logo: doc.Logo}}
 }
 
 // noteDocx is one note rendered: the bytes, the words the cover took off it,

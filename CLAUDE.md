@@ -226,7 +226,7 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
 | a setting, the settings file, the mark in effect | `go/internal/settings/doc.go` |
 | the docx the generator writes | `go/internal/render/doc.go`, `go/internal/body/doc.go` |
 | a house style value, or the gate that measures it | `go/internal/house/house.yaml`, `go/internal/drift/doc.go` |
-| the house logo, its Drive id, its cache or its stamp | `go/internal/asset/doc.go`, `go/cmd/gdoc/build.go` |
+| the house logo, its Drive id, its cache or its stamp | `go/internal/asset/doc.go`, `go/cmd/gdoc/logo.go` |
 | putting a document into Drive | `go/internal/publish/doc.go` |
 | an end-to-end test against real Drive | `go/internal/live/doc.go` |
 | a version, a tag, a release, the updater, its notice or the stamp | `go/internal/update/doc.go`, `go/internal/lastcheck/doc.go`, `.github/workflows/release.yml` |

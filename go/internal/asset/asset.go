@@ -146,19 +146,27 @@ func Fetch(ctx context.Context, client Drive, id string, want Want) (Bytes, erro
 // and on what the cache holds, because a file gdoc half understands must not
 // reach a document by either route.
 //
-// The whole image is decoded and not only its header, because a header says
-// what the picture would be rather than that it is there: a file cut off after
-// its IHDR chunk reads as the stated size and carries no picture.
-// TestAHalfPNGIsRefusedByBothRoutes is the pin. The cost is bounded by
-// MaxBytes, and what this room fetches is a mark on a page.
+// The header is read first and the size is judged on it, because Go's decoder
+// allocates the whole picture from what the header states before it reads one
+// pixel: a file of a few dozen bytes saying it is thirty thousand pixels
+// square would otherwise cost gigabytes to refuse. Judged on the header, the
+// decode that follows is bounded by the size the caller asked for.
+// TestAHugeStatedSizeIsRefusedWithoutDecoding is the pin.
+//
+// The image is then decoded whole and not left at its header, because a header
+// says what the picture would be rather than that it is there: a file cut off
+// after its IHDR chunk reads as the stated size and carries no picture.
+// TestAHalfPNGIsRefusedByBothRoutes is the pin for that half.
 func hold(raw []byte, want Want) error {
-	img, err := png.Decode(bytes.NewReader(raw))
+	cfg, err := png.DecodeConfig(bytes.NewReader(raw))
 	if err != nil {
 		return fmt.Errorf("it is not a PNG: %w", err)
 	}
-	b := img.Bounds()
-	if b.Dx() != want.Width || b.Dy() != want.Height {
-		return fmt.Errorf("it is stated as %dx%d px and the image is %dx%d", want.Width, want.Height, b.Dx(), b.Dy())
+	if cfg.Width != want.Width || cfg.Height != want.Height {
+		return fmt.Errorf("it is stated as %dx%d px and the image is %dx%d", want.Width, want.Height, cfg.Width, cfg.Height)
+	}
+	if _, err := png.Decode(bytes.NewReader(raw)); err != nil {
+		return fmt.Errorf("it is not a PNG: %w", err)
 	}
 	return nil
 }

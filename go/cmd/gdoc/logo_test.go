@@ -454,6 +454,34 @@ func TestTheLogoFetchOpensTheAssetGrantAndNothingElse(t *testing.T) {
 	}
 }
 
+// A build that fetched the logo and then failed still prints where the logo
+// came from. renderNote never answers nil for exactly this reason, and publish
+// already reads it on its own failure: a skill written against one envelope
+// would misread the other if build dropped the block.
+func TestAFailedBuildStillPrintsTheLogoBlock(t *testing.T) {
+	wire := &logoWire{t: t, png: housePNG(t)}
+	logoFetching(t, wire)
+	cachedLogo(t, logoFileID, housePNG(t), time.Hour)
+	dir, md := buildNote(t)
+	// A picture the note names and the directory does not hold, so the walk
+	// fails after the logo is in hand.
+	if err := os.WriteFile(md, []byte("---\ntitle: A note\n---\n\n# A note\n\n![missing](nowhere.png)\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	got, code := runJSON(t, "build", "--md", md, "--out", filepath.Join(dir, "out.docx"), "--house", driveLogoHouse(t))
+	if code == 0 || got["ok"] == true {
+		t.Fatalf("a note naming a picture that is not there is refused: %v (exit %d)", got, code)
+	}
+	block := logoBlockOf(t, got)
+	if block["source"] != "cache" {
+		t.Errorf("a failed build still says where the logo came from: %v", block)
+	}
+	if block["id"] != logoFileID {
+		t.Errorf("id names the file the house names: %v", block)
+	}
+}
+
 // publish reports the same block over its own envelope, because both commands
 // render through one renderNote and a second reading would slowly stop being
 // the same one.

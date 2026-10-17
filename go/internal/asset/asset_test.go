@@ -8,16 +8,19 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash/crc32"
 	"image"
 	"image/color"
 	"image/png"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -440,6 +443,69 @@ func TestAHalfPNGIsRefusedByBothRoutes(t *testing.T) {
 			t.Error("the bytes are not the ones Drive answered with")
 		}
 	})
+}
+
+// A PNG header states the size, and Go's decoder allocates the whole picture
+// from that statement before it reads a single pixel. So the size is checked
+// against the header and not against the decoded image: a file well inside
+// MaxBytes that says it is thirty thousand pixels square is refused by name
+// rather than allocating gigabytes to find out. The literal is the ceiling
+// this test would hit without the header check.
+func TestAHugeStatedSizeIsRefusedWithoutDecoding(t *testing.T) {
+	configDir(t)
+	// Sixty-eight bytes: the signature, an IHDR saying 30000x30000 RGBA, one
+	// unusable IDAT and IEND. Decoding it whole costs about 3.4 GiB.
+	raw := pngHeaderOf(t, 30000, 30000)
+	if len(raw) > 1<<10 {
+		t.Fatalf("the probe is %d bytes, and the point is that it is tiny", len(raw))
+	}
+	f := &fake{raw: raw}
+
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	got, err := Fetch(context.Background(), f, theID, housePNG)
+	runtime.ReadMemStats(&after)
+
+	if err == nil {
+		t.Fatalf("Fetch() = %+v, want a refusal", got)
+	}
+	if !strings.Contains(err.Error(), "30000x30000") {
+		t.Errorf("the refusal is %q, want the stated size named in it", err)
+	}
+	if grew := after.TotalAlloc - before.TotalAlloc; grew > 64<<20 {
+		t.Errorf("the refusal allocated %d MiB, want under 64 MiB: the header was not read first",
+			grew/(1<<20))
+	}
+}
+
+// pngHeaderOf writes a PNG that states a size and carries no picture: the
+// signature, an IHDR, an IDAT nothing can inflate and an IEND. It cannot go
+// through png.Encode, which would write the pixels this test exists to avoid.
+func pngHeaderOf(t *testing.T, w, h int) []byte {
+	t.Helper()
+	chunk := func(kind string, data []byte) []byte {
+		var b bytes.Buffer
+		_ = binary.Write(&b, binary.BigEndian, uint32(len(data)))
+		b.WriteString(kind)
+		b.Write(data)
+		c := crc32.NewIEEE()
+		c.Write([]byte(kind))
+		c.Write(data)
+		_ = binary.Write(&b, binary.BigEndian, c.Sum32())
+		return b.Bytes()
+	}
+	var ihdr bytes.Buffer
+	_ = binary.Write(&ihdr, binary.BigEndian, uint32(w))
+	_ = binary.Write(&ihdr, binary.BigEndian, uint32(h))
+	// Eight bits a channel, colour type 6 (RGBA), the three zeroes PNG fixes.
+	ihdr.Write([]byte{8, 6, 0, 0, 0})
+
+	var f bytes.Buffer
+	f.WriteString("\x89PNG\r\n\x1a\n")
+	f.Write(chunk("IHDR", ihdr.Bytes()))
+	f.Write(chunk("IDAT", []byte{0x78, 0x9c, 0x01, 0x00, 0x00, 0xff, 0xff, 0x00, 0x00, 0x00, 0x01}))
+	f.Write(chunk("IEND", nil))
+	return f.Bytes()
 }
 
 // A cache nothing can write is a slower build, not a failed one: the bytes are
