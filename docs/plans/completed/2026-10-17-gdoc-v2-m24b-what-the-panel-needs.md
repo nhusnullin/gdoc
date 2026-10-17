@@ -286,12 +286,16 @@ box is ticked and its commit is on the branch.
 **Files:**
 - Modify: `docs/plans/2026-10-17-gdoc-v2-m24-the-panel-spec.md`, `docs/v2/PLAN.md`
 
-- [ ] the Go rows of the spec's acceptance table, under a heading "M24b",
-      pass or the test that says otherwise
-- [ ] a new M24 row in `docs/v2/PLAN.md`'s Done table with the M24b half
+- [x] the Go rows of the spec's acceptance table, under a heading "M24b",
+      pass or the test that says otherwise. Every row passes: the section is
+      one row per clause of the three rules this half owns, each naming its
+      test, and it closes by saying which measurements are not this half's
+- [x] a new M24 row in `docs/v2/PLAN.md`'s Done table with the M24b half
       written and the M24a half left as "running"
-- [ ] this plan moves to `docs/plans/completed/`; the spec stays until M24a
-      closes, which moves it
+- [x] this plan moves to `docs/plans/completed/`; the spec stays until M24a
+      closes, which moves it. The spec's own opening paragraph now names this
+      plan at its new path, because that reference would otherwise be stale
+      while the spec waits for M24a
 
 ## Post-completion
 
