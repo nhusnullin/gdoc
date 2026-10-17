@@ -137,12 +137,19 @@ public enum Days {
   ///   - calendar: the calendar the local day comes from, injected because
   ///     the day is the thing under test and the machine's zone is not it.
   ///   - alive: the kernel's answer for one pid.
+  /// - Parameter carded: the `run|call` of every start NOW is holding a
+  ///   stuck card for. Those rows are not written twice: a write whose
+  ///   process went away is one card while the card is on the screen, and
+  ///   the row here is what the card leaves behind when it clears or is
+  ///   dismissed. The caller folds NOW first and hands the keys over,
+  ///   because the horizon and the dismissals are that fold's.
   public static func fold(
-    _ events: [Event], now: Date, calendar: Calendar, alive: (Int32) -> Bool
+    _ events: [Event], now: Date, calendar: Calendar, carded: Set<String> = [],
+    alive: (Int32) -> Bool
   ) -> DaysFold {
     let ordered = Fold.inOrder(events)
     let titles = Fold.latestTitles(ordered)
-    let rows = every(ordered, now: now, titles: titles, alive: alive)
+    let rows = every(ordered, now: now, titles: titles, carded: carded, alive: alive)
 
     let yesterday = calendar.date(byAdding: .day, value: -1, to: now)
 
@@ -157,7 +164,8 @@ public enum Days {
   /// Every row the record holds, newest first. The index breaks a tie, so two
   /// rows at the same moment keep the order the record had them in.
   private static func every(
-    _ ordered: [Event], now: Date, titles: [String: String], alive: (Int32) -> Bool
+    _ ordered: [Event], now: Date, titles: [String: String], carded: Set<String>,
+    alive: (Int32) -> Bool
   ) -> [DayRow] {
     var rows: [DayRow] = []
     var ended: Set<String> = []
@@ -178,8 +186,9 @@ public enum Days {
     }
 
     for event in ordered {
-      guard event.kind == .start, !event.wait, !alive(event.pid),
-        Now.stuckCommands.contains(event.command ?? ""), !ended.contains(event.pairing)
+      guard event.kind == .start, !event.wait,
+        Now.stuckCommands.contains(event.command ?? ""), !ended.contains(event.pairing),
+        !carded.contains(event.pairing), !alive(event.pid)
       else { continue }
       rows.append(lost(event, titles: titles))
     }

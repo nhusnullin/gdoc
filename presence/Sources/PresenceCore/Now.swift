@@ -61,6 +61,11 @@ public struct StuckWrite: Sendable, Equatable {
   public let call: Int64
   public let command: String
   public let doc: String?
+  /// The document the command was handed, where it was handed one. It is
+  /// what a later start can name again, and it is not the same as `doc`: a
+  /// publish is handed none and `doc` falls back to the id it made, which no
+  /// start will ever carry. The key that clears the card is this one.
+  public let handed: String?
   public let title: String?
   public let via: String?
   /// When it failed, or when it started for a process that is gone.
@@ -206,7 +211,11 @@ public enum Now {
         starts[event.pairing] = event
       case .end:
         ended.insert(event.pairing)
-        if event.verified == true { verified = check(event, titles: titles) }
+        // `ok` as well as `verified`: a publish whose pairing failed and
+        // whose rollback failed answers `ok: false` with the read-back it
+        // did manage still in it, and a green check over a run that NOW
+        // holds a stuck card for says two things at once.
+        if event.ok == true, event.verified == true { verified = check(event, titles: titles) }
         if event.ok == false, stuckCommands.contains(event.command ?? "") {
           failures.append(stuck(event, at: event.at, cause: .failed, titles: titles))
         }
@@ -277,10 +286,16 @@ public enum Now {
   /// same document, or, where the write named no document, the same command
   /// anywhere: a failed publish names none, and the next publish is the
   /// answer to it.
+  ///
+  /// The document it asks about is the one the run was handed and never the
+  /// one it made: a publish that created a document and then failed is a
+  /// card with an id on it, and no publish start can carry that id, because
+  /// the command is handed no document. Matching on it would leave the card
+  /// on the screen until somebody dismissed it.
   private static func cleared(_ write: StuckWrite, by starts: [Event]) -> Bool {
     starts.contains { start in
       guard start.command == write.command, start.at > write.at else { return false }
-      guard let doc = write.doc else { return true }
+      guard let doc = write.handed else { return true }
       return start.doc == doc
     }
   }
@@ -290,8 +305,8 @@ public enum Now {
   ) -> StuckWrite {
     StuckWrite(
       run: event.run, call: event.call ?? 0, command: event.command ?? "",
-      doc: Fold.subject(event), title: title(event, titles), via: event.via, at: at,
-      cause: cause, stop: event.stop, line: event.line)
+      doc: Fold.subject(event), handed: handed(event), title: title(event, titles),
+      via: event.via, at: at, cause: cause, stop: event.stop, line: event.line)
   }
 
   /// One running command, with the part it is on where the record names one
@@ -322,6 +337,14 @@ public enum Now {
     VerifiedWrite(
       run: event.run, call: event.call ?? 0, command: event.command ?? "",
       doc: Fold.subject(event), title: title(event, titles), ended: event.at)
+  }
+
+  /// The document the line was handed, which is nothing where the field is
+  /// absent or empty: `cmd/gdoc` writes the empty string for every command
+  /// whose first word is not a document.
+  private static func handed(_ event: Event) -> String? {
+    guard let doc = event.doc, !doc.isEmpty else { return nil }
+    return doc
   }
 
   /// The document's latest title, and the line's own only where the record

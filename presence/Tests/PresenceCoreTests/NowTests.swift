@@ -99,6 +99,18 @@ final class NowTests: XCTestCase {
     let anyPublish = start(at: "2026-10-17T11:00:00Z", command: "publish", run: "eeee", doc: docB)
     XCTAssertTrue(try folded([publish, anyPublish]).stuck.isEmpty, "any later publish clears it")
 
+    // A publish that created a document and then failed carries that id,
+    // and no publish start can ever name it: the command is handed no
+    // document. Any later publish is still the answer to it.
+    let made = end(
+      at: "2026-10-17T10:00:00Z", command: "publish", run: "ffff", doc: nil, ok: false,
+      made: docA)
+    let card = try XCTUnwrap(try folded([made]).stuck.first)
+    XCTAssertEqual(card.doc, docA, "the card opens what the run left behind")
+    XCTAssertTrue(
+      try folded([made, anyPublish]).stuck.isEmpty,
+      "the id is the one it made, so any later publish clears the card")
+
     // Or the person dismissed it, which is the app's own state and not a line.
     XCTAssertTrue(
       try folded([failed], dismissed: ["aaaa|1"]).stuck.isEmpty,
@@ -211,6 +223,19 @@ final class NowTests: XCTestCase {
     XCTAssertNil(
       try folded([hollow, silent]).lastVerified,
       "a read-back that did not confirm, and a command that reads nothing back, are not a check")
+
+    // A publish whose pairing failed and whose rollback failed answers
+    // `ok: false` with the read-back it did manage still in the object. NOW
+    // holds a stuck card for that run, so the bar may not show a check over
+    // it: the two would say the opposite thing at the same moment.
+    let brokenPairing = end(
+      at: "2026-10-17T14:00:00Z", command: "publish", run: "eeee", doc: nil, ok: false,
+      verified: true, title: "The draft", made: docA)
+    let broken = try folded([first, second, brokenPairing])
+    XCTAssertEqual(broken.stuck.map { $0.run }, ["eeee"], "the failed publish is the card")
+    XCTAssertEqual(
+      broken.lastVerified?.run, "bbbb",
+      "a write that failed is no check, whatever its read-back managed")
   }
 
   // MARK: - The pieces a test states
@@ -242,22 +267,24 @@ final class NowTests: XCTestCase {
 
   private func end(
     at text: String, command: String, run: String, doc: String?, ok: Bool, verified: Bool? = nil,
-    title: String? = nil
+    title: String? = nil, made: String? = nil
   ) -> Event {
     event(
       at: text, kind: .end, command: command, run: run, doc: doc, ok: ok, verified: verified,
-      title: title)
+      title: title, made: made)
   }
 
   private func event(
     at text: String, kind: EventKind, command: String, run: String, doc: String?,
-    wait: Bool = false, ok: Bool? = nil, verified: Bool? = nil, title: String? = nil
+    wait: Bool = false, ok: Bool? = nil, verified: Bool? = nil, title: String? = nil,
+    made: String? = nil
   ) -> Event {
     let formatter = ISO8601DateFormatter()
     formatter.formatOptions = [.withInternetDateTime]
     return Event(
       schema: 1, at: formatter.date(from: text) ?? Date(), gdoc: "v2.14.0", pid: 6000, run: run,
       call: 1, kind: kind, command: command, via: "terminal", doc: doc, wait: wait, title: title,
-      ok: ok, verified: verified, ms: ok == nil ? nil : 1200, hold: nil, rule: nil, until: nil)
+      made: made, ok: ok, verified: verified, ms: ok == nil ? nil : 1200, hold: nil, rule: nil,
+      until: nil)
   }
 }

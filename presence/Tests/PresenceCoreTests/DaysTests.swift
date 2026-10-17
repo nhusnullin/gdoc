@@ -134,6 +134,32 @@ final class DaysTests: XCTestCase {
     XCTAssertNil(unknown.ok, "nothing said it worked and nothing said it failed")
   }
 
+  /// The row and the card are one run, so they are not both on the screen.
+  /// NOW decides which it is: the horizon and the dismissals are that
+  /// fold's, so it is folded first and hands over the keys of the cards it
+  /// is keeping. What is left here is the row a card leaves behind when it
+  /// clears or is dismissed.
+  func testAWriteNowIsCardingIsNotAlsoARowInToday() throws {
+    let lost = start(at: "2026-10-17T12:00:00Z", command: "restyle", run: "aaaa", doc: docA)
+    let at = try seventeenTwenty()
+
+    let both = Days.fold(
+      [lost], now: at, calendar: try amsterdam(), alive: { _ in false })
+    XCTAssertEqual(
+      both.today.map(\.kind), [.outcomeUnknown],
+      "with no card for it the row is the only thing that says the run happened")
+
+    let carded = Days.fold(
+      [lost], now: at, calendar: try amsterdam(), carded: ["aaaa|1"], alive: { _ in false })
+    XCTAssertTrue(carded.today.isEmpty, "NOW is holding the card, so TODAY writes nothing")
+
+    // The key is the record's own pairing, so another run's card hides no
+    // row of this one.
+    let other = Days.fold(
+      [lost], now: at, calendar: try amsterdam(), carded: ["bbbb|1"], alive: { _ in false })
+    XCTAssertEqual(other.today.map(\.kind), [.outcomeUnknown])
+  }
+
   func testReadsAreLeftOutOfToday() throws {
     let fold = try fixture()
     XCTAssertFalse(

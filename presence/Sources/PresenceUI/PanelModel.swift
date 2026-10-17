@@ -309,13 +309,17 @@ extension PanelModel {
     let nowFold = Now.fold(events, now: now, dismissed: ui.dismissed, alive: alive)
     let sessions = Live.sessions(events, now: now)
     let docs = Documents.fold(events, now: now, calendar: calendar, alive: alive)
-    let days = Days.fold(events, now: now, calendar: calendar, alive: alive)
+    // The cards NOW is keeping are not rows TODAY writes as well: the
+    // horizon and the dismissals are the NOW fold's, so it is folded first
+    // and its keys are handed over.
+    let days = Days.fold(
+      events, now: now, calendar: calendar, carded: Set(nowFold.stuck.map(\.key)), alive: alive)
 
     let words = Phrases(facts: facts, now: now, calendar: calendar)
     let items = nowItems(nowFold, sessions: sessions, facts: facts, ui: ui, words: words)
     let documents = documentsSection(
       docs, facts: facts, ui: ui, words: words, busy: !items.isEmpty)
-    let today = todaySection(days, words: words)
+    let today = todaySection(days, ui: ui, words: words)
     let yesterday = yesterdaySection(days, ui: ui, words: words)
     let health = healthRows(
       facts: facts, ui: ui, now: now, stopping: stopping(items, sessions: sessions))
@@ -381,7 +385,7 @@ extension PanelModel {
         items.append(
           .stuck(
             id: write.key, card: words.stuckCard(write),
-            actions: stuckActions(write, facts: facts, ui: ui)))
+            actions: stuckActions(write, facts: facts, ui: ui, now: words.now)))
       case .job(let run):
         items.append(.job(id: run.key, card: words.jobCard(run)))
       case .watch:
@@ -409,6 +413,12 @@ extension PanelModel {
   /// The card a token that stopped working raises, which is the one card in
   /// NOW that comes from the machine and not from the record.
   private static func signInCard(facts: Facts, sessions: [LiveSession]) -> NowItem? {
+    // A sign-in the app started is the Account row with its countdown, and
+    // the last `auth status` still says the token does not work until that
+    // child answers. A card asking for a sign-in under a sign-in in flight
+    // is the same request twice, and its button is the one call
+    // `signInWithGoogle` refuses while one is running.
+    guard facts.signIn == nil else { return nil }
     guard facts.auth == .needsSignIn || facts.auth == .missingScopes else { return nil }
     let paused = sessions.filter(\.isOpen).count
     let reason =
@@ -424,15 +434,15 @@ extension PanelModel {
       ])
   }
 
-  private static func stuckActions(_ write: StuckWrite, facts: Facts, ui: UIState)
-    -> [ActionModel]
-  {
+  private static func stuckActions(
+    _ write: StuckWrite, facts: Facts, ui: UIState, now: Date
+  ) -> [ActionModel] {
     var actions: [ActionModel] = []
     if let doc = write.doc {
       actions.append(openDoc(doc))
       actions.append(openNote(doc, facts: facts, ui: ui))
       actions.append(openChat(doc, facts: facts))
-      actions.append(copyLink(doc, ui: ui))
+      actions.append(copyLink(doc, ui: ui, now: now))
     } else {
       // A write that created nothing has nothing to open or to copy, and a
       // dead icon is what made this card read as buttons again.
@@ -477,7 +487,7 @@ extension PanelModel {
           openDoc(row.doc, forced: ui.forcedTooltip),
           openNote(row.doc, facts: facts, ui: ui, forced: ui.forcedTooltip),
           openChat(row.doc, facts: facts, forced: ui.forcedTooltip),
-          copyLink(row.doc, ui: ui),
+          copyLink(row.doc, ui: ui, now: words.now),
         ])
     }
     return DocumentsSectionModel(
@@ -516,11 +526,13 @@ extension PanelModel {
 
   // MARK: TODAY and Yesterday
 
-  private static func todaySection(_ fold: DaysFold, words: Phrases) -> LogSectionModel {
+  private static func todaySection(_ fold: DaysFold, ui: UIState, words: Phrases)
+    -> LogSectionModel
+  {
     LogSectionModel(
       rows: fold.today.enumerated().map { words.logRow($1, index: $0) },
       collapsed: Days.defaultRows,
-      isOpen: false,
+      isOpen: ui.isOpen(.today),
       empty: fold.today.isEmpty ? Sentences.nothingYet : nil)
   }
 
@@ -591,8 +603,14 @@ extension PanelModel {
       forcedTooltip: forced == "\(name)|openChat")
   }
 
-  private static func copyLink(_ doc: String, ui: UIState) -> ActionModel {
-    let done = ui.copied == doc
+  /// Copy link, green for the one second after the press.
+  ///
+  /// The moment is read as well as the document: a `.done` button holds its
+  /// own tooltip open, so a check that never went back would keep "Copied"
+  /// on the screen and no other icon in the panel could show its words
+  /// again: testTheCopiedCheckGoesBackAfterItsSecond.
+  private static func copyLink(_ doc: String, ui: UIState, now: Date) -> ActionModel {
+    let done = ui.copied == doc && ActionButton.isDone(copiedAt: ui.copiedAt, now: now)
     return ActionModel(
       .copyLink, icon: .link, tip: done ? Tips.copied : Tips.copyLink,
       state: done ? .done : .live, target: doc)

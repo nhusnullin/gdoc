@@ -217,7 +217,13 @@ public struct Facts: Sendable, Equatable {
   /// question and the menu bar's: an app that cannot find the binary can do
   /// nothing at all, which is one of the three things that are stuck without
   /// a line in the record.
-  public var gdocFound: Bool { versions.gdoc != nil && gdocPath != nil }
+  ///
+  /// The path alone answers it, because the path is the location's own fact
+  /// and the version is an answer that has to come back. The two questions
+  /// are asked when the panel opens, so a version read as a not-found would
+  /// badge the menu bar from login until the first click:
+  /// testTheBarIsNotStuckBeforeTheFirstAnswer.
+  public var gdocFound: Bool { gdocPath != nil }
 
   /// The note paired with a document, as a path inside the hub.
   public func note(for doc: String?) -> String? {

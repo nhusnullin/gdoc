@@ -170,6 +170,28 @@ final class BarTests: XCTestCase {
     XCTAssertEqual(try bar([watch], facts: Scenes.machine(auth: .needsSignIn)), .stuck)
   }
 
+  /// The badge at login. Both questions are asked when the panel opens, so
+  /// between the launch and the first click the app has no version of gdoc
+  /// and the binary is there all the same: the path is what being found
+  /// means, or the app would badge itself red on a healthy machine every
+  /// morning and say gdoc was missing when the panel opened.
+  func testTheBarIsNotStuckBeforeTheFirstAnswer() throws {
+    let launching = Facts(
+      auth: .ok, versions: Versions(app: "2.14.0"), gdocPath: Scenes.gdocPath)
+    XCTAssertTrue(launching.gdocFound, "the binary is at a path, which is the location's fact")
+    XCTAssertEqual(try bar([], facts: launching), .idle, "nothing is wrong yet")
+
+    let row = PanelModel.gdoc(facts: launching)
+    XCTAssertTrue(row.waiting, "the ring says the question is out")
+    XCTAssertEqual(row.value, "", "and no version is claimed")
+    XCTAssertNil(row.quiet)
+
+    let missing = Facts(auth: .ok, versions: Versions(app: "2.14.0"))
+    XCTAssertEqual(
+      PanelModel.gdoc(facts: missing).value, "not found",
+      "no path is the only not found there is")
+  }
+
   /// A watch that cannot reach Google is still a watch: the decision table's
   /// own words, and the one fact the bar is handed and never reads.
   func testNetworkTroubleDoesNotChangeTheIcon() throws {

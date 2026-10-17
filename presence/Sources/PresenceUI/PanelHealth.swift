@@ -113,10 +113,16 @@ extension PanelModel {
   }
 
   static func gdoc(facts: Facts) -> HealthRowModel {
-    guard facts.gdocFound, let version = facts.versions.gdoc else {
+    guard facts.gdocFound else {
       return HealthRowModel(
         .gdoc, value: "not found", glyph: .exclamation, tone: .bad,
         quiet: "looked for it at \(facts.gdocPathTried)")
+    }
+    // The binary is there and `help --json` has not answered yet, which is
+    // every panel's first draw: the ring says the question is out rather
+    // than claiming a version nobody read or a binary nobody found.
+    guard let version = facts.versions.gdoc else {
+      return HealthRowModel(.gdoc, waiting: true)
     }
     // While the update's own child is up the row is a ring and the version
     // it names is the one still installed: there is nothing to press until
