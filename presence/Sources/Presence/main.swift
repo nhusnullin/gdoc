@@ -46,21 +46,26 @@ final class Shell: NSObject, NSApplicationDelegate {
   /// open is also the one moment the app asks gdoc about this machine.
   private func clicked() {
     guard let session else { return }
-    panel.toggle(view(of: session), under: item?.button)
+    panel.toggle(view(session.screen.model, of: session), under: item?.button)
     if panel.isOpen { session.opened() }
   }
 
   /// Something changed. The glyph follows it always; the panel only while it
   /// is open.
+  ///
+  /// One `screen` and not the glyph's two folds and then the panel's four:
+  /// every fold walks every line the app holds, and these two surfaces are
+  /// over one record at one moment.
   private func changed() {
     guard let session else { return }
-    item?.show(session.bar, progress: session.barProgress)
-    panel.refresh(view(of: session))
+    let screen = session.screen
+    item?.show(screen.bar, progress: screen.progress)
+    panel.refresh(view(screen.model, of: session))
   }
 
-  private func view(of session: Session) -> some View {
+  private func view(_ model: PanelModel, of session: Session) -> some View {
     PanelView(
-      model: session.model,
+      model: model,
       actions: PanelActions(perform: session.perform, toggle: session.toggle))
   }
 }

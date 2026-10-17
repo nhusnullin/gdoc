@@ -130,7 +130,20 @@ public enum Live {
   public static func sessions(
     _ events: [Event], now: Date, alive: (Int32) -> Bool
   ) -> [LiveSession] {
-    let ordered = Fold.inOrder(events)
+    sessions(ordered: Fold.inOrder(events), now: now, alive: alive)
+  }
+
+  /// The same watches where the caller has already ordered the events.
+  ///
+  /// `Fold.inOrder` dedupes and then sorts, so it answers the same on an
+  /// array it has already walked: a caller that ordered once and then asked
+  /// here was sorting every line in two months of record a second time for
+  /// nothing. TODAY and DOCUMENTS both fold the events themselves and then
+  /// ask for the watches, and both are taken again on every tick, so that
+  /// second sort was two of the fifteen walks a redraw cost.
+  public static func sessions(
+    ordered: [Event], now: Date, alive: (Int32) -> Bool
+  ) -> [LiveSession] {
     let titles = Fold.latestTitles(ordered)
 
     var polls: [String: [Poll]] = [:]

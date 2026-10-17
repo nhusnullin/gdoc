@@ -265,6 +265,42 @@ final class SessionTests: XCTestCase {
       "someone@example.com", "the address the app saw is the app's own memory")
   }
 
+  /// A redraw is one fold of the record, not three.
+  ///
+  /// The glyph, its ring and the panel were three computed properties, and
+  /// each of them took the folds again and read the clock again: nine walks
+  /// and sorts of every line the app holds for one redraw, on the main
+  /// actor, once a second while a child of the app's own is up. `Drawn` is
+  /// those four folds, and the question each of them puts to the kernel
+  /// about a start's pid is what counts them here, so one screen must cost
+  /// exactly one `Drawn` and nothing over it.
+  ///
+  /// Reading the clock once is the other half: the glyph and the panel are
+  /// in front of a person at the same time, and two readings a moment apart
+  /// could have let one of them call a watch live while the other had
+  /// already let it go quiet.
+  func testOneRedrawFoldsTheRecordOnce() throws {
+    try writeTheRecord([
+      line(kind: "start", command: "publish", call: 1, doc: nil),
+      line(kind: "start", command: "comments", call: 1, doc: Self.doc, wait: true),
+    ])
+
+    let asked = Tally()
+    let session = made(alive: { _ in asked.bump() })
+    answered(session)
+
+    asked.count = 0
+    _ = session.screen
+    let redraw = asked.count
+    XCTAssertGreaterThan(redraw, 0, "the record holds starts whose pid is a question")
+
+    asked.count = 0
+    _ = Drawn(
+      session.events, now: Date(), dismissed: session.ui.dismissed, calendar: Calendar.current,
+      alive: { _ in asked.bump() })
+    XCTAssertEqual(redraw, asked.count, "one redraw is the four folds and nothing over them")
+  }
+
   // MARK: what a press reaches
 
   /// The four icons on a row, each through the one room that does it, and the
@@ -848,5 +884,18 @@ final class SessionTests: XCTestCase {
     }
 
     func removeObject(forKey key: String) { values.removeValue(forKey: key) }
+  }
+}
+
+/// How many times an injected answer was asked for. A class, so the closure
+/// that counts and the test that reads the count are looking at one number.
+@MainActor
+private final class Tally {
+  var count = 0
+
+  /// Counted, and the answer every caller here wants: the pid is alive.
+  func bump() -> Bool {
+    count += 1
+    return true
   }
 }

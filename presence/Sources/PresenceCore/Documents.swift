@@ -203,7 +203,7 @@ public enum Documents {
         Action(doc: doc, at: event.at, command: event.command ?? "", state: .hold))
     }
 
-    for session in Live.sessions(ordered, now: now, alive: alive) {
+    for session in Live.sessions(ordered: ordered, now: now, alive: alive) {
       // The watch's moment is its last poll and never its first: a watch
       // polling right now acted a second ago, and `since` would sort it
       // under every write that finished since it began and would age it out

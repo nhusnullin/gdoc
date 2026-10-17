@@ -315,6 +315,24 @@ extension PanelModel {
     let days = Days.fold(
       events, now: now, calendar: calendar, carded: Set(nowFold.stuck.map(\.key)), alive: alive)
 
+    return build(
+      now: nowFold, sessions: sessions, days: days, documents: docs, facts: facts, ui: ui,
+      at: now, calendar: calendar)
+  }
+
+  /// The same panel out of folds the caller already took.
+  ///
+  /// Each of those four is a walk and a sort of every line the app holds, and
+  /// the app takes all four on every tick to decide whether anything moved.
+  /// Reading them again here made one redraw nine of those walks where four
+  /// would do, on the main thread, at one second apiece while the ring or
+  /// the sign-in countdown is moving. The folds and the words also share one
+  /// reading of the clock this way, so the glyph and the panel beside it
+  /// cannot describe two different moments.
+  public static func build(
+    now nowFold: NowFold, sessions: [LiveSession], days: DaysFold, documents docs: DocumentsFold,
+    facts: Facts, ui: UIState = UIState(), at now: Date, calendar: Calendar
+  ) -> PanelModel {
     let words = Phrases(facts: facts, now: now, calendar: calendar)
     let items = nowItems(nowFold, sessions: sessions, facts: facts, ui: ui, words: words)
     let documents = documentsSection(

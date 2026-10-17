@@ -70,3 +70,15 @@ struct Drawn: Equatable {
     return stretches.map { Words.minutes(moment.timeIntervalSince($0)) }
   }
 }
+
+/// One redraw, whole: the glyph, its ring and the panel.
+///
+/// It exists so the shell takes the folds once. The glyph and the panel are
+/// two surfaces over one record, and a person has both in front of them at
+/// the same time, so they are built from one fold at one moment rather than
+/// from three of their own.
+public struct Screen {
+  public let bar: BarState
+  public let progress: Double?
+  public let model: PanelModel
+}

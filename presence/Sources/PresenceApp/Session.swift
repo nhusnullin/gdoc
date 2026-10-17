@@ -242,30 +242,41 @@ public final class Session {
 
   // MARK: what the shell draws
 
-  /// What the menu bar shows, out of the same two folds the panel is built
-  /// from, so the item and an open panel never say different things.
-  public var bar: BarState {
+  /// Everything one redraw draws: the glyph, its ring and the panel, out of
+  /// one fold of the record at one reading of the clock.
+  ///
+  /// The shell asks for this and not for the three separately. Each of the
+  /// four folds walks and sorts every line the app holds, and the three
+  /// properties below used to take nine of those walks between them, on the
+  /// main actor, once a second while a child of the app's own is up: the ring
+  /// and the sign-in countdown are drawn by the clock that was paying for
+  /// them. They also read the clock three times, so the glyph could say a
+  /// watch was live while the panel beside it had already let it go quiet.
+  public var screen: Screen {
     let moment = clock()
-    return BarImage.state(
-      now: Now.fold(events, now: moment, dismissed: ui.dismissed, alive: alive),
-      sessions: Live.sessions(events, now: moment, alive: alive),
-      facts: facts,
-      checkShowing: check.isShowing(now: moment))
+    let folds = Drawn(
+      events, now: moment, dismissed: ui.dismissed, calendar: calendar, alive: alive)
+    return Screen(
+      bar: BarImage.state(
+        now: folds.now, sessions: folds.sessions, facts: facts,
+        checkShowing: check.isShowing(now: moment)),
+      progress: BarImage.ringProgress(now: folds.now),
+      model: PanelModel.build(
+        now: folds.now, sessions: folds.sessions, days: folds.days, documents: folds.documents,
+        facts: facts, ui: ui, at: moment, calendar: calendar))
   }
+
+  /// What the menu bar shows, out of the same folds the panel is built
+  /// from, so the item and an open panel never say different things.
+  public var bar: BarState { screen.bar }
 
   /// Where the menu bar's ring stands, which is the running job's own
   /// place in its steps. Nothing for every other state, which draws no
   /// ring at all.
-  public var barProgress: Double? {
-    BarImage.ringProgress(
-      now: Now.fold(events, now: clock(), dismissed: ui.dismissed, alive: alive))
-  }
+  public var barProgress: Double? { screen.progress }
 
   /// What the panel draws: the events, the machine and the person.
-  public var model: PanelModel {
-    PanelModel.build(
-      events: events, facts: facts, ui: ui, now: clock(), calendar: calendar, alive: alive)
-  }
+  public var model: PanelModel { screen.model }
 
   // MARK: the record
 

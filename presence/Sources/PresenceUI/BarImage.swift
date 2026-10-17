@@ -218,16 +218,20 @@ public enum BarImage {
     if let drawn = cache[key] { return drawn }
     let renderer = ImageRenderer(content: BarGlyph(state: state, progress: progress))
     renderer.scale = 2
-    let image: NSImage
-    if let bitmap = renderer.cgImage {
-      image = NSImage(
-        cgImage: bitmap,
-        size: NSSize(
-          width: CGFloat(bitmap.width) / renderer.scale,
-          height: CGFloat(bitmap.height) / renderer.scale))
-    } else {
-      image = NSImage(size: NSSize(width: height, height: height))
+    guard let bitmap = renderer.cgImage else {
+      // A render that gave nothing back is not written down. The blank keeps
+      // the item on screen for this refold, and the next one draws again:
+      // cached, it would be this state's picture for the life of the process,
+      // and the menu bar is the whole of what this app has.
+      let blank = NSImage(size: NSSize(width: height, height: height))
+      blank.isTemplate = true
+      return blank
     }
+    let image = NSImage(
+      cgImage: bitmap,
+      size: NSSize(
+        width: CGFloat(bitmap.width) / renderer.scale,
+        height: CGFloat(bitmap.height) / renderer.scale))
     image.isTemplate = true
     cache[key] = image
     return image

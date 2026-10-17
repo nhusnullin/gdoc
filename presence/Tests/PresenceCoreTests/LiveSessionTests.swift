@@ -27,6 +27,28 @@ final class LiveSessionTests: XCTestCase {
     return Live.sessions(scan.events, now: try halfPastSeven(), alive: { _ in true })
   }
 
+  /// The ordered entry point is the ordering one, minus the ordering.
+  ///
+  /// TODAY and DOCUMENTS fold the events themselves and then ask here, and
+  /// a second `Fold.inOrder` over an array already walked was a sort of
+  /// every line in two months of record for nothing. The two answers must
+  /// not differ by a single field, so the record this asks on is the day
+  /// fixture with every line written twice and the whole of it shuffled:
+  /// the dedupe and the sort are exactly what the caller is now trusted to
+  /// have done.
+  func testTheOrderedWatchesAreTheOrderingOnes() throws {
+    let scan = Event.scan(try Fixture.data("live-day"))
+    let messy = (scan.events + scan.events).shuffled()
+    let moment = try halfPastSeven()
+
+    let ordering = Live.sessions(messy, now: moment, alive: { _ in true })
+    let ordered = Live.sessions(
+      ordered: Fold.inOrder(messy), now: moment, alive: { _ in true })
+
+    XCTAssertEqual(ordered, ordering, "the same watches, field for field")
+    XCTAssertEqual(ordering.count, 2, "and the day fixture's own two, so this proves something")
+  }
+
   func testWaitsWithinThreeMinutesAreOneSession() throws {
     XCTAssertEqual(Live.gap, 3 * 60, "three minutes, as a duration")
 
