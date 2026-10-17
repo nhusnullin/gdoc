@@ -11,10 +11,12 @@
 // The second scan is the one sentence M23 reversed: that app launched
 // nothing at all, and this one launches the six.
 //
-// The last three are about what the app puts in front of somebody: the
-// system is asked through one file, and the only addresses that file can
-// build are two schemes and two hosts. A line of the record is forgeable, so
-// a click that came out of one must have nowhere else to go.
+// The rest are about what the app does to the machine and what it puts in
+// front of somebody: the system is asked through one file, an application is
+// opened by one file, this machine's login items are touched by one file, and
+// the only addresses any of them can build are two schemes and two hosts. A
+// line of the record is forgeable, so a click that came out of one must have
+// nowhere else to go.
 
 import Foundation
 import XCTest
@@ -35,6 +37,9 @@ final class SourceRulesTests: XCTestCase {
   /// Where the one room that opens an application is, and the one
   /// application it opens is this app's own bundle.
   private static let relauncher = "Sources/PresenceApp/Relauncher.swift"
+
+  /// Where the one room that touches this machine's login items is.
+  private static let loginItem = "Sources/PresenceApp/LoginItem.swift"
 
   /// The question that signals nothing: a zero asks whether a process is
   /// there and is the whole of Liveness. Any other number is a signal.
@@ -241,6 +246,41 @@ final class SourceRulesTests: XCTestCase {
       "the bundle on the disk is opened as a new instance")
     XCTAssertTrue(
       text.contains("activates = false"), "a relaunch is not something a person asked to look at")
+  }
+
+  /// One file registers this app at login, and nothing else names the
+  /// register at all.
+  ///
+  /// Starting by itself is the one thing this app arranges on somebody's
+  /// machine without being asked, so both halves of it are held here: the
+  /// register is reached from one file, and the settings pane that file opens
+  /// is opened through the register's own call rather than a settings URL,
+  /// which would be a third scheme in the next test.
+  func testLoginItemsAreTouchedOnlyByTheLoginItem() throws {
+    let register = "SMApp" + "Service"
+
+    var sawTheLoginItem = false
+    try eachSwiftFile { path, text in
+      guard path.hasPrefix("Sources/") else { return }
+      let named = text.split(separator: "\n").filter { word(register, isIn: String($0)) }
+      guard path != Self.loginItem else {
+        sawTheLoginItem = true
+        XCTAssertFalse(named.isEmpty, "\(path) is the one file that touches the login items")
+        return
+      }
+      for line in named {
+        XCTFail("\(path) touches the login items: \(line.trimmingCharacters(in: .whitespaces))")
+      }
+    }
+    XCTAssertTrue(sawTheLoginItem, "\(Self.loginItem) is not there, so this test guards nothing")
+
+    let text = try String(
+      contentsOf: packageRoot().appendingPathComponent(Self.loginItem), encoding: .utf8)
+    XCTAssertTrue(
+      text.contains("SMAppService.mainApp"), "the bundle registered is this app's own")
+    XCTAssertTrue(
+      text.contains("SMAppService.openSystemSettingsLoginItems()"),
+      "the approval row opens the pane through the register and not through a URL")
   }
 
   /// Two schemes and two hosts in the whole of the sources.

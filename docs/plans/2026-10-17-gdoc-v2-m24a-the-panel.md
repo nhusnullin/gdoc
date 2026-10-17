@@ -451,11 +451,11 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Tests/PresenceAppTests/LoginItemTests.swift`
 - Modify: `presence/Tests/PresenceCoreTests/SourceRulesTests.swift` (`SMAppService` only in `LoginItem.swift`)
 
-- [ ] `testTheFirstEverRunRegistersOnceAndRecordsOn`,
+- [x] `testTheFirstEverRunRegistersOnceAndRecordsOn`,
       `testAPersonsOffIsNeverOverridden`, `testARelaunchNeverRegisters`,
       `testRequiresApprovalShowsTheRowAndIsNotRetried`, over an injected
       service
-- [ ] `make app-lint`, `make app-test`, `make app`
+- [x] `make app-lint`, `make app-test`, `make app`
 
 ### Task 22: wiring the shell
 
