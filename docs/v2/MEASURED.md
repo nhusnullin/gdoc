@@ -1041,6 +1041,56 @@ Recheck when Anthropic documents the scheme, or when a release note names a
 URL that opens a chat. The prefill is then one decision entry and one line in
 the opener, and the scheme becomes the third the source scan admits.
 
+## What proc_pidpath says after the binary is renamed
+
+Measured 2026-10-17 while building the panel's Stop (M24a Task 18). Stop may
+signal a pid only when the kernel says that pid is running the gdoc the app
+knows, and `gdoc update` renames the running binary to `gdoc.previous` before
+it writes the new one. So the question is what `proc_pidpath` answers for a
+process whose own file was renamed under it: the old name, the new one, or
+nothing.
+
+How it was taken. A throwaway Swift script outside the repository, run with
+`swift measure2.swift`, compiled a four-line C program that sleeps thirty
+seconds, started it with `posix_spawn` from
+`/tmp/pidpath-measure/room2/waiter`, waited 400 ms, read `proc_pidpath` and
+`proc_pidinfo(PROC_PIDTBSDINFO)`, renamed the file to `waiter.previous`, and
+read both again at once and two seconds later. The subject is ad-hoc
+linker-signed (`codesign -dv`: `flags=0x20002(adhoc,linker-signed)`), which is
+what `~/.local/bin/gdoc` is too. macOS 26.3.1 (25D771280a), arm64. The script
+and its directory were deleted after the reading.
+
+| When | `kill(pid, 0)` | `proc_pidpath` |
+|---|---|---|
+| before the rename | alive | 41 bytes, `/private/tmp/pidpath-measure/room2/waiter` |
+| 400 ms after the rename | alive | 50 bytes, `/private/tmp/pidpath-measure/room2/waiter.previous` |
+| two seconds after the rename | alive | the same 50 bytes |
+
+**The kernel answers the file's name now, not the name it was started from.**
+The process keeps running, and `proc_pidinfo` keeps answering uid 501 and the
+same start time. So a wait that began before an update reads as
+`<path>/gdoc.previous`, which is exactly the one extra name
+`ProcessCheck.previousSuffix` admits, and nothing wider is needed: the suffix
+is compared whole, so `gdoc.previously` is still refused
+(`ProcessCheckTests.testPreviousCountsAsGdocAndPathsAreResolvedBeforeComparing`).
+
+Two things fell out of the same run and are written down because the check
+rests on them:
+
+- A copy of `/bin/sleep` cannot be the subject. `posix_spawn` of a copied
+  platform binary returned 0 and the process was then killed by the kernel
+  with signal 9, so the first reading of it came back `ESRCH`. That is why the
+  measurement compiles its own binary.
+- A process that has died and not been reaped still answers `kill(pid, 0)`
+  with yes while `proc_pidpath` answers `ESRCH`. The check reads an absent
+  path as `pathUnknown` and refuses, so a zombie is never signalled; the
+  waits the panel sees are never this app's children, so their own parent
+  reaps them.
+
+Recheck on a macOS upgrade, or if `gdoc update` ever stops renaming the
+running binary. `StopperTests` holds the reading that depends on this: the
+kernel's path is compared, never the record's `gdoc` field.
+
 ## Not measured yet
 
 One of the M14 measurements stayed open on 2026-10-03: whether Google emails an

@@ -140,6 +140,10 @@ public struct Facts: Sendable, Equatable {
   /// does not read. The line was skipped, so the one thing left to say is
   /// that it was there.
   public let newerRecord: Bool
+  /// The documents whose live watch the app may not signal, because the
+  /// kernel's answer about that pid did not agree with the record. It is
+  /// `Stopper.unstoppable`, asked once per refold, and it greys one icon.
+  public let unstoppable: Set<String>
 
   public init(
     account: String? = nil,
@@ -157,7 +161,8 @@ public struct Facts: Sendable, Equatable {
     pairing: [String: String] = [:],
     signedInAt: Date? = nil,
     bundle: BundleState = .same,
-    newerRecord: Bool = false
+    newerRecord: Bool = false,
+    unstoppable: Set<String> = []
   ) {
     self.account = account
     self.auth = auth
@@ -175,6 +180,7 @@ public struct Facts: Sendable, Equatable {
     self.signedInAt = signedInAt
     self.bundle = bundle
     self.newerRecord = newerRecord
+    self.unstoppable = unstoppable
   }
 
   /// What the app knows before it has asked anything: its own version, and

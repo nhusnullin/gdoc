@@ -393,7 +393,8 @@ extension PanelModel {
       items.append(
         .live(
           id: session.doc, row: words.liveRow(session),
-          stop: stopAction(session, ui: ui), pending: ui.pendingStop.contains(session.doc)))
+          stop: stopAction(session, facts: facts, ui: ui),
+          pending: ui.pendingStop.contains(session.doc)))
     }
     return items
   }
@@ -440,11 +441,14 @@ extension PanelModel {
   }
 
   /// Stop, or the words that say why this watch is not one the app can
-  /// stop. Between two polls there is no process to signal, which Task 18
-  /// narrows further with the process check.
-  private static func stopAction(_ session: LiveSession, ui: UIState) -> ActionModel? {
+  /// stop. Between two polls there is no process to signal; the rest is the
+  /// process check's answer, which arrives as a fact in `Facts`.
+  private static func stopAction(_ session: LiveSession, facts: Facts, ui: UIState)
+    -> ActionModel?
+  {
     guard !ui.pendingStop.contains(session.doc) else { return nil }
-    let state: ActionState = session.flight == nil ? .off(Tips.cannotStop) : .live
+    let cannot = session.flight == nil || facts.unstoppable.contains(session.doc)
+    let state: ActionState = cannot ? .off(Tips.cannotStop) : .live
     return ActionModel(
       .stopLive, icon: .stop, tip: LiveRow.stopTip, state: state, target: session.doc)
   }

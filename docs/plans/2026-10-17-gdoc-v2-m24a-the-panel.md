@@ -405,13 +405,13 @@ every box is ticked and its commit is on the branch.
 - Modify: `presence/Tests/PresenceCoreTests/SourceRulesTests.swift` (`kill(` with a signal only in `Stopper.swift`; `Liveness.swift`'s `kill(pid, 0)` exempt by its zero)
 - Modify: `docs/v2/MEASURED.md`
 
-- [ ] `testStopSendsOneSIGINTOnlyAfterTheProcessCheck` (a fake signaller),
+- [x] `testStopSendsOneSIGINTOnlyAfterTheProcessCheck` (a fake signaller),
       `testStopNeverSendsAnotherSignal`, `testAFailedCheckGreysStopWithItsTooltip`,
       `testTheCardShowsARingUntilTheEndArrives`
-- [ ] measured and written into MEASURED.md: what `proc_pidpath` returns for
+- [x] measured and written into MEASURED.md: what `proc_pidpath` returns for
       a running `sleep` started from a file that is then renamed to
       `.previous`, as `gdoc update` renames the binary
-- [ ] `make app-test`
+- [x] `make app-test`
 
 ### Task 19: the dismissals store and the update action
 

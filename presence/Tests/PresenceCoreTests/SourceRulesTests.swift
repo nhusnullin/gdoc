@@ -26,6 +26,13 @@ final class SourceRulesTests: XCTestCase {
   /// Where the one room that asks the system to open or copy something is.
   private static let opener = "Sources/PresenceApp/Opener.swift"
 
+  /// Where the one room that sends a signal is.
+  private static let stopper = "Sources/PresenceApp/Stopper.swift"
+
+  /// The question that signals nothing: a zero asks whether a process is
+  /// there and is the whole of Liveness. Any other number is a signal.
+  private static let asking = "0"
+
   /// The schemes the app may name. `https` is a document and a sign-in;
   /// `obsidian` is a note in the vault the person chose. A third is a
   /// decision in `docs/v2/DECISIONS.md`.
@@ -88,6 +95,52 @@ final class SourceRulesTests: XCTestCase {
         "case help", "case authStatus", "case authLogin", "case authLogout", "case update",
         "case updateDesktop",
       ])
+  }
+
+  /// One file sends a signal, and it sends one kind.
+  ///
+  /// This is the only thing the app does that reaches a program it did not
+  /// start, so it is held twice: to one file, and to one signal. A second
+  /// signal to a wait would be a stop nobody trusts, and a stronger one
+  /// would take away the end that makes Stop usable at all. Liveness's
+  /// question is exempt by its zero, which signals nothing.
+  func testASignalIsSentOnlyByTheStopper() throws {
+    let send = "kil" + "l("
+
+    var sawTheStopper = false
+    try eachSwiftFile { path, text in
+      let named = text.split(separator: "\n").filter { $0.contains(send) }
+      guard path != Self.stopper else {
+        sawTheStopper = true
+        XCTAssertFalse(named.isEmpty, "\(path) is the one file that sends a signal")
+        return
+      }
+      for line in named {
+        XCTAssertTrue(
+          signalless(String(line), call: send),
+          "\(path) sends a signal: \(line.trimmingCharacters(in: .whitespaces))")
+      }
+    }
+    XCTAssertTrue(sawTheStopper, "\(Self.stopper) is not there, so this test guards nothing")
+
+    let text = try String(
+      contentsOf: packageRoot().appendingPathComponent(Self.stopper), encoding: .utf8)
+    XCTAssertTrue(text.contains("SIGINT"), "the one signal is SIGINT")
+    for other in ["SIGKIL" + "L", "SIGTER" + "M", "SIGHUP", "SIGQUIT", "SIGSTOP", "SIGUSR"] {
+      XCTAssertFalse(text.contains(other), "\(Self.stopper) names \(other), and SIGINT is the one")
+    }
+  }
+
+  /// Whether the call on this line asks rather than signals: its last
+  /// argument is the zero.
+  private func signalless(_ line: String, call: String) -> Bool {
+    guard let opening = line.range(of: call) else { return true }
+    let rest = line[opening.upperBound...]
+    guard let closing = rest.firstIndex(of: ")") else { return false }
+    let arguments = rest[..<closing].split(separator: ",").map {
+      $0.trimmingCharacters(in: .whitespaces)
+    }
+    return arguments.last == Self.asking
   }
 
   /// The system is asked for something in one file, so what this app can put
