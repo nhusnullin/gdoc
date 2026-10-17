@@ -289,7 +289,7 @@ func TestOnlyTheReadBackWritersCarryVerified(t *testing.T) {
 	reports := map[string]bool{
 		"read": true, "comments": true, "suggestions": true, "export": true, "restyle": true,
 		"reply": true, "propose": true, "withdraw": true, "annotate": true, "publish": true,
-		"update": true, "auth login": true,
+		"update": true, "auth login": true, "auth logout": true,
 	}
 	for _, c := range commands() {
 		if c.readsBack != readBack[c.name] {

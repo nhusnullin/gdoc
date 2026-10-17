@@ -220,7 +220,7 @@ func TestTheUsageLineNamesEveryCommand(t *testing.T) {
 		t.Fatalf("an unknown command must fail: %v (exit %d)", got, code)
 	}
 	msg, _ := got["error"].(string)
-	for _, command := range []string{"auth status", "auth login", "read", "comments",
+	for _, command := range []string{"auth status", "auth login", "auth logout", "read", "comments",
 		"suggestions", "export", "restyle", "probe", "reply", "propose", "withdraw", "annotate", "build",
 		"publish", "update", "mcp", "help", "completion"} {
 		if !strings.Contains(msg, command) {

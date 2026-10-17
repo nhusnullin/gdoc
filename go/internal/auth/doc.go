@@ -57,6 +57,54 @@
 // TestLoginRefusesABuildWithNoClientSecret runs the real login and finds
 // stderr empty.
 //
+// # The sign-out is one file removed, read back, and four refusals
+//
+// Logout removes the file at config.TokenPath() and nothing else. It takes no
+// argument, because there is nothing to hand it: a sign-out tells Google
+// nothing, and the grant stays in the person's account settings until they
+// take it away there. TestLogoutMakesNoRequest reads logout.go's own syntax
+// tree for that, and go/boundary's TestOnlyLogoutRemovesTheToken holds that
+// this is the one function in the tree that asks where the token is and takes
+// a file away.
+//
+// The removal is read back through its own Lstat, because nothing trusts a
+// success: removed: true is an answer somebody looked at the disk for. No
+// token at all is removed: false and no error, the way a status with no token
+// is a report rather than a failure: somebody asking to be signed out of a
+// computer nobody is signed in on has been answered.
+// TestLogoutRemovesTheTokenAndReadsItsAbsenceBack and
+// TestLogoutWithNoTokenIsOkAndRemovesNothing are the pins.
+//
+// Four things are refused, and each leaves the file exactly as it was:
+//
+//   - A waiting sign-in. It is asked first, before the file is looked at: a
+//     browser trip halfway through is about to write this file, and a sign-out
+//     in the middle of one takes away the token that trip is going to replace,
+//     leaving a person reading "Signed in" in a tab that signed them in to
+//     nothing. A lock that is there and will not parse is refused too, by the
+//     rule above it: not knowing must not resolve to taking a credential away.
+//     TestLogoutRefusesWhileASignInIsWaiting.
+//   - Anything at that path that is not a regular file. Lstat and not Stat, so
+//     a symlink is seen rather than followed: following one would remove a
+//     file at the other end of it that gdoc never wrote.
+//     TestLogoutRefusesASymlinkOrANonRegularFileAndRemovesNothing.
+//   - A file that will not parse as the token's JSON. It is the strict reading
+//     every input gets, and here reaching nothing means the bytes stay where
+//     whoever reads the refusal can look at them.
+//     TestLogoutRefusesATokenItCannotParseAndLeavesIt.
+//   - A path this process cannot look at, which is the same not-knowing.
+//
+// Load's own refusals are deliberately not borrowed. A token missing the
+// fields a refresh needs is exactly the file a person wants taken away, and
+// the one file gdoc refuses to remove must not be the one that no longer
+// works: TestLogoutRemovesATokenARefreshCouldNotUse.
+//
+// Nothing else in the config dir is touched. The settings, the release stamp,
+// the record and the waiting sign-in all sit beside the token, and a sign-out
+// is about the credential alone: TestLogoutTouchesNothingElseInTheConfigDir.
+// M17's Keychain is not shipped, and the day it lands is the day this function
+// learns a second place to remove from.
+//
 // # One waiting sign-in, written down beside the token
 //
 // Claude Desktop runs two gdoc processes, one per client

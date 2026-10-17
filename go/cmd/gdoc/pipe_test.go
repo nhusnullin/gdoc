@@ -11,6 +11,13 @@
 // helper writes a golden that is missing, so the first run of a new case
 // records it, and never replaces one that is there.
 //
+// One exception, written down because it has happened four times. A milestone
+// that adds a command adds the line that names it to the help a pipe reads and
+// to the usage line a refusal prints, and those lines are re-recorded in that
+// milestone's own commit: M19, M20 and M22 did it for a line each, and M24b
+// for `gdoc auth logout`. Nothing else in these files may move, and a byte
+// that moves for any other reason is still a bug.
+//
 // Nothing here reaches the network: the version, the stamp and the reach are
 // all fixed by the test, through notice_test.go's checking.
 

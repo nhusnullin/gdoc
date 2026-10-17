@@ -110,7 +110,7 @@ box is ticked and its commit is on the branch.
 - Modify: `go/cmd/gdoc/commands.go`, `go/cmd/gdoc/login.go` (the auth entries), `go/cmd/gdoc/doc.go`, `go/internal/auth/doc.go`
 - Modify: `go/cmd/gdoc/testdata/screens/*.golden` (the overview and the auth screens), `go/cmd/gdoc/testdata/pipe/help.stdout.golden`, `go/cmd/gdoc/pipe_test.go` (the comment names the exception), the completion goldens, `go/cmd/gdoc/presenceflag_test.go` (the two literals re-taken), `go/cmd/gdoc/presence_test.go` (the `reports` map), `go/cmd/gdoc/help_test.go` (`everyCommandName`), `go/cmd/gdoc/main_test.go`, `go/boundary` (the command count), `CLAUDE.md:24`
 
-- [ ] `TestLogoutRemovesTheTokenAndReadsItsAbsenceBack`,
+- [x] `TestLogoutRemovesTheTokenAndReadsItsAbsenceBack`,
       `TestLogoutWithNoTokenIsOkAndRemovesNothing`,
       `TestLogoutRefusesASymlinkOrANonRegularFileAndRemovesNothing`,
       `TestLogoutRefusesATokenItCannotParseAndLeavesIt`,
@@ -118,14 +118,14 @@ box is ticked and its commit is on the branch.
       `TestLogoutTouchesNothingElseInTheConfigDir`, `TestLogoutMakesNoRequest`,
       `TestLogoutIsNoChatTool`, `TestLogoutWritesAStartAndAnEndWithNoDoc`,
       `TestOnlyLogoutRemovesTheToken` in `go/boundary`
-- [ ] the command, visible, with its sentence, example and `report: true`;
+- [x] the command, visible, with its sentence, example and `report: true`;
       the summary says the grant stays at Google until removed in the account
       settings
-- [ ] every pin named above re-recorded or updated for the one new command,
+- [x] every pin named above re-recorded or updated for the one new command,
       and `pipe_test.go`'s comment gains the sentence that a line a milestone
       adds for a new command is re-recorded in that milestone's commit, as
       M19, M20 and M22 did
-- [ ] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make vet`
+- [x] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make vet`
 
 ### Task 2: a hold remembers the sign-in it was held under
 

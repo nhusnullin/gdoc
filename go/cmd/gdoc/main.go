@@ -472,3 +472,21 @@ func authLogin(ctx context.Context, errOut io.Writer) emit.Result {
 	}
 	return authStatus(ctx, false)
 }
+
+// cmdAuthLogout is the token removed from this computer, and nothing else.
+//
+// It takes no context and opens no session, because there is nothing to ask
+// anybody: internal/auth removes one file and reads its absence back. The
+// report goes out beside a refusal as well as beside an answer, so a caller
+// that was refused still reads which file was left alone.
+//
+// What it is not is a sign-out at Google. The grant lives in the person's
+// account settings until they take it away there, which is what the command's
+// own sentence says: TestTheLogoutSummarySaysTheGrantStaysAtGoogle.
+func cmdAuthLogout() emit.Result {
+	report, err := auth.Logout()
+	if err != nil {
+		return emit.Result{OK: false, Error: err.Error(), Data: report}
+	}
+	return emit.Result{OK: true, Data: report}
+}

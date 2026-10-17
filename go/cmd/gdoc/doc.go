@@ -46,6 +46,10 @@
 //
 //   - auth status: the OAuth state, from internal/auth.
 //   - auth login: the browser trip, internal/auth and internal/auth/loopback.
+//   - auth logout: the token file taken away, internal/auth. One file on this
+//     computer and no request: the grant stays at Google until the person
+//     takes it away in their account settings, which is what the command's own
+//     sentence says.
 //   - read <url> [--structure]: the text projection, or the tree with the flag.
 //     internal/docs reads, internal/view projects.
 //   - comments <url> [--since] [--wait] [--witness]: the threads with their
@@ -130,7 +134,7 @@
 //
 // The usage line names every command that exists, because it is joined from
 // the table. Three tests hold the table and the usage line together.
-// TestTheUsageLineNamesEveryCommand spells the eighteen out word for word, as a
+// TestTheUsageLineNamesEveryCommand spells the nineteen out word for word, as a
 // reader sees them, so it cannot follow a rename in the code.
 // TestEveryCommandInTheTableIsDispatchedAndNothingElseIs runs every entry and
 // asks it to refuse a flag, so a new command cannot sit in the table
@@ -172,13 +176,14 @@
 // dispatch calls presence.Begin after the parse and defers its end, so a
 // command that is added is recorded without its author writing a line of
 // recording, and a panic safeDispatch recovers still closes the run it opened.
-// report is on for the twelve that read or write a document, replace this
-// binary, or make a browser trip, and off for `auth status`, probe, build,
-// help, completion and mcp, because a question about the token, a page of
-// help and one local file are not a run anybody is waiting on, and mcp is the
-// session every other event is reported under:
+// report is on for the thirteen that read or write a document, replace this
+// binary, make a browser trip, or take the credential away, and off for
+// `auth status`, probe, build, help, completion and mcp, because a question
+// about the token, a page of help and one local file are not a run anybody is
+// waiting on, and mcp is the session every other event is reported under:
 // TestAReportingCommandWritesAStartAndAnEnd, TestAnAuthStatusRunWritesNoEvent,
-// TestAHelpRunWritesNoEvent and TestAnUpdateAndALoginWriteNoDoc. readsBack is
+// TestAHelpRunWritesNoEvent, TestAnUpdateAndALoginWriteNoDoc and
+// TestLogoutWritesAStartAndAnEndWithNoDoc. readsBack is
 // on for the five writers that confirm their own write, reply, propose,
 // withdraw, annotate and publish, and it is the only thing that lets a
 // verified reach the record, because update and restyle print verified: false
@@ -275,6 +280,29 @@
 // for this command the object is the answer, and a pipe reads no screen at all.
 // TestTheStatusScreenSaysTheStateAndTheAccount and
 // TestAuthStatusOnAPipeWritesNoStderr.
+//
+// # auth logout removes one file, and tells Google nothing
+//
+// The answer is token_path and removed, and nobody signed in is
+// ok: true with removed: false, for the reason auth status is an answer when
+// there is no token: the question has been answered.
+// TestTheLogoutCommandAnswersWhatItRemoved is the pin.
+//
+// cmdAuthLogout takes no context and opens no session. internal/auth's Logout
+// removes the file and reads its absence back, and its doc comment holds the
+// four refusals; the report goes out beside a refusal as well, so a caller
+// that was refused still reads which file was left alone. What this layer
+// decides is one thing: the sentence a reader meets says the grant stays at
+// Google until they take it away in their account settings, because a command
+// called logout that leaves the grant standing has to say so where somebody
+// reads it. TestTheLogoutSummarySaysTheGrantStaysAtGoogle is the pin, and
+// TestLogoutMakesNoRequest in internal/auth is the other half.
+//
+// It is no chat tool, and that is the one entry of the table with a reason for
+// being out of mcpTools that is not about documents: a model that could sign
+// the person out could stop every tool of its own session working, and nobody
+// in the chat asked it to. TestLogoutIsNoChatTool and
+// TestNothingInTheChatSignsAnybodyOut in go/boundary.
 //
 // # auth login prints the URL to stderr, and waits on one line
 //

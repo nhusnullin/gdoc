@@ -30,7 +30,7 @@ import (
 )
 
 // The four jobs a command does. A screen groups the table by them, because
-// eighteen commands in one list is eighteen things to read and four groups is
+// nineteen commands in one list is nineteen things to read and four groups is
 // four: TestEveryCommandHasAGroup.
 const (
 	groupRead    = "Read"
