@@ -161,10 +161,15 @@ func Held(ctx context.Context, on bool, version, command, doc, hold, rule string
 	}, errOut)
 }
 
-// Released, Expired and Landed are the three ways a hold leaves, and exactly
+// Released, Expired and Landed are the three ways a hold leaves, and at most
 // one of them follows a held: a send consumed it, its life ran out, or
 // another send landed and took it away. Which one happened says nothing about
 // whether the send succeeded; the command's own start and end say that.
+//
+// At most, and not exactly: expired is written by the session's sweep, which
+// runs on the next tool call, so a chat that closed with a card open writes no
+// ending at all. A hold with no ending is one a reader judges by its until,
+// and that is what the app does: PresenceUI's testAHoldThatRanOutLeavesTheMenuBar.
 func Released(on bool, version, hold string, errOut io.Writer) {
 	endOfHold("released", on, version, hold, errOut)
 }

@@ -723,10 +723,15 @@
 // binary has landed by the time the app is touched, and gdoc does not take a
 // binary back because a folder beside it did not arrive, so the two may sit
 // at different versions until a later run and the app is what says so:
-// TestAPresenceFailureIsAWarningNamingBothPathsAndTheBinaryIsUpdated. The
-// four fields it reports, `presence`, `presence_version`, `presence_sha256`
-// and `presence_previous`, are all omitempty, so a run that reached no app
-// says nothing about one.
+// TestAPresenceFailureIsAWarningNamingBothPathsAndTheBinaryIsUpdated. That
+// holds for a run that came only for the app too, where the release itself
+// could not be read: nobody typed anything about an app on that line and the
+// binary here needed nothing, so the run answers with a warning naming both
+// paths: TestAnAppOnlyRefreshThatCannotReadTheReleaseIsAWarning. With
+// --desktop the extension is what the person asked for, so a release that
+// cannot be read is still a refusal. The four fields it reports, `presence`,
+// `presence_version`, `presence_sha256` and `presence_previous`, are all
+// omitempty, so a run that reached no app says nothing about one.
 //
 // A run with nothing newer still installs the app, out of the release the
 // binary here came from, where the app is missing or at another version. It is

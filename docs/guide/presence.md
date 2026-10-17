@@ -36,9 +36,10 @@ own and the gdoc that wrote the last line, and Quit. Press Escape or click
 elsewhere and the panel closes.
 
 A run that stopped without an end line, because the terminal was closed or the
-machine slept, is shown as its own row with an unknown outcome. It is never a
-glyph: an icon that stays lit after the work stopped is an icon nobody
-believes.
+machine slept, is shown as its own row with an unknown outcome. A held write
+whose thirty minutes passed with nobody answering it is shown as a row saying
+it ran out. Neither is ever a glyph: an icon that stays lit after the work
+stopped is an icon nobody believes.
 
 ## Turning it on
 

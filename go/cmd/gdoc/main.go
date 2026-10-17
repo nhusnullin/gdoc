@@ -169,6 +169,10 @@ const jsonHint = "Add --json to print the JSON object a skill reads."
 // TestAScreenWhoseWordsWentToAFileKeepsItsObject and
 // TestNoEscapeByteReachesAPipe.
 func run(ctx context.Context, args []string, out, errOut io.Writer, set settings.InEffect) int {
+	// The run's own line and the run's own sweep, which is one of each per
+	// process in production and one of each per call here, so no test inherits
+	// what another said: internal/presence's Fresh.
+	presence.Fresh()
 	return printResult(safeDispatch(ctx, args, errOut, set), out, errOut)
 }
 

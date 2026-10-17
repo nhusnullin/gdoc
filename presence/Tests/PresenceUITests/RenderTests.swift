@@ -55,6 +55,43 @@ final class RenderTests: XCTestCase {
     XCTAssertNil(Glyph.image(for: .idle), "idle shows nothing at all")
   }
 
+  // A hold leaves the menu bar when its life has run out, the way a start
+  // leaves it when its pid is gone. The binary writes the line that says a
+  // hold expired on its next tool call, so a chat window somebody closed with
+  // a card open writes none at all: the hold's own `until` is the whole of
+  // what the record can say, and a pause glyph that stays lit for a card
+  // nobody can press any more is the icon nobody believes.
+  //
+  // The row stays in the panel, saying it ran out, because what happened is
+  // still worth reading.
+  func testAHoldThatRanOutLeavesTheMenuBar() throws {
+    let waiting = try event(
+      .held, at: "2026-10-17T11:50:00Z", pid: 11, run: "r1", hold: "h_1",
+      until: "2026-10-17T12:20:00Z")
+    let ranOut = try event(
+      .held, at: "2026-10-17T11:00:00Z", pid: 12, run: "r2", hold: "h_2",
+      until: "2026-10-17T11:30:00Z")
+    let alive: (Int32) -> Bool = { _ in true }
+
+    XCTAssertEqual(
+      Glyph.state(for: try fold([waiting], alive: alive)), .hold,
+      "a hold inside its life is the one row waiting for the person")
+    let gone = try fold([ranOut], alive: alive)
+    XCTAssertEqual(
+      Glyph.state(for: gone), .idle,
+      "a hold past its until is waiting for nobody, so the menu bar says nothing")
+    XCTAssertEqual(
+      Glyph.state(for: try fold([waiting, ranOut], alive: alive)), .hold,
+      "one hold that ran out does not take the glyph off a hold that has not")
+
+    let row = try XCTUnwrap(
+      PanelModel.build(
+        glance: gone, appVersion: "2.13.0", bundle: .same, calendar: try amsterdam()
+      ).now.first, "the hold is still a row in the panel")
+    XCTAssertEqual(row.kind, .hold)
+    XCTAssertEqual(row.value, "ran out")
+  }
+
   func testThePanelRendersNowAndTodayInLightAndDark() throws {
     let model = try dayModel()
     XCTAssertFalse(model.now.isEmpty, "the day fixture holds a hold, a watch and a live run")
@@ -147,7 +184,7 @@ final class RenderTests: XCTestCase {
   /// and never the struct the record happens to decode into.
   private func event(
     _ kind: EventKind, at: String, pid: Int32, run: String, call: Int64? = 1,
-    command: String? = nil, wait: Bool = false, hold: String? = nil
+    command: String? = nil, wait: Bool = false, hold: String? = nil, until: String? = nil
   ) throws -> Event {
     var fields: [String] = [
       "\"v\":1", "\"at\":\"\(at)\"", "\"pid\":\(pid)", "\"run\":\"\(run)\"",
@@ -157,6 +194,7 @@ final class RenderTests: XCTestCase {
     if let command { fields.append("\"command\":\"\(command)\"") }
     if wait { fields.append("\"wait\":true") }
     if let hold { fields.append("\"hold\":\"\(hold)\"") }
+    if let until { fields.append("\"until\":\"\(until)\"") }
     return try Event.decode("{" + fields.joined(separator: ",") + "}")
   }
 

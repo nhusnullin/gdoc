@@ -539,6 +539,15 @@ func refreshHere(ctx context.Context, reach plain, rel update.Release, installed
 	defer cancel()
 	got, err := readRelease(ctx, reach, rel, desktop, pr)
 	if err != nil {
+		// A run that came only for the app refuses nothing. Nobody asked for
+		// anything on this line, the binary here needed nothing and is
+		// untouched, and every app failure is a warning that names where the
+		// app is: TestAnAppOnlyRefreshThatCannotReadTheReleaseIsAWarning.
+		// With --desktop the extension is what the person typed for, so a
+		// release that cannot be read is still a refusal.
+		if !desktop {
+			return emit.Result{OK: true, Data: data, Warnings: reachWarnings(reach, append(warns, appUntouched(err, data.Path)))}
+		}
 		return emit.Result{OK: false, Error: err.Error(), Data: data, Warnings: reachWarnings(reach, warns)}
 	}
 	if desktop {
@@ -563,6 +572,18 @@ func refreshSteps(desktop, app bool) []string {
 	return steps
 }
 
+// appUntouched is the sentence for a run that came only for the app and could
+// not read the release it comes out of. It names both paths, the binary and
+// the app, the way withPresence's warning does: the difference is that here
+// no binary moved either, so there is nothing to say about an earlier one.
+func appUntouched(err error, path string) string {
+	dest, derr := presenceBundle()
+	if derr != nil {
+		return fmt.Sprintf("%v. %v", err, derr)
+	}
+	return fmt.Sprintf("%v. The gdoc at %s needed nothing and is untouched, so %s is as it was until a later run installs it", err, tildePath(path), tildePath(dest))
+}
+
 // appNeeded is whether a run with nothing to install goes and gets the app,
 // and the one sentence for a run that would have and could not.
 //
@@ -571,8 +592,11 @@ func refreshSteps(desktop, app bool) []string {
 // app that is here has to be missing, or at another version: an app that
 // already says what the release says is nothing to download megabytes for.
 // And a version that cannot be read at all is treated as another version, so
-// a half-written bundle is replaced rather than left: internal/update refuses
-// anything at the destination that is not this app.
+// a bundle left half written is a run that tries rather than a run that stops.
+// What happens then is internal/update's to say: a destination whose plist
+// names this app is replaced and kept beside it, and one whose plist does not
+// read at all is refused, because not knowing never resolves to overwrite.
+// The person sees that refusal as a warning naming both paths.
 //
 // TestAnUpToDateRunWithThePresenceOnInstallsItFromTheReleaseHere.
 func appNeeded(rel update.Release, installed update.Version) (bool, string) {
@@ -812,6 +836,14 @@ func install(ctx context.Context, reach plain, rel update.Release, path string, 
 // TestAnUpToDateRunWithThePresenceOnInstallsItFromTheReleaseHere.
 func readRelease(ctx context.Context, reach plain, rel update.Release, desktop bool, pr *progress) (fetched, error) {
 	sumsName := update.ChecksumsName(rel.Tag)
+	// What a failed download leaves undone is what the run came for. A run
+	// that never typed --desktop is installing the app, and a sentence about
+	// a Claude Desktop extension would name the one thing it was not doing:
+	// TestAnAppOnlyRefreshThatCannotReadTheReleaseIsAWarning.
+	undone := "nothing it holds was taken"
+	if desktop {
+		undone = "no extension was written"
+	}
 	var sums, archive, template []byte
 	steps := []struct {
 		name, detail string
@@ -827,7 +859,7 @@ func readRelease(ctx context.Context, reach plain, rel update.Release, desktop b
 		{stepDownload, joinDetail(rel.AssetName, humanSize(rel.AssetSize)), func() (string, error) {
 			var err error
 			if archive, err = reach.GetBytes(ctx, rel.AssetURL, maxArchive); err != nil {
-				return "", fmt.Errorf("%s could not be downloaded, so no extension was written: %v", rel.AssetName, err)
+				return "", fmt.Errorf("%s could not be downloaded, so %s: %v", rel.AssetName, undone, err)
 			}
 			return "", nil
 		}},

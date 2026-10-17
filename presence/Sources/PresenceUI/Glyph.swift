@@ -2,9 +2,9 @@
 //
 // Four states, chosen by priority from one glance: a hold waiting for the
 // person, a finite command running, a watch sitting on a document, and
-// nothing at all. A start whose pid is gone is a row in the panel and never
-// a glyph here, because an icon that stays after the work stopped is an icon
-// nobody believes.
+// nothing at all. A start whose pid is gone, and a hold whose life ran out,
+// are rows in the panel and never a glyph here, because an icon that stays
+// after the work stopped is an icon nobody believes.
 //
 // Every image is a template, so macOS draws it in the menu bar's own colour
 // in both appearances and in both the normal and the inverted bar. There is
@@ -36,8 +36,15 @@ public enum Glyph {
   /// The order is the whole rule: a hold is first because it is the one state
   /// waiting for the person reading it, and a finite job is over a watch that
   /// may sit there all day.
+  ///
+  /// A hold whose life ran out is not waiting for anybody, so it is a row in
+  /// the panel and never a glyph, for the same reason a start whose pid is
+  /// gone is not one. The binary writes the line that says a hold expired on
+  /// its next tool call, so a chat that closed with a card open writes none at
+  /// all, and the hold's own `until` is the whole of what the record can say:
+  /// testAHoldThatRanOutLeavesTheMenuBar.
   public static func state(for glance: Glance) -> GlyphState {
-    if !glance.holds.isEmpty { return .hold }
+    if glance.holds.contains(where: { !$0.ranOut }) { return .hold }
     let live = glance.live
     if live.contains(where: { !$0.isWait }) { return .running }
     if live.contains(where: { $0.isWait }) { return .watching }

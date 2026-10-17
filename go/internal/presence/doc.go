@@ -46,7 +46,11 @@
 // proposal text, a hold's value, reason or text, error or warning sentences,
 // any path, the account, anything about the token, argv, the cursor, the mark,
 // and no judging word. TestAnEventCarriesNoWordOfTheEnvelopeButTheTitle puts
-// a canary in each of those places in a result and reads the line back.
+// a canary in each place a result has, the text, the threads, the path, the
+// account, a warning and the error, and reads the line back. A hold's value,
+// its reason and its words are held by Held's signature, which takes none of
+// them, and cmd/gdoc's TestAHeldWriteRecordsTheRuleAndNoneOfItsWords looks for
+// them in the line a real held write wrote.
 //
 // The one document word is the title, capped at 200 runes, because without it
 // the app would run gdoc read to fill a row and pull a whole body through a
@@ -97,9 +101,12 @@
 // # A failure changes nothing
 //
 // A write that fails changes no byte of the envelope and no exit code. One
-// line goes to stderr, once per process, because a chat session that cannot
-// write would otherwise say the same sentence on every call:
-// TestAFailedWriteSaysSoOnceOnStderrAndReturnsNothing. None of the functions
+// line goes to stderr, once per run, because a chat session that cannot write
+// would otherwise say the same sentence on every call:
+// TestAFailedWriteSaysSoOnceOnStderrAndReturnsNothing. A run is a process
+// here, so Fresh, which cmd/gdoc calls where a run begins, changes nothing a
+// person sees and keeps two runs in one process from inheriting the line:
+// cmd/gdoc's TestAnUnwritableLogChangesNoByteOfTheObject. None of the functions
 // here returns an error, which is the same decision said in the signatures.
 //
 // # Retention

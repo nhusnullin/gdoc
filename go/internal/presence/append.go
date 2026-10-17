@@ -31,13 +31,26 @@ var (
 	writeTo = func(f *os.File, b []byte) (int, error) { return f.Write(b) }
 )
 
-// said holds the one line a process says on stderr when the record cannot be
-// written, and swept the one directory sweep a process does. Both are
-// pointers so a test can put a fresh one in.
+// said holds the one line a run says on stderr when the record cannot be
+// written, and swept the one directory sweep a run does. Both are pointers so
+// Fresh and a test can put a fresh one in.
 var (
 	said  = new(sync.Once)
 	swept = new(sync.Once)
 )
+
+// Fresh starts one run's own accounting: the single line it says on stderr if
+// the record cannot be written, and the single sweep of old months it does.
+//
+// One gdoc process is one run, a chat session included, so this changes
+// nothing a person sees. It is called where a run begins because two runs
+// inside one process, which is every test over the command, would otherwise
+// inherit each other's: the second would say nothing on a stderr nobody had
+// written to yet. Nothing else resets either one:
+// TestAnUnwritableLogChangesNoByteOfTheObject.
+func Fresh() {
+	said, swept = new(sync.Once), new(sync.Once)
+}
 
 // monthFile is the exact name the record uses. The sweep removes nothing that
 // does not match it, so a note somebody left in the directory stays:

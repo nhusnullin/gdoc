@@ -146,7 +146,6 @@ func TestAnEventCarriesNoWordOfTheEnvelopeButTheTitle(t *testing.T) {
 		"someone@example.com",
 		"the warning about the mark",
 		"the quote \"was not found\"",
-		"h_ab12_value",
 	}
 	r := Begin(context.Background(), true, version, "reply", docID, false, true, errOut)
 	r.End(emit.Result{

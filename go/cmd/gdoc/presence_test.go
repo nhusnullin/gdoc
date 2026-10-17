@@ -193,6 +193,10 @@ func TestTheFlagChangesNoByteOfTheObject(t *testing.T) {
 // A record that cannot be written changes nothing either. The path where the
 // record goes is a file, so the directory cannot be made: the object, the exit
 // code and the work are what they were, and one line on stderr says so.
+//
+// The line is once per run and run() starts the run's own, so the two runs
+// below and every other test in this package each get their own: without that
+// this test would pass on the first run of a process and fail on the second.
 func TestAnUnwritableLogChangesNoByteOfTheObject(t *testing.T) {
 	var got [2]outcome
 	for i, set := range []settings.InEffect{defaultsInEffect(), presenceOn()} {

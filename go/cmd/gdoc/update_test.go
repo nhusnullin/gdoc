@@ -1060,6 +1060,45 @@ func TestAnUpToDateRunWithThePresenceOnInstallsItFromTheReleaseHere(t *testing.T
 	}
 }
 
+// A run that came only for the app and could not read the release is a warning
+// and not a refusal. Nobody typed anything about an app on that line: the
+// binary here was already the newest and nothing on this machine moved, so an
+// exit code of 1 would say a `gdoc update` failed when the gdoc it was about
+// is exactly where it was. The sentence names the app, never an extension,
+// because --desktop was not typed.
+func TestAnAppOnlyRefreshThatCannotReadTheReleaseIsAWarning(t *testing.T) {
+	desktopSeams(t, "darwin")
+	platform := update.Platform(runtime.GOOS, runtime.GOARCH)
+	files := publishedWith(t, "v2.1.0", []byte("old"), appEntries("v2.1.0")...)
+	// The checksums answer and the zip does not, which is a release GitHub is
+	// halfway through publishing, or a connection that went in the middle.
+	delete(files, assetURL("v2.1.0", update.AssetName("v2.1.0", platform)))
+	pl := &stubPlain{listing: listing("v2.1.0"), files: files}
+	path := installedAt(t, "v2.1.0", []byte("old"), pl)
+	dest := appAt(t)
+
+	got, code := runJSONSet(t, presenceOn(), "update")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("the binary needed nothing, so the run answers: %v (exit %d)", got, code)
+	}
+	data := updateObject(t, got)
+	if data["action"] != "up_to_date" {
+		t.Errorf("no binary was installed, and the object says so: %v", data)
+	}
+	noAppFields(t, data)
+	noAppAt(t, dest)
+	nothingMoved(t, path, "old")
+	warnings := fmt.Sprint(got["warnings"])
+	for _, named := range []string{dest, path} {
+		if !strings.Contains(warnings, named) {
+			t.Errorf("the warning must name %s: %v", named, got["warnings"])
+		}
+	}
+	if strings.Contains(warnings, "extension") {
+		t.Errorf("--desktop was not typed, so no sentence here is about one: %v", got["warnings"])
+	}
+}
+
 // --rollback with the flag on swaps both: the binary, then the app, each swap
 // its own involution.
 func TestRollbackWithThePresenceOnSwapsBoth(t *testing.T) {
