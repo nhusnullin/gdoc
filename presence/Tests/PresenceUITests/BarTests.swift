@@ -173,8 +173,7 @@ final class BarTests: XCTestCase {
   /// A watch that cannot reach Google is still a watch: the decision table's
   /// own words, and the one fact the bar is handed and never reads.
   func testNetworkTroubleDoesNotChangeTheIcon() throws {
-    let down = NetworkFact(
-      reachable: false, detail: "the internet is up, the handshake with Google fails")
+    let down = NetworkFact(reachable: false)
     let watch = try event(
       .start, at: "2026-10-17T11:03:00Z", pid: 14, run: "w", command: "comments", wait: true)
 

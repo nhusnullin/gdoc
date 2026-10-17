@@ -163,15 +163,21 @@ public enum Documents {
     var ended: Set<String> = []
 
     for event in ordered {
-      // A publish is handed no document and names the one it created, so
-      // the row it makes is under `made`: Fold.subject is that rule.
-      guard let doc = Fold.subject(event) else { continue }
       if event.kind == .end { ended.insert(event.pairing) }
+      // The hold's two halves are read before the document is, because a
+      // released, expired, landed or dropped line carries the hold's id and
+      // nothing else: `go/internal/presence` writes no document on one. A
+      // document guard above this would never let an ending through, and
+      // the row would wait for a person for ever:
+      // testDocumentsGroupByIdInsideFourteenDaysNewestFirst.
       if event.kind == .held {
         held[event.hold ?? ""] = event
       } else if HoldEnding(event.kind) != nil {
         held.removeValue(forKey: event.hold ?? "")
       }
+      // A publish is handed no document and names the one it created, so
+      // the row it makes is under `made`: Fold.subject is that rule.
+      guard let doc = Fold.subject(event) else { continue }
       guard event.kind == .end, !event.wait, Now.stuckCommands.contains(event.command ?? "") else {
         continue
       }

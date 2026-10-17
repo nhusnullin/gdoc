@@ -93,6 +93,29 @@ final class LiveSessionTests: XCTestCase {
     XCTAssertEqual(session.proposed, 1)
   }
 
+  /// The shape the Go writer really writes: `wait` on the start, and nothing
+  /// about waiting on the end. An end held to that field pairs with nothing,
+  /// and then every poll of a watch is its own open session for ever.
+  func testAnEndWithoutTheWaitFieldStillClosesItsStart() throws {
+    let started = try moment("2026-10-17T17:00:00Z")
+    let stopped = try moment("2026-10-17T17:02:00Z")
+    let line = { (kind: EventKind, at: Date, ok: Bool?) in
+      Event(
+        schema: 1, at: at, gdoc: "v2.14.0", pid: 7100, run: "ffff", call: 1, kind: kind,
+        command: "comments", via: "terminal", doc: self.chapterFive, wait: kind == .start,
+        title: nil, ok: ok, verified: nil, ms: nil, hold: nil, rule: nil, until: nil)
+    }
+    let events = [line(.start, started, nil), line(.end, stopped, true)]
+
+    let open = try XCTUnwrap(Live.sessions(events, now: try moment("2026-10-17T17:03:00Z")).first)
+    XCTAssertNil(open.flight, "the end paired, so no poll is in flight")
+    XCTAssertTrue(open.isOpen, "still inside the three-minute gap")
+
+    let later = Live.sessions(events, now: try moment("2026-10-17T17:10:00Z"))
+    XCTAssertEqual(later.count, 1, "one wait is one session, not one per half of it")
+    XCTAssertEqual(later[0].ended, stopped, "and it closed at the end the record wrote")
+  }
+
   func testTheLastWriteTimeIsTheQuietAnchor() throws {
     let five = try day()[0]
     XCTAssertEqual(
@@ -205,7 +228,7 @@ final class LiveSessionTests: XCTestCase {
     ]
     if let to {
       events.append(
-        event(at: to, kind: .end, command: "comments", run: run, doc: on, wait: true, ok: ok))
+        event(at: to, kind: .end, command: "comments", run: run, doc: on, ok: ok))
     }
     return events
   }

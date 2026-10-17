@@ -268,17 +268,17 @@ final class CardTests: XCTestCase {
   }
 
   // HEALTH is the same list on every screen, with the rows that have nothing
-  // to say left out: account, network, gdoc, skills, Claude Desktop, the
-  // thread mark, the switch, Quit. A section whose rows move is a section
-  // nobody learns.
+  // to say left out: account, network, gdoc, Claude Desktop, the thread
+  // mark, the switch, Quit. A section whose rows move is a section nobody
+  // learns.
   func testHealthRowsKeepTheirOrderOnEveryScreen() throws {
     XCTAssertEqual(
       HealthRowKind.allCases,
-      [.account, .network, .gdoc, .skills, .desktop, .mark, .launchAtLogin, .quit])
+      [.account, .network, .gdoc, .desktop, .mark, .launchAtLogin, .quit])
     XCTAssertEqual(
       HealthRowKind.allCases.map(\.label),
       [
-        "Account", "Network", "gdoc", "Skills", "Claude Desktop", "Thread mark",
+        "Account", "Network", "gdoc", "Claude Desktop", "Thread mark",
         "Launch at login", "Quit",
       ])
     XCTAssertEqual(HealthRows.quitShortcut, "⌘Q")
@@ -286,8 +286,8 @@ final class CardTests: XCTestCase {
     // The five screens the blueprint draws HEALTH on, each shuffled and put
     // back in order.
     let screens: [(String, [HealthRowKind])] = [
-      ("r8", [.account, .network, .gdoc, .skills, .desktop, .mark, .launchAtLogin, .quit]),
-      ("e5", [.account, .gdoc, .skills, .desktop, .launchAtLogin, .quit]),
+      ("r8", [.account, .network, .gdoc, .desktop, .mark, .launchAtLogin, .quit]),
+      ("e5", [.account, .gdoc, .desktop, .launchAtLogin, .quit]),
       ("e8", [.account, .gdoc, .launchAtLogin, .quit]),
       ("e9", [.account, .gdoc, .desktop, .launchAtLogin, .quit]),
       ("e10", [.account, .gdoc, .desktop, .launchAtLogin, .quit]),
@@ -395,14 +395,13 @@ final class CardTests: XCTestCase {
       HealthRow(
         .account, value: "nail@example.com", glyph: .check, tone: .ok,
         action: IconAction(.signout, tip: "Sign out")),
-      HealthRow(
-        .network, value: "Google not reachable", glyph: .exclamation, tone: .bad,
-        quiet: "the internet is up, the handshake with Google fails"),
+      HealthRow(.network, value: "Google not reachable", glyph: .exclamation, tone: .bad),
       HealthRow(
         .gdoc, value: "v2.12.0 · v2.13.0 available", glyph: .check, tone: .ok,
         action: IconAction(.down, tip: "Update to v2.13.0")),
-      HealthRow(.skills, value: "v2.12.0 · altery plugin", glyph: .check, tone: .ok),
-      HealthRow(.desktop, value: "extension connected", glyph: .check, tone: .ok),
+      HealthRow(
+        .desktop, value: "not installed", glyph: .empty,
+        action: IconAction(.down, tip: "Install extension")),
       HealthRow(.mark, value: "⁘"),
       HealthRow(.launchAtLogin, value: "", isOn: true),
       HealthRow(.quit, value: HealthRows.quitShortcut),

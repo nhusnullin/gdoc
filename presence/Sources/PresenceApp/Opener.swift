@@ -2,9 +2,10 @@
 //
 // Four verbs: open a document in a browser, copy its link, open the note
 // paired with it in Obsidian, and bring Claude Desktop to the front. Every
-// NSWorkspace and NSPasteboard use in this package is here, which a source
-// scan in PresenceCoreTests holds, so what this app can put in front of
-// somebody is a list one person can read.
+// NSWorkspace and NSPasteboard use in this package is here or in
+// Relauncher.swift, which opens this app's own bundle and nothing else, and
+// a source scan in PresenceCoreTests holds the pair, so what this app can
+// put in front of somebody is a list one person can read.
 //
 // Nothing here decides a URL. A document's URL is built in
 // PresenceCore/LinkLine from an id held to the Drive shape, and a note's is
@@ -25,7 +26,6 @@
 import AppKit
 import Foundation
 import PresenceCore
-import PresenceUI
 
 /// What the app may ask of the system, as three verbs.
 ///
@@ -115,17 +115,5 @@ public struct Opener: Sendable {
   /// and the document row's branch icon is this: one activation, no prefill.
   @discardableResult public func continueWithClaude() -> Bool {
     desk.activate(Self.claudeDesktop)
-  }
-}
-
-extension NoteFault {
-  /// The words the greyed icon carries. The panel has no sentence of its own
-  /// for a hub nobody chose: without a hub there is no pairing, and the
-  /// person reads the same thing either way.
-  public var tip: String {
-    switch self {
-    case .noHub, .notPaired: Tips.noNote
-    case .movedOrDeleted, .outsideTheHub, .notMarkdown: Tips.noteMoved
-    }
   }
 }

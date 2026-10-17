@@ -124,6 +124,41 @@ final class OpenerTests: XCTestCase {
     XCTAssertEqual(desk.opened.count, 1, "nothing more was opened")
   }
 
+  /// The sentence only a failed open can produce. The index is rebuilt on a
+  /// file event, so an unpaired document greys itself; a note the index
+  /// still names and Obsidian will not open is a fault nothing else in the
+  /// panel can see, so the click that found it is what the icon carries.
+  func testAFailedOpenGreysTheIconWithItsReason() throws {
+    let moment = Date(timeIntervalSince1970: 1_792_000_000)
+    let written = try Event.decode(
+      """
+      {"v":1,"at":"\(ISO8601DateFormatter().string(from: moment))","gdoc":"v2.14.0",\
+      "pid":4201,"run":"0d1a2b3c4d5e6f70","call":1,"event":"end","command":"propose",\
+      "via":"terminal","doc":"\(Self.id)","title":"\(Self.title)","ok":true,"ms":10}
+      """)
+    let facts = Facts(
+      versions: Versions(app: "1.0"), hub: "/somewhere",
+      pairing: [Self.id: "notes/supplier-register.md"])
+
+    let paired = try noteIcon(in: written, facts: facts, ui: UIState())
+    XCTAssertEqual(paired.state, .live, "the index names a note, so the icon is live")
+
+    let failed = try noteIcon(
+      in: written, facts: facts, ui: UIState(noteFault: [Self.id: .movedOrDeleted]))
+    XCTAssertEqual(
+      failed.state, .off(Tips.noteMoved),
+      "the last click found nothing there, and the icon says so")
+  }
+
+  /// The Open md icon of the one document row the panel draws.
+  private func noteIcon(in event: Event, facts: Facts, ui: UIState) throws -> ActionModel {
+    let panel = PanelModel.build(
+      events: [event], facts: facts, ui: ui, now: event.at,
+      calendar: Calendar(identifier: .gregorian), alive: { _ in false })
+    let row = try XCTUnwrap(panel.documents?.rows.first)
+    return try XCTUnwrap(row.actions.first { $0.kind == .openNote })
+  }
+
   func testContinueWithClaudeOnlyActivatesTheApp() {
     let desk = NoteDesk()
     let opener = Opener(desk: desk)

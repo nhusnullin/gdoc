@@ -14,8 +14,12 @@
 // A dismissal names a run and a call, or a hold's own id, and nothing about
 // the document: a title or a document id in UserDefaults would be a word of
 // somebody's document kept outside the record, where nothing prunes it.
-// Sixty-two days is what prunes these: the tail reads two month files, so a
-// key older than that is about a line this app can no longer see.
+// Sixty-two days is what prunes the two keys that are about a moment, the
+// dismissals and the relaunch stamp: the tail reads two month files, so a
+// key older than that is about a line this app can no longer see. The other
+// four are answers rather than moments, and an answer does not go stale: an
+// "off" dropped after two months would register somebody at login again,
+// which is the one thing the specification says never happens.
 //
 // The store is handed in. UserDefaults is what the app passes; a test passes
 // a dictionary of its own, so no test writes to the defaults of the machine
@@ -57,8 +61,11 @@ public final class Preferences: @unchecked Sendable {
     case lastAccount
   }
 
-  /// How long anything the app wrote down is kept: sixty-two days, which is
-  /// past both month files the tail reads.
+  /// How long the two keys that are about a moment are kept: sixty-two
+  /// days, which is past both month files the tail reads. It is the
+  /// dismissals and the relaunch stamp, and no other key: the hub, the
+  /// strip, the launch-at-login answer and the last account are answers
+  /// rather than moments, and nothing prunes an answer.
   public static let keepFor: TimeInterval = 62 * 24 * 60 * 60
 
   private let store: DefaultsStore

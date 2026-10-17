@@ -161,6 +161,7 @@ public enum Days {
   ) -> [DayRow] {
     var rows: [DayRow] = []
     var ended: Set<String> = []
+    var held: [String: Event] = [:]
 
     for event in ordered {
       if event.kind == .end {
@@ -168,9 +169,11 @@ public enum Days {
         guard !event.wait, Now.stuckCommands.contains(event.command ?? "") else { continue }
         rows.append(action(event, titles: titles))
       } else if event.kind == .held {
+        held[event.hold ?? ""] = event
         rows.append(raised(event, titles: titles))
       } else if let ending = HoldEnding(event.kind) {
-        rows.append(closed(event, ending: ending, titles: titles))
+        rows.append(
+          closed(event, held: held[event.hold ?? ""], ending: ending, titles: titles))
       }
     }
 
@@ -208,10 +211,27 @@ public enum Days {
     row(.holdRaised, event, titles: titles, rule: event.rule)
   }
 
+  /// A hold that stopped waiting, with the held line's own words on it.
+  ///
+  /// The ending line carries the hold's id and nothing else:
+  /// `go/internal/presence`'s released, expired, landed and dropped write no
+  /// command, no document and no rule, so a row built from the ending alone
+  /// would say only "Hold closed" and would not count towards the day's
+  /// documents. The moment and the kind are the ending's; everything a
+  /// person reads is the held line's: testTodayCarriesTheSyntheticRows.
+  ///
+  /// A held line this app never saw, because it is in a month the tail does
+  /// not read, leaves the row as bare as the ending that closed it.
   private static func closed(
-    _ event: Event, ending: HoldEnding, titles: [String: String]
+    _ event: Event, held: Event?, ending: HoldEnding, titles: [String: String]
   ) -> DayRow {
-    row(.holdClosed, event, titles: titles, rule: event.rule, ending: ending)
+    guard let held else {
+      return row(.holdClosed, event, titles: titles, rule: event.rule, ending: ending)
+    }
+    return DayRow(
+      kind: .holdClosed, at: event.at, command: held.command, via: held.via,
+      doc: Fold.subject(held), title: title(held, titles), ok: nil, verified: nil, ms: nil,
+      rule: held.rule, ending: ending, totals: nil, stop: nil, line: nil)
   }
 
   private static func began(_ session: LiveSession) -> DayRow {

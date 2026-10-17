@@ -75,6 +75,33 @@ final class PreferencesTests: XCTestCase {
     XCTAssertFalse(store.text.contains("01OLD|1"), "the pruned one leaves the store too")
   }
 
+  /// Two of the six keys are stamps and four are answers, and only a stamp
+  /// is pruned. An answer that went stale after two months would be the
+  /// app changing its mind about something the person said: a dropped "off"
+  /// puts the app back in their login items, and a dropped hub takes the
+  /// pairing away from somebody who chose a folder once.
+  func testOnlyTheTwoStampsArePruned() {
+    let now = Self.at("2026-10-17T09:30:00Z")
+    let long = now.addingTimeInterval(-63 * 24 * 60 * 60)
+    let store = Store()
+    let preferences = Preferences(store: store)
+
+    preferences.hub = "/Users/someone/hub"
+    preferences.stripSeen = true
+    preferences.loginItemChoice = .off
+    preferences.lastAccount = "someone@example.com"
+    preferences.dismiss("01OLD|1", at: long)
+    preferences.noteRelaunch(version: "2.14.0", at: long)
+
+    XCTAssertTrue(preferences.dismissals(now: now).isEmpty, "a stamp past the horizon goes")
+    XCTAssertNil(preferences.lastRelaunch(now: now), "and so does the relaunch's")
+
+    XCTAssertEqual(preferences.hub, "/Users/someone/hub", "the folder they chose stays")
+    XCTAssertTrue(preferences.stripSeen, "labels read once are read")
+    XCTAssertEqual(preferences.loginItemChoice, .off, "an off is never turned back on")
+    XCTAssertEqual(preferences.lastAccount, "someone@example.com")
+  }
+
   // MARK: the six keys
 
   func testOnlyTheSixKeysPersist() {

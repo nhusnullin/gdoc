@@ -43,6 +43,9 @@ final class DocumentsTests: XCTestCase {
         try moment("2026-10-17T10:20:30Z"), try moment("2026-10-17T09:10:30Z"),
         try moment("2026-10-17T08:00:00Z"), try moment("2026-10-05T10:03:00Z"),
       ])
+    // The policy row is done and not held: its landed line carries the
+    // hold's id and no document, which is the only shape gdoc writes, and a
+    // hold that was answered waits for nobody.
     XCTAssertEqual(
       fold.rows.map(\.state), [.unknown, .liveStopped, .done, .done, .failed, .done])
     XCTAssertEqual(

@@ -119,14 +119,21 @@ public enum Live {
   /// A wait is a start whose line says `wait`, which only `comments` writes.
   /// A wait on no document is left out: a watch is a watch of something, and
   /// nothing in the panel could name that row.
+  ///
+  /// The `wait` test is the start's alone. `go/internal/presence` writes the
+  /// field on the start and never on the end, so an end held to it would
+  /// pair with nothing and every poll would stay open for ever: the end is
+  /// found by the start's own `run|call` instead, which is what pairs the
+  /// two halves of every other command.
+  /// testAnEndWithoutTheWaitFieldStillClosesItsStart.
   private static func waits(_ ordered: [Event]) -> [Poll] {
     var polls: [String: Int] = [:]
     var found: [Poll] = []
 
     for event in ordered {
-      guard event.wait, let doc = event.doc, !doc.isEmpty else { continue }
       switch event.kind {
       case .start:
+        guard event.wait, let doc = event.doc, !doc.isEmpty else { continue }
         polls[event.pairing] = found.count
         found.append(
           Poll(

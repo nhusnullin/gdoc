@@ -52,6 +52,50 @@ final class SignInTests: XCTestCase {
     XCTAssertEqual(account, "someone@example.com")
   }
 
+  /// The live path and the pure reading are one rule. A child that printed
+  /// something else after the sentence has had its turn: a Google link three
+  /// lines later is not the login's link, and the panel never opens it.
+  func testTheLiveRuleIsTheReadingsRule() async {
+    let said = """
+      \(SignIn.linkAsk)
+      something else entirely
+      \(Self.real)
+      """
+    XCTAssertNil(
+      SignIn.link(inStandardError: said),
+      "the first non-empty line after the sentence was not a link")
+
+    let desk = NoteDesk()
+    let child = HeldChild(
+      lines: [SignIn.linkAsk, "something else entirely", Self.real],
+      envelope: Envelope(ok: true), endsAtOnce: true)
+    let signIn = SignIn(start: { child }, open: { desk.open($0) })
+    let result = await signIn.run()
+
+    XCTAssertEqual(
+      result, .refused("something else entirely"),
+      "the child printed somewhere else, which is not a sign-in")
+    XCTAssertTrue(desk.opened.isEmpty, "and the later link was never opened")
+  }
+
+  /// The child writes its sentence and its link in one write, so the sink is
+  /// called twice in a row off one thread. Both lines must reach the actor
+  /// in that order, however many times this runs.
+  func testTheLinkIsTakenHoweverTheLinesAreDelivered() async {
+    for _ in 0..<50 {
+      let desk = NoteDesk()
+      let child = HeldChild(
+        lines: [SignIn.linkAsk, Self.real], envelope: Envelope(ok: true))
+      let signIn = SignIn(start: { child }, open: { desk.open($0) })
+      let running = Task { await signIn.run() }
+      await child.printed()
+      await tookTheLink(signIn)
+      await child.finish()
+      _ = await running.value
+      XCTAssertEqual(desk.opened.map(\.absoluteString), [Self.real])
+    }
+  }
+
   func testOnlyGooglesSignInURLIsRefusedFromAChild() async {
     let desk = NoteDesk()
     let child = HeldChild(

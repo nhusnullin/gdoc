@@ -81,10 +81,18 @@ final class DaysTests: XCTestCase {
     XCTAssertEqual(raised.via, "chat")
     XCTAssertNil(raised.ending)
 
+    // The ending line carries the hold's id and nothing else, so everything
+    // a person reads on this row comes off the held line it closes. A row
+    // built from the ending alone would say only "Hold closed" and would
+    // leave the document out of the day's count.
     let closed = try XCTUnwrap(fold.today.first { $0.kind == .holdClosed })
-    XCTAssertEqual(closed.at, try moment("2026-10-17T10:20:00Z"))
+    XCTAssertEqual(closed.at, try moment("2026-10-17T10:20:00Z"), "the ending's own moment")
     XCTAssertEqual(closed.ending, .landed, "the person said yes in the chat")
     XCTAssertEqual(closed.doc, policy)
+    XCTAssertEqual(closed.command, "reply")
+    XCTAssertEqual(closed.via, "chat")
+    XCTAssertEqual(closed.rule, "dictated")
+    XCTAssertEqual(closed.title, "Group Channel Policy: the frozen vocabulary")
 
     let started = try XCTUnwrap(fold.today.first { $0.kind == .liveStarted })
     XCTAssertEqual(started.at, try moment("2026-10-17T11:00:00Z"))

@@ -12,11 +12,11 @@
 // nothing at all, and this one launches the six.
 //
 // The rest are about what the app does to the machine and what it puts in
-// front of somebody: the system is asked through one file, an application is
-// opened by one file, this machine's login items are touched by one file, and
-// the only addresses any of them can build are two schemes and two hosts. A
-// line of the record is forgeable, so a click that came out of one must have
-// nowhere else to go.
+// front of somebody: the system is asked through two files, one application
+// is opened at a path by one of them, this machine's login items are touched
+// by one file, and the only addresses any of them can build are two schemes
+// and two hosts. A line of the record is forgeable, so a click that came out
+// of one must have nowhere else to go.
 
 import Foundation
 import XCTest
@@ -229,13 +229,17 @@ final class SourceRulesTests: XCTestCase {
       "both files are there and both ask the system, so this test guards something")
   }
 
-  /// One file starts an application, and the application is this app.
+  /// One file opens an application at a path, and the application is this
+  /// app.
   ///
-  /// Every other route to the system is a URL or an activation of an app a
-  /// person installed themselves. Opening a bundle at a path is the one call
-  /// that could start anything at all, so it is held to the file that opens
-  /// this app's own bundle, with the new instance and the no-activation the
-  /// specification names.
+  /// The scan is of `openApplication`, which takes a bundle URL the caller
+  /// built and is the one call that could start anything at all, so it is
+  /// held to the file that opens this app's own bundle, with the new
+  /// instance and the no-activation the specification names. The opener can
+  /// also bring an application up, by the identifier of Claude Desktop and
+  /// no other: `SystemDesk.activate` asks the workspace for that bundle's
+  /// own URL rather than naming a path, which is held by the scheme and
+  /// host test below and by the identifier being a constant.
   func testOnlyTheRelauncherOpensAnApplication() throws {
     let start = "openApp" + "lication"
 

@@ -170,11 +170,14 @@ public final class Stopper: @unchecked Sendable {
   /// was renamed under the running process answers with its new name, which
   /// is why `ProcessCheck` takes `gdoc.previous` for gdoc: measured
   /// 2026-10-17 and written into `docs/v2/MEASURED.md`.
+  /// `proc_pidpath` writes the path and returns its length, so the bytes it
+  /// wrote are the whole of the answer and the null after them is not part
+  /// of it.
   private static func path(of pid: Int32) -> String? {
-    var buffer = [CChar](repeating: 0, count: Int(4 * MAXPATHLEN))
+    var buffer = [UInt8](repeating: 0, count: Int(4 * MAXPATHLEN))
     let length = proc_pidpath(pid, &buffer, UInt32(buffer.count))
     guard length > 0 else { return nil }
-    return String(cString: buffer)
+    return String(decoding: buffer[..<Int(length)], as: UTF8.self)
   }
 
   /// Whose the process is and when it began.
@@ -218,14 +221,21 @@ public final class Stopper: @unchecked Sendable {
   /// command, from the right place and inside its window is the check's
   /// question and not this one's, so a line that says the wrong thing is
   /// found here and refused there by name.
+  ///
+  /// Only the start is held to `wait`: `go/internal/presence` writes the
+  /// field on the start and never on the end, and an end held to it would
+  /// never be found, so every wait would look open for ever and a signalled
+  /// one would never be forgotten. An end is paired by its `run|call`, which
+  /// no other run can carry: testAnEndWithoutTheWaitFieldEndsTheWait.
   static func latestWait(doc: String, in events: [Event]) -> (Event, Bool)? {
     var ends: Set<String> = []
     var newest: Event?
     for event in events {
-      guard event.doc == doc, event.wait else { continue }
+      guard event.doc == doc else { continue }
       switch event.kind {
       case .end: ends.insert(event.pairing)
       case .start:
+        guard event.wait else { continue }
         if newest == nil || event.at >= (newest?.at ?? event.at) { newest = event }
       default: continue
       }

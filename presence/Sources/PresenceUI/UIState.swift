@@ -12,6 +12,7 @@
 // die with the panel, which is what they are for.
 
 import Foundation
+import PresenceCore
 
 /// The three lists a person can open.
 public enum PanelList: String, Sendable, Equatable, CaseIterable {
@@ -53,6 +54,13 @@ public struct UIState: Sendable, Equatable {
   /// Whether the four labels under the first document row have been seen.
   /// They go after the first click on any icon and never come back.
   public var stripSeen: Bool
+  /// Why the last Open md on a document did not open anything, by document.
+  /// A click that went nowhere is the one route to "Note moved or deleted":
+  /// the index is rebuilt on a file event, but a note Obsidian would not
+  /// open is a fault nothing else in the panel can see. It greys the icon,
+  /// so the click that would clear it cannot be made: it dies with the panel
+  /// instead, and the next open of the panel is a live icon again.
+  public var noteFault: [String: NoteFault]
 
   public init(
     dismissed: Set<String> = [],
@@ -63,7 +71,8 @@ public struct UIState: Sendable, Equatable {
     question: PanelQuestion? = nil,
     questionAt: Date? = nil,
     forcedTooltip: String? = nil,
-    stripSeen: Bool = true
+    stripSeen: Bool = true,
+    noteFault: [String: NoteFault] = [:]
   ) {
     self.dismissed = dismissed
     self.expanded = expanded
@@ -74,6 +83,7 @@ public struct UIState: Sendable, Equatable {
     self.questionAt = questionAt
     self.forcedTooltip = forcedTooltip
     self.stripSeen = stripSeen
+    self.noteFault = noteFault
   }
 
   /// Whether a list is open.

@@ -165,8 +165,7 @@ public actor HealthPoller {
       versions: Versions(
         app: facts.versions.app,
         gdoc: reading.help?.installed ?? reading.auth?.version ?? facts.versions.gdoc,
-        latestStable: reading.help?.latestStable ?? facts.versions.latestStable,
-        skills: facts.versions.skills),
+        latestStable: reading.help?.latestStable ?? facts.versions.latestStable),
       mark: reading.help?.mark ?? facts.mark,
       gdocPath: location.path,
       gdocPathTried: location.tried,

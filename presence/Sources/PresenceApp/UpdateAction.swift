@@ -60,10 +60,27 @@ public actor UpdateAction {
   }
 
   /// Run `update --desktop`, which writes the Claude Desktop extension and
-  /// hands it to Desktop. Whether Desktop then installs it is not something
-  /// this app is told, so no fact here changes.
-  public func installExtension() async -> UpdateStanding {
-    await ran(.updateDesktop)
+  /// hands it to Desktop, and say whether the handing over happened.
+  ///
+  /// Whether Desktop then installs it is not something this app is told, so
+  /// no version and no standing moves. What it is told is `extension_opened`:
+  /// the command writes the file and then opens it, and an open that failed
+  /// is a warning with the file left where it is, by the house rule that
+  /// nothing raises over a write that happened. So the file beside the
+  /// binary is no proof that Desktop was ever offered one, and this answer
+  /// is what the panel keeps instead:
+  /// testTheExtensionRunSaysWhetherDesktopWasHandedIt.
+  ///
+  /// The one answer is also the whole answer: a run that wrote nothing
+  /// leaves the row and its button where they were, and the reason it wrote
+  /// nothing is not a sentence this panel has anywhere to put. Saying it
+  /// would be a word on a row, which is a decision and not a refactor:
+  /// docs/backlog/install-extension-says-nothing-when-the-run-did-nothing.md.
+  public func installExtension() async -> Bool {
+    guard let outcome = try? await answer(.updateDesktop), outcome.envelope.ok,
+      let data = outcome.envelope.data, let report = try? UpdateReport.decode(data)
+    else { return false }
+    return report.extensionOpened
   }
 
   /// The panel's facts with the run written into them: the ring while the
@@ -80,8 +97,7 @@ public actor UpdateAction {
       versions: Versions(
         app: facts.versions.app,
         gdoc: installed ?? facts.versions.gdoc,
-        latestStable: facts.versions.latestStable,
-        skills: facts.versions.skills),
+        latestStable: facts.versions.latestStable),
       mark: facts.mark,
       gdocPath: facts.gdocPath,
       gdocPathTried: facts.gdocPathTried,
@@ -123,7 +139,7 @@ public actor UpdateAction {
   }
 }
 
-/// What `gdoc update` printed, as the two fields the panel reads.
+/// What `gdoc update` printed, as the three fields the panel reads.
 ///
 /// Strict, by the rule the record's own decoder follows: a field a newer gdoc
 /// prints is read past, and one this app knows that holds the wrong kind of
@@ -134,12 +150,18 @@ struct UpdateReport: Equatable {
 
   let action: String?
   let to: String?
+  /// Whether the extension reached Claude Desktop. gdoc prints the field
+  /// only where it did, so an absent field is a run that opened nothing,
+  /// which is the same silence a run without `--desktop` leaves.
+  let extensionOpened: Bool
 
   static func decode(_ data: Data) throws -> UpdateReport {
     guard let top = try? JSONSerialization.jsonObject(with: data, options: []),
       let object = top as? [String: Any]
     else { throw UpdateFault.undecodable("the update's data is not an object") }
-    return UpdateReport(action: try string("action", in: object), to: try string("to", in: object))
+    return UpdateReport(
+      action: try string("action", in: object), to: try string("to", in: object),
+      extensionOpened: try flag("extension_opened", in: object) ?? false)
   }
 
   private static func string(_ name: String, in object: [String: Any]) throws -> String? {
@@ -148,6 +170,17 @@ struct UpdateReport: Equatable {
       throw UpdateFault.undecodable("\(name) is not a string")
     }
     return text
+  }
+
+  /// A boolean held to being one, the way the envelope holds `ok`: a number
+  /// or a string in its place is something other than gdoc writing the
+  /// field, and `as? Bool` would take a 1 for a yes.
+  private static func flag(_ name: String, in object: [String: Any]) throws -> Bool? {
+    guard let held = object[name] else { return nil }
+    guard let number = held as? NSNumber, CFGetTypeID(number) == CFBooleanGetTypeID() else {
+      throw UpdateFault.undecodable("\(name) is not a boolean")
+    }
+    return number.boolValue
   }
 }
 

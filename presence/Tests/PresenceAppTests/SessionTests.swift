@@ -43,13 +43,131 @@ final class SessionTests: XCTestCase {
 
   // MARK: what the shell is handed
 
+  /// The Network row is the record's own word and never a connection this
+  /// app opened: `stop: "network"` is what gdoc writes when a request did
+  /// not get to Google, and a later command that worked is the answer to it.
+  ///
+  /// Two commands say nothing about Google and are read past: `auth logout`
+  /// opens no connection, and `update` reads GitHub. A `not_found` is
+  /// Google answering, so it clears the row the way a success does.
+  func testTheNetworkRowIsTheRecordsOwnWord() throws {
+    let failed = line(
+      kind: "end", command: "reply", call: 1, doc: Self.doc,
+      extra: "\"ok\":false,\"stop\":\"network\"")
+    try writeTheRecord([line(kind: "start", command: "reply", call: 1, doc: Self.doc), failed])
+
+    let session = made()
+    answered(session)
+    XCTAssertEqual(
+      session.facts.network, NetworkFact(reachable: false), "the last thing gdoc said")
+    XCTAssertTrue(
+      session.model.health.contains { $0.kind == .network },
+      "which the panel draws as a row of its own")
+
+    // A command that worked afterwards answers it, and the row goes.
+    let settled = expectation(description: "the later end reached the panel")
+    settled.assertForOverFulfill = false
+    session.start { [weak session] in
+      if session?.facts.network == NetworkFact(reachable: true) { settled.fulfill() }
+    }
+    try writeTheRecord([
+      line(kind: "start", command: "reply", call: 1, doc: Self.doc), failed,
+      line(kind: "start", command: "reply", call: 2, doc: Self.doc),
+      line(kind: "end", command: "reply", call: 2, doc: Self.doc, extra: "\"ok\":true"),
+    ])
+    wait(for: [settled], timeout: 20)
+    XCTAssertFalse(session.model.health.contains { $0.kind == .network })
+
+    // And the ends that are not about Google, read as the fold reads them.
+    let logout = try Event.decode(
+      line(kind: "end", command: "auth logout", call: nil, doc: nil, extra: "\"ok\":true"))
+    XCTAssertEqual(
+      Reachability.latest(in: [try Event.decode(failed), logout]), false,
+      "a logout opens no connection, so it answers nothing")
+
+    let github = try Event.decode(
+      line(
+        kind: "end", command: "update", call: nil, doc: nil,
+        extra: "\"ok\":false,\"stop\":\"network\""))
+    XCTAssertNil(
+      Reachability.latest(in: [github]), "update reads GitHub, and the row names Google")
+
+    let notFound = try Event.decode(
+      line(
+        kind: "end", command: "read", call: 2, doc: Self.doc,
+        extra: "\"ok\":false,\"stop\":\"not_found\""))
+    XCTAssertEqual(
+      Reachability.latest(in: [try Event.decode(failed), notFound]), true,
+      "a 404 is Google answering")
+  }
+
+  /// The Claude Desktop row says the one thing the app can prove: gdoc never
+  /// wrote the extension here, because there is no `gdoc.mcpb` beside the
+  /// binary. Once there is one, the app has nothing left to say: whether
+  /// Desktop loaded it is not a question it has a way to ask.
+  func testTheExtensionRowAppearsOnlyUntilGdocHasWrittenOne() throws {
+    try writeTheRecord([])
+
+    let session = made()
+    answered(session)
+    XCTAssertEqual(session.facts.extensionState, .notInstalled)
+    let row = try XCTUnwrap(session.model.health.first { $0.kind == .desktop })
+    XCTAssertEqual(row.value, "not installed")
+    XCTAssertEqual(row.actions.map(\.kind), [.installExtension])
+
+    try Data("not really an extension".utf8).write(
+      to: gdoc.deletingLastPathComponent().appendingPathComponent("gdoc.mcpb"))
+    let written = made()
+    answered(written)
+    XCTAssertEqual(written.facts.extensionState, .written)
+    XCTAssertNil(
+      written.model.health.first { $0.kind == .desktop },
+      "a file that is there says nothing about what Desktop loaded")
+  }
+
+  /// A run that wrote the extension and could not hand it to Claude Desktop
+  /// leaves the row and its button where they were.
+  ///
+  /// `update --desktop` writes `gdoc.mcpb` before it opens it, and an open
+  /// that refused is a warning with the file still there. So the file alone
+  /// would take the row away on a machine that was never offered anything,
+  /// and the person who pressed the button would be left with nothing to
+  /// press and nothing said. `extension_opened` is what the row goes on, and
+  /// the fake gdoc here writes the file and prints no such field, which is
+  /// what the real one prints when the open failed.
+  func testARunThatOpenedNothingLeavesTheRowWhereItWas() throws {
+    try writeTheRecord([])
+    let session = made()
+    answered(session)
+    XCTAssertEqual(session.facts.extensionState, .notInstalled)
+
+    let mcpb = gdoc.deletingLastPathComponent().appendingPathComponent("gdoc.mcpb")
+    let ended = expectation(description: "the extension run reached the panel")
+    ended.assertForOverFulfill = false
+    session.start { [weak session] in
+      guard let session, !session.extensionHandedOver else { return }
+      ended.fulfill()
+    }
+    session.perform(.installExtension, "desktop")
+    wait(for: [ended], timeout: 20)
+
+    XCTAssertTrue(
+      FileManager.default.fileExists(atPath: mcpb.path), "the run wrote the file either way")
+    XCTAssertEqual(
+      session.facts.extensionState, .notInstalled,
+      "and Desktop was never offered it, whatever is on the disk")
+    let row = try XCTUnwrap(session.model.health.first { $0.kind == .desktop })
+    XCTAssertEqual(row.actions.map(\.kind), [.installExtension], "so the button stays")
+    XCTAssertTrue(try argv().contains("update --desktop"), "one run, and the flag it was for")
+  }
+
   /// The facts are the polls', the stores' and the record's, and the model is
   /// built out of all three.
   func testTheFactsComeFromThePollsTheStoresAndTheRecord() throws {
     try writeTheRecord([
       line(kind: "start", command: "comments", call: 1, doc: Self.doc, wait: true),
       line(
-        kind: "end", command: "comments", call: 1, doc: Self.doc, wait: true,
+        kind: "end", command: "comments", call: 1, doc: Self.doc,
         extra: "\"title\":\"Supplier register\",\"ok\":true"),
     ])
     let store = Store()
@@ -112,8 +230,61 @@ final class SessionTests: XCTestCase {
     XCTAssertEqual(desk.activated, [Opener.claudeDesktop], "one activation, no prefill")
 
     // No hub is chosen, so there is no note to open and nothing is opened.
+    // The click keeps why, which is what greys the icon.
     session.perform(.openNote, Self.doc)
     XCTAssertEqual(desk.opened.count, 1, "the note icon opened nothing")
+    XCTAssertEqual(session.ui.noteFault[Self.doc], .noHub, "and the click kept why")
+  }
+
+  /// A fault on Open md greys the icon, and a greyed icon cannot be pressed,
+  /// so the panel going away is the one thing that ends it. Without that, a
+  /// hub chosen after the click would leave the icon grey until the app
+  /// quit, and the comment about the next click working would be about a
+  /// click nobody can make.
+  func testAFaultGoesWhenThePanelOpensAgain() throws {
+    try writeTheRecord([line(kind: "start", command: "reply", call: 1, doc: Self.doc)])
+    let session = made()
+    answered(session)
+
+    // No hub is chosen, so the click goes nowhere and the icon says why.
+    session.perform(.openNote, Self.doc)
+    XCTAssertEqual(session.ui.noteFault[Self.doc], .noHub)
+    let greyed = try noteIcon(of: session)
+    XCTAssertEqual(greyed.state, .off(NoteFault.noHub.tip))
+    XCTAssertFalse(
+      ActionButton.isPressable(greyed.state), "so no second click can take it away")
+
+    // The panel opening again is what takes it away.
+    session.opened()
+    XCTAssertTrue(session.ui.noteFault.isEmpty, "the fault died with the panel it was raised in")
+  }
+
+  /// A watch going quiet is three minutes passing and no new line, and the
+  /// four folds the screen is built from are the only things that notice it.
+  func testAQuietWatchRedrawsWithNoNewLine() throws {
+    let started = try Event.decode(
+      line(kind: "start", command: "comments", call: 1, doc: Self.doc, wait: true))
+    let ended = try Event.decode(
+      line(kind: "end", command: "comments", call: 1, doc: Self.doc, extra: "\"ok\":true"))
+    let events = [started, ended]
+    let calendar = Calendar(identifier: .gregorian)
+
+    let between = Drawn(
+      events, now: ended.at.addingTimeInterval(10), dismissed: [], calendar: calendar,
+      alive: { _ in false })
+    let quiet = Drawn(
+      events, now: ended.at.addingTimeInterval(Live.gap + 1), dismissed: [], calendar: calendar,
+      alive: { _ in false })
+
+    XCTAssertTrue(between.sessions.allSatisfy(\.isOpen), "a wait between two polls is a watch")
+    XCTAssertTrue(quiet.sessions.allSatisfy { !$0.isOpen }, "three minutes later it is not")
+    XCTAssertNotEqual(quiet, between, "so the screen is drawn again with no line to read")
+  }
+
+  /// The Open md icon of the one document row the panel draws.
+  private func noteIcon(of session: Session) throws -> ActionModel {
+    let row = try XCTUnwrap(session.model.documents?.rows.first)
+    return try XCTUnwrap(row.actions.first { $0.kind == .openNote })
   }
 
   /// A hold asks before its card goes and a failed write does not. Both end
@@ -224,12 +395,46 @@ final class SessionTests: XCTestCase {
     XCTAssertFalse(session.ui.isOpen(.documents))
   }
 
+  /// A redraw is decided by the folds the screen is drawn from, so a line
+  /// only one of them reads still moves the panel. A `step` is that line:
+  /// nothing but the ring and the job card changes when one arrives, and a
+  /// publish whose step never reached the panel would sit at its first part
+  /// until the run ended.
+  func testAStepLineRedrawsTheJobCard() throws {
+    let start = line(kind: "start", command: "publish", call: 1, doc: Self.doc)
+    try writeTheRecord([start])
+
+    let session = made(alive: { _ in true })
+    let settled = expectation(description: "the start reached the panel")
+    settled.assertForOverFulfill = false
+    let moved = expectation(description: "the step reached the panel")
+    moved.assertForOverFulfill = false
+    session.start { [weak session] in
+      guard let session else { return }
+      let jobs = Now.fold(
+        session.events, now: Date(), dismissed: [], alive: { _ in true }
+      ).jobs
+      if jobs.count == 1 { settled.fulfill() }
+      if jobs.compactMap(\.step) == ["upload"] { moved.fulfill() }
+    }
+    wait(for: [settled], timeout: 20)
+
+    try writeTheRecord([
+      start,
+      line(
+        kind: "step", command: "publish", call: 1, doc: Self.doc,
+        extra: "\"step\":\"upload\",\"index\":2,\"count\":4"),
+    ])
+    wait(for: [moved], timeout: 20)
+  }
+
   // MARK: a session over this test's own machine
 
   private func made(
     preferences: Preferences = Preferences(store: Store()),
     desk: Desk = FakeDesk(),
     loginService: LoginService = FakeRegister(),
+    alive: @escaping (Int32) -> Bool = { _ in false },
     quit: @escaping () -> Void = {}
   ) -> Session {
     let made = Session(
@@ -241,7 +446,7 @@ final class SessionTests: XCTestCase {
       desk: desk,
       loginService: loginService,
       environment: ["HOME": root.path, "PATH": "/usr/bin:/bin"],
-      alive: { _ in false },
+      alive: alive,
       quit: quit)
     session = made
     return made
@@ -318,6 +523,11 @@ final class SessionTests: XCTestCase {
         ;;
       "auth logout")
         printf '{"ok":true,"data":{"removed":true}}\\n'
+        ;;
+      "update --desktop")
+        printf 'not really an extension' > "$(dirname "$0")/gdoc.mcpb"
+        printf '{"ok":true,"data":{"installed":"v2.14.0",\
+      "extension":"gdoc.mcpb"},"warnings":["the open refused"]}\\n'
         ;;
       *)
         printf '{"ok":false,"error":"this gdoc was not asked for that"}\\n'

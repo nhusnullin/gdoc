@@ -1,4 +1,4 @@
-// HEALTH: the same eight rows, in the same order, on every screen.
+// HEALTH: the same seven rows, in the same order, on every screen.
 //
 // `HROW` in docs/design/2026-10-17-presence-screens-v3.html is the 28 pt
 // compact row, and HEALTH is a list of them with one rule this file holds:
@@ -19,7 +19,7 @@
 
 import SwiftUI
 
-/// The eight rows, in the order HEALTH draws them.
+/// The seven rows, in the order HEALTH draws them.
 public enum HealthRowKind: String, Sendable, CaseIterable {
   /// The signed-in address, with Sign in or Sign out beside it.
   case account
@@ -27,9 +27,9 @@ public enum HealthRowKind: String, Sendable, CaseIterable {
   case network
   /// The binary's version, and the one a release named.
   case gdoc
-  /// The skills, and where they came from.
-  case skills
-  /// Whether the Claude Desktop extension is connected.
+  /// Whether Claude Desktop can have an extension at all: none was ever
+  /// written on this machine, or a run of this process wrote one and could
+  /// not hand it over.
   case desktop
   /// The mark in effect, which is a setting of the binary's.
   case mark
@@ -45,7 +45,6 @@ public enum HealthRowKind: String, Sendable, CaseIterable {
     case .account: return "Account"
     case .network: return "Network"
     case .gdoc: return "gdoc"
-    case .skills: return "Skills"
     case .desktop: return "Claude Desktop"
     case .mark: return "Thread mark"
     case .launchAtLogin: return "Launch at login"

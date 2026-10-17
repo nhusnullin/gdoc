@@ -28,7 +28,7 @@ extension Session {
       opener.openDocument(target)
       sawTheStrip()
     case .openNote:
-      _ = opener.openNote(document: target, hub: preferences.hub, pairing: index.notes)
+      openTheNote(target)
       sawTheStrip()
     case .openChat:
       opener.continueWithClaude()
@@ -81,6 +81,24 @@ extension Session {
     ui = ui.afterAnIconClick()
     preferences.stripSeen = true
     changed()
+  }
+
+  /// Open the note, and keep why it did not open where it did not.
+  ///
+  /// A click that goes nowhere has to say so: the index is rebuilt on a file
+  /// event, so a note somebody deleted usually greys itself, but a note
+  /// Obsidian refuses is a fault only the opening knows about. The icon
+  /// carries it for as long as the panel is up, and `opened()` is what takes
+  /// it away: a greyed icon cannot be pressed, so a second click is not a
+  /// route out of it: testAFaultGoesWhenThePanelOpensAgain.
+  private func openTheNote(_ doc: String?) {
+    guard let doc else { return }
+    switch opener.openNote(document: doc, hub: preferences.hub, pairing: index.notes) {
+    case .success:
+      ui.noteFault.removeValue(forKey: doc)
+    case .failure(let fault):
+      ui.noteFault[doc] = fault
+    }
   }
 
   private func copyTheLink(_ doc: String?) {
@@ -193,11 +211,20 @@ extension Session {
     }
   }
 
+  /// `gdoc update --desktop`. The row it is pressed from stays where the run
+  /// did not hand the extension to Claude Desktop, because the file the row
+  /// otherwise reads is written before the handing over and left behind when
+  /// it fails: testARunThatOpenedNothingLeavesTheRowWhereItWas.
+  ///
+  /// The redraw is unconditional, unlike a refold's: a run a person started
+  /// may end with no fact moved at all, and the screen is still owed the
+  /// end of it.
   private func installTheExtension() {
     Task { [weak self] in
       guard let self else { return }
-      _ = await self.updates.installExtension()
+      self.extensionHandedOver = await self.updates.installExtension()
       await self.recompose()
+      self.changed()
     }
   }
 

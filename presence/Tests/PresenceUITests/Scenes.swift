@@ -85,7 +85,7 @@ enum Scenes {
     previousAccount: String? = nil,
     latestStable: String? = nil,
     gdocFound: Bool = true,
-    extensionState: ExtensionState = .connected,
+    extensionState: ExtensionState = .written,
     network: NetworkFact? = nil,
     signIn: SignInPhase? = nil,
     signedInAt: Date? = nil
@@ -95,8 +95,7 @@ enum Scenes {
       auth: auth,
       previousAccount: previousAccount,
       versions: Versions(
-        app: "2.14.0", gdoc: gdocFound ? "v2.14.0" : nil, latestStable: latestStable,
-        skills: "v2.14.0 · altery plugin"),
+        app: "2.14.0", gdoc: gdocFound ? "v2.14.0" : nil, latestStable: latestStable),
       mark: "⁘",
       gdocPath: gdocFound ? gdocPath : nil,
       hub: hub,
@@ -170,13 +169,13 @@ enum Scenes {
       id: "r8", title: "Google did not answer",
       caption:
         "The last poll failed, and the record says what kind of trouble it was in one "
-        + "word. The row says the moment and that word; HEALTH carries what the machine "
-        + "knows about the network itself.",
+        + "word. The row says the moment and that word, and HEALTH says the same thing "
+        + "about the machine: the app opens no connection, so Google not answering is "
+        + "only ever something gdoc wrote down.",
       fixture: "r8", moment: "2026-10-17T17:05:00Z", alive: [],
       facts: machine(
         latestStable: "v2.15.0",
-        network: NetworkFact(
-          reachable: false, detail: "the internet is up, the handshake with Google fails")),
+        network: NetworkFact(reachable: false)),
       ui: UIState(), appearance: nil),
     Scene(
       id: "r9", title: "You stopped the watch",

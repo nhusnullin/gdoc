@@ -124,6 +124,26 @@ final class StopperTests: XCTestCase {
       "one signal per wait, to the pid that wait named")
   }
 
+  /// The Go writer puts `wait` on the start and nothing about waiting on the
+  /// end, so an end held to that field would never be found: the wait would
+  /// look open for ever and a signalled one would keep its ring for ever.
+  func testAnEndWithoutTheWaitFieldEndsTheWait() throws {
+    let at = try moment("2026-10-17T12:00:00Z")
+    let closed = waiting(at: at) + [end(at: at.addingTimeInterval(6))]
+
+    let found = try XCTUnwrap(Stopper.latestWait(doc: Self.doc, in: closed))
+    XCTAssertTrue(found.1, "the end paired with its start")
+    XCTAssertTrue(Stopper.openWaits(in: closed).isEmpty, "so no wait is open")
+
+    // And the memory of a signal is let go once that end is in the record.
+    let desk = Desk()
+    let stopper = armed(desk)
+    XCTAssertEqual(stopper.stop(doc: Self.doc, in: waiting(at: at)), .signalled)
+    XCTAssertEqual(
+      stopper.pendingDocs(in: waiting(at: at)), [Self.doc], "the ring is on until the end")
+    XCTAssertTrue(stopper.pendingDocs(in: closed).isEmpty, "and off once the end arrived")
+  }
+
   // MARK: what the panel says
 
   func testAFailedCheckGreysStopWithItsTooltip() throws {
@@ -229,7 +249,7 @@ final class StopperTests: XCTestCase {
   private func end(at: Date, run: String = "a1b2c3d4e5f60718") -> Event {
     Event(
       schema: 1, at: at, gdoc: "v2.14.0", pid: 4311, run: run, call: 3, kind: .end,
-      command: "comments", via: "terminal", doc: Self.doc, wait: true, title: Self.title, ok: true,
+      command: "comments", via: "terminal", doc: Self.doc, wait: false, title: Self.title, ok: true,
       verified: nil, ms: 4000, hold: nil, rule: nil, until: nil)
   }
 

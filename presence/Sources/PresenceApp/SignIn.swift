@@ -7,11 +7,17 @@
 // child's own countdown beside it. Cancel terminates the child; nothing else
 // here signals anything.
 //
-// The link is taken from the child and from nowhere else, and only after the
-// sentence the command prints before it. A line that came earlier is some
-// other screen. What is taken is then held to one scheme, one host and one
-// path in PresenceCore/LinkLine, so a child that printed something else
-// opens nothing at all.
+// The link is taken from the child and from nowhere else, off the first
+// non-empty line after the sentence the command prints before it, and off no
+// other line. A line that came earlier is some other screen, and one that
+// came later has missed its turn. What is taken is then held to one scheme,
+// one host and one path in PresenceCore/LinkLine, so a child that printed
+// something else opens nothing at all.
+//
+// The lines reach this actor through one stream with one reader, so they
+// arrive in the order the child wrote them. The command prints its sentence
+// and its link in a single write, and a task per line may arrive either way
+// round, which would drop the link.
 //
 // This file holds no window. The stage is a value the panel reads, and the
 // opening is the Opener's one verb handed in as a closure.
@@ -112,11 +118,22 @@ public actor SignIn {
       return .failed(String(describing: error))
     }
     child = running
-    running.onStandardErrorLine { [weak self] line in
-      Task { await self?.printed(line) }
+
+    // The lines go through one stream with one reader, so they reach this
+    // actor in the order the child wrote them. A Task per line would not:
+    // the command prints its sentence and its link in a single write, and
+    // two unstructured tasks may arrive either way round, which would drop
+    // the link and leave the person with no line to open and no countdown.
+    // testTheLinkIsTakenHoweverTheLinesAreDelivered.
+    let (lines, writing) = AsyncStream<String>.makeStream()
+    running.onStandardErrorLine { line in writing.yield(line) }
+    let reading = Task { [weak self] in
+      for await line in lines { await self?.printed(line) }
     }
 
     defer {
+      writing.finish()
+      reading.cancel()
       child = nil
       startedAt = nil
       link = nil
@@ -128,6 +145,10 @@ public actor SignIn {
     } catch {
       return cancelled ? .cancelled : .failed(String(describing: error))
     }
+    // Every line the sink delivered is read before the child's own standard
+    // error is, so the two routes never interleave.
+    writing.finish()
+    await reading.value
     if cancelled { return .cancelled }
 
     // The whole of what the child said is read once more at the end: a child
@@ -161,42 +182,45 @@ public actor SignIn {
     }
   }
 
+  /// One line, as it arrives. The candidate is recomputed over everything
+  /// said so far rather than read off this line, so the live path and the
+  /// pure reading below are the one rule: the first non-empty line after the
+  /// sentence, and only that line. A line that arrives after a candidate has
+  /// already been judged is some other screen's and opens nothing.
   private func printed(_ line: String) async {
     said.append(line)
-    guard link == nil, said.count > 1 else { return }
-    // Only a line after the sentence is a candidate, so a link on an earlier
-    // line is some other screen's.
-    guard said.dropLast().contains(where: { $0.contains(Self.linkAsk) }) else { return }
-    guard !line.trimmingCharacters(in: .whitespaces).isEmpty else { return }
-    guard let accepted = LinkLine.signInURL(line) else { return }
+    guard link == nil, let candidate = Self.candidate(in: said) else { return }
+    guard candidate == line.trimmingCharacters(in: .whitespaces) else { return }
+    guard let accepted = LinkLine.signInURL(candidate) else { return }
     link = accepted
     guard let url = URL(string: accepted) else { return }
     _ = open(url)
   }
 
-  /// Whether a line after the sentence was a link this app would not open.
+  /// Whether the line after the sentence was a link this app would not open.
   /// It is the difference between a child that printed nothing and one that
   /// printed somewhere else.
   private func refusal() -> SignInResult? {
-    guard let ask = said.firstIndex(where: { $0.contains(Self.linkAsk) }) else { return nil }
-    let after = said[(ask + 1)...]
-      .map { $0.trimmingCharacters(in: .whitespaces) }
-      .first(where: { !$0.isEmpty })
-    guard let after else { return nil }
-    return .refused(after)
+    Self.candidate(in: said).map(SignInResult.refused)
   }
 
   // MARK: the two pure readings
+
+  /// The one line a link may come off: the first non-empty line after the
+  /// sentence. Everything before the sentence is some other screen's, and
+  /// everything after that line has already had its turn.
+  static func candidate(in lines: [String]) -> String? {
+    guard let ask = lines.firstIndex(where: { $0.contains(linkAsk) }) else { return nil }
+    return lines[(ask + 1)...]
+      .map { $0.trimmingCharacters(in: .whitespaces) }
+      .first(where: { !$0.isEmpty })
+  }
 
   /// The link in everything a child wrote, or nothing. The first non-empty
   /// line after the sentence, and only that line.
   public static func link(inStandardError text: String) -> String? {
     let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
-    guard let ask = lines.firstIndex(where: { $0.contains(linkAsk) }) else { return nil }
-    let after = lines[(ask + 1)...]
-      .map { $0.trimmingCharacters(in: .whitespaces) }
-      .first(where: { !$0.isEmpty })
-    guard let after else { return nil }
+    guard let after = candidate(in: lines) else { return nil }
     return LinkLine.signInURL(after)
   }
 

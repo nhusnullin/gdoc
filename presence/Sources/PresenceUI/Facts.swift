@@ -45,11 +45,23 @@ public struct SignInPhase: Equatable, Sendable {
   }
 }
 
-/// Whether the Claude Desktop extension is connected.
+/// Where the Claude Desktop extension stands, as far as this app can know.
+///
+/// `gdoc update --desktop` writes `gdoc.mcpb` beside the binary and hands it
+/// to Claude Desktop. The file being absent is proof that gdoc never wrote
+/// one on this machine, so Claude Desktop cannot have it. The file being
+/// there proves nothing about Claude Desktop, which this app may not ask:
+/// nothing published says where Desktop keeps what it loaded. So there is no
+/// "connected", and the row is left out rather than guessed at.
+/// docs/backlog/the-panel-cannot-see-the-desktop-extension.md.
 public enum ExtensionState: Sendable, Equatable {
-  case connected
+  /// No extension Claude Desktop can have taken: no `gdoc.mcpb` beside the
+  /// binary, or a run of this app wrote one and could not hand it over.
   case notInstalled
-  /// Nothing was asked, so the row is left out rather than guessed at.
+  /// It was written. Whether Desktop loaded it is not a question this app
+  /// has an answer to, and nothing is drawn.
+  case written
+  /// Nothing was looked for, because no gdoc was found at all.
   case unknown
 }
 
@@ -62,20 +74,30 @@ public enum LoginItemState: Sendable, Equatable {
   case needsApproval
 }
 
-/// Whether Google answered. It changes no icon in the menu bar, by decision:
-/// a watch that cannot reach Google is still a watch.
+/// Whether Google answered the last command that tried. It changes no icon
+/// in the menu bar, by decision: a watch that cannot reach Google is still a
+/// watch.
+///
+/// It is read off the record and never measured here: this app opens no
+/// connection, so the only thing it can know about the network is what gdoc
+/// wrote down. The fold that reads it is `PresenceCore.Reachability`, beside
+/// every other fold of the record; this is the value it hands back. There is
+/// no sentence with it, because the record carries one word and a sentence
+/// here would be this app guessing at what that word meant.
 public struct NetworkFact: Sendable, Equatable {
   public let reachable: Bool
-  /// What was seen, in the panel's own words, or nothing.
-  public let detail: String?
 
-  public init(reachable: Bool, detail: String? = nil) {
+  public init(reachable: Bool) {
     self.reachable = reachable
-    self.detail = detail
   }
 }
 
-/// The four version strings HEALTH can say.
+/// The three version strings HEALTH can say.
+///
+/// The skills are not among them. Nothing gdoc prints names a skills
+/// version, and the folders are symlinks into somebody's `~/.claude`, which
+/// this app does not read:
+/// docs/backlog/the-panel-cannot-see-the-skills-version.md.
 public struct Versions: Sendable, Equatable {
   /// The app's own, off its plist.
   public let app: String
@@ -85,15 +107,11 @@ public struct Versions: Sendable, Equatable {
   /// The newest release gdoc's own daily check heard about, where it is not
   /// the installed one.
   public let latestStable: String?
-  /// The skills, and where they came from.
-  public let skills: String?
 
-  public init(app: String, gdoc: String? = nil, latestStable: String? = nil, skills: String? = nil)
-  {
+  public init(app: String, gdoc: String? = nil, latestStable: String? = nil) {
     self.app = app
     self.gdoc = gdoc
     self.latestStable = latestStable
-    self.skills = skills
   }
 
   /// Whether the row offers an update: a release that is named and is not

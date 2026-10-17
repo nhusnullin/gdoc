@@ -97,7 +97,10 @@ Four icons sit on the right of every document row, always visible:
 
 An icon with nothing to do is greyed, and resting the pointer on it says why:
 "No Google Doc yet", "No note is paired with this document", "Note moved or
-deleted", "Install the Desktop extension in Health". The first time Documents
+deleted", "Install the Desktop extension in Health". "Note moved or deleted"
+is the one a click produces: Obsidian refused the note the index still names.
+A greyed icon cannot be clicked, so that one lasts as long as the panel is up,
+and the next time you open the panel it is live again. The first time Documents
 has a row, four labels appear under it once, naming the icons, and they go the
 first time you click one.
 
@@ -120,9 +123,25 @@ than yesterday is in this list; Documents is where the fortnight is.
 ### Health
 
 The last section, where you look for it. The rows are Account, Network, gdoc,
-Skills, Claude Desktop, Thread mark, Launch at login and Quit. When every fact
-is good the list is the short one: eight green rows on every screen is eight
-rows nobody reads. Quit is always there, and it is ⌘Q.
+Claude Desktop, Thread mark, Launch at login and Quit. When every fact is good
+the list is the short one: a screen of green rows is a screen nobody reads.
+Quit is always there, and it is ⌘Q.
+
+Network is the record's own word and never a connection the app opened: gdoc
+writes `network` on a run that could not reach Google, and the row says so
+until a later run works. Two ends are read past, because neither is about
+Google: `auth logout` opens no connection, and `update` reads GitHub. There is
+no Skills row: nothing gdoc prints names a skills version, and the app does not
+read your `~/.claude`.
+
+Claude Desktop appears only while there is no extension to load. The app looks
+for `gdoc.mcpb` beside the binary, which is where `gdoc update --desktop`
+leaves it: no file means gdoc never wrote one, so the row offers Install
+extension. A file that is there says nothing about what Desktop loaded, so the
+row goes and the panel claims nothing. The one exception is a run of Install
+extension that wrote the file and could not hand it over, which is a machine
+with no Claude Desktop on it: the row and its button stay for as long as the
+app is running.
 
 The gdoc row carries the installed version, and the newer one beside it when
 gdoc's own daily check heard of one. Its button says Update and not Check for
@@ -218,7 +237,9 @@ nothing the app chose on your behalf. While the child is up the gdoc row draws a
 ring and still names the version that is installed, because a row that said the
 new number before the bytes were in place would be a row that lied for a few
 seconds. Install extension is `gdoc update --desktop`, which writes the Claude
-Desktop extension and hands it to Desktop.
+Desktop extension and hands it to Desktop. Whether Desktop then loads it is
+not something the app is told; whether the handing over happened is, and that
+is what keeps the row.
 
 ## What the app runs, and what it never does
 
@@ -263,10 +284,12 @@ What the app never does, and no button in it offers:
 What it remembers between launches is six things, in its own preferences: the
 cards you hid, the hub folder, whether the four icon labels have been read, your
 launch-at-login answer, its last self-relaunch, and the last address it saw
-signed in. Anything older than sixty-two days is dropped as it is read, because
-the app reads two month files and a key older than that is about a line it can
-no longer see. A seventh key is a decision somebody writes down, not a line
-somebody adds.
+signed in. The two that are about a moment, the hidden cards and the relaunch,
+are dropped once they are older than sixty-two days, because the app reads two
+month files and a stamp older than that is about a line it can no longer see.
+The other four are answers and are kept until you change them: an "off" dropped
+after two months would put the app back in your login items. A seventh key is a
+decision somebody writes down, not a line somebody adds.
 
 ## The note beside the document
 

@@ -68,7 +68,7 @@ public final class Session {
   var events: [Event] = []
   var ui: UIState
   var facts: Facts
-  var glance: Glance
+  var drawn: Drawn
   var bundle: BundleState = .same
   var index = HubIndex.empty
   var hubWatcher: HubWatcher?
@@ -89,6 +89,10 @@ public final class Session {
   /// launched a moment later: the ring on the gdoc row is the actor's own
   /// standing, and this is what makes the clock tick fast enough to show it.
   var installing = false
+  /// Whether the last Install extension of this process handed the extension
+  /// to Claude Desktop. True until a run says otherwise, because the file
+  /// beside the binary is what answers before any run of this app's.
+  var extensionHandedOver = true
 
   /// The menu bar's check, and whether what the tail has delivered so far is
   /// the file as it stood at launch. Every line in it is a replay, and a
@@ -151,7 +155,7 @@ public final class Session {
     self.ui = UIState(
       dismissed: preferences.dismissals(now: clock()), stripSeen: preferences.stripSeen)
     self.facts = Facts.launching(appVersion: places.version)
-    self.glance = Fold.glance([], now: clock(), calendar: calendar, alive: alive)
+    self.drawn = Drawn([], now: clock(), dismissed: [], calendar: calendar, alive: alive)
   }
 
   // MARK: starting and stopping
@@ -196,7 +200,17 @@ public final class Session {
   /// The panel is on the screen. It is the one moment the app asks gdoc
   /// about the machine, at most once a minute, because `help --json` carries
   /// gdoc's own daily check of what is published.
+  ///
+  /// It is also where a failed Open md is forgotten. The fault greys the
+  /// icon, and a greyed icon cannot be pressed, so the click that would
+  /// clear it can never happen: the panel going away is what ends it, and a
+  /// hub chosen or a note renamed in between is a live icon on the next
+  /// open: testAFaultGoesWhenThePanelOpensAgain.
   public func opened() {
+    if !ui.noteFault.isEmpty {
+      ui.noteFault.removeAll()
+      changed()
+    }
     Task { [weak self] in await self?.ask(.panelOpened) }
   }
 
@@ -261,18 +275,26 @@ public final class Session {
     return true
   }
 
-  /// The fold taken again, and whether it moved. A glance that did not
-  /// change redraws nothing.
+  /// The folds taken again, and whether any of them moved. A screen that
+  /// would be drawn the same way is not drawn again.
+  ///
+  /// It is the four folds the panel and the menu bar are actually built
+  /// from, rather than one summary of them. Two things only those four
+  /// notice: a `step` line, which moves the ring and the job card and
+  /// nothing else: testAStepLineRedrawsTheJobCard, and a watch going quiet,
+  /// which is three minutes passing and no line at all:
+  /// testAQuietWatchRedrawsWithNoNewLine.
   ///
   /// The waits a signal has gone to are read back here as well, because what
   /// forgets one is its end arriving in the record.
   @discardableResult
   private func refolded() -> Bool {
-    let before = glance
+    let before = drawn
     let pending = ui.pendingStop
-    glance = Fold.glance(events, now: clock(), calendar: calendar, alive: alive)
     ui.pendingStop = stopper.pendingDocs(in: events)
-    return glance != before || ui.pendingStop != pending
+    drawn = Drawn(
+      events, now: clock(), dismissed: ui.dismissed, calendar: calendar, alive: alive)
+    return drawn != before || ui.pendingStop != pending
   }
 
   // MARK: the facts
@@ -297,13 +319,16 @@ public final class Session {
   }
 
   /// What the app knows about the machine before the polls have spoken: its
-  /// own version, the bundle under it, the hub, the switch, and the waits it
-  /// may not signal.
+  /// own version, the bundle under it, the hub, the switch, the extension,
+  /// what the record last said about reaching Google, and the waits it may
+  /// not signal.
   private func machine() -> Facts {
     Facts(
       auth: .ok,
       versions: Versions(app: version),
       hub: preferences.hub,
+      extensionState: extensionState(),
+      network: Reachability.latest(in: events).map(NetworkFact.init(reachable:)),
       loginItem: loginItem.state,
       signIn: phase,
       pairing: index.notes,
@@ -311,6 +336,25 @@ public final class Session {
       bundle: bundle,
       newerRecord: newerGdoc,
       unstoppable: stopper.unstoppable(in: events))
+  }
+
+  /// Whether gdoc has ever written the Claude Desktop extension here. The
+  /// one file the app looks at outside the record and its own plist, in the
+  /// directory it already resolved the binary in, and the only thing it can
+  /// say is that there is none: whether Desktop loaded one is not a
+  /// question this app has a way to ask.
+  /// testTheExtensionRowAppearsOnlyUntilGdocHasWrittenOne.
+  ///
+  /// A run of this process that wrote the file and could not hand it over is
+  /// the one case the file itself would get wrong: `update --desktop` writes
+  /// before it opens and leaves the file where it is when the open fails, so
+  /// a machine with no Claude Desktop would end up with the row and its
+  /// button gone and nothing said. The run's own answer wins while this
+  /// process lives: testARunThatOpenedNothingLeavesTheRowWhereItWas.
+  private func extensionState() -> ExtensionState {
+    guard let file = runner.location.extensionFile else { return .unknown }
+    guard extensionHandedOver else { return .notInstalled }
+    return FileManager.default.fileExists(atPath: file) ? .written : .notInstalled
   }
 
   /// Whether a watch is open, which is what makes the token a question

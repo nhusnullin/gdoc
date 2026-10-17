@@ -65,6 +65,26 @@ public struct Location: Sendable, Equatable {
   /// can do nothing at all, which is why HEALTH says so and the menu bar
   /// counts it as stuck.
   public var found: Bool { path != nil }
+
+  /// Where `gdoc update --desktop` leaves the Claude Desktop extension: a
+  /// file called `gdoc.mcpb` beside the binary. Nothing where no binary was
+  /// found, because then there is no "beside" to look in.
+  ///
+  /// It is a path and not a reading: whether the file is there is the
+  /// session's question, and the only thing the answer proves is the
+  /// absence. A machine with no such file never had `update --desktop` run
+  /// on it, so Claude Desktop cannot have the extension; a machine with one
+  /// says nothing about what Desktop loaded.
+  public var extensionFile: String? {
+    path.map {
+      URL(fileURLWithPath: $0)
+        .deletingLastPathComponent()
+        .appendingPathComponent(Location.extensionName).path
+    }
+  }
+
+  /// The name `go/cmd/gdoc/desktop.go` writes it under, as a literal.
+  public static let extensionName = "gdoc.mcpb"
 }
 
 /// Which strict reading of the one printed object did not hold. The panel

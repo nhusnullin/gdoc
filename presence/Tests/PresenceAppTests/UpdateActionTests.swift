@@ -45,6 +45,25 @@ final class UpdateActionTests: XCTestCase {
     XCTAssertEqual(standing, .idle)
   }
 
+  /// What the extension run hands back is `extension_opened`, and nothing
+  /// else. gdoc writes the file before it opens it and leaves it there when
+  /// the open refused, so the file is no answer; the field is the only one,
+  /// and it is absent on the run that opened nothing.
+  func testTheExtensionRunSaysWhetherDesktopWasHandedIt() async {
+    let opened = UpdateAction(
+      answer: FakeUpdater(
+        data: #"{"installed":"v2.14.0","extension":"gdoc.mcpb","extension_opened":true}"#
+      ).answer)
+    let refused = UpdateAction(
+      answer: FakeUpdater(data: #"{"installed":"v2.14.0","extension":"gdoc.mcpb"}"#).answer)
+
+    let handedOver = await opened.installExtension()
+    let notHandedOver = await refused.installExtension()
+
+    XCTAssertTrue(handedOver, "Desktop was handed it")
+    XCTAssertFalse(notHandedOver, "the file is there and Desktop was offered nothing")
+  }
+
   func testTheGdocRowShowsTheRingUntilTheEndThenTheNewVersion() async {
     let gate = Gate()
     let fake = FakeUpdater(gate: gate)
