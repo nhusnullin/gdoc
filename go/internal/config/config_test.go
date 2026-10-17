@@ -153,3 +153,64 @@ func TestSettingsPathIsInTheConfigFolder(t *testing.T) {
 		t.Errorf("SettingsPath() = %q, want settings.yaml in the config folder", p)
 	}
 }
+
+// The cached asset and its stamp sit under assets/ in the config dir, the
+// bytes under the file's own id and the stamp beside them. Both are per-user
+// state this machine keeps, like the token and the release stamp, and neither
+// is a credential.
+func TestAnAssetAndItsStampSitUnderAssets(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("GDOC_CONFIG_DIR", dir)
+	const id = "1J3uh6poVAneP_V_Pc5FuNI4-Gahlab0s"
+
+	p, err := AssetPath(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p != filepath.Join(dir, "assets", id) {
+		t.Errorf("AssetPath(%q) = %q, want the id under assets/", id, p)
+	}
+
+	s, err := AssetStampPath(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s != filepath.Join(dir, "assets", id+".json") {
+		t.Errorf("AssetStampPath(%q) = %q, want the stamp beside the bytes", id, s)
+	}
+}
+
+// An id is a path segment here, so an id that is not one is refused by name
+// rather than joined. The id comes out of a house file, which a colleague may
+// write themselves and point at with --house, and `../../oauth-token.json` as
+// a file id must not become a path this machine writes to.
+func TestAnAssetPathRefusesAnIdThatIsNotOne(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("GDOC_CONFIG_DIR", dir)
+	for _, id := range []string{"", "..", "../token", "a/b", `a\b`, "a.b", "a b", "a:b"} {
+		if p, err := AssetPath(id); err == nil {
+			t.Errorf("AssetPath(%q) = %q, want a refusal", id, p)
+		}
+		if p, err := AssetStampPath(id); err == nil {
+			t.Errorf("AssetStampPath(%q) = %q, want a refusal", id, p)
+		}
+	}
+}
+
+// Both asset paths fail when Dir does, for the reason TokenPath does: a
+// relative path would write the cache into whatever directory the command ran
+// in.
+func TestTheAssetPathsFailWhenTheDirectoryCannotBeNamed(t *testing.T) {
+	t.Setenv("GDOC_CONFIG_DIR", "")
+	if runtime.GOOS == "windows" {
+		t.Setenv("AppData", "")
+	} else {
+		t.Setenv("HOME", "")
+	}
+	if p, err := AssetPath("1J3uh6poVAneP_V_Pc5FuNI4-Gahlab0s"); err == nil || p != "" {
+		t.Errorf("AssetPath() = %q, %v, want the failure Dir gave and no path", p, err)
+	}
+	if p, err := AssetStampPath("1J3uh6poVAneP_V_Pc5FuNI4-Gahlab0s"); err == nil || p != "" {
+		t.Errorf("AssetStampPath() = %q, %v, want the failure Dir gave and no path", p, err)
+	}
+}

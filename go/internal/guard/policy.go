@@ -62,6 +62,7 @@ type Policy struct {
 	rejects    map[string]bool // suggestion ids a rejectSuggestion may name; empty means none
 	marker     *marker         // the one named range a createNamedRange may make; nil means none
 	account    bool            // the one Drive read that names no file may go out; false means it may not
+	asset      string          // the one file whose bytes may be read; empty means none
 	warnings   []string        // things the guard could not do quietly, for the command to report
 }
 
@@ -195,8 +196,8 @@ func (p *Policy) AllowFile(id string, lvl Level) {
 
 // GrantInPlace upgrades an id already in the set to LevelInPlace, which permits
 // a batchUpdate without SUGGEST on that one document, and only for the request
-// kinds inPlaceKinds names. It is not a third door: an id nobody handed in is
-// not admitted by asking to style it.
+// kinds inPlaceKinds names. It is not a door into the set at all: an id nobody
+// handed in is not admitted by asking to style it.
 //
 // The grant is one id and one run. Nothing writes it down, nothing reads it
 // from a file, and no flag turns it on for every document: it dies with the
@@ -276,8 +277,9 @@ func (p *Policy) mayCopy(id string) bool {
 
 // AllowCreateIn names the one folder a create may target. The folder id is not
 // added to the file set: creating in a folder is not a licence to read it, and
-// the set has exactly two doors, the ids passed in and the ids learned from a
-// create.
+// a create target is none of the three doors into the set, which are the ids
+// passed in, the ids learned from a create, and the one id AllowAsset admits a
+// media read of.
 func (p *Policy) AllowCreateIn(folderID string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -776,8 +778,80 @@ func (p *Policy) isAccountRead(method string, u *url.URL) bool {
 	return vals["fields"][0] == accountFields
 }
 
+// assetMediaParams is the asset read's query, spelled exactly: the two
+// parameters and their two values, and no third. `alt=media` is what turns
+// files.get from a metadata read into the file's bytes, which is why it is not
+// in driveGetParams and is written here instead: a document the command was
+// handed must not become downloadable bytes because one asset may be.
+// `supportsAllDrives=true` is there because the firm's file sits in a Shared
+// Drive, and Drive answers 404 on a Shared Drive file without it.
+var assetMediaParams = map[string]string{
+	"alt":               "media",
+	"supportsAllDrives": "true",
+}
+
+// AllowAsset names the one file whose bytes this run may read. It is the
+// seventh grant of the shape the six before it have: one object, one request,
+// dying with the process, and nothing writes it down.
+//
+// M22. The house logo is the firm's file in the firm's Drive rather than bytes
+// in this tree, so a build has to fetch it once a day. The door is as narrow as
+// that job: GET, one file id, `alt=media` and `supportsAllDrives=true` and no
+// third parameter, and nothing else on that id. No metadata read, no export, no
+// copy, no patch, no Docs read.
+//
+// It is a third way an id becomes reachable, and the one that cannot grow the
+// set: the id comes from house.yaml rather than from anything Drive said, the
+// answer is a PNG, and a PNG carries no id to learn from. What the run then
+// does with the bytes is bounded by the house file's own statement of mime and
+// pixels, checked in internal/asset before the bytes reach a document.
+//
+// An empty id opens nothing: a caller that has just shown it does not know
+// which file it means must not be left with a grant matching a path the guard
+// reads as empty. The pins are in asset_test.go:
+// TestTheAssetGrantAdmitsOneMediaReadAndNothingElse,
+// TestWithoutTheAssetGrantTheReadIsRefused,
+// TestTheAssetGrantAdmitsNoDocument, TestTheAssetGrantDiesWithThePolicy and
+// TestAnEmptyAssetGrantOpensNothing.
+func (p *Policy) AllowAsset(fileID string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if fileID != "" {
+		p.asset = fileID
+	}
+}
+
+// assetFile names the one file whose bytes this run may read, or empty.
+func (p *Policy) assetFile() string {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.asset
+}
+
+// isAssetRead reports whether this request is the asset read, spelled exactly
+// as AllowAsset opened it. A false here is not a refusal: it is this rule
+// saying nothing, and the Drive rules below then say what they said before the
+// grant existed, which for an id nobody handed in is that it was not given to
+// this command.
+func (p *Policy) isAssetRead(method string, u *url.URL) bool {
+	id := p.assetFile()
+	if method != "GET" || id == "" || u.Path != "/drive/v3/files/"+id {
+		return false
+	}
+	vals, err := url.ParseQuery(u.RawQuery)
+	if err != nil || len(vals) != len(assetMediaParams) {
+		return false
+	}
+	for name, want := range assetMediaParams {
+		if len(vals[name]) != 1 || vals[name][0] != want {
+			return false
+		}
+	}
+	return true
+}
+
 func (p *Policy) judgeDrive(method string, u *url.URL, body []byte) error {
-	if p.isAccountRead(method, u) {
+	if p.isAccountRead(method, u) || p.isAssetRead(method, u) {
 		return nil
 	}
 	path := strings.TrimPrefix(u.Path, "/upload")

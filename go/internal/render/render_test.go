@@ -41,9 +41,27 @@ func config(t *testing.T) *house.Config {
 	return cfg
 }
 
+// placeholderLogo is the stand-in for the mark in the first page's header. The
+// firm's logo is one file in its Drive and the tree carries no copy of it, so
+// a test that needs real PNG bytes reads internal/house's placeholder: a flat
+// light grey of the size the house file states.
+const placeholderLogo = "../house/testdata/placeholder-logo.png"
+
+// houseLogo is the mark render is handed. Build takes the logo from its caller
+// rather than reading it off the config, because a house style may name one
+// file in Drive instead of carrying the bytes, and this package reaches nothing.
+func houseLogo(t *testing.T) []byte {
+	t.Helper()
+	raw, err := os.ReadFile(placeholderLogo)
+	if err != nil {
+		t.Fatalf("read the placeholder logo: %v", err)
+	}
+	return raw
+}
+
 func build(t *testing.T) *Package {
 	t.Helper()
-	pkg, err := Build(config(t), fields(), nil, nil, nil, 0)
+	pkg, err := Build(config(t), houseLogo(t), fields(), nil, nil, nil, 0)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -125,6 +143,30 @@ func TestTheLogoPartIsThePNGTheConfigCarries(t *testing.T) {
 	}
 }
 
+// A caller with no mark in hand gets a refusal rather than a document whose
+// header carries an empty picture. An unbranded document is the one thing a
+// missing logo must not resolve to, and the logo is the caller's to fetch
+// since M22, so this is the room that has to say no.
+func TestBuildRefusesALogoWithNoBytes(t *testing.T) {
+	for _, c := range []struct {
+		name string
+		logo []byte
+	}{
+		{"nil", nil},
+		{"empty", []byte{}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			pkg, err := Build(config(t), c.logo, fields(), nil, nil, nil, 0)
+			if err == nil {
+				t.Fatalf("Build() returned %d parts, want a refusal", len(pkg.Parts))
+			}
+			if !strings.Contains(err.Error(), "logo") {
+				t.Errorf("the refusal is %q, and it has to name the logo", err)
+			}
+		})
+	}
+}
+
 func TestTheZipListsContentTypesFirst(t *testing.T) {
 	pkg := build(t)
 	var buf bytes.Buffer
@@ -202,7 +244,7 @@ func TestSectionPropertiesAreA4InTwipsWithTheFourReferences(t *testing.T) {
 func TestATitleCarryingXMLCharactersIsEscaped(t *testing.T) {
 	f := fields()
 	f.Title = "R&D <policy>"
-	pkg, err := Build(config(t), f, nil, nil, nil, 0)
+	pkg, err := Build(config(t), houseLogo(t), f, nil, nil, nil, 0)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -228,7 +270,7 @@ func TestATitleCarryingXMLCharactersIsEscaped(t *testing.T) {
 func TestTheBodyElementsSitBetweenTheFrontMatterAndTheSectionProperties(t *testing.T) {
 	p := etree.NewElement("w:p")
 	p.CreateElement("w:r").CreateElement("w:t").SetText("the body")
-	pkg, err := Build(config(t), fields(), []*etree.Element{p}, nil, nil, 0)
+	pkg, err := Build(config(t), houseLogo(t), fields(), []*etree.Element{p}, nil, nil, 0)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -246,7 +288,7 @@ func TestTheBodyElementsSitBetweenTheFrontMatterAndTheSectionProperties(t *testi
 
 func TestAnImageIsWrittenWithItsRelationshipAndItsContentType(t *testing.T) {
 	media := []Media{{RelID: "rId9", Name: "image1.jpeg", Data: []byte("not really a jpeg")}}
-	pkg, err := Build(config(t), fields(), nil, media, nil, 0)
+	pkg, err := Build(config(t), houseLogo(t), fields(), nil, media, nil, 0)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -282,7 +324,7 @@ func TestAnImageIsWrittenWithItsRelationshipAndItsContentType(t *testing.T) {
 // under word/media/ and [Content_Types].xml gains no extension.
 func TestALinkIsAnExternalRelationshipWithNoPart(t *testing.T) {
 	media := []Media{{RelID: "rId9", Target: "https://example.com/p?a=1&b=2"}}
-	pkg, err := Build(config(t), fields(), nil, media, nil, 0)
+	pkg, err := Build(config(t), houseLogo(t), fields(), nil, media, nil, 0)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -318,7 +360,7 @@ func TestALinkIsAnExternalRelationshipWithNoPart(t *testing.T) {
 func TestARelationshipThatIsBothALinkAndAFileIsRefused(t *testing.T) {
 	media := []Media{{RelID: "rId9", Name: "image1.png", Data: []byte("x"),
 		Target: "https://example.com/"}}
-	_, err := Build(config(t), fields(), nil, media, nil, 0)
+	_, err := Build(config(t), houseLogo(t), fields(), nil, media, nil, 0)
 	if err == nil {
 		t.Fatal("Build accepted a relationship that is a link and a file at once")
 	}
@@ -329,7 +371,7 @@ func TestARelationshipThatIsBothALinkAndAFileIsRefused(t *testing.T) {
 
 func TestAnImageIdThatCollidesWithTheShellIsRefused(t *testing.T) {
 	media := []Media{{RelID: "rId4", Name: "image1.png", Data: []byte("x")}}
-	_, err := Build(config(t), fields(), nil, media, nil, 0)
+	_, err := Build(config(t), houseLogo(t), fields(), nil, media, nil, 0)
 	if err == nil {
 		t.Fatal("Build accepted an image relationship id the shell already uses")
 	}
@@ -343,7 +385,7 @@ func TestTwoImagesSharingOneIdAreRefused(t *testing.T) {
 		{RelID: "rId9", Name: "image1.png", Data: []byte("x")},
 		{RelID: "rId9", Name: "image2.png", Data: []byte("y")},
 	}
-	_, err := Build(config(t), fields(), nil, media, nil, 0)
+	_, err := Build(config(t), houseLogo(t), fields(), nil, media, nil, 0)
 	if err == nil {
 		t.Fatal("Build accepted two images with one relationship id")
 	}

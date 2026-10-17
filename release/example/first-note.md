@@ -53,5 +53,7 @@ Try it:
 gdoc build --md first-note.md --out first-note.docx
 ```
 
-That writes the document on this machine and sends nothing anywhere. When it
-looks right, `gdoc publish` puts it in Drive.
+That writes the document on this machine. The one thing it reaches for is the
+house logo, which is one file in the firm's Drive: it is fetched once a day and
+cached, and nothing of yours is sent anywhere. When it looks right, `gdoc
+publish` puts it in Drive.

@@ -69,6 +69,13 @@ func (f *fakeSession) GetBytes(ctx context.Context, rawURL string, _ int64) ([]b
 	return nil, fmt.Errorf("the fake session has no answer for %s", rawURL)
 }
 
+// A read command fetches no asset, so the fake read session refuses the one
+// read that is bytes of a file rather than a document. A command that grew
+// one would fail here by name.
+func (f *fakeSession) FileBytes(_ context.Context, fileID string, _ int64) ([]byte, error) {
+	return nil, fmt.Errorf("a read command fetches no file's bytes: %s", fileID)
+}
+
 // The read commands write nothing, so the fake read session refuses both write
 // verbs rather than recording them. A read command that grew a POST would fail
 // here by name, which is the point.

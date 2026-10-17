@@ -19,8 +19,8 @@
 │ annotate              │ Leave a comment on the exact words you quote, under your mark, changing  │
 │                       │ nothing.                                                                 │
 ├─ Make a doc ──────────┼──────────────────────────────────────────────────────────────────────────┤
-│ build                 │ Build the note as a house-style docx on this machine, with no network at │
-│                       │ all.                                                                     │
+│ build                 │ Build the note as a house-style docx on this machine, reaching only for  │
+│                       │ the house logo.                                                          │
 │ publish               │ Build the note as a house-style document and upload it into one folder.  │
 ├─ Account and tool ────┼──────────────────────────────────────────────────────────────────────────┤
 │ auth status           │ Say whether gdoc has a token, when it expires, and what it may reach.    │

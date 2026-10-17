@@ -100,7 +100,7 @@ func firstLabel(block *etree.Element) string {
 // buildWith is Build over one note's fields.
 func buildWith(t *testing.T, f cover.Fields) *Package {
 	t.Helper()
-	pkg, err := Build(config(t), f, nil, nil, nil, 0)
+	pkg, err := Build(config(t), houseLogo(t), f, nil, nil, nil, 0)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -182,7 +182,7 @@ func TestTheVersionLineKeepsItsLabel(t *testing.T) {
 }
 
 func TestANoteWithNoTitleKeepsTheTemplatesHighlightedPlaceholder(t *testing.T) {
-	pkg, err := Build(config(t), cover.Fields{}, nil, nil, nil, 0)
+	pkg, err := Build(config(t), houseLogo(t), cover.Fields{}, nil, nil, nil, 0)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -549,7 +549,7 @@ func TestEveryTableCellSaysWhereItsTextSits(t *testing.T) {
 // differently would publish a document describing four classes and marking
 // none, which is the failure the shading exists to stop.
 func TestAClassNothingDescribesIsRefused(t *testing.T) {
-	_, err := Build(config(t), cover.Fields{
+	_, err := Build(config(t), houseLogo(t), cover.Fields{
 		Title: "Supplier Register Policy", Version: "1.0",
 		Classification: "Secret (S)",
 	}, nil, nil, nil, 0)

@@ -27,6 +27,7 @@ Two rules about the documents themselves:
 | `go/internal/emit/` | the output envelope every command prints through |
 | `go/internal/tty/`, `go/internal/panel/` | the terminal, its colours and width, and the boxes drawn on it |
 | `go/internal/guard/` | the network policy, and the only place a client is built |
+| `go/internal/asset/` | one file in Drive read as bytes, held to what the caller states, and cached beside the token. The house logo is its one caller |
 | `go/internal/auth/` | the token file, its refresh, and the login flow |
 | `go/internal/auth/loopback/` | the one-shot localhost listener the browser redirect lands on |
 | `go/internal/config/` | where the per-user files live, per platform |
@@ -101,10 +102,11 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
   `TestACheckoutBuildNeverChecks`, `TestReadNeverReachesTheCheck`,
   `TestAStaleStampAsksOnceAndTheFirstAnswerCarriesTheLine` and
   `TestACheckoutBuildNeverAsksFromMcp`.
-- **The reachable set has two doors**, the ids a command was handed and the id a
-  create the guard itself carried came back with, and naming a folder to create
-  in does not open a third: `TestAllowCreateInDoesNotAdmitTheFolder` and
-  `TestCreateTeachesThePolicy`.
+- **The reachable set has three doors**, the ids a command was handed, the id a
+  create the guard itself carried came back with, and the one id `AllowAsset`
+  admits one media read of, and naming a folder to create in opens no fourth:
+  `TestAllowCreateInDoesNotAdmitTheFolder`, `TestCreateTeachesThePolicy` and
+  `TestTheAssetGrantAdmitsNoDocument`.
 - **Every change inside a handed-in document is a suggestion**, refused in the
   process unless the body says `writeMode: SUGGEST`:
   `TestAHandedInDocumentIsNeverDirectlyEditedWithoutTheGrant`.
@@ -115,12 +117,12 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
   `TestNothingAtLevelInPlaceCanChangeACharacter` and
   `TestGrantInPlaceLeavesACreatedDocumentAtFull`.
 - **A grant names one object and dies with the process.** `AllowCreateIn`,
-  `AllowReject`, `AllowCopy`, `AllowMarker`, `AllowUpdateFrom`,
+  `AllowReject`, `AllowCopy`, `AllowMarker`, `AllowUpdateFrom`, `AllowAsset`,
   `AllowAccountRead`, called by `gdoc mcp`'s `login` and `auth status`, and
   `GrantInPlace` are per-run, and nothing writes one down:
   `TestAGrantedRejectSuggestionCarriesAndNothingElseInTheFamilyDoes`,
-  `TestAGrantedMarkerCarriesAndNothingElseDoes` and
-  `TestTheAccountGrantDiesWithThePolicy`.
+  `TestAGrantedMarkerCarriesAndNothingElseDoes`,
+  `TestTheAccountGrantDiesWithThePolicy` and `TestTheAssetGrantDiesWithThePolicy`.
 - **Nothing trusts a success.** Every write is read back through a route it did
   not go out on, and `verified: false` is reported rather than raised, because
   the write happened: `TestVerifyCatchesADirectEditWhoseReplacementCarriesTheQuote`.
@@ -224,19 +226,17 @@ writes into `docs/v2/DECISIONS.md`, not a refactor.
 | a setting, the settings file, the mark in effect | `go/internal/settings/doc.go` |
 | the docx the generator writes | `go/internal/render/doc.go`, `go/internal/body/doc.go` |
 | a house style value, or the gate that measures it | `go/internal/house/house.yaml`, `go/internal/drift/doc.go` |
+| the house logo, its Drive id, its cache or its stamp | `go/internal/asset/doc.go`, `go/cmd/gdoc/logo.go` |
 | putting a document into Drive | `go/internal/publish/doc.go` |
 | an end-to-end test against real Drive | `go/internal/live/doc.go` |
-| a version, a tag, a release or the updater | `go/internal/update/doc.go`, `.github/workflows/release.yml` |
-| a release notice, the stamp | `go/internal/lastcheck/doc.go`, `go/cmd/gdoc/doc.go` |
+| a version, a tag, a release, the updater, its notice or the stamp | `go/internal/update/doc.go`, `go/internal/lastcheck/doc.go`, `.github/workflows/release.yml` |
 | chat: the protocol, a tool, the code, a label, a fact, a hold, a card | `go/internal/mcp/doc.go`, `go/internal/chat/doc.go` |
 | the Claude Desktop extension, either `--desktop` | `go/cmd/gdoc/desktop.go`, `release/mcpb/manifest.json` |
 | a document written back into the hub | `go/internal/export/doc.go`, `go/internal/markers/markers.go` |
 | what a colleague installs, and how | `README.md`, `release/install.sh`, `.claude-plugin/` |
 | a guard over the wire, the modules or these documents | `go/boundary/doc.go` |
-| what the review session does with what the binary prints | `skills/gdoc-review/SKILL.md` |
-| what a skill tells a session to run | `skills/`, and `gdoc help <command>` |
-| what v2 is | `docs/v2/SPEC.md` |
-| what is next | `docs/v2/PLAN.md` |
+| what a skill tells a session to run, the review session included | `skills/`, `skills/gdoc-review/SKILL.md`, and `gdoc help <command>` |
+| what v2 is, and what is next | `docs/v2/SPEC.md`, `docs/v2/PLAN.md` |
 | why something is the way it is | `docs/v2/DECISIONS.md` |
 | what Google does, or refuses to do | `docs/v2/MEASURED.md`, `docs/v2/BLOCKED-BY-API.md` |
 | work that was deferred on purpose | `docs/backlog/` |

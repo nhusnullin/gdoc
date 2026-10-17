@@ -121,6 +121,29 @@
 // here rather than in review. A call written for a third room is a reach
 // somebody has to decide on, which is a DECISIONS.md entry and not a refactor.
 //
+// # The asset room has one path into it, and it ends at two commands
+//
+// internal/asset reads the bytes of one file out of Drive, which is the house
+// logo and nothing else today. The grant that admits the read is held narrow
+// by internal/guard's own asset_test.go; what is held here is who may open
+// it. The path is four names long: asset.Fetch is called in logoFor in
+// cmd/gdoc/logo.go, logoFor is called in renderNote, and renderNote is called
+// by cmdBuild and cmdPublish. TestOnlyBuildAndPublishCallTheAssetRoom reads
+// each link out of the syntax tree, the way the account tests above read
+// theirs, and counts.
+//
+// TestReadExportRestyleAndHelpNeverReachTheAssetRoom holds the other half
+// over cmd/gdoc's call graph: no command but those two reaches logoFor by any
+// path. export, restyle and help marks read the house style for their own
+// reasons and read, comments and suggestions read a document; none of them
+// renders a note, so a request to Drive from any of them is a request nobody
+// asked for. The graph is the generous reading, by called name rather than by
+// resolved symbol, because a test asking whether a path exists must not miss
+// one. The command table is the one node left out of it: it names every
+// command by construction, so a path through it is the dispatcher rather than
+// one command reaching another. The test also fails if the two commands stop
+// reaching the room, because a rule nothing exercises holds nothing.
+//
 // # The mark is read in one place
 //
 // The mark is the only record of authorship a thread itself carries, so the
@@ -258,6 +281,30 @@
 // three .gitignore files shaped like the real ones and then in one file no
 // pattern names. Both use example.net, so no test here names the firm's
 // domain, whole or in parts.
+//
+// # The firm's logo is not in the tree either
+//
+// The logo was a base64 PNG in house.yaml until M22, and this repository is
+// public: the picture is the firm's and is not licensed with the code. It is
+// one file in the firm's Drive now, read once a day and cached beside the
+// token, and house.yaml names it by id. TestTheLogoIsNotInTheTree is the pin,
+// and it holds the PNG as a SHA-256 for the reason the domain test holds the
+// domain as one.
+//
+// It walks what the domain scan walks, through walkTracked, because both rules
+// are about the same tree. What it adds is the zip: a .docx is a zip, so the
+// logo inside one is invisible to any scan that hashes files off the disk, and
+// the three fixtures that measure the house style carry a picture in their
+// first-page header. Each is opened and every member hashed. A .docx this scan
+// cannot open is an error rather than an empty answer.
+//
+// It hashes whole files rather than looking for the bytes inside a larger one.
+// The two ways the logo travels are as a file and as a part of a document, and
+// a re-encoding of the same picture is a different file this scan does not
+// know. What it holds is that nobody puts this file back.
+//
+// TestTheLogoScanFindsAPlantedPNG is the canary, bare and inside a zip, and it
+// plants a payload of its own: no test here carries the firm's bytes.
 //
 // # A make target that writes into bin/ makes bin/ first
 //

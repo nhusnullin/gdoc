@@ -70,7 +70,13 @@
 //   - annotate <url> --quote | --from [--body-file]: a comment on the words a
 //     caller quotes, and nothing else. internal/annotate.
 //   - build --md --out [--house] [--force]: the house-style docx, no network
-//     at all. internal/house, internal/cover, internal/body, internal/render.
+//     beyond the house logo, once a day and bounded by logoCeiling, twenty
+//     seconds, because a person is waiting for a file and a cached mark is
+//     already in hand. internal/house, internal/cover, internal/body,
+//     internal/render, and internal/asset when the style names the logo as one
+//     file in Drive rather than carrying its bytes.
+//     TestTheLogoCeilingIsTwentySeconds and
+//     TestAHungDriveCostsTheCeilingAndThenTheCacheAnswers.
 //   - publish --md --folder-id [--house]: that docx into Drive as a Google
 //     Doc. internal/publish.
 //   - update [--check] [--major] [--nightly] [--rollback]: this binary
@@ -556,9 +562,9 @@
 // TestAnUnknownHelpWordIsRefusedBeforeTheCheck.
 //
 // No other command checks. There is no check before a build and none on the
-// way to reading somebody's document from the terminal. A build is a person waiting for a docx
-// with no network at all, and a review session is somebody's document open in
-// front of them; a background fetch in either is a second thing happening that
+// way to reading somebody's document from the terminal. A build is a person
+// waiting for a docx, which reaches Drive for the house logo and for nothing
+// else, and a review session is somebody's document open in front of them; a background fetch in either is a second thing happening that
 // nobody asked for, and on a slow connection it is the command taking longer
 // for a reason the person cannot see. The rule is held by reading this package
 // rather than by trusting it: TestNothingChecksForUpdatesUnasked says one

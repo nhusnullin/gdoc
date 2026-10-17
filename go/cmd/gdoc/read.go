@@ -44,6 +44,11 @@ import (
 type session interface {
 	GetJSON(ctx context.Context, rawURL string, into any) error
 	GetBytes(ctx context.Context, rawURL string, limit int64) ([]byte, error)
+	// FileBytes is the one read that is neither a document nor JSON: the
+	// bytes of one Drive file, which is the house logo and nothing else
+	// today. It is here rather than in a second interface because there is
+	// one session factory, and logo.go's reach opens a policy of its own.
+	FileBytes(ctx context.Context, fileID string, limit int64) ([]byte, error)
 	PostJSON(ctx context.Context, rawURL string, body any, into any) error
 	PatchJSON(ctx context.Context, rawURL string, body any, into any) error
 	PostMultipart(ctx context.Context, rawURL string, meta any, part []byte, partType string, into any) error

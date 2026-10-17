@@ -20,7 +20,7 @@ func note(id int, words string) Footnote {
 // buildNotes is a package carrying the given notes.
 func buildNotes(t *testing.T, notes []Footnote) *Package {
 	t.Helper()
-	pkg, err := Build(config(t), fields(), nil, nil, notes, 0)
+	pkg, err := Build(config(t), houseLogo(t), fields(), nil, nil, notes, 0)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -135,7 +135,7 @@ func TestTheFootnotesPartIsDeclaredAndRelated(t *testing.T) {
 // cover the new row rather than only the seven it was written for.
 func TestAnImageIdThatCollidesWithTheFootnotesIsRefused(t *testing.T) {
 	media := []Media{{RelID: "rId8", Name: "image1.png", Data: []byte("x")}}
-	_, err := Build(config(t), fields(), nil, media, nil, 0)
+	_, err := Build(config(t), houseLogo(t), fields(), nil, media, nil, 0)
 	if err == nil {
 		t.Fatal("Build accepted a picture at the footnotes relationship id")
 	}

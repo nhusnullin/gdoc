@@ -1,11 +1,14 @@
-// The one command that reaches nothing at all.
+// The command that writes the document on this machine.
 //
-// `gdoc build` turns a note into a house-style .docx on this machine. It opens
-// no policy and no session, because there is no wire to judge: the house style
-// is embedded in the binary, the pictures come from the note's own directory,
-// and the file is written through internal/atomicfile. Publishing the result
-// into Drive is `gdoc publish`, a different command, and it renders through the
-// same renderNote below rather than through a second path.
+// `gdoc build` turns a note into a house-style .docx on this machine. The
+// house style is in the binary, the pictures come from the note's own
+// directory, and the file is written through internal/atomicfile. The one
+// thing it reaches for is the house logo, and only when the style names it as
+// a file in Drive rather than carrying its bytes: that is logo.go, one
+// request a day through a cache beside the token, on a policy that admits
+// that one file's bytes and nothing else. Publishing the result into Drive is
+// `gdoc publish`, a different command, and it renders through the same
+// renderNote below rather than through a second path.
 //
 // Nothing here decides anything either. The cover words are the note's, the
 // sizes and colours are house.yaml's, and what the walker could not render is a
@@ -15,6 +18,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -47,10 +51,11 @@ type buildData struct {
 	Title       string      `json:"title"`
 	RunningHead string      `json:"running_head"`
 	House       string      `json:"house"`
+	Logo        logoData    `json:"logo"`
 	Body        body.Counts `json:"body"`
 }
 
-func cmdBuild(a *args) emit.Result {
+func cmdBuild(ctx context.Context, a *args) emit.Result {
 	md, err := required(a, "--md")
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
@@ -74,9 +79,9 @@ func cmdBuild(a *args) emit.Result {
 	if err != nil {
 		return emit.Result{OK: false, Error: err.Error()}
 	}
-	doc, err := renderNote(source, md, a)
+	doc, err := renderNote(ctx, source, md, a)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return buildFailed(doc, err.Error())
 	}
 	// The note's pictures are inputs too, and which files they are is only
 	// known once the walk has read them. Asked before the walk, the check
@@ -84,11 +89,10 @@ func cmdBuild(a *args) emit.Result {
 	// picture it had just embedded. Nothing has been written yet, because the
 	// render zips into memory.
 	if err := notAnInput(out, pictures(doc.Sources)...); err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		return buildFailed(doc, err.Error())
 	}
 	if err := atomicfile.Replace(out, doc.Docx, atomicfile.ModeOf(out, buildMode)); err != nil {
-		return emit.Result{OK: false, Error: fmt.Sprintf("the document could not be written: %v", err),
-			Warnings: doc.Warnings}
+		return buildFailed(doc, fmt.Sprintf("the document could not be written: %v", err))
 	}
 
 	return emit.Result{OK: true, Warnings: doc.Warnings, Data: buildData{
@@ -97,8 +101,20 @@ func cmdBuild(a *args) emit.Result {
 		Title:       doc.Title,
 		RunningHead: doc.RunningHead,
 		House:       doc.House,
+		Logo:        doc.Logo,
 		Body:        doc.Counts,
 	}}
+}
+
+// buildFailed is a build that read the style and reached for the logo before
+// it failed. What the run earned on the way is still the caller's to read: a
+// logo fetched and not cached is a line whatever happened next, and publish
+// prints the same block on its own failure. A skill should not have to read
+// the two envelopes differently. TestAFailedBuildStillPrintsTheLogoBlock is
+// the pin. No file was written, so Out and Bytes stay empty.
+func buildFailed(doc *noteDocx, why string) emit.Result {
+	return emit.Result{OK: false, Error: why, Warnings: doc.Warnings,
+		Data: buildData{House: doc.House, Logo: doc.Logo}}
 }
 
 // noteDocx is one note rendered: the bytes, the words the cover took off it,
@@ -113,6 +129,7 @@ type noteDocx struct {
 	Title       string
 	RunningHead string
 	House       string
+	Logo        logoData
 	Counts      body.Counts
 	Sources     []string
 	Warnings    []string
@@ -130,45 +147,56 @@ func noteSource(md string) ([]byte, error) {
 	return source, nil
 }
 
-// renderNote turns the note into docx bytes. It reaches nothing and writes
-// nothing: the house style is embedded or named by --house, the pictures come
-// from the note's own directory, and the package is zipped into memory.
+// renderNote turns the note into docx bytes. It writes nothing, and the only
+// thing it reaches for is the logo, when the style names one in Drive: the
+// pictures come from the note's own directory, and the package is zipped into
+// memory.
 //
 // Zipping whole before the caller does anything with the bytes is deliberate. A
 // package that cannot be serialised leaves no half a file behind under the name
 // somebody asked for, and no half a document in somebody's Drive.
-func renderNote(source []byte, md string, a *args) (*noteDocx, error) {
+//
+// It never answers nil, even when it fails. Docx is the field a caller reads
+// to know whether there is a document, and what the run earned on the way to
+// failing is still the caller's to print: a logo that was fetched and could
+// not be cached is worth a line whatever happened next.
+func renderNote(ctx context.Context, source []byte, md string, a *args) (*noteDocx, error) {
+	doc := &noteDocx{}
 	fields, markdown, err := cover.Read(source)
 	if err != nil {
-		return nil, errors.New(titleError(err, string(markdown), md))
+		return doc, errors.New(titleError(err, string(markdown), md))
 	}
 	cfg, style, err := readHouse(a)
 	if err != nil {
-		return nil, err
+		return doc, err
+	}
+	doc.House = style
+
+	logo, mark, warns, err := logoFor(ctx, cfg)
+	doc.Logo, doc.Warnings = mark, warns
+	if err != nil {
+		return doc, err
 	}
 	// The note's own directory, because a picture in a note is written relative
 	// to the note rather than to wherever the command was run from.
 	walked, err := body.Render(cfg, keepLines(source, markdown), filepath.Dir(md), fields.HeadingNumbering)
 	if err != nil {
-		return nil, err
+		return doc, err
 	}
-	pkg, err := render.Build(cfg, fields, walked.Blocks, walked.Media, walked.Footnotes, walked.NumberedLists)
+	doc.Warnings = append(doc.Warnings, walked.Warnings...)
+	doc.Counts, doc.Sources = walked.Counts, walked.Sources
+
+	pkg, err := render.Build(cfg, logo, fields, walked.Blocks, walked.Media, walked.Footnotes, walked.NumberedLists)
 	if err != nil {
-		return nil, err
+		return doc, err
 	}
 	var buf bytes.Buffer
 	if err := pkg.Write(&buf); err != nil {
-		return nil, err
+		return doc, err
 	}
-	return &noteDocx{
-		Docx:        buf.Bytes(),
-		Title:       fields.CoverTitle(),
-		RunningHead: fields.RunningHead(),
-		House:       style,
-		Counts:      walked.Counts,
-		Sources:     walked.Sources,
-		Warnings:    walked.Warnings,
-	}, nil
+	doc.Docx = buf.Bytes()
+	doc.Title, doc.RunningHead = fields.CoverTitle(), fields.RunningHead()
+	return doc, nil
 }
 
 // freeToWrite refuses a file that is already there unless --force says
