@@ -11,7 +11,8 @@
 // line of it is a fact off the record rather than a reading of one:
 //
 //   - since, which is the first wait's start, and ended, which is the last
-//     wait's end once three minutes have passed with no new poll.
+//     wait's end once three minutes have passed with no new poll, or that end
+//     at once where a person stopped the wait.
 //   - replied and proposed, counted from the document's own ok ends inside
 //     the session. A write that failed answered nobody and is not counted.
 //   - the last write's time, which is what quiet is measured from. With no
@@ -44,8 +45,9 @@ public struct LiveSession: Sendable, Equatable {
   public let title: String?
   /// The first wait's start.
   public let since: Date
-  /// The last wait's end, once no poll followed it inside the gap. Absent
-  /// while the watch is still going.
+  /// The last wait's end, once no poll followed it inside the gap, or that
+  /// end at once where the wait says a person stopped it. Absent while the
+  /// watch is still going.
   public let ended: Date?
   public let replied: Int
   public let proposed: Int
@@ -177,10 +179,15 @@ public enum Live {
     var flight: LiveSession.Flight?
     var ended: Date?
     if let close = last.ended {
-      if now.timeIntervalSince(close) < gap {
-        ended = nil
-      } else {
+      // A wait a person stopped ends the watch where it ended, and does not
+      // wait out the gap: no poll ever follows one, because the skill reads
+      // `waited.interrupted`, prints its totals and stops. Every other end
+      // waits, because there the next poll may be a second away:
+      // testAnInterruptedWaitEndsTheWatchAtOnce.
+      if last.interrupted || now.timeIntervalSince(close) >= gap {
         ended = close
+      } else {
+        ended = nil
       }
     } else {
       flight = LiveSession.Flight(

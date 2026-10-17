@@ -490,16 +490,28 @@ public final class Child: @unchecked Sendable {
 /// One pipe, drained on its own thread.
 ///
 /// The descriptor rather than the handle, so nothing that is not safe to pass
-/// between threads is passed between them; the pipe itself stays alive as long
-/// as the child does.
+/// between threads is passed between them. It is a copy of the descriptor,
+/// made here and closed here: a child that timed out is thrown away without
+/// its bytes being taken, so the reading thread is still in `read` when the
+/// pipe it was made from is released and its number goes back to the
+/// process. Reading a number somebody else has since been given would hand
+/// one child's output to another, and the app would call a run that worked
+/// an answer gdoc would not print. The copy is this thread's own, so no
+/// other owner can close it.
+///
+/// TODO(test): a descriptor being handed out again cannot be forced from a
+/// test, so nothing here pins this. The property is the ownership, not a
+/// sequence of reads.
 final class Collector: @unchecked Sendable {
   private let group = DispatchGroup()
   private let lock = NSLock()
   private var collected = Data()
 
-  init(_ descriptor: Int32, line: (@Sendable (String) -> Void)? = nil) {
+  init(_ handed: Int32, line: (@Sendable (String) -> Void)? = nil) {
+    let descriptor = dup(handed)
     group.enter()
     DispatchQueue.global().async { [self] in
+      defer { if descriptor >= 0 { close(descriptor) } }
       var buffer = [UInt8](repeating: 0, count: 1 << 16)
       var all = Data()
       var partial = Data()

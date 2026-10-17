@@ -116,6 +116,33 @@ final class LiveSessionTests: XCTestCase {
     XCTAssertEqual(later[0].ended, stopped, "and it closed at the end the record wrote")
   }
 
+  /// A wait a person stopped is the end of the watch, and not three minutes
+  /// spent waiting to see whether another poll follows. No poll ever does:
+  /// the skill reads `waited.interrupted`, prints its totals and stops.
+  ///
+  /// Without this the panel kept a watch somebody had just stopped live for
+  /// three minutes, with no process to signal, so Stop was greyed with "This
+  /// watch is not one gdoc presence can stop" over the thing that had worked,
+  /// the menu bar still said live, and TODAY wrote no row for the stop.
+  func testAnInterruptedWaitEndsTheWatchAtOnce() throws {
+    let signalled = wait(
+      from: "2026-10-17T17:00:00Z", to: "2026-10-17T17:04:00Z", run: "aaaa", interrupted: true)
+    let stopped = try XCTUnwrap(
+      Live.sessions(signalled, now: try moment("2026-10-17T17:04:10Z")).first)
+    XCTAssertFalse(stopped.isOpen, "ten seconds after the signal the watch is over")
+    XCTAssertEqual(
+      stopped.ended, try moment("2026-10-17T17:04:00Z"), "at the end the record wrote")
+    XCTAssertTrue(stopped.stoppedByYou)
+    XCTAssertNil(stopped.flight, "and there is no process left to signal")
+
+    // The three minutes are still what closes a watch nobody stopped: there
+    // the next poll really may be a second away.
+    let ran = wait(from: "2026-10-17T17:00:00Z", to: "2026-10-17T17:04:00Z", run: "bbbb")
+    let between = try XCTUnwrap(Live.sessions(ran, now: try moment("2026-10-17T17:04:10Z")).first)
+    XCTAssertTrue(between.isOpen, "a poll that ended by itself is inside the gap")
+    XCTAssertFalse(between.stoppedByYou)
+  }
+
   func testTheLastWriteTimeIsTheQuietAnchor() throws {
     let five = try day()[0]
     XCTAssertEqual(
@@ -220,7 +247,8 @@ final class LiveSessionTests: XCTestCase {
 
   /// One `comments --wait` call: its start, and its end where it has one.
   private func wait(
-    from: String, to: String?, run: String, ok: Bool = true, doc: String? = nil
+    from: String, to: String?, run: String, ok: Bool = true, doc: String? = nil,
+    interrupted: Bool = false
   ) -> [Event] {
     let on = doc ?? chapterFive
     var events = [
@@ -228,7 +256,9 @@ final class LiveSessionTests: XCTestCase {
     ]
     if let to {
       events.append(
-        event(at: to, kind: .end, command: "comments", run: run, doc: on, ok: ok))
+        event(
+          at: to, kind: .end, command: "comments", run: run, doc: on, ok: ok,
+          interrupted: interrupted))
     }
     return events
   }
@@ -245,13 +275,14 @@ final class LiveSessionTests: XCTestCase {
 
   private func event(
     at text: String, kind: EventKind, command: String, run: String, doc: String?,
-    wait: Bool = false, ok: Bool? = nil
+    wait: Bool = false, ok: Bool? = nil, interrupted: Bool = false
   ) -> Event {
     let formatter = ISO8601DateFormatter()
     formatter.formatOptions = [.withInternetDateTime]
     return Event(
       schema: 1, at: formatter.date(from: text) ?? Date(), gdoc: "v2.14.0", pid: 7000, run: run,
-      call: 1, kind: kind, command: command, via: "terminal", doc: doc, wait: wait, title: nil,
+      call: 1, kind: kind, command: command, via: "terminal", doc: doc, wait: wait,
+      interrupted: interrupted, title: nil,
       ok: ok, verified: nil, ms: ok == nil ? nil : 1200, hold: nil, rule: nil, until: nil)
   }
 }
