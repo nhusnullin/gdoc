@@ -955,6 +955,52 @@ entry names its heading and opens it, no bookmark flag sits beside any heading,
 and the `#` jump lands. The decision is DECISIONS.md, 2026-10-16, "Every
 heading carries one hidden bookmark".
 
+## What ImageRenderer draws for a SwiftUI ScrollView
+
+Measured 2026-10-17 while building the panel's scroll box (M24a Task 7). The
+panel is capped at 600 pt and an opened section scrolls inside itself, so the
+box is a `ScrollView`; the panel's tests and its scene renders all go through
+`ImageRenderer`. The question is whether a rendered panel shows the rows inside
+such a box at all.
+
+How it was taken. A throwaway `XCTestCase` in `presence/Tests/PresenceUITests`
+built forty rows of `Text` in a `VStack`, each 200 by 20 pt over a red
+background, and drew them four ways through `ImageRenderer` at scale 1 in the
+dark appearance: in a `ScrollView` with no height given, in a plain stack with
+no height given, in a `ScrollView` framed at 200 by 236, and in a plain stack
+framed at 200 by 236 with `.clipped()`. A fifth draw put a single row in the
+framed `ScrollView`. Each image was read back as an `NSBitmapImageRep` and its
+pixels with an alpha over 0.05 counted. The file was deleted after the reading.
+
+| What was drawn | Image | Inked pixels |
+|---|---|---|
+| `ScrollView` of forty rows, width 200, no height | 200x1600 | 0 |
+| the same forty rows in a plain `VStack` | 200x1600 | 160,000, which is every pixel of the window counted |
+| `ScrollView` of forty rows, framed 200x236 | 200x236 | 0 |
+| `ScrollView` of one row, framed 200x236 | 200x236 | 0 |
+| forty rows framed 200x236 and clipped | 200x236 | 47,200, which is every pixel |
+
+At scale 2 the same two 236 pt boxes came back as a 23,910-byte PNG for the
+stack and a 3,467-byte PNG for the scroller.
+
+**`ImageRenderer` lays a `ScrollView` out and draws it empty.** The box takes
+the size it should, and its content takes the content's size, so every
+measurement through a preference key still holds; nothing inside it reaches the
+canvas. One row is as empty as forty, so this is not clipping or a scroll
+offset: the renderer does not draw the scroller's content at all.
+
+So the scroll box carries a drawn mode. `ScrollBox` reads
+`\.isRendering` from the environment, and with it on it clips a plain stack
+with `.fixedSize` instead of scrolling. The scenes and every render test turn
+it on with one `rendering()` at the top of the tree; the app never does, so
+what a person sees is a real scroller. `ScrollTests`
+`testTheBoxCapsItsHeightAndScrollsInsideWithTheThumbAndTheFade` asserts the
+ScrollView's ink is zero, so the day the renderer learns to draw one, that test
+says so and the drawn mode can go.
+
+Recheck on a macOS or Xcode upgrade, by that one assertion: it fails when the
+answer changes.
+
 ## Not measured yet
 
 One of the M14 measurements stayed open on 2026-10-03: whether Google emails an

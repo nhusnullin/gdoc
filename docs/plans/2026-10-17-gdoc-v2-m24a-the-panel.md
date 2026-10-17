@@ -202,11 +202,11 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Tests/PresenceUITests/ScrollTests.swift`
 - Modify: `docs/v2/MEASURED.md`
 
-- [ ] measure first and write it into MEASURED.md: whether `ImageRenderer`
+- [x] measure first and write it into MEASURED.md: whether `ImageRenderer`
       draws a SwiftUI `ScrollView`; the render mode clips a plain stack if not
-- [ ] `testTheBoxCapsItsHeightAndScrollsInsideWithTheThumbAndTheFade` (over
+- [x] `testTheBoxCapsItsHeightAndScrollsInsideWithTheThumbAndTheFade` (over
       forty plain rows, by preference key), `testShowMoreAndShowLessToggleTheList`
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 8: the process check
 
