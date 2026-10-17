@@ -102,7 +102,12 @@ func cmdPublish(ctx context.Context, a *args) emit.Result {
 	p.AllowCreateIn(folder)
 	s, err := openSession(p)
 	if err != nil {
-		return emit.Result{OK: false, Error: err.Error()}
+		// The render is already done, so the logo is a fact this run earned
+		// before the sign-in failed. buildFailed states the rule: a skill
+		// should not have to read the two envelopes differently.
+		// TestAPublishThatCannotSignInStillPrintsTheLogoBlock is the pin.
+		return emit.Result{OK: false, Error: err.Error(), Warnings: doc.Warnings,
+			Data: publishData{FolderID: folder, House: doc.House, Logo: doc.Logo}}
 	}
 	return runPublish(ctx, s, md, source, folder, doc)
 }

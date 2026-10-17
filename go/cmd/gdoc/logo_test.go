@@ -503,6 +503,35 @@ func TestPublishReportsTheLogoSource(t *testing.T) {
 	}
 }
 
+// A publish that fails before it reaches Drive prints the block anyway, which
+// is buildFailed's rule read over the other command: a skill should not have
+// to read the two envelopes differently. The render has already happened by
+// then, so the logo is a fact this run earned whatever stopped it next. The
+// cache is fresh, so the session the logo would have opened is never asked
+// for, and the one that fails is publish's own.
+func TestAPublishThatCannotSignInStillPrintsTheLogoBlock(t *testing.T) {
+	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+	cachedLogo(t, logoFileID, housePNG(t), time.Hour)
+	old := openSession
+	openSession = func(*guard.Policy) (session, error) {
+		return nil, fmt.Errorf("there is no token at nowhere. Run: gdoc auth login")
+	}
+	t.Cleanup(func() { openSession = old })
+	_, md := buildNote(t)
+
+	got, code := runJSON(t, "publish", "--md", md, "--folder-id", "1AbCdEfGhIjKlMnOpQrStUvWxYz012345", "--house", driveLogoHouse(t))
+	if code == 0 || got["ok"] == true {
+		t.Fatalf("a publish that cannot sign in is refused: %v (exit %d)", got, code)
+	}
+	block := logoBlockOf(t, got)
+	if block["source"] != "cache" {
+		t.Errorf("a failed publish still says where the logo came from: %v", block)
+	}
+	if block["id"] != logoFileID {
+		t.Errorf("id names the file the house names: %v", block)
+	}
+}
+
 // A house whose logo is bytes is reported as such by publish too.
 func TestPublishReportsALogoInTheFile(t *testing.T) {
 	_, md := buildNote(t)

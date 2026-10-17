@@ -30,6 +30,12 @@ const realLogoSHA256 = "a0c4fc99472c7a8fb069d387b8755dd73f622c2ce261c35a34871e5f
 // because the two ways the logo travels are as a file and as a part of a
 // document. A re-encoding of the same picture is a different file and this
 // scan does not know it; what it holds is that nobody puts this file back.
+//
+// Base64 inside a larger file is the one re-encoding that matters, because it
+// is the form the logo had until M22. There is one file in the tree written to
+// carry a logo that way, internal/house/testdata/house-base64.yaml, and
+// TestTheBase64HouseCarriesThePlaceholderAndNothingElse holds its bytes to the
+// stand-in. This scan covers everything else.
 func scanForBytes(root string, want [32]byte) ([]string, error) {
 	var found []string
 	err := walkTracked(root, func(rel, path string) error {

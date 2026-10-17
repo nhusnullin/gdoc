@@ -753,6 +753,27 @@ func TestThePlaceholderIsAPNGOfTheHouseSize(t *testing.T) {
 	}
 }
 
+// TestTheBase64HouseCarriesThePlaceholderAndNothingElse is the other half of
+// the rule TestTheLogoIsNotInTheTree states, and the half that test cannot
+// reach. The boundary scan hashes whole files, so base64 text sitting inside a
+// larger YAML file is invisible to it, and this file is the one place in the
+// tree whose whole purpose is to carry a logo's bytes. Nothing else pins what
+// those bytes are: the copy is checked against house.yaml only above the key
+// that names them, and every test reading it asks for a PNG of 195 by 97,
+// which the firm's own logo also is. So the firm's bytes pasted here would
+// pass every other test in the tree. This one decodes them and holds them to
+// the placeholder, byte for byte.
+func TestTheBase64HouseCarriesThePlaceholderAndNothingElse(t *testing.T) {
+	raw, err := loadBase64House(t).LogoBytes()
+	if err != nil {
+		t.Fatalf("LogoBytes: %v", err)
+	}
+	if !bytes.Equal(raw, placeholderLogoBytes(t)) {
+		t.Errorf("%s carries %d logo bytes that are not %s; the stand-in is the only picture this tree holds",
+			base64HousePath, len(raw), placeholderLogoPath)
+	}
+}
+
 // TestTheEmbeddedLogoIsADriveIdAndCarriesNoBytes is where this milestone ends:
 // the shipped house names the firm's file and carries none of it. Bytes put
 // back under logo.base64 fail here, which is the point: the tree holds no
