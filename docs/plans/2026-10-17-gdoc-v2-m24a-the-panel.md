@@ -214,12 +214,12 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Sources/PresenceCore/ProcessCheck.swift`
 - Create: `presence/Tests/PresenceCoreTests/ProcessCheckTests.swift`
 
-- [ ] `testAWaitIsStoppableOnlyWhenEveryCheckHolds`: a table over path not
+- [x] `testAWaitIsStoppableOnlyWhenEveryCheckHolds`: a table over path not
       gdoc, another uid, start time outside ten seconds before the event, a
       dead pid, an end already written, `via: chat`;
       `testPreviousCountsAsGdocAndPathsAreResolvedBeforeComparing`
-- [ ] the pure compare over injected facts (resolved path, uid, start time)
-- [ ] `make app-test`
+- [x] the pure compare over injected facts (resolved path, uid, start time)
+- [x] `make app-test`
 
 ### Task 9: the fold, NOW
 
