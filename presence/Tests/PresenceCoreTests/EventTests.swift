@@ -12,7 +12,7 @@ import XCTest
 final class EventTests: XCTestCase {
   func testAVersionOneLineDecodesAndAnUnknownFieldIsIgnored() throws {
     let lines = try Fixture.lines("events-v1")
-    XCTAssertEqual(lines.count, 10, "the shared fixture is ten records")
+    XCTAssertEqual(lines.count, 11, "the shared fixture is eleven records")
 
     let widened = try withUnknownField(lines[0])
     let event = try Event.decode(widened)
@@ -51,8 +51,33 @@ final class EventTests: XCTestCase {
     let kinds = try lines.map { try Event.decode($0).kind }
     XCTAssertEqual(
       kinds,
-      [.start, .end, .start, .end, .held, .released, .expired, .landed, .start, .end]
+      [.start, .end, .start, .end, .held, .released, .expired, .landed, .dropped, .start, .end]
     )
+  }
+
+  // A hold whose sign-in changed leaves the record as dropped, which is a
+  // hold ending like the other three: it names its hold, it names no command,
+  // and it says nothing about the account, because gdoc puts no account in the
+  // record at all.
+  func testADroppedLineDecodesAsAHoldEnding() throws {
+    let line = try Fixture.lines("events-v1")[8]
+    let event = try Event.decode(line)
+
+    XCTAssertEqual(event.kind, .dropped)
+    XCTAssertEqual(event.hold, "h_gh78")
+    XCTAssertNil(event.command, "a hold ending is not a command")
+    XCTAssertNil(event.call, "a hold is not a numbered call")
+    XCTAssertNil(event.doc)
+
+    XCTAssertThrowsError(try Event.decode(try without("hold", line)), "a dropped hold names itself")
+
+    // And it closes the hold it names, the way a release does.
+    let held = try Event.decode(try Fixture.lines("events-v1")[4])
+    let renamed = line.replacingOccurrences(of: "h_gh78", with: "h_ab12")
+    let glance = Fold.glance(
+      [held, try Event.decode(renamed)], now: try moment("2026-10-17T09:20:00Z"),
+      calendar: Calendar(identifier: .gregorian), alive: { _ in true })
+    XCTAssertTrue(glance.now.isEmpty, "the dropped card is gone from NOW")
   }
 
   func testAnUnknownVersionIsRefusedAsNewer() throws {

@@ -653,9 +653,11 @@ func presenceLine(t *testing.T, dir string) string {
 	return string(b)
 }
 
-// A hold leaves one of three ways, and exactly one line says which: the person
-// released it, its thirty minutes ran out, or the write it held landed another
-// way. Two lines for one hold would read as two cards.
+// A hold leaves one of four ways, and exactly one line says which: the person
+// released it, its thirty minutes ran out, the write it held landed another
+// way, or the sign-in it was held under stopped being the sign-in on this
+// computer. Two lines for one hold would read as two cards. What the sign-in
+// rule itself is, and what it answers, is mcpsignin_test.go.
 func TestEveryWayAHoldLeavesIsExactlyOneLine(t *testing.T) {
 	t.Run("released", func(t *testing.T) {
 		dir := recording(t)
@@ -722,6 +724,24 @@ func TestEveryWayAHoldLeavesIsExactlyOneLine(t *testing.T) {
 		}
 		leftOnce(t, presenceEvents(t, dir), "landed")
 	})
+
+	t.Run("dropped", func(t *testing.T) {
+		dir := recording(t)
+		signedIn(t)
+		stubWire(t, &fakeWire{answers: pinAnswers(t)})
+		stubClock(t, holdClock)
+
+		ch := chatRecording(t)
+		watchConfirms(t, ch)
+		heldInChat(t, ch)
+
+		// Somebody signs in as somebody else, and the sweep every tool call
+		// makes finds the card unsendable.
+		signedInAs(t, anotherRefreshToken)
+		ch.holds.sweep(now())
+		ch.holds.sweep(now())
+		leftOnce(t, presenceEvents(t, dir), "dropped")
+	})
 }
 
 // leftOnce is the rule the three ways share: one held, one line saying how it
@@ -741,7 +761,7 @@ func leftOnce(t *testing.T, events []presence.Event, way string) {
 	if counted[way] != 1 {
 		t.Errorf("the hold left %s %d times: %+v", way, counted[way], events)
 	}
-	for _, other := range []string{"released", "expired", "landed"} {
+	for _, other := range []string{"released", "expired", "landed", "dropped"} {
 		if other != way && counted[other] != 0 {
 			t.Errorf("the hold also left %s: %+v", other, events)
 		}

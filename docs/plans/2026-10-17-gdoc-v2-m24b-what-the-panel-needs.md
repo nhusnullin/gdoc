@@ -134,7 +134,7 @@ box is ticked and its commit is on the branch.
 - Modify: `go/cmd/gdoc/mcphold.go`, `go/cmd/gdoc/mcprelease.go`, `go/cmd/gdoc/mcphold_test.go`
 - Modify: `go/internal/presence/event.go` (the `dropped` hold ending), `doc.go`, `testdata/events-v1.jsonl`, `presence/Tests/PresenceCoreTests/Fixtures/events-v1.jsonl`, `presence/Sources/PresenceCore/Event.swift`, `presence/Sources/PresenceCore/Fold.swift` (the two switches learn `dropped` as a hold ending), `presence/Tests/PresenceCoreTests/EventTests.swift`, `LogTailTests.swift`
 
-- [ ] `TestAHoldRemembersTheSignInItWasHeldUnder`,
+- [x] `TestAHoldRemembersTheSignInItWasHeldUnder`,
       `TestAReleaseAfterTheSignInChangedSendsNothingAndDropsTheHold`,
       `TestAReleaseAfterASignOutSendsNothingAndDropsTheHold`,
       `TestAReleaseUnderTheSameSignInStillSends`,
@@ -144,9 +144,14 @@ box is ticked and its commit is on the branch.
       `TestTheSignInMarkReachesNoAnswerNoToolAndNoLine`,
       `TestEveryWayAHoldLeavesIsExactlyOneLine` gains `dropped`;
       Swift: `testADroppedLineDecodesAsAHoldEnding`
-- [ ] the mark kept in `mcpHolds` beside the hold and compared at release and
-      in `sweep`; the fixed sentence; `internal/chat` untouched
-- [ ] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make app-test`
+- [x] the mark kept in `mcpHolds` beside the hold and compared at release and
+      in `sweep`; the fixed sentence; `internal/chat` untouched. The tests of
+      the rule are in `go/cmd/gdoc/mcpsignin_test.go`, because
+      `mcphold_test.go` is already at its length; the `dropped` way out joined
+      `TestEveryWayAHoldLeavesIsExactlyOneLine` in `mcphold_test.go` itself.
+      The new fixture line sits after `landed`, so every index the Swift tests
+      read is where it was and `LogTailTests.swift` needed no change
+- [x] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make app-test`
 
 ### Task 3: `made` on a publish end
 

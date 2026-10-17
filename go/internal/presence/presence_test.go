@@ -537,6 +537,7 @@ func TestTheFixtureIsWhatTheWriterWrites(t *testing.T) {
 	Released(true, version, "h_ab12", errOut)
 	Expired(true, version, "h_cd34", errOut)
 	Landed(true, version, "h_ef56", errOut)
+	Dropped(true, version, "h_gh78", errOut)
 
 	upgrade := Begin(ctx, true, version, "update", "", false, false, errOut)
 	upgrade.End(emit.Result{OK: false, Error: "nothing newer than v2.13.0 is published", Version: version})

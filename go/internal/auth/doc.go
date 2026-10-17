@@ -105,6 +105,26 @@
 // M17's Keychain is not shipped, and the day it lands is the day this function
 // learns a second place to remove from.
 //
+// # Which sign-in, without saying whose
+//
+// SignInMark is the hex SHA-256 of a fixed prefix and the refresh token, and
+// it answers one question: is this the same sign-in as that one. It reads the
+// refresh token because that is the field a sign-in as another account
+// changes and an ordinary access-token refresh leaves alone, which is the
+// reading internal/gapi's newerLogin already makes of the same file.
+//
+// It carries nothing of the token, and no account or email is compared
+// anywhere: TestTheSignInMarkCarriesNoWordOfTheToken. A token with no refresh
+// token has no mark, and an empty mark equals nothing, so whoever holds a mark
+// of nothing holds no permission: TestATokenWithNoRefreshTokenHasNoMark.
+//
+// Its one caller is cmd/gdoc's chat holds, which keep a mark beside each open
+// card and drop the card where the mark stops matching, so an approval a
+// person gave as one account never posts as the next. The prefix is in the
+// hash so this digest is this question's own, and nothing else that hashes the
+// same string can be read as an answer to it:
+// TestTheSignInMarkIsTheDomainPrefixedHashOfTheRefreshToken.
+//
 // # One waiting sign-in, written down beside the token
 //
 // Claude Desktop runs two gdoc processes, one per client

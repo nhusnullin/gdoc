@@ -127,7 +127,7 @@ public enum Fold {
         finished.append(end(event))
       case .held:
         holds[event.hold ?? ""] = hold(event, now: now)
-      case .released, .expired, .landed:
+      case .released, .expired, .landed, .dropped:
         holds.removeValue(forKey: event.hold ?? "")
       }
     }
@@ -155,7 +155,7 @@ public enum Fold {
     switch event.kind {
     case .start, .end:
       return "\(event.kind.rawValue)|\(event.pairing)"
-    case .held, .released, .expired, .landed:
+    case .held, .released, .expired, .landed, .dropped:
       return "\(event.kind.rawValue)|\(event.hold ?? "")"
     }
   }

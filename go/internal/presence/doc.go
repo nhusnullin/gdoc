@@ -3,6 +3,15 @@
 // command's start and one for its end, and one line for each way a chat hold
 // begins and leaves.
 //
+// A hold begins as held and leaves as released, expired, landed or dropped,
+// and a hold leaves at most once: cmd/gdoc's
+// TestEveryWayAHoldLeavesIsExactlyOneLine. dropped is the sign-in the hold was
+// raised under no longer being the sign-in on the computer, which cmd/gdoc
+// judges by comparing a hash of the refresh token it kept beside the hold. The
+// hash never reaches this package and no account ever does, so the line says
+// the card is gone and nothing about whose it was:
+// cmd/gdoc's TestTheSignInMarkReachesNoAnswerNoToolAndNoLine.
+//
 // It exists because of the 2026-10-17 brief: gdoc must not change in kind,
 // and it may say what it is doing in real time. A live review is hours of
 // silence in a chat window, and alive and dead look the same there. The

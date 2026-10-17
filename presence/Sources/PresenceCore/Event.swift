@@ -7,8 +7,10 @@
 
 import Foundation
 
-/// The six things the record says happened. A command has a start and an end;
-/// a chat hold is held and then released, expired or landed, exactly once.
+/// The seven things the record says happened. A command has a start and an
+/// end; a chat hold is held and then released, expired, landed or dropped,
+/// exactly once. Dropped is the sign-in it was held under changing, which gdoc
+/// treats as the card being gone.
 public enum EventKind: String, Sendable, CaseIterable {
   case start
   case end
@@ -16,6 +18,7 @@ public enum EventKind: String, Sendable, CaseIterable {
   case released
   case expired
   case landed
+  case dropped
 }
 
 /// Why a line is not a record. A newer schema is the one fault the app shows
@@ -187,7 +190,7 @@ private struct Wire: Decodable {
     switch kind {
     case .start, .end:
       guard let command, !command.isEmpty else { throw RecordFault.undecodable("no command") }
-    case .held, .released, .expired, .landed:
+    case .held, .released, .expired, .landed, .dropped:
       guard let hold, !hold.isEmpty else { throw RecordFault.undecodable("no hold") }
     }
 

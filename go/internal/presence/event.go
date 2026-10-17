@@ -161,10 +161,11 @@ func Held(ctx context.Context, on bool, version, command, doc, hold, rule string
 	}, errOut)
 }
 
-// Released, Expired and Landed are the three ways a hold leaves, and at most
-// one of them follows a held: a send consumed it, its life ran out, or
-// another send landed and took it away. Which one happened says nothing about
-// whether the send succeeded; the command's own start and end say that.
+// Released, Expired, Landed and Dropped are the four ways a hold leaves, and
+// at most one of them follows a held: a send consumed it, its life ran out,
+// another send landed and took it away, or the sign-in it was held under
+// stopped being the sign-in on the computer. Which one happened says nothing
+// about whether the send succeeded; the command's own start and end say that.
 //
 // At most, and not exactly: expired is written by the session's sweep, which
 // runs on the next tool call, so a chat that closed with a card open writes no
@@ -180,6 +181,15 @@ func Expired(on bool, version, hold string, errOut io.Writer) {
 
 func Landed(on bool, version, hold string, errOut io.Writer) {
 	endOfHold("landed", on, version, hold, errOut)
+}
+
+// Dropped is the hold whose sign-in changed: cmd/gdoc found another token at
+// the path, or none, and took the card away rather than letting a person
+// approve a write that would go out under the next account. The line says the
+// hold is gone and nothing about the account, because no account reaches this
+// package: cmd/gdoc's TestTheSignInMarkReachesNoAnswerNoToolAndNoLine.
+func Dropped(on bool, version, hold string, errOut io.Writer) {
+	endOfHold("dropped", on, version, hold, errOut)
 }
 
 func endOfHold(kind string, on bool, version, hold string, errOut io.Writer) {

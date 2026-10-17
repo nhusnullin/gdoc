@@ -6,5 +6,6 @@
 {"v":1,"at":"2026-10-17T09:15:05Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","event":"released","hold":"h_ab12"}
 {"v":1,"at":"2026-10-17T09:15:06Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","event":"expired","hold":"h_cd34"}
 {"v":1,"at":"2026-10-17T09:15:07Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","event":"landed","hold":"h_ef56"}
-{"v":1,"at":"2026-10-17T09:15:08Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","call":3,"event":"start","command":"update","via":"terminal"}
-{"v":1,"at":"2026-10-17T09:15:09Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","call":3,"event":"end","command":"update","via":"terminal","ok":false,"ms":0}
+{"v":1,"at":"2026-10-17T09:15:08Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","event":"dropped","hold":"h_gh78"}
+{"v":1,"at":"2026-10-17T09:15:09Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","call":3,"event":"start","command":"update","via":"terminal"}
+{"v":1,"at":"2026-10-17T09:15:10Z","gdoc":"v2.13.0","pid":4242,"run":"9f1cb3a7d2e45608","call":3,"event":"end","command":"update","via":"terminal","ok":false,"ms":0}
