@@ -1,7 +1,7 @@
 // What a render test does with a view: draw it, count its ink, write it out.
 //
-// Three test files draw the same way, so the renderer, the pixel count and
-// the directory the PNGs go to live here once. The directory is outside the
+// Four test files draw the same way, so the renderer, the pixel count, the
+// measurements and the directory the PNGs go to live here once. The directory is outside the
 // repository, always: a render is something a person looks at once, and a
 // committed screenshot is a file nobody compares against the code that drew
 // it.
@@ -9,6 +9,8 @@
 import AppKit
 import SwiftUI
 import XCTest
+
+@testable import PresenceUI
 
 /// One view through the renderer at 2x, in the appearance named.
 @MainActor
@@ -91,4 +93,43 @@ func presencePackageRoot() -> URL {
     .deletingLastPathComponent()
     .deletingLastPathComponent()
     .deletingLastPathComponent()
+}
+
+/// What a view measured, by name: the `metricProbe` names under it against
+/// the boxes they were drawn in.
+///
+/// A size in this package is a literal from the screens file, and a literal
+/// is worth nothing until the drawing is shown to honour it, so the tests
+/// read the numbers back through the preference key rather than off the
+/// constant they came from.
+@MainActor
+func probes<V: View>(_ view: V, scheme: ColorScheme, width: CGFloat = Grid.panelWidth) throws
+  -> [String: CGSize]
+{
+  let collector = ProbeCollector()
+  let framed =
+    view
+    .frame(width: width)
+    .environment(\.colorScheme, scheme)
+    .onPreferenceChange(MetricProbes.self) { reported in
+      MainActor.assumeIsolated { collector.reported = reported }
+    }
+  let renderer = ImageRenderer(content: framed)
+  renderer.scale = 2
+  let appearance = NSAppearance(named: scheme == .dark ? .darkAqua : .aqua)
+  appearance?.performAsCurrentDrawingAppearance {
+    _ = renderer.cgImage
+  }
+  XCTAssertFalse(collector.reported.isEmpty, "nothing reported a size in \(scheme)")
+  var byName: [String: CGSize] = [:]
+  for probe in collector.reported where byName[probe.name] == nil {
+    byName[probe.name] = probe.size
+  }
+  return byName
+}
+
+/// The box a render writes its measurements into.
+@MainActor
+final class ProbeCollector {
+  var reported: [MetricProbe] = []
 }

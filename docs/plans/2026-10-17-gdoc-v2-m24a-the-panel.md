@@ -152,7 +152,7 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Sources/PresenceCore/Titles.swift`
 - Create: `presence/Tests/PresenceCoreTests/TitlesTests.swift`, `presence/Tests/PresenceUITests/RowTests.swift`
 
-- [ ] `testTheSplitIsTheScreensRule` (26 whole, a tail of 14 or fewer with its
+- [x] `testTheSplitIsTheScreensRule` (26 whole, a tail of 14 or fewer with its
       space, `TT()` ported case by case over invented titles of 20, 40, 60 and
       80 characters), `testNoHeadUnderEightCharactersAtPanelWidth`,
       `testRowHeightsAreTheGrid` (32, 44, 28 by preference key),
@@ -160,8 +160,8 @@ every box is ticked and its commit is on the branch.
       `testASectionLabelIs28AndUppercaseWithTheCount`,
       `testTheHeaderIs36WithTheMarkTheNameAndTheAccount`,
       `testAGoneTitleIsStruckThrough`
-- [ ] the views in the five layouts, hover fill, busy hides icons
-- [ ] `make app-lint`, `make app-test`
+- [x] the views in the five layouts, hover fill, busy hides icons
+- [x] `make app-lint`, `make app-test`
 
 ### Task 5: tooltip, switch, confirm, buttons
 

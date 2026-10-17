@@ -36,7 +36,7 @@ public struct PanelView: View {
       header
 
       if let notice = model.notice {
-        RowView(row: notice)
+        M23RowView(row: notice)
       }
 
       if model.showsNow {
@@ -55,7 +55,7 @@ public struct PanelView: View {
 
       VStack(alignment: .leading, spacing: 0) {
         ForEach(Array(model.versions.enumerated()), id: \.offset) { _, row in
-          RowView(row: row)
+          M23RowView(row: row)
         }
       }
 
@@ -97,7 +97,7 @@ private struct RowSection: View {
         .font(.system(size: Metrics.label, weight: .semibold))
         .foregroundStyle(.tertiary)
       ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-        RowView(row: row)
+        M23RowView(row: row)
       }
     }
   }
@@ -126,9 +126,11 @@ private struct KindGlyph: View {
   }
 }
 
-/// One row: a leading word, a sentence under it, a value on the right, and
-/// the one symbol a finished row carries.
-private struct RowView: View {
+/// One row of the M23 plain panel: a leading word, a sentence under it, a
+/// value on the right, and the one symbol a finished row carries. Named
+/// apart from Components/RowView.swift, which is the panel this milestone
+/// draws, until Task 13 takes this file out.
+private struct M23RowView: View {
   let row: Row
 
   var body: some View {
