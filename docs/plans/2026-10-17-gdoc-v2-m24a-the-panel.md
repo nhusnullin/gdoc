@@ -342,14 +342,14 @@ every box is ticked and its commit is on the branch.
 - Create: `presence/Tests/PresenceAppTests/RunnerTests.swift`, `Fixtures/fake-gdoc.sh` (mode 755)
 - Modify: `presence/Tests/PresenceCoreTests/SourceRulesTests.swift` (`Process` only in `Runner.swift`, the argv enum closed at six)
 
-- [ ] `testGdocIsResolvedAtLocalBinThenBesideTheBundleNeverFromPATH`,
+- [x] `testGdocIsResolvedAtLocalBinThenBesideTheBundleNeverFromPATH`,
       `testTheArgvSetIsExactlyTheSix`, `testTheChildEnvironmentIsTheFourVariables`
       (with `GDOC_CONFIG_DIR` set in the test's own environment and absent in
       the child's), `testStdinIsTheNullDevice`, `testOneChildPerKindAtATime`,
       `testTheEnvelopeIsDecodedStrictly`, `testATimeoutTerminatesTheChild`,
       over `fake-gdoc.sh`; `testProcessAppearsOnlyInTheRunner`
-- [ ] the runner; the "gdoc not found" fact with the path tried, for HEALTH
-- [ ] `make app-lint`, `make app-test`, `make app`
+- [x] the runner; the "gdoc not found" fact with the path tried, for HEALTH
+- [x] `make app-lint`, `make app-test`, `make app`
 
 ### Task 16: health facts and the polls
 
