@@ -186,7 +186,7 @@ func Apply(ctx context.Context, s Session, docID string, a Annotation, mark stri
 		// which tab it is in. Refusing is the honest answer until a milestone
 		// decides how a comment names a tab. propose refuses the same document
 		// with the same words.
-		return out, fmt.Errorf("the document has %d tabs, and a comment is written into a document with one", len(d.Tabs))
+		return out, propose.MoreThanOneTab("the document has %d tabs, and a comment is written into a document with one", len(d.Tabs))
 	}
 	r, err := propose.FindSpan(d, a.Quoted)
 	if err != nil {

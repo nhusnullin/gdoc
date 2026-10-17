@@ -2,6 +2,8 @@ package body
 
 import (
 	"bytes"
+	"encoding/base64"
+	"errors"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -220,5 +222,37 @@ func TestAJPEGIsMeasuredOnItsFirstFrame(t *testing.T) {
 	}
 	if info.pxWidth != 100 || info.pxHeight != 50 {
 		t.Errorf("the JPEG measures %dx%d, want 100x50", info.pxWidth, info.pxHeight)
+	}
+}
+
+// TestAPictureThatCannotBeEmbeddedCarriesItsLine holds the typed refusal a
+// stop code is read from. An SVG is the picture a person actually pastes and
+// the house style cannot carry, and the line is the only way a reader finds it
+// in a long note, so the refusal is a value with the line on it rather than a
+// sentence a caller would have to parse.
+func TestAPictureThatCannotBeEmbeddedCarriesItsLine(t *testing.T) {
+	svg := base64.StdEncoding.EncodeToString([]byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`))
+	note := "# A note\n\nA line of prose.\n\n![a diagram](data:image/svg+xml;base64," + svg + ")\n"
+
+	_, err := Render(config(t), []byte(note), "testdata/docs", true)
+
+	if err == nil {
+		t.Fatal("an SVG must be refused, not published as a missing picture")
+	}
+	var pictureErr *PictureError
+	if !errors.As(err, &pictureErr) {
+		t.Fatalf("the refusal must be a *PictureError errors.As reaches: %T: %v", err, err)
+	}
+	if pictureErr.Line != 5 {
+		t.Errorf("Line = %d, and the picture is on line 5", pictureErr.Line)
+	}
+	if !strings.Contains(err.Error(), "could not be embedded") {
+		t.Errorf("the sentence a person reads does not change: %v", err)
+	}
+	if !strings.Contains(err.Error(), "line 5") {
+		t.Errorf("the sentence still names the line: %v", err)
+	}
+	if !strings.Contains(err.Error(), "an inline picture") {
+		t.Errorf("an inline picture is named as one rather than quoted whole: %v", err)
 	}
 }

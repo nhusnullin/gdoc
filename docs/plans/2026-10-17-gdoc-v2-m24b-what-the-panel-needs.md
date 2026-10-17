@@ -174,12 +174,19 @@ box is ticked and its commit is on the branch.
 - Create: `go/internal/emit/stop.go` (`StopCode` with the seven literals and `Result.Stop StopCode` tagged `json:"-"`, `Result.StopLine int` tagged `json:"-"`), `go/internal/emit/stop_test.go`
 - Modify: `go/internal/body/image.go` (a typed `PictureError{Line}`), `go/internal/gapi/session.go` (`statusError` exposes its status), `go/internal/propose/*.go` and `go/internal/annotate/*.go` (a typed `ErrMoreThanOneTab`), `go/internal/guard/policy.go` (a typed refusal), their tests
 
-- [ ] `TestStopNeverReachesTheObject` (as `TestScreenNeverReachesTheObject`),
+- [x] `TestStopNeverReachesTheObject` (as `TestScreenNeverReachesTheObject`),
       `TestTheSevenCodesAreLiterals`, `TestAPictureThatCannotBeEmbeddedCarriesItsLine`,
       `TestAStatusErrorExposesItsStatus`, `TestMoreThanOneTabIsATypedRefusal`,
       `TestTheGuardsRefusalIsTyped`; every existing test over those error
-      strings unchanged, because the words do not change
-- [ ] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`
+      strings unchanged, because the words do not change. Four more boxes the
+      work asked for: `TestStopCodesIsACopy`, because `StopCodes` hands out a
+      slice; `TestATokenRefusedTwiceIsAStatusError`, because the auth refusal
+      gapi writes itself is not a `statusError` and Task 5 has to name it;
+      `TestMoreThanOneTabIsATypedRefusal` a second time in `internal/annotate`,
+      because the two packages refuse separately; and `Unwrap` on
+      `*PictureError` and on the two sentence-only types, which is how every
+      word a person reads stayed the word it was
+- [x] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make vet`
 
 ### Task 5: `stop` and `line` on a failed end
 

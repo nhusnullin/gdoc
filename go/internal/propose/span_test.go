@@ -1,6 +1,8 @@
 package propose
 
 import (
+	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -221,4 +223,43 @@ func chipDocument(t *testing.T) *docs.Document {
 		t.Fatal(err)
 	}
 	return d
+}
+
+// TestMoreThanOneTabIsATypedRefusal holds the one refusal both writes that
+// name a range give a document with more than one tab. A range means nothing
+// without saying which tab it is in, and all three places that say so answer
+// one value cmd/gdoc reads with errors.Is, so naming a stop code never means
+// matching English. The sentences themselves do not change.
+func TestMoreThanOneTabIsATypedRefusal(t *testing.T) {
+	t.Run("FindSpan", func(t *testing.T) {
+		_, err := FindSpan(document(t, "two-tabs.json"), "reviewed annually")
+		if err == nil {
+			t.Fatal("a two-tab document was placed in")
+		}
+		if !errors.Is(err, ErrMoreThanOneTab) {
+			t.Errorf("the refusal must be ErrMoreThanOneTab: %T: %v", err, err)
+		}
+		if !strings.Contains(err.Error(), "2 tabs") {
+			t.Errorf("the sentence still names the count: %v", err)
+		}
+	})
+	t.Run("Apply", func(t *testing.T) {
+		f := script(t, "two-tabs.json", "after.json", "preview.json", "batch-saved.json", withComment)
+		_, err := Apply(context.Background(), f, testDocID, testProposal, "🤖")
+		if err == nil {
+			t.Fatal("a two-tab document was written to")
+		}
+		if !errors.Is(err, ErrMoreThanOneTab) {
+			t.Errorf("the refusal must be ErrMoreThanOneTab: %T: %v", err, err)
+		}
+	})
+	t.Run("a refusal that is not about tabs", func(t *testing.T) {
+		_, err := FindSpan(document(t, "before.json"), "reviewed monthly")
+		if err == nil {
+			t.Fatal("text that is not in the document was found")
+		}
+		if errors.Is(err, ErrMoreThanOneTab) {
+			t.Error("a quote that is not there is not a tab refusal")
+		}
+	})
 }

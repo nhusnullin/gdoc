@@ -416,7 +416,11 @@ func (s *Session) send(ctx context.Context, rawURL string, build requestFor, lim
 			return nil, err
 		}
 		if status == http.StatusUnauthorized {
-			return nil, errors.New("the token was refused twice; run: gdoc auth login")
+			// The status is what the server said twice, so the refusal is the
+			// same typed value a 404 is and cmd/gdoc names it without reading
+			// the sentence. TestATokenRefusedTwiceIsAStatusError is the pin.
+			return nil, &StatusError{Status: http.StatusUnauthorized,
+				msg: "the token was refused twice; run: gdoc auth login"}
 		}
 	}
 	if status < 200 || status > 299 {
@@ -620,6 +624,19 @@ func (s *Session) adopt(tok auth.Token) {
 	}
 }
 
+// StatusError is an answer with a status outside 2xx: the status itself, and
+// the sentence a person reads. The status is a field rather than a word in the
+// sentence because cmd/gdoc reads it with errors.As to name a stop code for the
+// presence record, and 404 and 401 are the two a person meets.
+// TestAStatusErrorExposesItsStatus is the pin.
+type StatusError struct {
+	// Status is what the server answered.
+	Status int
+	msg    string
+}
+
+func (e *StatusError) Error() string { return e.msg }
+
 // statusError carries the status and the server's own message, and never the
 // raw body. A refusal goes into the JSON a command prints, and an HTML error page
 // on the envelope is noise nobody reads.
@@ -630,7 +647,8 @@ func statusError(rawURL string, status int, body []byte) error {
 		} `json:"error"`
 	}
 	if json.Unmarshal(body, &e) == nil && e.Error.Message != "" {
-		return fmt.Errorf("%s answered %d: %s", rawURL, status, e.Error.Message)
+		return &StatusError{Status: status,
+			msg: fmt.Sprintf("%s answered %d: %s", rawURL, status, e.Error.Message)}
 	}
 	// GitHub puts its message at the top level, and the releases listing is
 	// read through this same function. The rate limit is the one a person
@@ -639,9 +657,11 @@ func statusError(rawURL string, status int, body []byte) error {
 		Message string `json:"message"`
 	}
 	if json.Unmarshal(body, &g) == nil && g.Message != "" {
-		return fmt.Errorf("%s answered %d: %s", rawURL, status, g.Message)
+		return &StatusError{Status: status,
+			msg: fmt.Sprintf("%s answered %d: %s", rawURL, status, g.Message)}
 	}
-	return fmt.Errorf("%s answered %d with no readable message", rawURL, status)
+	return &StatusError{Status: status,
+		msg: fmt.Sprintf("%s answered %d with no readable message", rawURL, status)}
 }
 
 // unwrapRequestError drops the *url.Error wrapper http.Client.Do puts around a

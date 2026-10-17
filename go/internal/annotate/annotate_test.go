@@ -357,6 +357,25 @@ func TestApplyRefusesADocumentWithMoreThanOneTabBeforeAnyWrite(t *testing.T) {
 	}
 }
 
+// TestMoreThanOneTabIsATypedRefusal holds that a comment refuses the document
+// with the same value propose does, so cmd/gdoc names one stop code from one
+// match rather than from two sentences.
+func TestMoreThanOneTabIsATypedRefusal(t *testing.T) {
+	f := script(t, "two-tabs.json", "batch-saved.json")
+
+	_, err := Apply(context.Background(), f, testDocID, testAnnotation, "🤖")
+
+	if err == nil {
+		t.Fatal("a two-tab document was written to")
+	}
+	if !errors.Is(err, propose.ErrMoreThanOneTab) {
+		t.Errorf("the refusal must be propose.ErrMoreThanOneTab: %T: %v", err, err)
+	}
+	if !strings.Contains(err.Error(), "a comment is written into a document with one") {
+		t.Errorf("the sentence a person reads does not change: %v", err)
+	}
+}
+
 // TestApplyReadsTheCommentIdFromTheThreadFirst is the shape Docs really answers
 // with, measured for propose on 2026-09-07: the id sits under
 // insertComment.commentThread.commentId. The flat field was the guess made

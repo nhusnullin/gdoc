@@ -35,6 +35,13 @@ type Result struct {
 	// any other answer, and no skill has to learn it.
 	// TestScreenNeverReachesTheObject.
 	Screen bool `json:"-"`
+	// Stop says in one fixed word why a failed run failed, and StopLine the
+	// line of the note the cause sits on where the cause has one. Both follow
+	// Screen: a caller sets them, the object never carries them, and no skill
+	// has to learn them. The presence record is their one reader.
+	// TestStopNeverReachesTheObject.
+	Stop     StopCode `json:"-"`
+	StopLine int      `json:"-"`
 }
 
 // Print writes the result as one JSON object and a newline. HTML escaping is

@@ -269,6 +269,27 @@ func readImage(target, base string, line int) ([]byte, string, error) {
 	return data, path, nil
 }
 
+// PictureError is a picture the house style cannot carry, with the line of the
+// note it sits on. It is a value rather than a sentence because cmd/gdoc reads
+// it with errors.As to name a stop code for the presence record, and a caller
+// that had to find the line in the words would be parsing English.
+//
+// An SVG is the case every reader meets: Word embeds no SVG, so the picture
+// would go missing from the document and only show up once somebody read it.
+// TestAPictureThatCannotBeEmbeddedCarriesItsLine is the pin.
+type PictureError struct {
+	// Line is the line of the note the picture is written on.
+	Line int
+	msg  string
+	err  error
+}
+
+func (e *PictureError) Error() string { return e.msg }
+
+// Unwrap keeps what identify said, so a caller asking after the cause still
+// reaches it.
+func (e *PictureError) Unwrap() error { return e.err }
+
 // place reads one picture and returns the centred paragraph that holds it,
 // with the media part it needs. A picture wider than the text column is scaled
 // down to it, and never scaled up.
@@ -289,7 +310,9 @@ func (r *renderer) place(target string, line int, captioned bool) (*etree.Elemen
 		if isDataURI(target) {
 			shown = "an inline picture"
 		}
-		return nil, fmt.Errorf("line %d: %s could not be embedded: %w", line, shown, err)
+		return nil, &PictureError{Line: line,
+			msg: fmt.Sprintf("line %d: %s could not be embedded: %s", line, shown, err),
+			err: err}
 	}
 
 	r.imageCount++

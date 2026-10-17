@@ -7,6 +7,7 @@ package guard
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -460,8 +461,22 @@ func (p *Policy) Warnings() []string {
 	return out
 }
 
+// ErrRefused is what errors.Is matches on every refusal the guard makes. The
+// sentence stays the thing a reader argues with, rule by rule; this is the
+// thing a caller matches. cmd/gdoc names a stop code for the presence record
+// from it, and a code read out of English would follow the words wherever a
+// milestone reworded them. TestTheGuardsRefusalIsTyped is the pin.
+var ErrRefused = errors.New("guard refused")
+
+// refusal is one refusal: the sentence, and nothing else. Unwrap, rather than
+// a %w inside the sentence, is why every refusal reads exactly as it did.
+type refusal struct{ msg string }
+
+func (e refusal) Error() string { return e.msg }
+func (e refusal) Unwrap() error { return ErrRefused }
+
 func refuse(format string, a ...any) error {
-	return fmt.Errorf("guard refused: "+format, a...)
+	return refusal{msg: fmt.Sprintf("guard refused: "+format, a...)}
 }
 
 // Judge is the whole policy in one function: it answers whether this method on

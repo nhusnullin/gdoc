@@ -50,7 +50,7 @@ func FindSpan(d *docs.Document, quoted string) (docs.Range, error) {
 		return docs.Range{}, fmt.Errorf("the proposal quotes no text, so there is nothing to find")
 	}
 	if len(d.Tabs) != 1 {
-		return docs.Range{}, fmt.Errorf("the document has %d tabs, and a proposal is placed in a document with one", len(d.Tabs))
+		return docs.Range{}, MoreThanOneTab("the document has %d tabs, and a proposal is placed in a document with one", len(d.Tabs))
 	}
 	tab := d.Tabs[0]
 
