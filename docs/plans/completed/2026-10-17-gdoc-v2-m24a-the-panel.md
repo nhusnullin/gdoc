@@ -526,6 +526,11 @@ every box is ticked and its commit is on the branch.
 - [x] the M24a half of the M24 row in `docs/v2/PLAN.md`'s Done table
 - [x] this plan and the spec move to `docs/plans/completed/`
 
+One row was added to those acceptance rows afterwards, on the evening of
+2026-10-17: the reviewer's pass ran once more over the renders of the finished
+branch, and the three findings it rated blocking are closed by Tasks 1, 2 and 4
+of `docs/plans/completed/2026-10-17-gdoc-v2-m24a-second-pass.md`.
+
 ## Post-completion
 
 **Nail's measurements, confirmed by him, into MEASURED.md.** Self-relaunch

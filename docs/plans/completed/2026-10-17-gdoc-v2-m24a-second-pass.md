@@ -200,8 +200,8 @@ branch.
 - Modify: `docs/plans/completed/2026-10-17-gdoc-v2-m24a-the-panel.md`
   (one line under its acceptance rows naming this pass), this plan
 
-- [ ] the acceptance rows of the M24a plan gain one row: the second
+- [x] the acceptance rows of the M24a plan gain one row: the second
       reviewer's pass ran on the renders of the final branch, and its
       report's three blocking findings are closed by Tasks 1, 2 and 4
-- [ ] move this plan to `docs/plans/completed/`
-- [ ] `make app-lint`, `make app-test`
+- [x] move this plan to `docs/plans/completed/`
+- [x] `make app-lint`, `make app-test`
