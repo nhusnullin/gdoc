@@ -12,7 +12,10 @@
 // number before the bytes were in place would be a row that lied for a few
 // seconds. Only `action: "updated"` moves it, because that is the one word
 // the command prints for a run that replaced something; `major_available` is
-// a version this app declined to install by passing no flag.
+// a version this app declined to install by passing no flag. It moves the row
+// until the next reading disagrees with it and no longer: the row belongs to
+// `help --json`, and this run's answer stands in for one stale reading rather
+// than for the rest of the process.
 //
 // Install extension is the second list, `update --desktop`. It is not a new
 // gdoc, so it moves no version: the standing stays idle and the row's number
@@ -53,6 +56,9 @@ public actor UpdateAction {
   public private(set) var standing: UpdateStanding = .idle
 
   private let answer: Answer
+  /// The version the last run replaced, as that run reported it. It is what
+  /// bounds the override in `installed(over:)` to the one reading it is for.
+  private var replaced: String?
 
   public init(answer: @escaping Answer) {
     self.answer = answer
@@ -102,7 +108,7 @@ public actor UpdateAction {
       previousAccount: facts.previousAccount,
       versions: Versions(
         app: facts.versions.app,
-        gdoc: installed ?? facts.versions.gdoc,
+        gdoc: installed(over: facts.versions.gdoc) ?? facts.versions.gdoc,
         latestStable: facts.versions.latestStable),
       mark: facts.mark,
       gdocPath: facts.gdocPath,
@@ -123,10 +129,20 @@ public actor UpdateAction {
       updating: facts.updating || standing == .running)
   }
 
-  /// The version this app installed, where it installed one.
-  private var installed: String? {
+  /// The version this app installed, while it is newer than the reading
+  /// beside it.
+  ///
+  /// The override is for the second between the child's end and the next
+  /// `help --json`, where the last reading still names the version that was
+  /// replaced. It is bounded by that version: a reading naming anything else
+  /// came after this run, which is what a `gdoc update` typed in a terminal
+  /// later leaves behind. Unbounded, the row would name this run's version
+  /// for the life of the process and offer an update for a release already
+  /// installed: testTheInstalledVersionStopsOverridingALaterReading.
+  private func installed(over reported: String?) -> String? {
     guard case .installed(let version) = standing else { return nil }
-    return version
+    guard let reported, reported != version else { return version }
+    return reported == replaced ? version : nil
   }
 
   /// One child, and what its one object says about what it did.
@@ -152,6 +168,7 @@ public actor UpdateAction {
       return .unchanged(report.action ?? "")
     }
     guard let version = report.to else { return .failed(UpdateWords.answerUnread) }
+    replaced = report.installed
     return .installed(version)
   }
 }
@@ -167,6 +184,9 @@ struct UpdateReport: Equatable {
 
   let action: String?
   let to: String?
+  /// The version that was there when the run started, which is what the
+  /// installed version is allowed to stand over.
+  let installed: String?
   /// Whether the extension reached Claude Desktop. gdoc prints the field
   /// only where it did, so an absent field is a run that opened nothing,
   /// which is the same silence a run without `--desktop` leaves.
@@ -178,6 +198,7 @@ struct UpdateReport: Equatable {
     else { throw UpdateFault.undecodable("the update's data is not an object") }
     return UpdateReport(
       action: try string("action", in: object), to: try string("to", in: object),
+      installed: try string("installed", in: object),
       extensionOpened: try flag("extension_opened", in: object) ?? false)
   }
 

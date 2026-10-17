@@ -113,6 +113,36 @@ final class UpdateActionTests: XCTestCase {
     XCTAssertEqual(row.value, "v2.14.0 · v3.0.0 available")
   }
 
+  /// The version this app installed moves the row, and stops moving it the
+  /// moment a reading says something else.
+  ///
+  /// The override is there for the second between the child's end and the
+  /// next `help --json`, where the last reading still names the version that
+  /// was replaced. It is bounded by that version: a later reading naming
+  /// anything else is newer than this run, which is what a `gdoc update` run
+  /// in a terminal after this one leaves behind. Without the bound the row
+  /// would name this run's version for the life of the process, and offer an
+  /// update for a release already installed.
+  func testTheInstalledVersionStopsOverridingALaterReading() async {
+    let action = UpdateAction(answer: FakeUpdater().answer)
+
+    let standing = await action.update()
+    XCTAssertEqual(standing, .installed("v2.15.0"))
+
+    // The stale reading: the poll has not answered yet, so it still says the
+    // version this run replaced.
+    let stale = Self.gdocRow(
+      await action.applied(to: Self.facts(installed: "v2.14.0", latest: "v2.15.0")))
+    XCTAssertEqual(stale.value, "v2.15.0", "the child's end is newer than the last poll")
+
+    // A terminal updated gdoc again. The reading wins, and no update is
+    // offered for a release that is already there.
+    let later = Self.gdocRow(
+      await action.applied(to: Self.facts(installed: "v2.16.0", latest: "v2.16.0")))
+    XCTAssertEqual(later.value, "v2.16.0", "a reading this run did not write stands")
+    XCTAssertTrue(later.actions.isEmpty, "and offers nothing to install")
+  }
+
   // MARK: the panel's own reading
 
   private static func facts(installed: String, latest: String) -> Facts {

@@ -173,6 +173,19 @@ final class GlyphTests: XCTestCase {
       source.contains("EnvironmentKey"), "and declares no render key of its own")
   }
 
+  // A ring that gains a fraction stops turning. The turn is started on the
+  // view's appearance, and the job card keeps one ring in the tree across a
+  // refold: a publish whose first `step` line arrives after its start goes
+  // from indeterminate to a quarter without the ring being rebuilt. An arc
+  // that orbits states nothing, so the rotation the ring draws is the one its
+  // current fraction asks for and not the one it mounted in.
+  func testARingWithAFractionCarriesNoRotation() {
+    XCTAssertEqual(RingView.rotation(angle: 123, spinning: true), 123)
+    XCTAssertEqual(
+      RingView.rotation(angle: 123, spinning: false), 0,
+      "a determinate ring stands at its fraction, whatever the turn reached")
+  }
+
   // MARK: the renders
 
   /// The sheet: seven kinds down, six tones across, in both appearances, so

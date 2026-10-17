@@ -47,7 +47,8 @@ public enum Call: String, CaseIterable, Sendable {
 
 /// Where the binary is, and where it was looked for.
 public struct Location: Sendable, Equatable {
-  /// The resolved absolute path, or nothing where neither place held one.
+  /// The absolute path, as it was looked for, or nothing where neither place
+  /// held one. A link is left a link: see `locate`.
   public let path: String?
   /// The places tried, in order, in full.
   public let candidates: [String]
@@ -245,20 +246,29 @@ public final class Runner: @unchecked Sendable {
 
   /// The two places, in order, and the first one that holds an executable.
   ///
-  /// `exists` and `resolve` are injected so the decision is a pure function of
-  /// its arguments. The resolution is the Stopper's own, so the path the app
-  /// launches is the path the kernel will name for the child.
+  /// `exists` is injected so the decision is a pure function of its
+  /// arguments.
+  ///
+  /// The path is handed on as it was looked for, a link left a link. On a
+  /// checkout machine `~/.local/bin/gdoc` is a link into the repository, and
+  /// `gdoc update` refuses to replace a link, by `binaryPath` in
+  /// `go/cmd/gdoc/update.go`: the path it judges is `os.Executable`, which on
+  /// darwin is the path the child was launched through. A child launched at
+  /// the link's target would pass that refusal and drop a release binary over
+  /// the file `make build` writes. Nothing here needs the target: the Stop
+  /// check resolves both sides itself (`ProcessCheck.verdict`), and the
+  /// extension sits beside the binary as gdoc's own run names it.
+  /// testGdocIsResolvedAtLocalBinThenBesideTheBundleNeverFromPATH.
   public static func locate(
     home: String,
     bundle: URL?,
-    exists: (String) -> Bool = Runner.isExecutable,
-    resolve: (String) -> String = ProcessCheck.resolved
+    exists: (String) -> Bool = Runner.isExecutable
   ) -> Location {
     var candidates = [URL(fileURLWithPath: home).appendingPathComponent(installedAt).path]
     if let bundle {
       candidates.append(bundle.deletingLastPathComponent().appendingPathComponent("gdoc").path)
     }
-    let found = candidates.first(where: exists).map(resolve)
+    let found = candidates.first(where: exists)
     let tried = candidates.map { abbreviate($0, home: home) }.joined(separator: " or ")
     return Location(path: found, candidates: candidates, tried: tried)
   }

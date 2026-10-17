@@ -40,12 +40,18 @@ final class RunnerTests: XCTestCase {
       onlyOnPath.tried, "~/.local/bin/gdoc or ~/Applications/gdoc",
       "the not-found fact names both places, with the home directory as a tilde")
 
-    // The checkout route: a link at the local bin, resolved before it is run,
-    // so the path the app launches is the path the kernel will name for it.
-    let linked = Runner.locate(
-      home: home, bundle: bundle, exists: { $0 == localBin },
-      resolve: { $0 == localBin ? "/Users/someone/src/gdoc/bin/gdoc" : $0 })
-    XCTAssertEqual(linked.path, "/Users/someone/src/gdoc/bin/gdoc")
+    // The checkout route: the link at the local bin is what gets launched,
+    // the link itself and never what it points at. `gdoc update` refuses to
+    // replace a symlink, and the path it looks at is os.Executable, which on
+    // darwin is the path the child was launched through: a child handed the
+    // target instead would pass that refusal and drop a release binary over
+    // the checkout's own `make build`. The pid check needs no help here,
+    // because ProcessCheck resolves both sides itself.
+    let linked = Runner.locate(home: home, bundle: bundle, exists: { $0 == localBin })
+    XCTAssertEqual(linked.path, localBin, "the link is what the app runs")
+    XCTAssertEqual(
+      linked.extensionFile, "/Users/someone/.local/bin/gdoc.mcpb",
+      "and the extension is beside the link, where `update --desktop` writes it")
 
     let unbundled = Runner.locate(home: home, bundle: nil, exists: { _ in false })
     XCTAssertEqual(unbundled.candidates, [localBin], "no bundle, no second place")
