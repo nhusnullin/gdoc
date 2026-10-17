@@ -269,10 +269,17 @@ in the test folder.
 
 ### Task 8: Update documentation and close
 
-- [ ] `README.md` needs nothing unless it describes the contents list
-- [ ] `CLAUDE.md`: no invariant changes; check the task map still names files
-      that exist
-- [ ] move this plan to `docs/plans/completed/`
+- [x] `README.md` needs nothing unless it describes the contents list. It
+      names the contents list once, as one of the three things to look at in
+      the document after a publish because gdoc cannot see them, and it makes
+      no claim about where an entry lands. The landing is the guide's
+      paragraph, which Task 6 rewrote, so the README is unchanged
+- [x] `CLAUDE.md`: no invariant changes; check the task map still names files
+      that exist. `TestTheTaskMapNamesFilesThatExist` and
+      `TestCLAUDEmdIsUnderTheCeiling` both pass, and the two files this
+      milestone touched under `go/internal/` are already the rows for the docx
+      and the body
+- [x] move this plan to `docs/plans/completed/`
 
 ## Post-completion
 
