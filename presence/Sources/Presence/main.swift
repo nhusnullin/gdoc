@@ -70,7 +70,7 @@ final class Shell: NSObject, NSApplicationDelegate {
   /// Something changed. The glyph follows it always; the panel only while it
   /// is open.
   ///
-  /// One `screen` and not the glyph's two folds and then the panel's four:
+  /// One `screen` and not the glyph's two folds and then the panel's three:
   /// every fold walks every line the app holds, and these two surfaces are
   /// over one record at one moment.
   private func changed() {
@@ -81,9 +81,7 @@ final class Shell: NSObject, NSApplicationDelegate {
   }
 
   private func view(_ model: PanelModel, of session: Session) -> some View {
-    PanelView(
-      model: model,
-      actions: PanelActions(perform: session.perform, toggle: session.toggle))
+    PanelView(model: model, actions: PanelActions(perform: session.perform))
   }
 }
 

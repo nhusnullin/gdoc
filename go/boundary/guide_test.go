@@ -184,32 +184,41 @@ func TestThePublishingPageSaysAPencilIsAComment(t *testing.T) {
 	}
 }
 
-// TestThePresencePageWalksTheSecondMorningsPanel holds the page a colleague
-// reads about the menu bar app to the panel as it stands after 2026-10-18.
-// Nail used the panel for a morning and the top of it moved: the account, its
-// sign-out and the version are in the header, the group they left is SETTINGS
-// and carries the hub, the Thread mark row is gone, the edges are pinned and
-// the middle scrolls, and a document row remembers the Claude Code session its
-// last run came from. A page that walks the old panel sends somebody looking
-// at the foot for a row that is at the top.
-func TestThePresencePageWalksTheSecondMorningsPanel(t *testing.T) {
+// TestThePresencePageWalksTheThirdLooksPanel holds the page a colleague reads
+// about the menu bar app to the panel as it stands after the evening of
+// 2026-10-18. Nail used the panel for a day and said what it should lose:
+// nothing scrolls and there is no cap, TODAY and Yesterday are gone, DOCUMENTS
+// is the documents he pinned and the last five, the pin is a row's own icon
+// because he never found the menu, there is no Hub row because Spotlight finds
+// the note, and the update glyph is always there in three states. A page that
+// walks the old panel sends somebody scrolling for a section that is not
+// there.
+func TestThePresencePageWalksTheThirdLooksPanel(t *testing.T) {
 	text := guidePage(t, "presence.md")
 	for _, want := range []string{
-		// The header, which is the part that is new.
+		// The header, and the two things in it, each with its one action.
 		"### The header",
-		// What the two things in it are, each with its one action.
 		"Sign out",
-		"the update icon",
-		// What moved and what did not: the edges are pinned, the middle
-		// scrolls, and NOW has half the body before it scrolls itself.
-		"The edges are pinned and the middle scrolls",
-		// DOCUMENTS: the order rule, in one place, and the two answers a
-		// person gives about one document.
-		"Pinned documents come first",
+		// The update glyph: always there, in three states, with the
+		// published version on the quiet line under the header.
+		"three states",
+		"is published",
+		// The panel itself, which is one stack at its own height.
+		"Nothing in it scrolls",
+		// DOCUMENTS: the whole of the list, and the order inside it.
+		"The pinned documents and the last five",
+		"the newest pin first",
+		// The two answers a person gives about one document: the icon
+		// that pins it, and the one word the menu is left with.
+		"the row's fifth icon",
 		"Hide from the list",
-		// SETTINGS: the hub row, which is what greys the md icon until it
-		// is answered.
-		"Hub is the folder your notes are in",
+		// The note beside the document, which is found and not
+		// configured, and the override for a machine Spotlight does not
+		// index.
+		"Spotlight",
+		"defaults write com.altery.gdoc.presence hubPath",
+		// The timer, which is the app asking gdoc and never GitHub.
+		"every six hours",
 		// The session: the field in the record, the link it builds, and
 		// that nobody opens that link today.
 		"the Claude Code session",
@@ -222,11 +231,17 @@ func TestThePresencePageWalksTheSecondMorningsPanel(t *testing.T) {
 		}
 	}
 
+	// The two sections the third look took out. A heading for either is a
+	// page promising a log the panel no longer draws.
+	for _, gone := range []string{"### Today and Yesterday", "### Today", "### Yesterday"} {
+		if strings.Contains(text, gone) {
+			t.Errorf("docs/guide/presence.md still has a %q heading, and the panel has not drawn that section since the third look", gone)
+		}
+	}
+
 	// The page walks the panel from the top, because a guide read in order
 	// is a panel read in order.
-	walk := []string{
-		"### The header", "### Now", "### Documents", "### Today and Yesterday", "### Settings",
-	}
+	walk := []string{"### The header", "### Now", "### Documents", "### Settings"}
 	at := -1
 	for _, heading := range walk {
 		next := strings.Index(text, heading)

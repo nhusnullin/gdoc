@@ -91,18 +91,18 @@ branch.
   `ScrollTests.swift` (removed or reduced to the one assertion that nothing
   scrolls), `Shots.swift`, `Scenes.swift`
 
-- [ ] the panel is as tall as its content: no cap, no `ScrollBox`, no inner
+- [x] the panel is as tall as its content: no cap, no `ScrollBox`, no inner
       scroll in NOW or any list, no Show more; `Grid.panelMaxHeight` goes; a
       test renders scene e3 and asserts the panel's height equals the sum of
       its parts and that no view in the tree is a scroll view
-- [ ] the render index draws one image per scene and appearance, since the
+- [x] the render index draws one image per scene and appearance, since the
       capped pair no longer differs from the whole; the caption at the top
       of the index says so
-- [ ] `docs/v2/MEASURED.md` gains the note that a panel taller than the
+- [x] `docs/v2/MEASURED.md` gains the note that a panel taller than the
       screen is cut at the screen's edge by the window server, measured once
       on this machine with a fixture of twelve hold cards, with the height
       the cut happened at; the decision names this as the price Nail chose
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 2: DOCUMENTS is the pinned and the last five
 
@@ -113,18 +113,18 @@ branch.
   `presence/Sources/PresenceCore/Days.swift` and its tests, the TODAY and
   Yesterday views and words; Modify: the scene fixtures, `RenderTests.swift`
 
-- [ ] DOCUMENTS lists the pinned documents first, newest pin first, then
+- [x] DOCUMENTS lists the pinned documents first, newest pin first, then
       the last five documents by their latest action, newest first, skipping
       any already listed as pinned and any hidden; one row per document id;
       no horizon count and no "N today" in the header, the label alone; the
       by-use ordering of M26 is withdrawn; a table test over pinned, recent,
       duplicate and hidden
-- [ ] TODAY and Yesterday are gone from the panel: the sections, their
+- [x] TODAY and Yesterday are gone from the panel: the sections, their
       folds, their words and their tests; NOW stays as it is
-- [ ] the scenes that showed TODAY and Yesterday are re-fixtured and their
+- [x] the scenes that showed TODAY and Yesterday are re-fixtured and their
       captions rewritten; e2 (midnight) becomes the scene of a pinned
       document surviving fourteen days
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 3: the pin is an icon
 
@@ -133,14 +133,14 @@ branch.
   `IconShapes.swift`, `PanelModel.swift`, `Words.swift`,
   `presence/Sources/PresenceApp/SessionActions.swift`, tests beside each
 
-- [ ] a DOCUMENTS row's strip has five icons: the four it has and a pin at
+- [x] a DOCUMENTS row's strip has five icons: the four it has and a pin at
       the end, outline when the document is not pinned and filled when it
       is; pressing it pins or unpins; the tooltip says "Pin" or "Unpin"; the
       small pin glyph in the status column goes, because the icon says it; a
       test over the five icons, their order and the two states
-- [ ] the row's menu keeps Hide and loses Pin, which the icon now owns; a
+- [x] the row's menu keeps Hide and loses Pin, which the icon now owns; a
       test over the menu's one word
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 4: the note is found, not configured
 
@@ -152,7 +152,7 @@ branch.
   `PanelHealth.swift` (the SETTINGS rows), `Preferences.swift`,
   `presence/Sources/PresenceUI/Words.swift`, tests beside each
 
-- [ ] `NoteFinder` asks Spotlight (`NSMetadataQuery`, scope the home folder,
+- [x] `NoteFinder` asks Spotlight (`NSMetadataQuery`, scope the home folder,
       predicate: text content contains the document id, Markdown files) for
       candidate paths, then reads only the `gdoc:` front-matter block of each
       candidate, as `HubIndex` already does, and answers the one whose block
@@ -161,19 +161,19 @@ branch.
       off the main actor with a two-second ceiling and the answer is cached
       per document id until a Spotlight change notice names one of the
       candidates; a test through an injected finder over the four cases
-- [ ] `hubPath` stays as an override: when set, the hub's index is asked
+- [x] `hubPath` stays as an override: when set, the hub's index is asked
       first and Spotlight second; the Hub row leaves SETTINGS and the
       `noHub` fault goes, because there is no hub to choose; the guide says
       the override is a `defaults write` for a person whose notes are not
       indexed
-- [ ] the md icon is grey only when no note names the document, and its
+- [x] the md icon is grey only when no note names the document, and its
       tooltip says that; the Open md action opens the note the finder
       answered
-- [ ] `docs/v2/MEASURED.md` records the query's timings on this machine
+- [x] `docs/v2/MEASURED.md` records the query's timings on this machine
       with the method, and what Spotlight answers for a file that mentions
       the id in its body (the document map): a candidate the front-matter
       check rejects
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 5: the update glyph has three states and a clock
 
@@ -183,7 +183,7 @@ branch.
   `presence/Sources/PresenceApp/HealthPoller.swift`, `UpdateAction.swift`,
   `Session.swift`, tests beside each
 
-- [ ] the update glyph is always in the header after the version, in three
+- [x] the update glyph is always in the header after the version, in three
       states: quiet, the icon in the caption grey, when nothing newer is
       known, and pressing it runs `gdoc update`, which asks GitHub and
       installs if there is something newer or answers that this is current;
@@ -192,14 +192,28 @@ branch.
       --json` listed a newer stable, and pressing it runs the same update;
       running, the ring, while the child is up; a test over the three states
       and their words
-- [ ] the app asks `help --json` on open as today and once every six hours
+- [x] the app asks `help --json` on open as today and once every six hours
       while it runs, so a release cut during the day is noticed by evening;
       gdoc's own stamp keeps GitHub to once in 24 hours, and the test shows
       the timer asks the runner and nothing else
-- [ ] after a successful update the app relaunches itself as M24 made it;
+- [x] after a successful update the app relaunches itself as M24 made it;
       after "already current" the glyph shows the check for one second and
       goes quiet
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
+
+**One sentence of the decision was not built, and this is where it is
+said.** The newer version is not on the header line after the current one.
+It does not fit: the line is 320 pt less 8 either side, and a second version
+in that slot takes the address from 98 pt to 49.5, which is "nail@ex…" on
+every screen, the one thing the morning of the same day was about. Both
+numbers are measured in
+`RowTests.testTheHeaderIs36WithTheMarkTheNameTheVersionAndTheAccount` and
+written down in `docs/v2/MEASURED.md`, "What the header line holds". So the
+published version is the quiet line directly under the installed one,
+"v2.15.0 is published", and the glyph keeps the accent ink and the dot.
+Everything else in the decision's paragraph is built as written. Nail's word
+puts it back on the line, as a new decision entry naming what leaves it: the
+mark, the name, or a cut address.
 
 ### Task 6: the words
 
@@ -208,34 +222,34 @@ branch.
   presence invariant, if it names the hub), `docs/design/2026-10-17-presence-screens-v3.html`
   (scene captions only)
 
-- [ ] the guide walks the panel as it now is: header with version and the
+- [x] the guide walks the panel as it now is: header with version and the
       update glyph's three states, NOW, DOCUMENTS as the pinned and the last
       five with the pin icon and Hide in the menu, SETTINGS with Launch at
       login and Quit; Open md through Spotlight and the `hubPath` override
-- [ ] CLAUDE.md names the app's reads: the record, its plist, the front
+- [x] CLAUDE.md names the app's reads: the record, its plist, the front
       matter of the notes Spotlight names; under 300 lines
-- [ ] `make test`, `make app-lint`
+- [x] `make test`, `make app-lint`
 
 ### Task 7: the acceptance rows
 
 **Files:**
 - Modify: this plan
 
-- [ ] an acceptance table at the foot of this plan: each of Nail's
+- [x] an acceptance table at the foot of this plan: each of Nail's
       sentences with the test that holds its answer
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 8: the reviewer's pass
 
 **Files:**
 - Modify: whatever the pass finds under `presence/`
 
-- [ ] render every scene and run the checklist of the principles file over
+- [x] render every scene and run the checklist of the principles file over
       them as a reviewer who drew nothing (a subagent that reads images),
       against this plan's sentences; every blocking or should-fix finding is
       fixed here and listed in the commit message; the pass also states that
       no render shows a scroll thumb
-- [ ] `make app-lint`, `make app-test`, `make app`
+- [x] `make app-lint`, `make app-test`, `make app`
 
 ### Task 9: the close
 
@@ -243,8 +257,30 @@ branch.
 - Modify: this plan, `docs/v2/DECISIONS.md` only if a task found the
   decision wrong
 
-- [ ] the render index's "Still your call" list drops what this plan
-      decided
-- [ ] move this plan to `docs/plans/completed/`
-- [ ] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
+- [x] the render index's "Still your call" list drops what this plan
+      decided: the DOCUMENTS header count, which Nail settled by asking for
+      the label alone, leaves the list and eight choices stay
+      (`RenderTests.testTheIndexOpensWithWhatIsStillYourCall`)
+- [x] move this plan to `docs/plans/completed/`
+- [x] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
       `make app-lint`, `make app-test`, `make app`
+
+## Acceptance
+
+Nail's words of 2026-10-18, in the order he sent them, with the test that
+holds each answer. A row's test is the one that fails if its answer is taken
+away. A sentence that carried two claims is two rows.
+
+| Nail's sentence | The answer | The test that holds it |
+|---|---|---|
+| double scrolling is awful | no source under `PresenceUI` names a scroll view, a box, a Show more or the old cap, and e3 draws no box in either appearance | `RenderTests.testNothingScrollsAndThePanelIsItsPartsAddedUp` |
+| show no more than five documents | DOCUMENTS lists five recent rows and no sixth | `DocumentsTests.testDocumentsGroupByIdAndTheListIsTheLastFive` |
+| no activity log for today and yesterday at all | TODAY and Yesterday are gone with `Days.swift`: `PanelSection` has three cases, and e3, the screen with every part on it, draws three sections | `RenderTests.testNothingScrollsAndThePanelIsItsPartsAddedUp` |
+| why show the hub, it differs by document and the notes live in different folders | Spotlight names the candidates and the `gdoc:` block picks the note, so no SETTINGS row chooses a folder; `hubPath` stays as a `defaults write` override | `NoteFinderTests.testOneNoteNamingTheDocumentIsTheAnswer`, `NoteFinderTests.testAFileThatMerelyMentionsTheIdIsNotTheNote`, `NoteFinderTests.testTwoNotesNamingOneDocumentIsAFaultOfItsOwn`, `SessionTests.testTheOverrideIsAskedBeforeSpotlight`, `StateTests.testTheMdIconIsGreyOnlyWhenNoNoteNamesTheDocument` |
+| he did not see how to pin a document | the pin is the row's fifth icon, outline when it is not pinned and filled when it is, and pressing it pins or unpins; the menu keeps Hide alone | `StateTests.testADocumentRowsFifthIconIsThePinInItsTwoStates`, `CardTests.testTheStripLabelsAreDocNoteChatLinkPin`, `IconTests.testThePinIsOutlinedAndFilledAndNeitherIsACircle`, `SessionTests.testThePinIconPinsTheDocumentAndRetiresTheStrip`, `StateTests.testTheRowMenuIsHideAndAPinnedRowHasNone` |
+| the use statistics are not needed | the order is the latest action, neither the day nor the count of finished actions; the by-use ordering of M26 is withdrawn | `DocumentsTests.testTheOrderIsTheLastActionAndNeitherTheDayNorTheCount` |
+| show the last five plus the pinned ones, no duplicates | the pinned first, newest pin first, then the last five, skipping any pinned row and any hidden one; one row per document id | `DocumentsTests.testTheListIsThePinnedThenTheLastFiveWithNoDuplicates`, `RenderTests.testThePinOfE2OutlivesTheFortnight`, `StateTests.testAPinnedDocumentWithNoLinesDrawsThePinsOwnRow` |
+| no scroll at all, let the panel be as long as it comes out | the cap is gone: e3 comes out taller than the 600 pt the panel was held to, and the window server cuts a panel taller than the screen at its edge | `RenderTests.testNothingScrollsAndThePanelIsItsPartsAddedUp`, with the cut measured in `docs/v2/MEASURED.md` |
+| check for a new version periodically | `help --json` on open and once every six hours after it, while gdoc's own stamp keeps GitHub to once in 24 hours | `HealthPollerTests.testHelpIsAskedOnOpenAndEverySixHours` |
+| show it beside the current one | not on the line, which is measured to have no room for a second version: the published one is the quiet line directly under the installed one, "v2.15.0 is published". Task 5's note says this and what Nail's word would cost to put it back | `StateTests.testTheUpdateGlyphIsAlwaysThereInItsThreeStates`, `RowTests.testTheHeaderIs36WithTheMarkTheNameTheVersionAndTheAccount` |
+| give the update glyph more than one state so he can press it to check and install even before the timer has asked | quiet, available and running; the press runs `gdoc update` in every state, so a check is one click away before any timer has asked, and "already current" shows the check for one second | `StateTests.testTheUpdateGlyphIsAlwaysThereInItsThreeStates`, `SessionTests.testAnUpdateThatInstalledNothingShowsTheCheckForASecond` |

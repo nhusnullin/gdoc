@@ -27,7 +27,7 @@ import SwiftUI
 public struct MiddleTitle: View {
   /// The narrowest title column in the panel: the document row's middle
   /// cell. 320 less the panel's 8 either side, less the row's 12 either
-  /// side, less the 16 pt glyph, the two 8 pt gaps and the 108 pt action
+  /// side, less the 16 pt glyph, the two 8 pt gaps and the 136 pt action
   /// column.
   public static let narrowestColumn: CGFloat =
     Grid.panelWidth - 2 * Grid.unit - 2 * Grid.rowInset - Grid.glyphSize - 2 * Grid.columnGap

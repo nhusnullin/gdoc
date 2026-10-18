@@ -10,8 +10,8 @@
 // The second button says Dismiss. The screens file labels it "Release
 // without writing", and the specification's decision table says the panel
 // never says Release: dismissing is the app's own doing, the card and the
-// glyph go, the row in TODAY stays, and the hold itself lives on in the chat
-// until its own `until`. Releasing is a thing only the chat can do, because
+// glyph go, nothing is written either way, and the hold itself lives on in
+// the chat until its own `until`. Releasing is a thing only the chat can do, because
 // only the chat can say what it would write. So the card's quiet line names
 // the chat, and the word Release is not in this file.
 //

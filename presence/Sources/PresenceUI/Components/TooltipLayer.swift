@@ -27,7 +27,7 @@ public enum TooltipAlign: String, Sendable, CaseIterable {
   /// centred under the anchor.
   case centred
   /// `.acts [data-tip]::after{left:auto;right:0}`: an action's bubble ends
-  /// where the icons themselves end, which is how four icons in 108 pt keep
+  /// where the icons themselves end, which is how five icons in 136 pt keep
   /// their words inside the panel. The icon it belongs to is the one it
   /// hangs under; a plate that ended on each icon's own edge stepped left
   /// across the row and read as four different plates.
@@ -65,8 +65,8 @@ public enum Tooltip {
   /// Where an action's bubble ends: the row's own trailing edge, which is
   /// the column every value, every time and every icon in the panel ends
   /// on. The panel's bare 8 pt put it 12 pt right of the icon it belongs
-  /// to and over the scroll thumb, which is the one thing a bubble about a
-  /// row may not cover: testAnActionTooltipSitsUnderItsIconAndEndsOnTheIconColumn.
+  /// to, past the edge the rest of the panel ends on:
+  /// testAnActionTooltipSitsUnderItsIconAndEndsOnTheIconColumn.
   public static let actionMargin: CGFloat = Grid.unit + Grid.rowInset
   /// How long the pointer rests first.
   public static let delay: TimeInterval = Timing.tooltipDelay

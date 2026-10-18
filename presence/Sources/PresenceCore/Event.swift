@@ -23,6 +23,30 @@ public enum EventKind: String, Sendable, CaseIterable {
   case dropped
 }
 
+/// How a hold stopped waiting. The record's own words, with no reading on
+/// top, and each of them is `cmd/gdoc`'s own: released is the person
+/// pressing the card, written before the write it approved goes out
+/// (`mcprelease.go` takes the hold out and then sends); landed is that write
+/// reaching the document another way, which is the model sending it again
+/// with no card (`mcphold.go`'s `landed`); expired is the hold's own life
+/// running out; and dropped is the sign-in it was held under stopping being
+/// the sign-in on the computer.
+///
+/// No line says a person refused one. A card nobody answers expires, which
+/// is why the panel never words any of these as a no.
+public enum HoldEnding: String, Sendable, Equatable, CaseIterable {
+  case released
+  case expired
+  case landed
+  case dropped
+
+  /// The ending an event kind is, and nothing for the kinds that are not one.
+  public init?(_ kind: EventKind) {
+    guard let ending = HoldEnding(rawValue: kind.rawValue) else { return nil }
+    self = ending
+  }
+}
+
 /// Why a line is not a record. A newer schema is the one fault the app shows
 /// a person, as "gdoc is newer than this app"; everything else is a line that
 /// is skipped and never guessed at.

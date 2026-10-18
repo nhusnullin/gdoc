@@ -126,13 +126,12 @@ into `docs/v2/DECISIONS.md`, not a refactor.
   Nail accepted it in decision 16 of M14, and the list is fixed and in Go:
   `TestTheFirstRuleThatTripsIsTheOneNamed` and
   `TestAuthorDomainChangesNoOutcome`.
-- **One JSON object reaches stdout**, always through `internal/emit`, except
-  that `mcp` writes JSON-RPC lines there and a help screen on a terminal
-  without `--json` writes nothing there, and the exit code is 0 if and only if
-  that object says `ok`, or 0 for `help` and 1 for bare `gdoc` when the screen
-  replaced it: `TestOnlyJSONObjectRefusesAnythingAfterTheObject`,
-  `TestAPanicIsStillOneEnvelope`, `TestStdoutCarriesOnlyJSONRPC` and
-  `TestHelpOnATerminalWritesNothingToStdout`.
+- **One JSON object reaches stdout**, always through `internal/emit`, except that
+  `mcp` writes JSON-RPC lines there and a help screen on a terminal without `--json`
+  writes nothing there, and the exit code is 0 if and only if that object says `ok`,
+  or 0 for `help` and 1 for bare `gdoc` when the screen replaced it:
+  `TestOnlyJSONObjectRefusesAnythingAfterTheObject`, `TestAPanicIsStillOneEnvelope`,
+  `TestStdoutCarriesOnlyJSONRPC` and `TestHelpOnATerminalWritesNothingToStdout`.
 - **The binary never prompts, and every command but `mcp` leaves stdin alone.**
   `mcp` reads its protocol there, and only `main` names the real stdin and
   stdout, so every other room is handed a reader and a writer. It still refuses
@@ -171,30 +170,31 @@ into `docs/v2/DECISIONS.md`, not a refactor.
   because the mark is the only record of authorship there is. The mark is a
   setting, ⁘ by default, and may be empty; 🤖, ⁘ and ∴ stay known marks
   (DECISIONS.md, 2026-10-04): `TestMarkdownNamesWhatDocsWouldRenderLiterally`.
-- **The presence file is the one file gdoc appends to, and gdoc never reads
-  it.** `presence/<yyyy>-<mm>.jsonl` in the config directory is written only
-  under the `presence` setting, carries the listed fields and no document word
-  but the title, and nothing gdoc decides depends on a line in it. Beside those
-  files the app holds `flock` on `presence/app.lock` for its life, and gdoc holds
-  no lock and reads no byte: it asks once whether the app holds its own.
-  `TestOnlyPresenceAppends`, `TestPresenceExportsNoReader`, `TestOffTouchesNothing`,
+- **The presence file is the one file gdoc appends to, and gdoc never reads it.**
+  `presence/<yyyy>-<mm>.jsonl` in the config directory is written only under the
+  `presence` setting, carries the listed fields and no document word but the title,
+  and nothing gdoc decides depends on a line in it. Beside those files the app
+  holds `flock` on `presence/app.lock` for its life; gdoc holds no lock and reads
+  no byte, asking once whether the app holds its own: `TestOnlyPresenceAppends`,
+  `TestPresenceExportsNoReader`, `TestOffTouchesNothing`,
   `TestTheEventCarriesOnlyItsListedFields` and
   `TestTheOpenerAsksThreeThingsAndRunsOpenGOnce`.
-- **The menu bar app runs six argv lists and signals one wait.** `help --json`,
-  `auth status`, `auth login`, `auth logout`, `update` and `update --desktop`,
-  from `PresenceApp/Runner.swift` alone, at `~/.local/bin/gdoc` or beside the
-  bundle and never from PATH, with four variables and no stdin; the one signal
-  is a single SIGINT to a `comments --wait` the kernel agreed every claim about,
-  from `Stopper.swift` alone: `testTheArgvEnumIsClosedAtSix`,
+- **The menu bar app runs six argv lists, signals one wait and reads three things.**
+  `help --json`, `auth status`, `auth login`, `auth logout`, `update` and
+  `update --desktop`, from `PresenceApp/Runner.swift` alone, at `~/.local/bin/gdoc`
+  or beside the bundle and never from PATH, with four variables and no stdin; one
+  SIGINT to a `comments --wait` the kernel agreed every claim about, from
+  `Stopper.swift` alone; the record, its plist and the `gdoc:` front matter of
+  the notes Spotlight names and of those under the `hubPath` override where one
+  is set, and no other byte: `testTheArgvEnumIsClosedAtSix`,
   `testGdocIsResolvedAtLocalBinThenBesideTheBundleNeverFromPATH`,
-  `testASignalIsSentOnlyByTheStopper` and
-  `testStopSendsOneSIGINTOnlyAfterTheProcessCheck`.
-- **A hold dies with the sign-in it was raised under.** `mcpHolds` keeps a hash
-  of the refresh token beside the hold and no email, and a release or a sweep
-  that finds another token or none drops the hold and sends nothing, while a
-  token nobody can read keeps it:
-  `TestAReleaseAfterTheSignInChangedSendsNothingAndDropsTheHold` and
-  `TestTheSweepDropsAHoldWhoseSignInChanged`.
+  `testASignalIsSentOnlyByTheStopper`, `testAFileThatMerelyMentionsTheIdIsNotTheNote`
+  and `testStopSendsOneSIGINTOnlyAfterTheProcessCheck`.
+- **A hold dies with the sign-in it was raised under.** `mcpHolds` keeps a hash of
+  the refresh token beside the hold and no email, and a release or a sweep that
+  finds another token or none drops the hold and sends nothing, while a token nobody
+  can read keeps it: `TestAReleaseAfterTheSignInChangedSendsNothingAndDropsTheHold`
+  and `TestTheSweepDropsAHoldWhoseSignInChanged`.
 - **Identity is never a gate.** Whose account wrote a comment decides nothing.
   The marker decides.
 - **Skills are linked, not copied.** The five folders under `skills/` are

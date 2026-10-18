@@ -12,31 +12,23 @@ public enum Grid {
   public static let panelWidth: CGFloat = 320
   public static let unit: CGFloat = 8
   public static let panelRadius: CGFloat = 12
-  /// The cap the expanded sections scroll inside, rather than growing past.
-  public static let panelMaxHeight: CGFloat = 600
 
   /// The heights: the header, a section label, and a row in its three forms.
   public static let headerHeight: CGFloat = 36
-  /// The gap the header leaves under itself, which the body has to take off
-  /// the cap as well: a body that only subtracts the header is laid out this
-  /// much past the frame, and the clip takes it off the bottom edge.
+  /// The gap the header leaves under itself, which is part of what the
+  /// header's own probe reports.
   public static let headerGap: CGFloat = 4
   public static let sectionLabelHeight: CGFloat = 28
   public static let rowHeight: CGFloat = 32
   public static let twoLineRowHeight: CGFloat = 44
   public static let compactRowHeight: CGFloat = 28
 
-  /// The document row's third column, wide enough for the four icons.
-  public static let actionColumn: CGFloat = 108
+  /// The document row's third column, wide enough for the five icons: the
+  /// four that open or copy something and the pin at the end of them.
+  public static let actionColumn: CGFloat = 136
 
   /// The glyph, an action button and the radius they share.
   public static let glyphSize: CGFloat = 16
-  /// The pin, and the slot a document row keeps for it in front of the
-  /// glyph where that list has a pin in it. Every row of such a list keeps
-  /// it, pinned or not, so the titles break at the same place whatever is
-  /// pinned; a list with no pin keeps no slot, so DOCUMENTS stands on the
-  /// panel's one left edge with every other row.
-  public static let pinSize: CGFloat = Grid.unit
   public static let actionSize: CGFloat = 24
   public static let controlRadius: CGFloat = 6
   /// `.acts{margin-right:-4px}`: an action's artwork is 16 pt centred in a
@@ -64,10 +56,12 @@ public enum Grid {
   /// The left inset of a line under a row, past the glyph column.
   public static let quietInset: CGFloat = 44
 
-  /// The scroll box: its own cap, and the fade at its foot.
-  public static let scrollBoxHeight: CGFloat = 236
-  public static let fadeHeight: CGFloat = 28
-
   /// The badge beside the mark in the menu bar.
   public static let badgeSize: CGFloat = 10
+
+  /// The dot on the header's update glyph while a release is there to take.
+  /// It is the menu bar badge's own size taken down to what reads beside a
+  /// 16 pt icon, and it is drawn in the accent ink the icon takes:
+  /// testTheUpdateGlyphCarriesItsDotOnlyWhenThereIsSomethingToTake.
+  public static let updateDotSize: CGFloat = 5
 }

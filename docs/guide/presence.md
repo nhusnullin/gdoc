@@ -44,18 +44,20 @@ in a word.
 
 ## The panel
 
-Click the glyph and the panel opens under it. It is 320 points wide and never
-taller than 600. Press Escape or click elsewhere and it closes. Nothing in it
-is a window, there is no dock icon, and the settings in it are your hub, the
+Click the glyph and the panel opens under it. It is 320 points wide and as
+tall as what is in it. Press Escape or click elsewhere and it closes. Nothing
+in it is a window, there is no dock icon, and the settings in it are the
 switch for launching at login and Quit.
 
-The edges are pinned and the middle scrolls. From the top: the header, Now,
-the middle, Settings. The header, Now and Settings stay where they are
-however long the day was, because those are the three a hand reaches for. The
-one thing that scrolls is the middle, which is Documents, Today and Yesterday.
-Now has a cap of its own, half the panel under the header: four holds and a
-watch are taller than the whole panel, and past that cap Now scrolls inside
-itself rather than pushing Quit off the bottom.
+Nothing in it scrolls. From the top: the header, Now, Documents, Settings,
+each at its own height, one under the other. Until the third look the middle
+was a box capped at 600 points, with Now capped inside it and a Show more on
+each list, which is three scroll thumbs on one panel. There is no cap and no
+thumb now. A panel taller than the screen is cut at the screen's edge, and
+that was the choice: a panel you read in one look, over one you operate.
+Three things keep it short. Now draws what is happening this second and
+nothing else, Documents is the pinned documents and the last five, and the
+log of the day is gone from the panel.
 
 The order is the same on every screen but two, where Settings comes first
 because Settings is the whole point: no token at all, and a sign-in in flight.
@@ -64,17 +66,30 @@ already.
 
 ### The header
 
-One line across the top, above everything that can scroll: the mark, then
-gdoc with the version you are running, then the address you are signed in as.
-Each of the last two carries its own icon, and the two of them are what the
-header is for: which gdoc this is, and who it is signed in as. Both were rows
-at the foot of the panel until the second morning, which is where a hand had
-to scroll for them.
+One line across the top: the mark, then gdoc with the version you are
+running, then the address you are signed in as. Each of the last two carries
+its own icon, and the two of them are what the header is for: which gdoc
+this is, and who it is signed in as. Both were rows at the foot of the panel
+until the second morning, which is where a hand had to scroll for them.
 
-The version carries the update icon when gdoc's own daily check heard of a
-newer release, and a ring while an update is running, still naming the
-version that is installed. The icon says Update and not Check for updates,
-because this app never asks GitHub anything: see what the app runs, below.
+The update glyph is always there, after the version, in three states.
+Quiet is the icon in the caption grey: nothing newer is known, and
+pressing it runs `gdoc update`, which asks GitHub itself and installs
+whatever is newer or answers that this is the newest release. Available is
+the icon in the accent ink with a small dot, and the published version is
+the quiet line under the header, "v2.19.0 is published": `help --json` named
+a newer stable release, and the press is the same command. Running is a
+ring, while the update child is up, with the version still installed beside
+it, because a header that said the new number before the bytes were in place
+would lie for a few seconds. A press that found nothing to install leaves a
+check for one second and goes quiet again.
+
+The published version is a line under the header rather than a second number
+on the line, which is what the decision of the third look asked for. It does
+not fit: 320 points hold the mark, the name, one version, the glyph and the
+account with four points to spare, and a second version squeezes the address
+to "nail@ex…" on every screen.
+
 Where the binary was not found the version reads "not found" and says
 underneath where it was looked for.
 
@@ -123,40 +138,41 @@ A section with nothing in it is left out rather than labelled.
 
 ### Documents
 
-Every document gdoc touched in the last fourteen days, five rows with Show
-more under them. The order is three lists, one under the other.
-Pinned documents come first, the newest pin first.
-Then the documents acted on today, newest action first, because what gdoc
-just made is what a hand reaches for. Then the rest of the fourteen days, the
-ones gdoc did most in those days first, so a document touched once last week
-sinks under one worked on every day. The count itself is never printed. A
-read alone makes no row: reading is not something that happened to the
-document. Each row says what the last action
-was, when, and where the note paired with it is, or "not in the hub". The
-label is "3 today" where every row in the list is from today, and
-"14 days · 12" where one of them is older, counting the rows behind Show more
-as well.
+The pinned documents and the last five, and nothing else. Pinned documents
+come first, the newest pin first, and under them the last five documents by
+their latest action, newest first, so what gdoc just worked on is at the
+top of the five. A document that is already there as a pin is not drawn twice
+and does not use one of the five up. The label is the word "Documents", with
+no count after it: the fortnight ordered by how much each document was used,
+which the second morning added, is gone, and so is the day as an order of
+its own. There is no Show more, because there is nothing behind it.
 
-A pin holds a document in the list. Right-click a row, or hold a press on it
-for half a second, and the menu says "Pin" and "Hide from the list"; a row
-already pinned says "Unpin" and nothing else, because a pin is never away and
-a hide of it would hide nothing. Pinned documents never drop off: fourteen days
-on, or when the app
-can no longer see the lines about them, the row is still there with the title
-it had and its icons still work, because the pin keeps the name and the id.
-A small pin sits in front of the row's own glyph while it is pinned.
+A read alone makes no row: reading is not something that happened to the
+document. Each row says what the last action was, when, and where the note
+paired with it is, or "no note". A document leaves the list fourteen days
+after its last action, unless it is pinned.
 
-"Hide from the list" takes a document out of Documents. Today and Yesterday
-still show its runs: the log is the log, and nothing rewrites it. There is no
-"Unhide". The next thing gdoc finishes on that document brings the row back,
-which is the one way back. The pin is the louder answer: a document that is
-pinned stays in the list whatever a hide of it said, which is why its menu
-offers Unpin alone. Unpin it, and the menu offers Hide again.
+A pin holds a document in the list. The pin is the row's fifth icon, at the
+end of the strip: an outline while the document is not pinned, filled while
+it is, and the words on it are "Pin" and "Unpin". It was a menu word until
+the third look, where Nail had pins and never found the menu. Pinned
+documents never drop off: fourteen days on, or when the app can no longer
+see the lines about them, the row is still there with the title it had and
+its icons still work, because the pin keeps the name and the id.
+
+"Hide from the list" is what the row's menu is for, and it is the one word
+in it. Right-click a row, or hold a press on it for half a second. It takes
+the document out of Documents, and rewrites nothing: the record is the
+record. There is no "Unhide". The next thing gdoc finishes on that document
+brings the row back, which is the one way back. The pin is the louder
+answer: a document that is pinned stays in the list whatever a hide of it
+said, and a pinned row opens no menu at all. Unpin it, and the menu is
+there again.
 
 The pins and the hides are the app's own, kept beside your other settings and
 never written into the record.
 
-Four icons sit on the right of every document row, always visible:
+Five icons sit on the right of every document row, always visible:
 
 | Icon | Does |
 |---|---|
@@ -164,17 +180,18 @@ Four icons sit on the right of every document row, always visible:
 | md | Opens the note paired with the document in Obsidian |
 | Branch | Brings Claude Desktop to the front |
 | Link | Copies the document's link, and turns into a green check for a second |
+| Pin | Pins the document, or takes the pin back |
 
 An icon with nothing to do is greyed, and resting the pointer on it says why:
-"No Google Doc yet", "No link yet", "Choose the hub in SETTINGS", "No note is
-paired with this document",
+"No Google Doc yet", "No link yet", "No note is paired with this document",
+"Two notes name this document",
 "Note moved or deleted", "Install the Desktop extension in Settings". The first
 two are one case: a row whose id is not one Drive could have written has no
 document to open and no link to copy. "Note moved or deleted"
-is the one a click produces: Obsidian refused the note the index still names.
+is the one a click produces: Obsidian refused the note the finder named.
 A greyed icon cannot be clicked, so that one lasts as long as the panel is up,
 and the next time you open the panel it is live again. The first time Documents
-has a row, four labels appear under it once, naming the icons, and they go the
+has a row, five labels appear under it once, naming the icons, and they go the
 first time you click one.
 
 Continue with Claude, the branch icon, activates Claude Desktop and nothing
@@ -195,31 +212,29 @@ form switches, the id is already in the row. A document whose last run came
 from the chat, or from a terminal, carries no session: the field is written
 on a Claude Code run and nowhere else.
 
-### Today and Yesterday
-
-Today is the local day the calendar names, newest first, eight rows with Show
-more. Reads are left out. Besides the writes it carries four rows the record
-does not write as single lines: a hold raised, a hold closed, a live watch
-started and a live watch stopped, the last of those with what the watch came
-to. Yesterday is one row with the counts, and it opens in place. Nothing older
-than yesterday is in this list; Documents is where the fortnight is.
+There was a Today section and a Yesterday row under this one until the third
+look, which is the log of the day gdoc had. They are gone from the panel:
+the panel is for what is happening and what you reach for, and a log of a
+finished day is neither. Nothing was lost. The record keeps every line, in
+the file this guide's last sections describe, and Now still carries what is
+running this second.
 
 ### Settings
 
-The last section, pinned to the foot where you look for it, under the one
-part of the panel that scrolls. It was called Health until the second
-morning, and three of its rows left with the name. The account and the gdoc
-version are in the header now, each with its one action beside it, and the
+The last section, at the foot where you look for it. It was called Health
+until the second morning, and three of its rows left with the name. The
+account and the gdoc version are in the header now, each with its one action
+beside it, and the
 Thread mark row is gone: the mark is drawn in that header, at the panel's top
 left, so the row said the same thing twice.
 
-What is left is Network, Claude Desktop, Hub, Launch at login and Quit. The
-first two are drawn only where a fact carries them, so on a good machine the
-group is the hub, the switch and Quit. Quit is always there, and it is ⌘Q.
+What is left is Network, Claude Desktop, Launch at login and Quit. The first
+two are drawn only where a fact carries them, so on a good machine the group
+is the switch and Quit. Quit is always there, and it is ⌘Q.
 
-Hub is the folder your notes are in, and it is the one row that opens a window
-of the system's: pressing it asks you for a folder, folders only. What it is
-for is the next section.
+There is no Hub row since the third look. The note beside a document is found
+rather than configured, which is the next section, so there is no folder to
+choose and this app opens no window of the system's at all.
 
 Network is the record's own word and never a connection the app opened: gdoc
 writes `network` on a run that could not reach Google, and the row says so
@@ -246,7 +261,7 @@ Dismiss, which hides a card the app itself drew and changes nothing else.
 ### Dismiss
 
 Dismiss is on a hold card and on a card for a write that stopped. It hides the
-card and rewrites nothing. The row in Today stays. A dismissed hold goes on
+card and rewrites nothing. The line in the record stays. A dismissed hold goes on
 living in the chat until its thirty minutes run out, and the card says that
 before you press it. The app remembers the dismissal under the run and the call,
 or under the hold's own id, for sixty-two days, and never the document.
@@ -327,10 +342,15 @@ retried.
 ### Update, and Install extension
 
 Update runs `gdoc update` with no flag at all: what you would have typed, and
-nothing the app chose on your behalf. While the child is up the header draws a
-ring beside the version and still names the version that is installed, because a
-header that said the new number before the bytes were in place would be one that
-lied for a few seconds. Install extension is `gdoc update --desktop`, which writes the Claude
+nothing the app chose on your behalf. The glyph is pressable in all three of
+its states, because `gdoc update` is the command that asks GitHub: a glyph
+that did nothing until the app's own six hours had passed would make you wait
+for a release you already know is out. While the child is up the header draws
+a ring beside the version and still names the version that is installed. A
+run that installed something relaunches the app, so the version on the line
+is the one you are running. A run that found nothing leaves the check for a
+second and the words "This is the newest release".
+Install extension is `gdoc update --desktop`, which writes the Claude
 Desktop extension and hands it to Desktop. Whether Desktop then loads it is
 not something the app is told; whether the handing over happened is, and that
 is what keeps the row.
@@ -341,7 +361,7 @@ The app runs six command lines and no seventh:
 
 | Run | When |
 |---|---|
-| `gdoc help --json` | On panel open, at most once a minute |
+| `gdoc help --json` | On panel open, at most once a minute, and every six hours while the app runs |
 | `gdoc auth status` | On panel open, at most once a minute, and every ten minutes while a live watch is open |
 | `gdoc auth login` | Sign in |
 | `gdoc auth logout` | Sign out |
@@ -351,9 +371,16 @@ The app runs six command lines and no seventh:
 The set is a closed list in one file, and a test over the sources holds it at
 six. There is no flag in it the app invented, and no setting of its own.
 
-`help --json` is asked on panel open and never on a timer, because that command
-carries gdoc's own once-a-day check of what is published. A timer here would be
-this app asking GitHub on gdoc's behalf. The two questions are also asked again
+`help --json` is asked on panel open and every six hours after that, so a
+release cut in the morning is on the header by the evening without the panel
+being opened at all. The timer asks gdoc and nothing else: that command
+carries gdoc's own once-a-day check of what is published, so three of those
+four questions reach GitHub not at all, and this app opens no connection
+either way. It was asked on open and on no timer at all until the third look,
+where Nail asked to be told about a new version without pressing anything.
+Six hours is a working day cut in four. A person who wants to know sooner
+presses the update glyph, which runs `gdoc update` and asks for itself. The
+two questions are also asked again
 straight after the app signs in, signs out, or updates the binary, because the
 last answer is then known to be wrong.
 
@@ -373,10 +400,12 @@ What the app never does, and no button in it offers:
 - It approves no held write, and it releases none.
 - It reads no document, answers no comment and proposes nothing.
 - It runs no program but those six, and signals nothing but one wait.
-- It never starts gdoc on a schedule of its own.
+- It starts gdoc on two timers and no third: `help --json` every six hours,
+  and `auth status` every ten minutes while a live watch is open. Both are
+  questions. Nothing it does on a timer writes anything, anywhere.
 
 What it remembers between launches is eight things, in its own preferences:
-the cards you hid, the hub folder, whether the four icon labels have been
+the cards you hid, the `hubPath` override, whether the five icon labels have been
 read, your launch-at-login answer, its last self-relaunch, the last address
 it saw signed in, the documents you pinned and the documents you hid. The two
 that are about a moment, the hidden cards and the relaunch,
@@ -390,29 +419,44 @@ ninth key is a decision somebody writes down, not a line somebody adds.
 ## The note beside the document
 
 Open md needs no field in the record. What pairs a note with a document is the
-`gdoc:` block gdoc writes into that note's front matter, so the app reads that
-one block of every note in your hub, builds a map from document id to note path,
-and rebuilds it when files there change. Nothing else in a note ever reaches the
-app: the reading stops at the closing fence, a `gdoc:` block inside a fenced
-example pairs nothing, and every id is held to the Drive shape.
+`gdoc:` block gdoc writes into that note's front matter.
 
-The hub is a folder you name, in the Hub row of Settings. The row says the
-folder you chose, with your home directory written as `~`, or "Choose…" when
-there is none; pressing it opens the system's folder panel, and the notes under
-the folder you pick are read at once. Nothing is written down if you cancel. You
-can still set it from a terminal instead, which takes effect when the app is
-opened again:
+The app asks Spotlight for the Markdown files under your home folder whose text
+holds the document id. That is usually two or three files: the note itself, and
+anything that mentions the id in a sentence, like a document map. It then reads
+the `gdoc:` block of each of them and opens the one whose block names the id. A
+file that only mentions the id is thrown away. Nothing else in a note ever
+reaches the app: the reading stops at the closing fence, a `gdoc:` block inside
+a fenced example pairs nothing, and every id is held to the Drive shape.
+
+The answer is kept until Spotlight says one of those files changed, so a note
+you wrote a minute ago lights the icon without you reopening anything. A query
+takes about a quarter of a second here, and the app gives it two before it
+gives up for that draw. It tries that document again a minute later, or at once
+when you open the panel.
+
+Three things the icon can say. "No note is paired with this document" is no
+file whose front matter names it. "Two notes name this document" is two, which
+the app will not pick between. "Note moved or deleted" is a click that found
+nothing there.
+
+There was a Hub row until the third look, and one folder was the wrong shape
+for this: notes about one document and another live in different folders, and
+the row could only ever name one. If your notes are somewhere Spotlight does
+not index, you can still name a folder from a terminal, and the app reads the
+notes under it before it asks Spotlight about anything:
 
 ```
 defaults write com.altery.gdoc.presence hubPath -string ~/path/to/hub
 ```
 
-With no hub set, the md icon is greyed on every row and says "Choose the hub in
-SETTINGS", which is the row that fixes it. With one set, a note is opened
-through `obsidian://` with the vault and the relative path, after the app has
-proved the file is a regular `.md` file inside the folder you named. A
-symlink is not the note either: what is at the end of it is somewhere you did
-not choose. No line number is promised, because gdoc does not record one.
+It takes effect when the app is opened again. There is no row that sets it and
+most machines have none.
+
+A note is opened through `obsidian://open?path=`, after the app has proved the
+file is a regular `.md` at that absolute path. A symlink is not the note: what
+is at the end of it is somewhere else. No line number is promised, because gdoc
+does not record one.
 
 ## Turning it on
 

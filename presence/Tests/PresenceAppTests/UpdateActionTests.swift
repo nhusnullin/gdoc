@@ -97,7 +97,9 @@ final class UpdateActionTests: XCTestCase {
     let after = Self.gdocHeader(await action.applied(to: facts))
     XCTAssertFalse(after.versionWaiting)
     XCTAssertEqual(after.version, "v2.15.0")
-    XCTAssertNil(after.update, "there is nothing newer to take")
+    XCTAssertEqual(
+      after.updateLook, .quiet, "there is nothing newer to take, so the glyph goes quiet")
+    XCTAssertTrue(after.quiet.isEmpty, "and no line names a release")
   }
 
   /// A run that installed nothing moves no version. `gdoc update` declines a
@@ -112,6 +114,9 @@ final class UpdateActionTests: XCTestCase {
     let standing = await action.update()
 
     XCTAssertEqual(standing, .unchanged("major_available"))
+    XCTAssertFalse(
+      standing.isCurrent,
+      "a major this app declined to install is not a machine on the newest release")
     let row = Self.gdocHeader(await action.applied(to: facts))
     XCTAssertEqual(row.version, "v2.14.0")
     XCTAssertEqual(row.update?.tip, "Update to v3.0.0")
@@ -132,6 +137,7 @@ final class UpdateActionTests: XCTestCase {
 
     let standing = await action.update()
     XCTAssertEqual(standing, .installed("v2.15.0"))
+    XCTAssertFalse(standing.isCurrent, "a run that installed something shows no check")
 
     // The stale reading: the poll has not answered yet, so it still says the
     // version this run replaced.
@@ -144,7 +150,7 @@ final class UpdateActionTests: XCTestCase {
     let later = Self.gdocHeader(
       await action.applied(to: Self.facts(installed: "v2.16.0", latest: "v2.16.0")))
     XCTAssertEqual(later.version, "v2.16.0", "a reading this run did not write stands")
-    XCTAssertNil(later.update, "and offers nothing to install")
+    XCTAssertEqual(later.updateLook, .quiet, "and offers nothing to install")
   }
 
   // MARK: the panel's own reading

@@ -127,16 +127,6 @@ final class WordsTests: XCTestCase {
     XCTAssertNil(Words.via("a_via_from_a_newer_gdoc"))
   }
 
-  /// A read-back that confirmed the write, and one that did not. A false is
-  /// a hollow check and never a failure, so the word says what happened and
-  /// not that something is wrong.
-  func testVerifiedIsVerifiedOrNotReadBack() {
-    XCTAssertEqual(Words.verified(true), "verified")
-    XCTAssertEqual(Words.verified(false), "not read back")
-    XCTAssertNil(Words.verified(nil))
-    XCTAssertFalse(try XCTUnwrap(Words.verified(false)).contains("failed"))
-  }
-
   /// Principle 5: facts and questions, never a prediction. No word this file
   /// can produce says when something finishes, and the file that produces
   /// them carries none either.
@@ -154,7 +144,6 @@ final class WordsTests: XCTestCase {
       produced.append(verb.past)
     }
     for via in ["terminal", "chat"] { produced.append(try XCTUnwrap(Words.via(via))) }
-    for state in [true, false] { produced.append(try XCTUnwrap(Words.verified(state))) }
     for seconds in stride(from: 0, through: 30 * 3_600, by: 37) {
       produced.append(Words.duration(TimeInterval(seconds)))
     }

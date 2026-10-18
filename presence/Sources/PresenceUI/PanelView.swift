@@ -10,27 +10,18 @@
 // has to squint at. That is also why Tasks 16 to 24 add no code here: they
 // produce facts and perform actions, and this file already draws both.
 //
-// The panel never grows past 600 pt. A section a person opens scrolls
-// inside itself, which is the decision table's rule.
+// Nothing in it scrolls, and it has no cap. Everything under the header was
+// one box capped at 600 pt until 2026-10-18, with NOW capped inside it and
+// a Show more on each list, and Nail's screenshot of that evening had three
+// scroll thumbs on one panel. The decision of that day is one panel as tall
+// as its content: a panel taller than the screen is cut at the screen's
+// edge, which he chose over any scroll. So the sections are a plain stack
+// in the order the model put them in, each at its own height.
 //
-// What scrolls under the header changed on 2026-10-18. Everything under it
-// used to be one box, and Nail's first sentence after a morning with the
-// panel was that the scrolling is wrong: NOW went away upwards and Quit
-// went off the bottom, so the two parts a hand reaches for were the two
-// that moved. The panel's edges are pinned now. The order is the header,
-// NOW, the middle and SETTINGS; the header, NOW and SETTINGS never scroll,
-// and the one box is the middle: DOCUMENTS, TODAY and Yesterday. The middle
-// takes what is left of the 600 pt, which is how SETTINGS keeps its place
-// whatever the day held.
-//
-// NOW has a cap of its own, half the body, because four holds and a watch
-// are taller than the whole panel. Past that it scrolls inside itself
-// rather than pushing Quit off the bottom.
-//
-// A document row carries one more thing since that morning: its own menu,
-// with Pin or Unpin and Hide from the list, on a secondary click and on a
-// press held half a second. It is a menu and not a fifth icon because the
-// four icons on a row are four, and because a pin is a thing done once.
+// A document row carries its own menu, with Hide from the list, on a
+// secondary click and on a press held half a second. Pin was in it until the
+// third look and is the row's fifth icon now, because Nail had pins and
+// never found the menu. A pinned row offers nothing, so it opens no menu.
 //
 // RenderTests draws every scene of the screens file through this view, in
 // both appearances, and reads its sizes back through the metric probes.
@@ -43,41 +34,21 @@ public struct PanelView: View {
   public let actions: PanelActions
 
   @Environment(\.colorScheme) private var scheme
-  @Environment(\.renderMode) private var renderMode
 
   public init(model: PanelModel, actions: PanelActions = PanelActions()) {
     self.model = model
     self.actions = actions
   }
 
-  /// What is left for the sections once the header, the gap under it and
-  /// the panel's own padding have taken theirs.
-  ///
-  /// Every part of the panel is in this sum, because the cap is a frame with
-  /// a clip under it: a body that left the header's gap out would read 600
-  /// on the probe and lose 4 pt of the bottom edge, its corner and the
-  /// scroll fade off the screen.
-  public static var bodyHeight: CGFloat {
-    Grid.panelMaxHeight - Grid.headerHeight - Grid.headerGap - 2 * Grid.unit
-  }
-
-  /// The most NOW takes before it scrolls inside itself: half the body.
-  ///
-  /// Half, because the two things under it are a list of documents and a
-  /// group of settings, and a NOW that took more than its share would leave
-  /// one row of each. A day with four holds in it is the day this matters
-  /// on, and on that day the person still reaches Quit.
-  public static var nowHeight: CGFloat { (Self.bodyHeight / 2).rounded(.down) }
-
   public var body: some View {
     let palette = Palette.of(scheme)
-    let parts = PanelParts(model.sections)
     return VStack(alignment: .leading, spacing: 0) {
-      // At its own height, like SETTINGS under it. A row states a minimum
-      // and not a height, so the header stretched into whatever the capped
-      // panel had spare: on the sign-out question it took 190 pt, drew
-      // "Sign out?" in the middle of a hole and left DOCUMENTS and TODAY
-      // 18 pt between them. The middle is the one part that gives way:
+      // At its own height, like every section under it. A row states a
+      // minimum and not a height, so a header inside a stack that had room
+      // to spare took it: on the sign-out question it drew "Sign out?" in
+      // the middle of a 190 pt hole. Nothing has room to spare now, because
+      // the panel is the sum of what is in it, and the header still says
+      // what its own height is:
       // testTheQuestionLeavesTheHeaderAtThirtySix.
       PanelHeader(model: model.header, forced: model.forcedTooltip, actions: actions)
         .fixedSize(horizontal: false, vertical: true)
@@ -92,27 +63,14 @@ public struct PanelView: View {
           EmptyState(mark: model.mark, words: empty)
             .fixedSize(horizontal: false, vertical: true)
         }
-        ForEach(parts.above) { pinned($0) }
-        ScrollBox(.given) {
-          VStack(alignment: .leading, spacing: 0) {
-            ForEach(parts.middle) { section($0) }
-          }
+        ForEach(placed) { placed in
+          section(placed)
+            .fixedSize(horizontal: false, vertical: true)
+            .metricProbe("panel.\(placed.section.id.lowercased())")
         }
-        .metricProbe("panel.middle")
-        ForEach(parts.below) { pinned($0) }
       }
       .metricProbe("panel.body")
     }
-    // The cap is here and not on the body, because the header is not always
-    // 36 pt: a sign-out question, a countdown and a banner are drawn in it,
-    // and a body capped at a number of its own would push the foot of a
-    // panel with a tall header off the screen. The header takes its own
-    // height, the two pinned parts take theirs, and the middle is what
-    // gives way.
-    .frame(
-      maxHeight: renderMode == .whole ? .infinity : Grid.panelMaxHeight - 2 * Grid.unit,
-      alignment: .top
-    )
     .padding(Grid.unit)
     .frame(width: Grid.panelWidth, alignment: .leading)
     .background(
@@ -124,43 +82,19 @@ public struct PanelView: View {
         .strokeBorder(palette.panelEdge.color, lineWidth: Grid.hairline)
     )
     .shadows(palette.panelShadows)
-    // A whole render is the reviewer's copy, where nothing may be hidden.
-    // Every other drawing is capped, which is what the person sees.
-    .frame(
-      maxHeight: renderMode == .whole ? .infinity : Grid.panelMaxHeight, alignment: .top
-    )
-    .clipped()
     .tooltipLayer()
     .metricProbe("panel")
   }
 
-  /// One of the panel's pinned parts: NOW under its own cap, or SETTINGS at
-  /// its own height.
-  @ViewBuilder private func pinned(_ placed: PlacedSection) -> some View {
-    switch placed.section {
-    case .now:
-      ScrollBox(height: Self.nowHeight) { section(placed) }
-        .metricProbe("panel.now")
-    default:
-      // SETTINGS, and nothing else: PanelParts puts the other three in the
-      // middle.
-      //
-      // At its own height, and not at the height a stack felt like giving
-      // it: a row states a minimum rather than a height, so a group of rows
-      // stretches into whatever it is offered, and the middle and SETTINGS
-      // would split the panel evenly between them.
-      section(placed)
-        .fixedSize(horizontal: false, vertical: true)
-        .metricProbe("panel.settings")
-    }
+  /// The sections with the place each of them had in the model's own list,
+  /// which is what decides the hairline over it.
+  private var placed: [PlacedSection] {
+    model.sections.enumerated().map { PlacedSection(index: $0, section: $1) }
   }
 
   /// One section, with the hairline rule its place in the list decides.
   private func section(_ placed: PlacedSection) -> some View {
-    SectionView(
-      placed.section.label, count: count(of: placed.section),
-      isFirst: isFirst(placed.index)
-    ) {
+    SectionView(placed.section.label, isFirst: isFirst(placed.index)) {
       body(of: placed.section)
     }
   }
@@ -172,11 +106,6 @@ public struct PanelView: View {
     index == 0 && model.notice == nil && model.empty == nil
   }
 
-  private func count(of section: PanelSection) -> String? {
-    if case .documents(let documents) = section { return documents.count }
-    return nil
-  }
-
   @ViewBuilder
   private func body(of section: PanelSection) -> some View {
     switch section {
@@ -184,10 +113,6 @@ public struct PanelView: View {
       NowList(items: items, forced: model.forcedTooltip, actions: actions)
     case .documents(let documents):
       DocumentsList(model: documents, forced: model.forcedTooltip, actions: actions)
-    case .today(let log):
-      LogList(model: log, list: .today, actions: actions)
-    case .yesterday(let yesterday):
-      YesterdayList(model: yesterday, actions: actions)
     case .settings(let rows):
       SettingsList(rows: rows, forced: model.forcedTooltip, actions: actions)
     }
@@ -201,47 +126,6 @@ struct PlacedSection: Identifiable {
   let section: PanelSection
 
   var id: String { section.id }
-}
-
-/// The sections sorted into the three parts of the panel: what is pinned
-/// above the box, what is in it, and what is pinned under it.
-///
-/// Which part a section belongs to is the section's own answer. Where it
-/// goes is the model's order: SETTINGS is above everything on the two
-/// screens the model pins it on, and under everything on the rest, and this
-/// reads that order rather than holding a rule of its own.
-struct PanelParts {
-  var above: [PlacedSection] = []
-  var middle: [PlacedSection] = []
-  var below: [PlacedSection] = []
-
-  init(_ sections: [PanelSection]) {
-    for (index, section) in sections.enumerated() {
-      let placed = PlacedSection(index: index, section: section)
-      if section.scrolls {
-        middle.append(placed)
-      } else if middle.isEmpty {
-        above.append(placed)
-      } else {
-        below.append(placed)
-      }
-    }
-  }
-}
-
-extension PanelSection {
-  /// Whether this section is in the box that scrolls.
-  ///
-  /// NOW and SETTINGS are the panel's pinned edges since the second
-  /// morning: the first is what gdoc is doing and the second is where Quit
-  /// is, and neither is a thing a person should have to scroll to. The
-  /// three in the middle are a log, and a log is what scrolling is for.
-  var scrolls: Bool {
-    switch self {
-    case .now, .settings: return false
-    case .documents, .today, .yesterday: return true
-    }
-  }
 }
 
 /// NOW: the cards and the live rows, in the order the fold put them in.
@@ -275,49 +159,41 @@ struct NowList: View {
   }
 }
 
-/// DOCUMENTS: the rows, the strip under the first of them, and Show more.
+/// DOCUMENTS: the rows, and the strip under the first of them.
+///
+/// Every row the model carries, because the list is short by the time it
+/// gets here: the fold decides how many documents there are and the view
+/// draws them. There is no Show more and nothing to open.
 struct DocumentsList: View {
   let model: DocumentsSectionModel
   let forced: String?
   let actions: PanelActions
 
-  /// What the rows keep in front of their glyph. A list with a pin in it
-  /// keeps the slot on every row, so one pin does not move the titles under
-  /// it; a list with no pin keeps none, so DOCUMENTS stands on the panel's
-  /// one left edge. The whole list decides it and not the rows on the
-  /// screen, so opening Show more moves nothing sideways.
-  private var pinColumn: PinColumn {
-    model.rows.contains(where: \.isPinned) ? .slot : .none
-  }
-
   var body: some View {
     if let empty = model.empty {
       QuietLine(empty)
     } else {
-      ShowMoreList(
-        model.rows, collapsed: model.collapsed, isOpen: model.isOpen,
-        toggle: { actions.toggle(.documents) }
-      ) { row in
-        VStack(alignment: .leading, spacing: 0) {
-          RowView(
-            .doc, title: row.title, sub: row.sub, gone: row.gone,
-            leading: {
-              DocumentGlyph(row.glyph, tone: row.tone, pin: row.isPinned ? .pinned : pinColumn)
-            },
-            trailing: {
-              HStack(spacing: Grid.actionGap) {
-                ForEach(row.actions) { action in
-                  ActionButton(
-                    action.icon, tip: action.tip, state: action.state,
-                    forcedTooltip: action.forcedTooltip || forced == action.id,
-                    action: { actions.perform(action.kind, action.target) })
+      VStack(alignment: .leading, spacing: 0) {
+        ForEach(model.rows) { row in
+          VStack(alignment: .leading, spacing: 0) {
+            RowView(
+              .doc, glyph: row.glyph, tone: row.tone, title: row.title, sub: row.sub,
+              gone: row.gone,
+              trailing: {
+                HStack(spacing: Grid.actionGap) {
+                  ForEach(row.actions) { action in
+                    ActionButton(
+                      action.icon, tip: action.tip, state: action.state,
+                      forcedTooltip: action.forcedTooltip || forced == action.id,
+                      action: { actions.perform(action.kind, action.target) })
+                  }
                 }
               }
+            )
+            .rowMenu(row.menu, actions: actions)
+            if model.showsStrip, row.id == model.rows.first?.id {
+              IconStrip()
             }
-          )
-          .rowMenu(row.menu, actions: actions)
-          if model.showsStrip, row.id == model.rows.first?.id {
-            IconStrip()
           }
         }
       }
@@ -350,13 +226,20 @@ private struct RowMenu: ViewModifier {
   @State private var held = false
 
   func body(content: Content) -> some View {
-    content
-      .contextMenu { words }
-      .onLongPressGesture(minimumDuration: Timing.menuHold) { held = true }
-      .popover(isPresented: $held, arrowEdge: .bottom) {
-        VStack(alignment: .leading, spacing: 0) { words }
-          .padding(Grid.unit / 2)
-      }
+    // A row with nothing to offer opens nothing. A pinned row is that row,
+    // and an empty menu under the pointer is a panel that answered a press
+    // with a grey rectangle: testTheRowMenuIsHideAndAPinnedRowHasNone.
+    if items.isEmpty {
+      content
+    } else {
+      content
+        .contextMenu { words }
+        .onLongPressGesture(minimumDuration: Timing.menuHold) { held = true }
+        .popover(isPresented: $held, arrowEdge: .bottom) {
+          VStack(alignment: .leading, spacing: 0) { words }
+            .padding(Grid.unit / 2)
+        }
+    }
   }
 
   @ViewBuilder private var words: some View {
@@ -364,47 +247,6 @@ private struct RowMenu: ViewModifier {
       Button(item.word) {
         held = false
         actions.perform(item.kind, item.target)
-      }
-    }
-  }
-}
-
-/// TODAY: the log, newest first, with the rest behind Show more.
-struct LogList: View {
-  let model: LogSectionModel
-  let list: PanelList
-  let actions: PanelActions
-
-  var body: some View {
-    if let empty = model.empty {
-      QuietLine(empty)
-    } else {
-      ShowMoreList(
-        model.rows, collapsed: model.collapsed, isOpen: model.isOpen,
-        toggle: { actions.toggle(list) }
-      ) { row in
-        RowView(
-          row.sub == nil ? .plain : .two, glyph: row.glyph, tone: row.tone, title: row.title,
-          value: row.value, sub: row.sub)
-      }
-    }
-  }
-}
-
-/// Yesterday: one chevron row that opens in place.
-struct YesterdayList: View {
-  let model: YesterdayModel
-  let actions: PanelActions
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 0) {
-      ChevronRow(model.summary, isOpen: model.isOpen) { actions.toggle(.yesterday) }
-      if model.isOpen {
-        ForEach(model.rows) { row in
-          RowView(
-            row.sub == nil ? .plain : .two, glyph: row.glyph, tone: row.tone,
-            title: row.title, value: row.value, sub: row.sub)
-        }
       }
     }
   }

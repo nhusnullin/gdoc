@@ -471,11 +471,12 @@ final class CardTests: XCTestCase {
   }
 
   // `.strip` is shown once, under the first document row, and says what the
-  // four icons above it are. It is the whole of the onboarding: one person
+  // five icons above it are. It is the whole of the onboarding: one person
   // does not need a tour, he needs to not guess once.
-  func testTheStripLabelsAreDocNoteChatLink() throws {
-    XCTAssertEqual(StripLabel.allCases.map(\.rawValue), ["Doc", "Note", "Chat", "Link"])
-    XCTAssertEqual(StripLabel.allCases.count, 4, "one label per icon of the document row")
+  func testTheStripLabelsAreDocNoteChatLinkPin() throws {
+    XCTAssertEqual(
+      StripLabel.allCases.map(\.rawValue), ["Doc", "Note", "Chat", "Link", "Pin"])
+    XCTAssertEqual(StripLabel.allCases.count, 5, "one label per icon of the document row")
     XCTAssertEqual(IconStrip.cell, 24, "`.strip span{width:24px}`")
     XCTAssertEqual(IconStrip.gap, Grid.actionGap)
     XCTAssertEqual(IconStrip.leadingInset, Grid.quietInset, "`padding-left:44px`")
@@ -490,6 +491,43 @@ final class CardTests: XCTestCase {
     }
   }
 
+  /// Each label is centred on the icon it names, and not 4 pt to its left.
+  ///
+  /// The cells and the gaps were the icons' own from the first draft, but
+  /// the trailing inset was a row's 12 pt where an action strip's is 8: the
+  /// strip hangs 4 pt out over the content edge, because an action's 16 pt
+  /// of artwork sits in a 24 pt box. So every word was drawn half a letter
+  /// left of its icon, on the one element whose whole job is saying which
+  /// word belongs to which icon. The third look made it worse by adding a
+  /// fifth: "Pin" under the gap beside the tack is the hint failing at the
+  /// icon Nail could not find.
+  ///
+  /// The two are measured in one tree here, because the claim is about one
+  /// against the other and two separate renders agree on nothing.
+  func testEachLabelIsCentredOnTheIconItNames() throws {
+    let row = VStack(alignment: .leading, spacing: 0) {
+      HStack(spacing: Grid.actionGap) {
+        Spacer(minLength: 0)
+        ForEach(StripLabel.allCases, id: \.rawValue) { label in
+          ActionButton(.link, tip: label.rawValue).metricProbe("icon.\(label.rawValue)")
+        }
+      }
+      .padding(.trailing, Grid.rowInset - Grid.actionOverhang)
+      IconStrip()
+    }
+    let measured = try probeList(row, scheme: .dark, width: Grid.panelWidth)
+    func centre(_ name: String) throws -> CGFloat {
+      let probe = try XCTUnwrap(measured.first { $0.name == name }, "nothing reported \(name)")
+      return probe.origin.x + probe.size.width / 2
+    }
+
+    for label in StripLabel.allCases {
+      XCTAssertEqual(
+        try centre("strip.\(label.rawValue)"), try centre("icon.\(label.rawValue)"),
+        accuracy: 0.01, "\(label.rawValue) is not centred under its own icon")
+    }
+  }
+
   // SETTINGS is the same list on every screen, with the rows that have
   // nothing to say left out: network, Claude Desktop, the switch, Quit. A
   // section whose rows move is a section nobody learns.
@@ -499,14 +537,16 @@ final class CardTests: XCTestCase {
   // whose account a reply would go out under. The Thread mark row went with
   // the same morning, "a pointless thing": the mark is in the header, drawn
   // at the panel's top left, and a row repeating it is the same fact twice.
+  // Hub went on the evening of the same day: the note is found rather than
+  // configured, so there is no folder to choose.
   func testSettingsRowsKeepTheirOrderOnEveryScreen() throws {
     XCTAssertEqual(PanelSection.settings([]).label, "Settings")
     XCTAssertEqual(SectionLabel.text(PanelSection.settings([]).label), "SETTINGS")
     XCTAssertEqual(
-      SettingsRowKind.allCases, [.network, .desktop, .hub, .launchAtLogin, .quit])
+      SettingsRowKind.allCases, [.network, .desktop, .launchAtLogin, .quit])
     XCTAssertEqual(
       SettingsRowKind.allCases.map(\.label),
-      ["Network", "Claude Desktop", "Hub", "Launch at login", "Quit"])
+      ["Network", "Claude Desktop", "Launch at login", "Quit"])
     XCTAssertFalse(
       SettingsRowKind.allCases.map(\.rawValue).contains("mark"),
       "the mark is the header's, and is said in one place")
@@ -521,11 +561,11 @@ final class CardTests: XCTestCase {
     // and Claude Desktop only where no extension has been written, which is
     // why the two move screen to screen and the other two never do.
     let screens: [(String, [SettingsRowKind])] = [
-      ("r8", [.network, .hub, .launchAtLogin, .quit]),
-      ("e5", [.desktop, .hub, .launchAtLogin, .quit]),
-      ("e8", [.hub, .launchAtLogin, .quit]),
-      ("e9", [.hub, .launchAtLogin, .quit]),
-      ("e10", [.hub, .launchAtLogin, .quit]),
+      ("r8", [.network, .launchAtLogin, .quit]),
+      ("e5", [.desktop, .launchAtLogin, .quit]),
+      ("e8", [.launchAtLogin, .quit]),
+      ("e9", [.launchAtLogin, .quit]),
+      ("e10", [.launchAtLogin, .quit]),
     ]
     for (screen, expected) in screens {
       let scene = try XCTUnwrap(Scenes.all.first { $0.id == screen }, "\(screen) is not a scene")

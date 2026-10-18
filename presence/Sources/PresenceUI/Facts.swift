@@ -11,7 +11,7 @@
 // is the whole reason the type exists.
 //
 // A fact is never a judgement either. `auth` is the word `gdoc auth status`
-// printed, `network` is what a command answered, `pairing` is what the hub's
+// printed, `network` is what a command answered, `pairing` is what the
 // front matter said. The panel's reading of them is in PanelModel.
 
 import Foundation
@@ -181,22 +181,26 @@ public struct Facts: Sendable, Equatable {
   public let gdocPath: String?
   /// Where it was looked for, which is what the not-found row says.
   public let gdocPathTried: String
-  /// The hub folder the person chose, or nothing while none is chosen.
-  public let hub: String?
-  /// This machine's home directory, which is the one thing the Hub row needs
-  /// to write a path with a tilde. It is handed over like every other fact
-  /// here, so a render of a scene says the same thing on every machine, and
-  /// it is empty where nobody asked.
-  public let home: String
   public let extensionState: ExtensionState
   /// What the last command said about reaching Google, or nothing.
   public let network: NetworkFact?
   public let loginItem: LoginItemState
   /// A sign-in in flight.
   public let signIn: SignInPhase?
-  /// The hub index: a document id to the note paired with it, as a path
-  /// relative to the hub.
+  /// This machine's home directory, which is the one thing a note's path
+  /// needs to be written with a tilde. It is handed over like every other
+  /// fact here, so a render of a scene says the same thing on every
+  /// machine, and it is empty where nobody asked.
+  public let home: String
+  /// A document id to the note paired with it, as an absolute path. Since
+  /// the third look it is what the finder answered, with the `hubPath`
+  /// override's own notes first.
   public let pairing: [String: String]
+  /// Why a drawn document has no note, where what the finder answered was a
+  /// fault and not a path. It is the one sentence the greyed icon carries,
+  /// and the pairing above is what makes the icon live, so a document in
+  /// both is one the `hubPath` override paired.
+  public let noteFaults: [String: NoteFault]
   /// When this account signed in, which the banner's five seconds run from.
   public let signedInAt: Date?
   /// Whether the bundle under the running app is still the one it launched
@@ -214,6 +218,12 @@ public struct Facts: Sendable, Equatable {
   /// ring in the header, and the version beside it stays the installed one
   /// until the child's end says what was put there.
   public let updating: Bool
+  /// When an update run of the app's own came back having installed
+  /// nothing because this is the newest release. The glyph draws the check
+  /// for a second from that moment, which is the copied link's own second:
+  /// a press that did something is owed an answer, and "nothing to do" is
+  /// an answer.
+  public let updateChecked: Date?
 
   public init(
     account: String? = nil,
@@ -223,18 +233,19 @@ public struct Facts: Sendable, Equatable {
     mark: String = "⁘",
     gdocPath: String? = nil,
     gdocPathTried: String = "~/.local/bin/gdoc",
-    hub: String? = nil,
     home: String = "",
     extensionState: ExtensionState = .unknown,
     network: NetworkFact? = nil,
     loginItem: LoginItemState = .off,
     signIn: SignInPhase? = nil,
     pairing: [String: String] = [:],
+    noteFaults: [String: NoteFault] = [:],
     signedInAt: Date? = nil,
     bundle: BundleState = .same,
     newerRecord: Bool = false,
     unstoppable: Set<String> = [],
-    updating: Bool = false
+    updating: Bool = false,
+    updateChecked: Date? = nil
   ) {
     self.account = account
     self.auth = auth
@@ -243,18 +254,19 @@ public struct Facts: Sendable, Equatable {
     self.mark = mark
     self.gdocPath = gdocPath
     self.gdocPathTried = gdocPathTried
-    self.hub = hub
     self.home = home
     self.extensionState = extensionState
     self.network = network
     self.loginItem = loginItem
     self.signIn = signIn
     self.pairing = pairing
+    self.noteFaults = noteFaults
     self.signedInAt = signedInAt
     self.bundle = bundle
     self.newerRecord = newerRecord
     self.unstoppable = unstoppable
     self.updating = updating
+    self.updateChecked = updateChecked
   }
 
   /// What the app knows before it has asked anything: its own version, and
@@ -275,7 +287,7 @@ public struct Facts: Sendable, Equatable {
   /// testTheBarIsNotStuckBeforeTheFirstAnswer.
   public var gdocFound: Bool { gdocPath != nil }
 
-  /// The note paired with a document, as a path inside the hub.
+  /// The note paired with a document, as an absolute path.
   public func note(for doc: String?) -> String? {
     guard let doc else { return nil }
     return pairing[doc]

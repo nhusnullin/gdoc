@@ -2,10 +2,10 @@
 //
 // One function over the twenty kinds, and nothing else in the app turns a
 // press into anything. Each case is one line of the specification's decision
-// table: the two icons that open something, the one that copies, the one that
-// dismisses a card, the one signal, sign in and sign out, the update and the
-// extension, the hub, the switch, quit, and the three words of a document
-// row's own menu.
+// table: the two icons that open something, the one that copies, the pin
+// either way round, the one that dismisses a card, the one signal, sign in
+// and sign out, the update and the extension, the switch, quit, and the one
+// word of a document row's own menu.
 //
 // Nothing here judges. A dismissal hides a card and rewrites no row, a stop
 // is refused by the process check and not by this file, and a sign-out stops
@@ -53,8 +53,6 @@ extension Session {
       install()
     case .installExtension:
       installTheExtension()
-    case .chooseHub:
-      chooseTheHub()
     case .openLoginItems:
       loginItem.openSettings()
     case .toggleLoginItem:
@@ -72,16 +70,9 @@ extension Session {
     }
   }
 
-  /// One section opened or closed. A refold never closes it: what is open is
-  /// the person's and lives out here.
-  public func toggle(_ list: PanelList) {
-    ui = ui.toggling(list)
-    changed()
-  }
+  // MARK: the five icons on a row
 
-  // MARK: the four icons on a row
-
-  /// The four labels under the first document row go after the first click
+  /// The five labels under the first document row go after the first click
   /// on any icon and never come back.
   private func sawTheStrip() {
     guard !ui.stripSeen else {
@@ -95,15 +86,17 @@ extension Session {
 
   /// Open the note, and keep why it did not open where it did not.
   ///
-  /// A click that goes nowhere has to say so: the index is rebuilt on a file
-  /// event, so a note somebody deleted usually greys itself, but a note
-  /// Obsidian refuses is a fault only the opening knows about. The icon
-  /// carries it for as long as the panel is up, and `opened()` is what takes
-  /// it away: a greyed icon cannot be pressed, so a second click is not a
-  /// route out of it: testAFaultGoesWhenThePanelOpensAgain.
+  /// A click that goes nowhere has to say so: the finder's answer is thrown
+  /// away on a Spotlight notice, so a note somebody deleted usually greys
+  /// itself, but a note Obsidian refuses is a fault only the opening knows
+  /// about. The icon carries it for as long as the panel is up, and
+  /// `opened()` is what takes it away: a greyed icon cannot be pressed, so
+  /// a second click is not a route out of it:
+  /// testAFaultGoesWhenThePanelOpensAgain.
   private func openTheNote(_ doc: String?) {
     guard let doc else { return }
-    switch opener.openNote(document: doc, hub: preferences.hub, pairing: index.notes) {
+    let opened = notePath(of: doc).flatMap { opener.openNote(at: $0) }
+    switch opened {
     case .success:
       ui.noteFault.removeValue(forKey: doc)
     case .failure(let fault):
@@ -128,7 +121,7 @@ extension Session {
     changed()
   }
 
-  // MARK: the two words of a row's menu
+  // MARK: the pin, and the one word of a row's menu
 
   /// Pin one document, with the title the list is drawing for it.
   ///
@@ -137,22 +130,26 @@ extension Session {
   /// the pin is all the row has. It is the one thing of somebody's document
   /// this app writes down, and the decision of 2026-10-18 is where that is
   /// written.
+  ///
+  /// It retires the labels like the other four icons on the row, because it
+  /// is one of them since the third look and the fifth label is its own:
+  /// testThePinIconPinsTheDocumentAndRetiresTheStrip.
   private func pin(_ doc: String?) {
     guard let doc else { return }
     preferences.pin(doc, title: lastTitle(of: doc), at: clock())
     ui.pinned = preferences.pins
-    changed()
+    sawTheStrip()
   }
 
   private func unpin(_ doc: String?) {
     guard let doc else { return }
     preferences.unpin(doc)
     ui.pinned = preferences.pins
-    changed()
+    sawTheStrip()
   }
 
-  /// Hide one document from DOCUMENTS. Its rows in TODAY stay, because the
-  /// log is the log, and the next action gdoc finishes on it brings the row
+  /// Hide one document from DOCUMENTS. The record keeps every line of it,
+  /// and the next action gdoc finishes on that document brings the row
   /// back: nothing here unhides one.
   private func hide(_ doc: String?) {
     guard let doc else { return }
@@ -257,18 +254,37 @@ extension Session {
 
   // MARK: the two runs the panel offers
 
-  /// `gdoc update`, with no flag: what the person would have typed. The row
-  /// draws a ring until the child's end, and the version beside it moves
-  /// only once `help --json` says what is installed.
+  /// `gdoc update`, with no flag: what the person would have typed. The
+  /// glyph draws a ring until the child's end, and the version beside it
+  /// moves only once `help --json` says what is installed.
+  ///
+  /// A run that replaced the binary needs nothing said: the version moves
+  /// and, where the release carried a new app as well, the bundle under
+  /// this process changes and it reopens itself, which is M24's and
+  /// `reopenIfTheBundleMoved`'s. A run that installed nothing is the one
+  /// that would otherwise answer a press with nothing at all, so the glyph
+  /// shows the check for a second and goes quiet.
+  ///
+  /// The facts are taken again before the two polls below and not only
+  /// after them. The check lasts one second from the child's end, and the
+  /// polls are two processes: a screen that first hears about the check when
+  /// they come back is a screen that shows it late or not at all, and the
+  /// redraw the second is up would draw the ring the run already ended:
+  /// testTheCheckIsOnTheScreenBeforeTheTwoPollsComeBack.
   private func install() {
     guard !installing else { return }
     installing = true
     retick()
     Task { [weak self] in
       guard let self else { return }
-      _ = await self.updates.update()
+      let standing = await self.updates.update()
       self.installing = false
+      if standing.isCurrent {
+        self.updateChecked = self.clock()
+        self.revert(after: Timing.doneFlash)
+      }
       self.retick()
+      await self.recompose()
       await self.ask(.changed)
     }
   }
@@ -301,28 +317,6 @@ extension Session {
       await self.recompose()
       self.changed()
     }
-  }
-
-  // MARK: the hub
-
-  /// Choose the folder the notes are in, through the system's own panel.
-  ///
-  /// The path is the one thing of the person's file system this app writes
-  /// down, and it is written only where they chose one: a cancel leaves the
-  /// last answer where it was, and an empty path would be the app choosing
-  /// nothing for them. The notes under it are read at once rather than at
-  /// the next file event, because a folder chosen and no icon lit is a row
-  /// that looks like it did nothing:
-  /// testChoosingTheHubWritesItDownAndReadsTheNotesAtOnce.
-  private func chooseTheHub() {
-    guard let chosen = desk.chooseFolder(startingAt: preferences.hub) else {
-      changed()
-      return
-    }
-    preferences.hub = chosen.path
-    readTheHub()
-    Task { [weak self] in await self?.recompose() }
-    changed()
   }
 
   // MARK: the switch

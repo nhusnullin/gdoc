@@ -11,12 +11,14 @@
 // order of what a person can do something about: the facts first, and the
 // three rows that are not facts at all last.
 //
-// Three of the rows are not statuses. Hub is the folder somebody chose, and
-// pressing it opens the system's own folder panel. Launch at login is a
-// setting, so it carries the drawn switch and never a status colour. Quit is
-// a row with a keystroke on the right, pressed rather than read. The group's
-// name is theirs: the two facts above them are read, and the three rows
-// below them are the only settings the panel has.
+// Two of the rows are not statuses. Launch at login is a setting, so it
+// carries the drawn switch and never a status colour. Quit is a row with a
+// keystroke on the right, pressed rather than read. The group's name is
+// theirs: the two facts above them are read, and the two rows below them
+// are the only settings the panel has.
+//
+// Hub was the third until the third look. The note is found now, so there
+// is no folder to choose and the row that chose one is gone.
 //
 // CardTests puts every screen's rows in shuffled and reads the order back.
 
@@ -38,9 +40,6 @@ public enum SettingsRowKind: String, Sendable, CaseIterable {
   /// written on this machine, or a run of this process wrote one and could
   /// not hand it over.
   case desktop
-  /// The folder the notes are in, which is the one row that opens a window
-  /// of the system's rather than saying something.
-  case hub
   /// The one switch in the panel.
   case launchAtLogin
   /// The last row, always.
@@ -52,7 +51,6 @@ public enum SettingsRowKind: String, Sendable, CaseIterable {
     switch self {
     case .network: return "Network"
     case .desktop: return "Claude Desktop"
-    case .hub: return "Hub"
     case .launchAtLogin: return "Launch at login"
     case .quit: return "Quit"
     }
@@ -82,7 +80,7 @@ public struct SettingsRow: Identifiable {
   /// The switch, on the one row that is a setting.
   public let isOn: Bool?
   public let onToggle: () -> Void
-  /// Pressing the row itself, which Hub, Quit and the Login Items row do.
+  /// Pressing the row itself, which Quit and the Login Items row do.
   public let onSelect: (() -> Void)?
 
   public var id: String { kind.rawValue }
@@ -198,15 +196,22 @@ struct SettingsRowView: View {
   }
 
   /// `.row.hasact` pulls a row's value in to make room; a row with nothing
-  /// on its right keeps the content edge, which is the edge every time in
-  /// TODAY is on. An empty box here is not nothing: the row's own 8 pt
+  /// on its right keeps the content edge, which is the edge every value in
+  /// the panel is on. An empty box here is not nothing: the row's own 8 pt
   /// column gap goes with it, and every version, mark and keystroke this
   /// group drew sat 8 pt left of every other value in the panel.
   /// testAValueEndsWhereEveryOtherValueEnds.
   @ViewBuilder
   private var trailing: some View {
     if let isOn = row.isOn {
+      // A row pulls its trailing column 4 pt out, because an action's 16 pt
+      // of artwork sits in a 24 pt box and it is the artwork that meets the
+      // edge. A 26 pt pill has no such margin inside it, so the same pull
+      // put the one control in the panel 4 pt right of every icon, every
+      // value and the ⌘Q under it. Here it is given back:
+      // testTheSwitchStopsWhereTheKeystrokeUnderItStops.
       SwitchView(isOn: isOn, action: row.onToggle)
+        .padding(.trailing, Grid.actionOverhang)
     } else if !row.actions.isEmpty {
       HStack(spacing: Grid.actionGap) {
         ForEach(row.actions) { action in

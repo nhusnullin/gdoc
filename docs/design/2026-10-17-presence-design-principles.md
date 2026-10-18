@@ -510,7 +510,124 @@ Left as they are, with the reason:
 
 ## The render for review
 
-Every scene is drawn twice: the panel as the person opens it, capped at
-600 pt with the rest under a scroll, and the same panel with nothing hidden.
-The second is the one to review. A PNG cannot be scrolled, so a screen whose
-HEALTH sat past the cap was a screen nobody had checked.
+Every scene is drawn once in each appearance, and that one image is the
+whole panel. It was two images until 2026-10-18: the panel as the person
+opened it, capped at 600 pt with the rest under a scroll, and the same panel
+with nothing hidden. The third look took the cap and the scroll away, so the
+two are one drawing and the panel the person opens is the panel the reviewer
+reads. A panel taller than the screen is cut at the screen's edge, which is
+measured in `docs/v2/MEASURED.md` and is the price Nail chose over a scroll.
+
+## Amendments, 2026-10-18, after the third look's pass
+
+Five reviewers who drew nothing read every rendered screen and every
+component sheet of milestone 27 against the checklist above: seventeen
+scenes between four of them, and one on the six sheets. Three findings were
+blocking, nineteen were to fix, the rest were notes. Every blocking and
+should-fix one is closed in the pass's own commit except the ones at the
+foot of this section. These are the lines that moved.
+
+- **A page that says what is drawn says it after the drawing changes.** The
+  index named a Hub row in SETTINGS, a pin before the state glyph, "Pin,
+  Unpin and Hide" in a row's menu, a hint strip of four labels and a
+  first-run screen of 409 pt. The milestone had taken the Hub row out, moved
+  the pin to the row's fifth icon, left Hide alone in the menu, made the
+  strip five and the screen 381 pt. Three reviewers read the same paragraph
+  and two of them rated it blocking, which is what a sentence costs when it
+  outlives its drawing. Five source comments said "the four labels" as well.
+- **One right edge means the switch too.** A row pulls its trailing column
+  4 pt out, because an action's 16 pt of artwork sits in a 24 pt box and the
+  artwork is what meets the edge. A 26 pt pill has no such margin inside it,
+  so the one control in the panel stood 4 pt right of every icon, every
+  value and the ⌘Q under it. Four reviewers measured it at 303.5 against
+  299. It predates this milestone and was invisible until Launch at login
+  went off by default and put the switch on nearly every screen:
+  `testTheSwitchStopsWhereTheKeystrokeUnderItStops`.
+- **A label sits on the icon it names, not 4 pt off it.** The hint strip is
+  the panel's whole onboarding, and it kept a row's 12 pt where the icons
+  above it are pulled 4 pt out, so every word was half a letter left of its
+  own icon. The third look made it plain by adding a fifth: "Pin" under the
+  gap beside the tack is the hint failing at the one icon Nail could not
+  find: `testEachLabelIsCentredOnTheIconItNames`.
+- **An icon is one mark in one ink.** The pinned tack is a filled head with
+  the outline's stroke over it, which is how both states keep one
+  silhouette. Drawn as two layers of a translucent ink it composites to
+  `1-(1-a)²`: 0.49 where the action ink is 0.29, and 0.61 where the dimmed
+  one is 0.38. The pinned row carried the brightest icon in the panel and a
+  dimmed pin outshone a live icon beside it. The shapes are drawn opaque now
+  and the ink's own alpha goes on the pair:
+  `testThePinnedTackIsOneLayerOfItsOwnInk`.
+- **Every state this milestone added is on a screen, and two of them had no
+  day to be on.** The update glyph is drawn four ways. Two belong to moments
+  of a day and are on scenes, r8 and e1; the check after a press that
+  installed nothing and the ring while the child is up last as long as a
+  press and belong to no moment, so they were drawn nowhere at all. The rows
+  sheet draws the header four times now, which is the one page a state with
+  no day can be on: `testTheRowSheetDrawsTheUpdateGlyphInEveryDrawingItHas`.
+- **Principle 2 gains the update glyph.** Three reviewers found the accent
+  ink in the header against "colour lives in the 16 px status glyph and
+  nowhere else". It is the fifth exception, with the green check after a
+  press that installed nothing for the sixth, which is the Copy check's own
+  rule in another place. The accent is Task 5's decision and the principle
+  is what had not caught up.
+- **A caption names what the render draws**, five more times: r3 named the
+  source of each write where a DOCUMENTS row draws the word and the moment
+  alone, r9 called its list the fortnight where the list is the last five,
+  r8 and r9 said nothing about the blue dot and the published line that are
+  this milestone's own new header, e5 said the grey note icon is on no
+  screen where it is on three, and e3 explained how a publish clears a stuck
+  card under a card that is an export.
+
+Left as they are, with the reason:
+
+- **The question is the one header with no update glyph, and that is the
+  rule.** Task 5 says the glyph is always in the header; the second
+  morning's amendment says the question takes the header's line. Both are
+  written down and they meet on one screen, e10. The question wins: a line
+  asking whether to sign out is not a line to offer an install on, and the
+  version, the glyph and the memory of the changed address all come back
+  when it is answered. e10's caption says so now.
+- **The quiet glyph is at the action ink, which in light is a step darker
+  than the version beside it.** Task 5's sentence is "the icon in the
+  caption grey", and in dark the two inks measure the same. In light they do
+  not, and the glyph is drawn in the ink every pressable icon in the panel
+  uses. Making it the fainter grey would leave the one action in the header
+  fainter than every action under it, which is principle 4 read backwards.
+- **A bubble ends on the icon column however many icons the row has.** With
+  the pin, a Copy tooltip ends 24 pt right of the icon it belongs to and
+  over the tack. The rule is the second morning's and it is deliberate: a
+  bubble that moves with its icon gives one row five bubble positions, and
+  the icon it hangs under is what says which one it is about. It reads
+  differently at five icons than it did at four, so it is named here for
+  Nail rather than changed.
+- **e5 carries a hairline above SETTINGS and e8 does not, because one has a
+  block above it.** The rule is `isFirst`: the section under the header
+  carries no rule, and a panel with a notice or an empty state above it has
+  no first section. e5's first-run sentence is a block of the body; e8's
+  account banner belongs to the header. One reviewer read the difference as
+  a drift between two screens of the same shape.
+- **"Still your call" keeps the DOCUMENTS header line until Task 9.** Four
+  reviewers found it, and all four were right that no render draws the count
+  any more. The plan gives that list to the milestone's last task, which is
+  where the lines this plan decided leave it.
+- **The fifth icon costs the title column 28 pt, and the titles say so.**
+  Every reviewer who read a document row measured it: "Ch 5. Commercial
+  Model… v0.1" in NOW against "Ch 5. Com… v0.1" in DOCUMENTS on one screen,
+  and sub-lines that now wrap to two. Every one of them clears the
+  eight-character head floor, so the rule holds and the room is what the pin
+  was bought with. The lever is the strip, not the truncation, and it is
+  Nail's.
+- **The pin's artwork is the smallest in the strip**, 10 × 11.5 pt where its
+  neighbours are 11–14 × 13–14. A tack seen from the side is a bar and a
+  needle, and it is drawn inside the same 16 pt slot as the rest. Making it
+  larger is the iconographer's seat and a drawing Nail approved.
+
+And the thing the milestone is named for, which every one of the five was
+asked for separately and every one of them answered the same way: **no
+render shows a scroll thumb, a fade, a Show more row or any other sign of a
+cap**, in either appearance, on any of the seventeen scenes or the six
+sheets. Four of them checked by measurement as well as by eye, scanning the
+strip inside each panel's right edge for a vertical run and finding only
+card tints, the panel's own edge and ordinary text. The heights are the
+other half of it: the panels come out between 321 and 1088 pt, so the cap is
+gone rather than merely unreached.

@@ -14,7 +14,8 @@
 // crosses it.
 //
 // Dismissing is the app's own: the card and the menu bar's exclamation go,
-// the TODAY row stays. Nothing is undone, because nothing was done.
+// and the document keeps its row. Nothing is undone, because nothing was
+// done.
 //
 // CardTests states the ceiling, measures the two lines of the reason and
 // the two of the title, and reads the order of the icons.

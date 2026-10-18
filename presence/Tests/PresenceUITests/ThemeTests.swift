@@ -42,6 +42,9 @@ final class ThemeTests: XCTestCase {
     XCTAssertEqual(dark.hold, Swatch(0xD9_A0_3C))
     XCTAssertEqual(dark.bad, Swatch(0xE5_48_4D))
 
+    // --accent, which the header's update glyph is the one reader of
+    XCTAssertEqual(dark.accent, Swatch(0x8F_B3_DC))
+
     // .hold and .stuck: the tint and the half-pixel edge inside it
     XCTAssertEqual(dark.holdTint, Swatch(0xD9_A0_3C, alpha: 0.07))
     XCTAssertEqual(dark.holdTintEdge, Swatch(0xD9_A0_3C, alpha: 0.22))
@@ -50,11 +53,10 @@ final class ThemeTests: XCTestCase {
     XCTAssertEqual(dark.stuckTint, Swatch(0xE5_48_4D, alpha: 0.07))
     XCTAssertEqual(dark.stuckTintEdge, Swatch(0xE5_48_4D, alpha: 0.22))
 
-    // .ring, .switch, .scrollbox, .btn-primary, .btn.confirm, .btn-danger
+    // .ring, .switch, .btn-primary, .btn.confirm, .btn-danger
     XCTAssertEqual(dark.ringTrack, Swatch(0xFF_FF_FF, alpha: 0.10))
     XCTAssertEqual(dark.switchTrack, Swatch(0xFF_FF_FF, alpha: 0.24))
     XCTAssertEqual(dark.switchKnob, Swatch(0xFF_FF_FF))
-    XCTAssertEqual(dark.scrollThumb, Swatch(0xFF_FF_FF, alpha: 0.22))
     XCTAssertEqual(dark.primaryFill, Swatch(0xFF_FF_FF, alpha: 0.92))
     XCTAssertEqual(dark.primaryInk, Swatch(0x11_11_11))
     XCTAssertEqual(dark.confirmFill, Swatch(0xE5_48_4D, alpha: 0.10))
@@ -104,6 +106,9 @@ final class ThemeTests: XCTestCase {
     XCTAssertEqual(light.hold, Swatch(0xE6_87_0A))
     XCTAssertEqual(light.bad, Swatch(0xE0_31_2E))
 
+    // --accent
+    XCTAssertEqual(light.accent, Swatch(0x3B_5F_8A))
+
     // the light hold card is a solid tint with its own ink, --hold-ink
     XCTAssertEqual(light.holdTint, Swatch(0xFF_F6_E5))
     XCTAssertEqual(light.holdTintEdge, Swatch(0xE6_87_0A, alpha8: 0x66))
@@ -115,7 +120,6 @@ final class ThemeTests: XCTestCase {
     XCTAssertEqual(light.ringTrack, Swatch(0x00_00_00, alpha8: 0x1F))
     XCTAssertEqual(light.switchTrack, Swatch(0x00_00_00, alpha: 0.12))
     XCTAssertEqual(light.switchKnob, Swatch(0xFF_FF_FF))
-    XCTAssertEqual(light.scrollThumb, Swatch(0x00_00_00, alpha: 0.22))
     XCTAssertEqual(light.primaryFill, Swatch(0x11_11_13))
     XCTAssertEqual(light.primaryInk, Swatch(0xFF_FF_FF))
     XCTAssertEqual(
@@ -170,15 +174,13 @@ final class ThemeTests: XCTestCase {
     XCTAssertEqual(Grid.panelWidth, 320)
     XCTAssertEqual(Grid.unit, 8)
     XCTAssertEqual(Grid.panelRadius, 12)
-    XCTAssertEqual(Grid.panelMaxHeight, 600)
     XCTAssertEqual(Grid.headerHeight, 36)
     XCTAssertEqual(Grid.sectionLabelHeight, 28)
     XCTAssertEqual(Grid.rowHeight, 32)
     XCTAssertEqual(Grid.twoLineRowHeight, 44)
     XCTAssertEqual(Grid.compactRowHeight, 28)
-    XCTAssertEqual(Grid.actionColumn, 108)
+    XCTAssertEqual(Grid.actionColumn, 136)
     XCTAssertEqual(Grid.glyphSize, 16)
-    XCTAssertEqual(Grid.pinSize, 8)
     XCTAssertEqual(Grid.actionSize, 24)
     XCTAssertEqual(Grid.controlRadius, 6)
     XCTAssertEqual(Grid.actionOverhang, 4, "`.acts{margin-right:-4px}`")
@@ -194,8 +196,6 @@ final class ThemeTests: XCTestCase {
     XCTAssertEqual(Grid.ringLarge, 28)
     XCTAssertEqual(Grid.hairline, 0.5)
     XCTAssertEqual(Grid.quietInset, 44)
-    XCTAssertEqual(Grid.scrollBoxHeight, 236)
-    XCTAssertEqual(Grid.fadeHeight, 28)
     XCTAssertEqual(Grid.badgeSize, 10)
   }
 

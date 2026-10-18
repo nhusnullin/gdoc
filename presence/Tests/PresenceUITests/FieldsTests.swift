@@ -43,10 +43,6 @@ final class FieldsTests: XCTestCase {
       card.reason, "SVG picture at line 41. Nothing was created; the note is unchanged.")
     XCTAssertTrue(StuckCard.fits(card.reason), "the two lines the card has room for")
 
-    XCTAssertEqual(
-      panel.today?.rows.first?.sub, "from the terminal · SVG picture at line 41",
-      "the log row carries the cause as well, and the red glyph says it stopped")
-
     // A code this version has not heard of, and `other`, which is gdoc
     // saying nothing matched: the panel says where the reason is and never
     // guesses at one.
@@ -169,22 +165,21 @@ final class FieldsTests: XCTestCase {
       "a job whose steps are not known is the indeterminate ring")
   }
 
-  /// A write whose process went away has no row in TODAY while its card is
-  /// up, because `Days.every` leaves out what NOW is carding, and NOW keeps
-  /// such a card for fourteen days. So the card is the one thing on the
-  /// screen that can say when it started, and it does.
+  /// A write whose process went away said nothing about how it went, so the
+  /// card says when it started: that is the one fact the record carries
+  /// about it, and NOW keeps such a card for fourteen days.
   ///
-  /// A write whose end said it failed is the other way round: the row in
-  /// TODAY carries the moment, so the card says the cause and the state of
-  /// the world and nothing a second time.
-  func testACardWithNoRowBehindItCarriesTheMoment() throws {
+  /// A write whose end said it failed is the other way round: the card says
+  /// the cause and the state of the world, and never a moment on top of
+  /// them. The card is two lines, and a moment there costs the half of the
+  /// sentence that says what to do.
+  func testACardWithNoCauseCarriesTheMoment() throws {
     let went = try drawn(
       [event("2026-10-17T12:00:00Z", .start, command: "restyle", doc: chapter5)],
       at: "2026-10-17T14:00:00Z")
     XCTAssertEqual(
       went.reasons, ["Started 12:00. The terminal that ran it has the reason."],
-      "nothing else on the screen says when it was")
-    XCTAssertTrue(went.today?.rows.isEmpty ?? false, "and TODAY draws no row under the card")
+      "the moment is the one thing the record says about it")
     XCTAssertTrue(StuckCard.fits(went.reasons[0]), "it still fits the card")
 
     // An older card says the day and not the clock, which is the words
@@ -203,8 +198,8 @@ final class FieldsTests: XCTestCase {
       older.reasons, ["Started Tue. The terminal that ran it has the reason."],
       "the weekday, as the value column of a row says it")
 
-    // An end that failed with a code nobody knows has its row in TODAY, so
-    // the card says where to look and no moment.
+    // An end that failed with a code nobody knows says where to look and no
+    // moment: the document's own row carries the moment it stopped at.
     let failed = try drawn(
       [
         event("2026-10-17T12:00:00Z", .start, command: "restyle", doc: chapter5),
@@ -213,49 +208,24 @@ final class FieldsTests: XCTestCase {
           stop: "other"),
       ], at: "2026-10-17T14:00:00Z")
     XCTAssertEqual(failed.reasons, ["The terminal that ran it has the reason."])
-    XCTAssertEqual(failed.today?.rows.count, 1, "the row is what carries the moment")
+    XCTAssertEqual(
+      failed.documents?.rows.first?.sub, "stopped 12:01 · ~/hub/falcon/chapters/05.md",
+      "the document's row is what carries the moment")
   }
 
   // Scene r3: `via: code` is gdoc under Claude Code, which is where most of
-  // a day's writes come from. It was the one via with no words.
+  // a day's writes come from. It was the one via with no words, and the job
+  // card is where a via reaches a person now that the day's log is gone.
   func testViaCodeReadsFromClaudeCode() throws {
     let panel = try drawn(
-      [
-        event("2026-10-17T11:37:40Z", .start, command: "annotate", via: "code", doc: chapter5),
-        event(
-          "2026-10-17T11:38:00Z", .end, command: "annotate", via: "code", doc: chapter5,
-          title: "Ch 5. Commercial Model: review draft v0.1", ok: true, verified: true),
-      ], at: "2026-10-17T11:39:00Z")
+      [event("2026-10-17T11:37:40Z", .start, command: "annotate", via: "code", doc: chapter5)],
+      at: "2026-10-17T11:39:00Z", alive: [7101])
 
     XCTAssertEqual(Words.via("code"), "from Claude Code")
-    XCTAssertEqual(panel.today?.rows.first?.sub, "from Claude Code · verified")
-  }
-
-  // Scene r9: a wait somebody stopped carries `interrupted`, so the log says
-  // who ended the watch. Without it the row read as a watch that stopped by
-  // itself, which is what a lost process looks like.
-  func testAnInterruptedWaitIsLiveStoppedByYou() throws {
-    let stopped = try drawn(
-      [
-        event("2026-10-17T18:10:50Z", .start, command: "comments", doc: chapter5, wait: true),
-        event(
-          "2026-10-17T18:40:40Z", .end, command: "comments", doc: chapter5, wait: true,
-          interrupted: true, title: "Ch 5. Commercial Model: review draft v0.1", ok: true),
-      ], at: "2026-10-17T18:59:00Z")
-
-    let row = try XCTUnwrap(stopped.today?.rows.first)
-    XCTAssertEqual(row.title, "Live stopped by you · Ch 5. Commercial Model: review draft v0.1")
-
-    let lost = try drawn(
-      [
-        event("2026-10-17T18:10:50Z", .start, command: "comments", doc: chapter5, wait: true),
-        event(
-          "2026-10-17T18:40:40Z", .end, command: "comments", doc: chapter5, wait: true,
-          title: "Ch 5. Commercial Model: review draft v0.1", ok: true),
-      ], at: "2026-10-17T18:59:00Z")
-    XCTAssertEqual(
-      lost.today?.rows.first?.title, "Live stopped · Ch 5. Commercial Model: review draft v0.1",
-      "nobody said they stopped it, so the panel does not say so either")
+    guard case .job(_, let card)? = panel.now.first else {
+      return XCTFail("a command that is still running is a job card")
+    }
+    XCTAssertEqual(card.sub, "started 11:37 · from Claude Code")
   }
 
   // Scene r8 and scene e9: a poll that failed carries its code, so the row
@@ -346,9 +316,10 @@ final class FieldsTests: XCTestCase {
       "the stopped watch says why it stopped, and the open one still says what it has done")
   }
 
-  // The hold the sign-in changed under: the card goes, and the one line in
-  // TODAY says what happened to the text. It is the record's own word and
-  // no reading on top of it.
+  // The hold the sign-in changed under: the card goes, and nothing is left
+  // on the screen. The hold was the whole of what that document had: a
+  // document the chat only held a write for has no action on it, so no row
+  // in DOCUMENTS either.
   func testADroppedHoldEndsTheCard() throws {
     let panel = try drawn(
       [
@@ -365,70 +336,14 @@ final class FieldsTests: XCTestCase {
 
     XCTAssertTrue(
       panel.now.isEmpty, "nothing is waiting for anybody, so NOW is not drawn at all")
-    let closed = try XCTUnwrap(panel.today?.rows.first)
-    XCTAssertEqual(closed.title, "Hold closed · Altery Group Channel Management Policy")
-    XCTAssertEqual(closed.sub, "the sign-in changed, nothing was sent")
+    XCTAssertEqual(
+      panel.documents?.rows.map(\.doc), [], "a hold that ended is no action on the document")
   }
 
-  // The two endings a write happened under, each the line gdoc actually
-  // writes for it. `mcprelease.go` writes `released` when the person presses
-  // the card, before the send, so the approval is the row of the write it
-  // sent; `mcphold.go` writes `landed` for a held write the model sent again
-  // with no card, so that one is the write's own row and a second row saying
-  // the card went with it. Neither of them is a person saying no: nothing in
-  // gdoc writes a refusal, and an unanswered card expires.
-  func testTheApprovalAndTheLandingAreTheLinesGdocWrites() throws {
-    let read = event(
-      "2026-10-17T16:19:01Z", .end, command: "read", doc: policy,
-      title: "Altery Group Channel Management Policy", ok: true)
-    let held = event(
-      "2026-10-17T16:20:00Z", .held, command: "reply", via: "chat", doc: policy,
-      hold: "h_1", rule: "Dictated")
-    // The chat is one run and a dozen calls, so the reply is the second
-    // call of the process the read was the first call of.
-    let wrote = [
-      event(
-        "2026-10-17T16:40:55Z", .start, command: "reply", via: "chat", doc: policy, call: 2),
-      event(
-        "2026-10-17T16:41:00Z", .end, command: "reply", via: "chat", doc: policy, ok: true,
-        verified: true, call: 2),
-    ]
-
-    let approved = try drawn(
-      [
-        read, held,
-        event(
-          "2026-10-17T16:40:55Z", .released, command: "reply", via: "chat", doc: policy,
-          hold: "h_1"),
-      ] + wrote, at: "2026-10-17T17:00:00Z")
-    let rows = try XCTUnwrap(approved.today).rows
-    XCTAssertEqual(
-      rows.first?.title, "Reply · Altery Group Channel Management Policy",
-      "one row for the write the approval sent")
-    XCTAssertEqual(rows.first?.sub, "approved by you in chat · verified")
-    XCTAssertFalse(
-      rows.contains { $0.title.hasPrefix("Hold closed") }, "the write carries the ending")
-
-    let landed = try drawn(
-      [read, held] + wrote + [
-        event(
-          "2026-10-17T16:41:01Z", .landed, command: "reply", via: "chat", doc: policy,
-          hold: "h_1")
-      ], at: "2026-10-17T17:00:00Z")
-    let after = try XCTUnwrap(landed.today).rows
-    XCTAssertEqual(after.first?.title, "Hold closed · Altery Group Channel Management Policy")
-    XCTAssertEqual(
-      after.first?.sub, "the write went out without the card",
-      "nobody approved anything, so the row says what did happen")
-    XCTAssertEqual(
-      after.dropFirst().first?.sub, "from Desktop chat · verified",
-      "and the write is the ordinary row of a write")
-  }
-
-  // The TODAY row of a hold names the write by the command's heading, the
-  // way every other row in the panel names it: the record writes `propose`
-  // and a person reads "Proposal". A raw command name in one row and a
-  // heading in the next is two vocabularies for one thing.
+  // The card of a hold names the write by the command's heading, the way
+  // every other word in the panel names it: the record writes `propose` and
+  // a person reads "Proposal". A raw command name on the card and a heading
+  // in the list is two vocabularies for one thing.
   func testAHeldWriteIsNamedByItsHeading() throws {
     for (command, verb) in Words.verbs {
       let panel = try drawn(
@@ -441,64 +356,14 @@ final class FieldsTests: XCTestCase {
             hold: "h_1", rule: "Unread target"),
         ], at: "2026-10-17T16:34:00Z")
 
-      let raised = try XCTUnwrap(
-        panel.today?.rows.first { $0.title.hasPrefix("Hold ·") },
-        "a held \(command) is one row in TODAY")
+      guard case .hold(_, let card, _)? = panel.now.first else {
+        return XCTFail("a held \(command) is one card in NOW")
+      }
       XCTAssertEqual(
-        raised.sub, "\(verb.heading) held by rule Unread target · waiting in Desktop chat",
-        "the row says \(verb.heading) and never \(command)")
+        card.sub,
+        "\(verb.heading) · Altery Group Channel Management Policy · rule Unread target",
+        "the card says \(verb.heading) and never \(command)")
     }
-  }
-
-  // One rule for the DOCUMENTS header, and one number in it: the day's own
-  // count where every row in the list is from today, and "14 days" with the
-  // whole list's count where one row is older. The count is the list's and
-  // never the screen's, because a row behind "Show more" is a document too.
-  // Scene e2 is the mixed one, and it reads "14 days · 4".
-  func testTheDocumentsHeaderCountsTheWholeList() throws {
-    var runs = 0
-    func wrote(_ at: String, _ doc: String) -> Event {
-      runs += 1
-      return event(
-        at, .end, command: "reply", doc: doc, title: "A note", ok: true, verified: true,
-        run: "300000000000000\(runs)")
-    }
-
-    let bare = try drawn([], at: "2026-10-17T18:00:00Z")
-    XCTAssertNil(bare.documents?.count, "an empty list has no count at all")
-
-    let day = try drawn(
-      [
-        wrote("2026-10-17T09:00:00Z", chapter4),
-        wrote("2026-10-17T10:00:00Z", chapter5),
-        wrote("2026-10-17T11:00:00Z", policy),
-      ], at: "2026-10-17T18:00:00Z")
-    XCTAssertEqual(day.documents?.count, "3 today", "every row is from today")
-
-    let older = try drawn(
-      [
-        wrote("2026-10-16T09:00:00Z", SceneDocuments.northwind),
-        wrote("2026-10-17T09:00:00Z", chapter4),
-        wrote("2026-10-17T10:00:00Z", chapter5),
-        wrote("2026-10-17T11:00:00Z", policy),
-      ], at: "2026-10-17T18:00:00Z")
-    XCTAssertEqual(
-      older.documents?.count, "14 days · 4",
-      "one row is from yesterday, so the header is the stretch and the whole count")
-
-    let long = try drawn(
-      [
-        wrote("2026-10-17T09:00:00Z", chapter4),
-        wrote("2026-10-17T10:00:00Z", chapter5),
-        wrote("2026-10-17T11:00:00Z", policy),
-        wrote("2026-10-17T12:00:00Z", SceneDocuments.northwind),
-        wrote("2026-10-17T13:00:00Z", SceneDocuments.partner),
-        wrote("2026-10-17T14:00:00Z", SceneDocuments.concept),
-      ], at: "2026-10-17T18:00:00Z")
-    XCTAssertEqual(long.documents?.rows.count, 6)
-    XCTAssertEqual(
-      long.documents?.count, "6 today",
-      "the sixth row is behind Show more and is counted all the same")
   }
 
   // MARK: the record, as values

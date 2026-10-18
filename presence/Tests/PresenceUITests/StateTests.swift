@@ -4,8 +4,8 @@
 // nothing about: a list opened, a link copied, a card dismissed. Each is a
 // value outside every view, so each is a test that states the value and reads
 // the model back. The three here are the ones a drawn panel would be wrong
-// about without them: a Show more that opens nothing, a green check that
-// never goes back, and the same request made twice at once.
+// about without them: a green check that never goes back, a card nobody
+// dismissed, and the same request made twice at once.
 
 import Foundation
 import PresenceCore
@@ -17,31 +17,33 @@ import XCTest
 final class StateTests: XCTestCase {
   private let chapter4 = SceneDocuments.chapter4
 
-  /// `MORE('Show 3 more')` over TODAY: the row is drawn from the day's own
-  /// count, so the list has to read the state the chevron writes. Without it
-  /// the word is there, the press is wired, and the panel comes back the
-  /// same.
-  func testTodaysShowMoreOpensTheList() throws {
+  /// Every row the fold hands over is drawn, and the fold is what decides
+  /// how many there are.
+  ///
+  /// DOCUMENTS drew the first five with the rest behind a Show more until
+  /// 2026-10-18, and the word was the one piece of panel state a person's
+  /// press changed. The five are the fold's own now: seven documents
+  /// written to today are five rows in the model, newest first, and the
+  /// list draws every one of them.
+  func testTheListTheFoldHandsOverIsTheListDrawn() throws {
+    let documents = [
+      SceneDocuments.chapter4, SceneDocuments.chapter5, SceneDocuments.policy,
+      SceneDocuments.northwind, SceneDocuments.partner, SceneDocuments.concept,
+      SceneDocuments.proposal,
+    ]
     var events: [Event] = []
-    for minute in 0..<11 {
-      let at = String(format: "2026-10-17T09:%02d:00Z", minute)
-      // Each line is its own call: the shared walk keeps one row per
-      // run and call, so eleven ends of one call would be one row.
+    for (index, doc) in documents.enumerated() {
+      let at = String(format: "2026-10-17T09:%02d:00Z", index)
       events.append(
-        event(at, .end, command: "reply", doc: chapter4, call: Int64(minute + 1), ok: true))
+        event(at, .end, command: "reply", doc: doc, call: Int64(index + 1), ok: true))
     }
 
-    let closed = try drawn(events, at: "2026-10-17T10:00:00Z")
-    let today = try XCTUnwrap(closed.today)
-    XCTAssertEqual(today.rows.count, 11, "the day's rows are all in the model")
-    XCTAssertEqual(today.collapsed, 8)
-    XCTAssertFalse(today.isOpen, "the list starts closed")
-
-    let opened = try drawn(
-      events, at: "2026-10-17T10:00:00Z", ui: UIState(expanded: [.today]))
-    XCTAssertTrue(
-      try XCTUnwrap(opened.today).isOpen,
-      "the chevron the shell wires to .today is the state this list reads")
+    let drawn = try drawn(events, at: "2026-10-17T10:00:00Z")
+    let list = try XCTUnwrap(drawn.documents)
+    XCTAssertEqual(
+      list.rows.map(\.doc), documents.suffix(5).reversed(),
+      "the last five by their latest action, newest first")
+    XCTAssertNil(list.empty, "a list with five rows says nothing about being empty")
   }
 
   /// `.act.is-done` for one second: the state is the document and the moment
@@ -133,60 +135,103 @@ final class StateTests: XCTestCase {
     let behind = try drawn(
       [], at: "2026-10-17T09:00:00Z", facts: Scenes.machine(latestStable: "v2.15.0"))
     XCTAssertEqual(behind.header.version, "v2.14.0")
-    XCTAssertEqual(behind.header.update?.kind, .update)
+    XCTAssertEqual(behind.header.quiet, ["v2.15.0 is published"])
+    XCTAssertEqual(behind.header.updateLook, .available)
     XCTAssertEqual(behind.header.update?.tip, "Update to v2.15.0")
     let ahead = try drawn(
       [], at: "2026-10-17T09:00:00Z", facts: Scenes.machine(latestStable: "v2.13.0"))
-    XCTAssertEqual(ahead.header.version, "v2.14.0")
-    XCTAssertNil(ahead.header.update, "and there is no button to press")
+    XCTAssertEqual(ahead.header.version, "v2.14.0", "the line names one version")
+    XCTAssertEqual(
+      ahead.header.updateLook, .quiet, "and the glyph offers a check and no release")
   }
 
-  /// The Hub row, which is the one row in the panel that opens a window of
-  /// the system's: the folder the person chose, written with a tilde where
-  /// it is inside their home, or the word that offers to choose one.
+  /// The update glyph is on the line whenever there is a binary to update,
+  /// in the states of the third look. Pressing it runs `gdoc update` in
+  /// every one of them, because that command is the one that asks GitHub:
+  /// the states differ in what this app has been told, never in what the
+  /// press does.
+  func testTheUpdateGlyphIsAlwaysThereInItsThreeStates() throws {
+    let when = "2026-10-17T09:00:00Z"
+
+    // Quiet: nothing newer is known, so the words are about asking.
+    let quiet = try drawn([], at: when, facts: Scenes.machine())
+    XCTAssertEqual(quiet.header.version, "v2.14.0")
+    XCTAssertEqual(quiet.header.updateLook, .quiet)
+    let glyph = try XCTUnwrap(quiet.header.update, "the glyph is there with nothing published")
+    XCTAssertEqual(glyph.kind, .update)
+    XCTAssertEqual(glyph.icon, .down)
+    XCTAssertEqual(glyph.state, .live)
+    XCTAssertEqual(glyph.tip, "Check for a new version")
+
+    // Available: `help --json` listed a newer stable, so the line carries
+    // both versions and the glyph takes the accent ink and its dot.
+    let available = try drawn([], at: when, facts: Scenes.machine(latestStable: "v2.15.0"))
+    XCTAssertEqual(available.header.version, "v2.14.0", "the line names the one installed")
+    XCTAssertEqual(
+      available.header.quiet, ["v2.15.0 is published"],
+      "and the one published is directly under it, because the line has no room for both")
+    XCTAssertEqual(available.header.updateLook, .available)
+    XCTAssertEqual(available.header.update?.tip, "Update to v2.15.0")
+    XCTAssertEqual(available.header.update?.state, .live)
+
+    // Running: the ring stands where the glyph is, and the version beside
+    // it is the one still installed.
+    let running = try drawn([], at: when, facts: updating(true))
+    XCTAssertTrue(running.header.versionWaiting)
+    XCTAssertEqual(running.header.version, "v2.14.0")
+    XCTAssertNil(running.header.update, "there is nothing to press while the child is up")
+
+    // And the second after a run that installed nothing: the check, with
+    // the one thing the run said.
+    let answered = try at(when)
+    let checked = try drawn(
+      [], at: when, facts: Scenes.machine(updateChecked: answered))
+    XCTAssertEqual(checked.header.update?.state, .done)
+    XCTAssertEqual(checked.header.update?.tip, "This is the newest release")
+    let after = try drawn(
+      [], at: "2026-10-17T09:00:02Z", facts: Scenes.machine(updateChecked: answered))
+    XCTAssertEqual(after.header.update?.state, .live, "a second later it is quiet again")
+    XCTAssertEqual(after.header.update?.tip, "Check for a new version")
+  }
+
+  /// A machine with no gdoc on it has nothing to update, so there is no
+  /// glyph: the header says where it looked instead.
+  func testAMachineWithNoGdocOffersNoUpdate() throws {
+    let missing = try drawn(
+      [], at: "2026-10-17T09:00:00Z", facts: Scenes.machine(gdocFound: false))
+    XCTAssertEqual(missing.header.version, "not found")
+    XCTAssertNil(missing.header.update)
+  }
+
+  /// The md icon is grey because no note names the document, which is the
+  /// reason it carries where nothing else was found.
   ///
-  /// The md icon says the same thing from the other side. Without a hub
-  /// there is no pairing, and a greyed icon that said "No note is paired
-  /// with this document" sent the person looking for a note, which is where
-  /// Nail went on the second morning: the tooltip names the row that fixes
-  /// it instead.
-  func testTheHubRowIsTheFolderOrTheWayToChooseOne() throws {
-    let chosen = try drawn([], at: "2026-10-17T10:00:00Z")
-    let row = try XCTUnwrap(chosen.settings.first { $0.kind == .hub }, "SETTINGS has no Hub row")
-    XCTAssertEqual(row.kind.label, "Hub")
-    XCTAssertEqual(row.value, "~/hub", "the folder, with the home directory as a tilde")
-    XCTAssertEqual(row.select, .chooseHub, "and pressing the row is what opens the panel")
-    XCTAssertNil(row.isOn, "it is not a switch")
-    XCTAssertTrue(row.actions.isEmpty, "and it carries no icon")
-
-    let none = try drawn(
-      [], at: "2026-10-17T10:00:00Z", facts: Scenes.machine(hub: nil))
-    let offer = try XCTUnwrap(none.settings.first { $0.kind == .hub })
-    XCTAssertEqual(offer.value, "Choose…")
-    XCTAssertEqual(offer.select, .chooseHub, "the same press either way")
-
-    // A hub outside the home directory is written in full, because a tilde
-    // there would name a folder that is not the one chosen.
-    XCTAssertEqual(
-      Sentences.folder("/Volumes/work/hub", home: "/Users/nail"), "/Volumes/work/hub")
-    XCTAssertEqual(Sentences.folder("/Users/nail", home: "/Users/nail"), "~")
-    XCTAssertEqual(
-      Sentences.folder("/Users/nail/hub", home: ""), "/Users/nail/hub",
-      "and no home to compare against is no tilde either")
-
-    // The other side of the same fact: the md icon with no hub names the row.
+  /// The Hub row was the other half of this test until that evening. The
+  /// note is found now, so there is no folder to choose, and "Choose the hub
+  /// in SETTINGS" named a row that no longer exists. The other sentence the
+  /// icon can carry is the finder's own, two notes naming one document:
+  /// testTwoNotesNamingOneDocumentSaySoOnTheIcon.
+  func testTheMdIconIsGreyOnlyWhenNoNoteNamesTheDocument() throws {
     let paired = event(
       "2026-10-17T09:00:00Z", .end, command: "reply", doc: chapter4, ok: true)
-    let greyed = try drawn([paired], at: "2026-10-17T10:00:00Z", facts: Scenes.machine(hub: nil))
+
+    let greyed = try drawn(
+      [paired], at: "2026-10-17T10:00:00Z", facts: Scenes.machine(pairing: [:]))
     let icon = try XCTUnwrap(
       greyed.documents?.rows.first?.actions.first { $0.kind == .openNote })
-    XCTAssertEqual(icon.state, .off("Choose the hub in SETTINGS"))
-    XCTAssertEqual(NoteFault.noHub.tip, "Choose the hub in SETTINGS", "and a click says it too")
+    XCTAssertEqual(icon.state, .off("No note is paired with this document"))
+    XCTAssertEqual(
+      NoteFault.notPaired.tip, "No note is paired with this document",
+      "and a click says the same")
 
     let live = try drawn([paired], at: "2026-10-17T10:00:00Z")
     XCTAssertEqual(
       live.documents?.rows.first?.actions.first { $0.kind == .openNote }?.state, .live,
-      "with a hub and a note the icon works")
+      "with a note naming it the icon works")
+
+    XCTAssertFalse(
+      SettingsRowKind.allCases.contains { $0.label == "Hub" },
+      "and no row in SETTINGS offers to choose a folder")
   }
 
   /// While an update child of the app's own is up, neither row offers a
@@ -373,15 +418,14 @@ final class StateTests: XCTestCase {
       panel.header.question, "the header is the question while it is asked")
   }
 
-  /// A document row's own menu, in both its states.
+  /// A document row's five icons, in their order, and the pin's two states.
   ///
-  /// The menu is where a pin and a hide are, so the four icons on the row
-  /// stay four. A pinned row says Unpin and nothing else, because the one
-  /// thing a person wants from a pin they have already made is to take it
-  /// back, and a hide of a pinned document hides nothing: the press would
-  /// look dead and then take the row away at the Unpin. There is no Unhide
-  /// anywhere: a hidden document has no row to open a menu on.
-  func testTheRowMenuSaysPinOrUnpinAndHide() throws {
+  /// The pin is the fifth since the third look (docs/v2/DECISIONS.md,
+  /// 2026-10-18): it was a word in a menu Nail never found, and a menu
+  /// nobody finds is no affordance. The outline tack pins and says Pin, the
+  /// filled one takes it back and says Unpin, so the row says which it is
+  /// without a word.
+  func testADocumentRowsFifthIconIsThePinInItsTwoStates() throws {
     let events = [
       event(
         "2026-10-17T09:00:00Z", .end, command: "reply", doc: chapter4, title: "Ch 4", ok: true)
@@ -390,30 +434,62 @@ final class StateTests: XCTestCase {
     let plain = try drawn(events, at: "2026-10-17T09:10:00Z")
     let row = try XCTUnwrap(plain.documents?.rows.first)
     XCTAssertFalse(row.isPinned, "nothing is pinned until somebody pins it")
-    XCTAssertEqual(row.menu.map(\.word), ["Pin", "Hide from the list"])
-    XCTAssertEqual(row.menu.map(\.kind), [.pinDoc, .hideDoc])
-    XCTAssertEqual(row.menu.map(\.target), [chapter4, chapter4])
-    XCTAssertEqual(row.actions.count, 4, "the four icons are four")
+    XCTAssertEqual(
+      row.actions.map(\.icon), [.gdocs, .md, .branch, .link, .pin],
+      "the four it had, and the pin at the end")
+    XCTAssertEqual(
+      row.actions.map(\.kind), [.openDoc, .openNote, .openChat, .copyLink, .pinDoc])
+    let pin = try XCTUnwrap(row.actions.last)
+    XCTAssertEqual(pin.tip, "Pin")
+    XCTAssertEqual(pin.state, .live, "a pin is a press on every row there is")
+    XCTAssertEqual(pin.target, chapter4)
 
     let moment = try at("2026-10-17T09:05:00Z")
     let pinned = try drawn(
       events, at: "2026-10-17T09:10:00Z",
       ui: UIState(pinned: [DocumentChoice(doc: chapter4, at: moment, title: "Ch 4")]))
     let kept = try XCTUnwrap(pinned.documents?.rows.first)
-    XCTAssertTrue(kept.isPinned, "which the row draws in its own column before the glyph")
+    XCTAssertTrue(kept.isPinned)
     XCTAssertEqual(
-      kept.menu.map(\.word), ["Unpin"],
-      "and a pinned row offers no hide, because the pin would win and the press look dead")
-    XCTAssertEqual(kept.menu.map(\.kind), [.unpinDoc])
-    XCTAssertEqual(kept.actions.count, 4, "and the icons are still four")
+      kept.actions.map(\.icon), [.gdocs, .md, .branch, .link, .pinOn],
+      "the filled tack is the one thing that changes")
+    XCTAssertEqual(
+      kept.actions.map(\.kind), [.openDoc, .openNote, .openChat, .copyLink, .unpinDoc])
+    let unpin = try XCTUnwrap(kept.actions.last)
+    XCTAssertEqual(unpin.tip, "Unpin")
+    XCTAssertEqual(unpin.target, chapter4)
+  }
+
+  /// A document row's own menu is one word, and a pinned row has no menu.
+  ///
+  /// Hide is the one thing left in it: the pin is the row's fifth icon since
+  /// the third look. A pinned row offers nothing, because the pin is the
+  /// louder answer and a hide of a pinned document hides nothing: the press
+  /// would look dead and then take the row away at the unpin. There is no
+  /// Unhide anywhere, because a hidden document has no row to open a menu on.
+  func testTheRowMenuIsHideAndAPinnedRowHasNone() throws {
+    let events = [
+      event(
+        "2026-10-17T09:00:00Z", .end, command: "reply", doc: chapter4, title: "Ch 4", ok: true)
+    ]
+
+    let plain = try drawn(events, at: "2026-10-17T09:10:00Z")
+    let row = try XCTUnwrap(plain.documents?.rows.first)
+    XCTAssertEqual(row.menu.map(\.word), ["Hide from the list"])
+    XCTAssertEqual(row.menu.map(\.kind), [.hideDoc])
+    XCTAssertEqual(row.menu.map(\.target), [chapter4])
+
+    let moment = try at("2026-10-17T09:05:00Z")
+    let pinned = try drawn(
+      events, at: "2026-10-17T09:10:00Z",
+      ui: UIState(pinned: [DocumentChoice(doc: chapter4, at: moment, title: "Ch 4")]))
+    let kept = try XCTUnwrap(pinned.documents?.rows.first)
+    XCTAssertTrue(kept.menu.isEmpty, "a pinned row has nothing to offer, so it opens no menu")
 
     let hidden = try drawn(
       events, at: "2026-10-17T09:10:00Z",
       ui: UIState(hidden: [DocumentChoice(doc: chapter4, at: moment, title: "Ch 4")]))
     XCTAssertEqual(hidden.documents?.rows.count, 0, "a hidden document is not a row")
-    XCTAssertNil(hidden.documents?.count, "and the label counts no rows")
-    XCTAssertEqual(
-      hidden.today?.rows.count, 1, "TODAY still carries its run, because the log is the log")
   }
 
   /// A pinned document the record has no line for any more: the row is the
@@ -430,11 +506,12 @@ final class StateTests: XCTestCase {
     XCTAssertEqual(
       row.glyph, .blank, "no state is invented for a document the record is silent about")
     XCTAssertEqual(
-      row.sub, "falcon/chapters/04.md",
-      "the sub-line says where the note is and nothing about an action")
+      row.sub, "~/hub/falcon/chapters/04.md",
+      "the sub-line says where the note is, with the home as a tilde, and "
+        + "nothing about an action")
     XCTAssertEqual(
       row.actions.first { $0.kind == .openDoc }?.state, .live, "and its open action works")
-    XCTAssertEqual(panel.documents?.count, "14 days · 1", "the label counts it")
+    XCTAssertEqual(panel.documents?.rows.count, 1, "and it is the whole of the list")
   }
 
   /// A write a rule held, as gdoc writes it: one line, and no call.
@@ -456,7 +533,6 @@ final class StateTests: XCTestCase {
       account: Scenes.account,
       versions: Versions(app: "2.14.0", gdoc: "v2.14.0", latestStable: "v2.15.0"),
       gdocPath: Scenes.gdocPath,
-      hub: Scenes.hub,
       extensionState: .notInstalled,
       updating: running)
   }

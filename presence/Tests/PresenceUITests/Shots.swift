@@ -46,6 +46,17 @@ func inkWeight<V: View>(_ view: V, scheme: ColorScheme, side: CGFloat) throws ->
   return total
 }
 
+/// The heaviest single pixel, which is how much ink the view puts down at
+/// its darkest. A shape drawn once in a translucent ink peaks at that ink's
+/// own alpha; one drawn twice over peaks higher, and that is the difference
+/// this reads.
+@MainActor
+func heaviestPixel<V: View>(_ view: V, scheme: ColorScheme, side: CGFloat) throws -> Double {
+  var peak = 0.0
+  try eachPixel(view, scheme: scheme, side: side) { peak = max(peak, $0) }
+  return peak
+}
+
 @MainActor
 private func eachPixel<V: View>(
   _ view: V, scheme: ColorScheme, side: CGFloat, _ body: (Double) -> Void
@@ -114,8 +125,8 @@ func probes<V: View>(_ view: V, scheme: ColorScheme, width: CGFloat = Grid.panel
 }
 
 /// The same measurements in the order they were drawn, so a test can tell
-/// two reports of one name apart: a box inside a box is two `scrollbox`
-/// probes, and which of them carries a thumb is the thing under test.
+/// two reports of one name apart: two rows of one list are two `row.doc`
+/// probes, and which of them is which is the thing under test.
 @MainActor
 func probeList<V: View>(_ view: V, scheme: ColorScheme, width: CGFloat = Grid.panelWidth) throws
   -> [MetricProbe]
@@ -322,12 +333,6 @@ enum SheetPieces {
     return Array(rows.prefix(2))
   }
 
-  /// Scene r3's first log row: a write that landed and was read back.
-  static func logRow() throws -> LogRowModel {
-    let today = try XCTUnwrap(try scene("r3").model().today, "r3 drew no TODAY")
-    return try XCTUnwrap(today.rows.first, "r3's TODAY is empty")
-  }
-
   /// Scene r8's header: the mark, the version with a release to take, and
   /// the account that works. It is the one scene whose header carries every
   /// piece the line can hold at once.
@@ -337,13 +342,38 @@ enum SheetPieces {
     return header
   }
 
-  /// Scene e1's DOCUMENTS: its header count, and the chevron's own words
-  /// for what is under it.
-  static func documents() throws -> (count: String, more: String) {
-    let model = try XCTUnwrap(try scene("e1").model().documents, "e1 drew no documents")
-    let count = try XCTUnwrap(model.count, "e1's DOCUMENTS has no count")
-    let shown = ShowMore(total: model.rows.count, collapsed: model.collapsed, isOpen: false)
-    return (count, try XCTUnwrap(shown.title, "e1 hides nothing, so there is no word"))
+  /// The update glyph's three other drawings, which no still of a day shows.
+  ///
+  /// Quiet is scene e1's, a machine that has been told of nothing newer.
+  /// The other two are a second and a few seconds long and belong to a
+  /// press rather than to a day, so no scene is drawn inside either: the
+  /// sheet takes e1's own record and facts with the check just back, and
+  /// with an update child up. It invents no word. The glyph has no words of
+  /// its own, and the line around each is the line e1 draws.
+  /// testTheRowSheetDrawsTheUpdateGlyphInEveryDrawingItHas.
+  static func headerStates() throws -> (
+    quiet: HeaderModel, checked: HeaderModel, running: HeaderModel
+  ) {
+    let scene = try scene("e1")
+    let quiet = try scene.model().header
+    XCTAssertEqual(quiet.updateLook, .quiet, "e1 is the screen told of nothing newer")
+
+    let at = try scene.now()
+    func header(_ facts: Facts) throws -> HeaderModel {
+      PanelModel.build(
+        events: try scene.events(), facts: facts, ui: scene.ui, now: at,
+        calendar: scene.calendar, alive: { _ in false }
+      ).header
+    }
+
+    let checked = try header(Scenes.machine(updateChecked: at))
+    XCTAssertEqual(
+      checked.update?.state, .done, "a check that found nothing leaves the glyph done")
+
+    let running = try header(Scenes.machine(updating: true))
+    XCTAssertTrue(running.versionWaiting, "the ring is beside the version while a child is up")
+    XCTAssertNil(running.update, "and there is nothing to press until it ends")
+    return (quiet, checked, running)
   }
 
   /// The two labels the rows sheet draws, out of the model that names
@@ -400,7 +430,6 @@ enum SheetPieces {
     let stuck = try self.stuck()
     let live = try self.live()
     let job = try self.job()
-    let documents = try self.documents()
 
     let labels = try sectionLabels()
     let header = try self.header()
@@ -411,7 +440,6 @@ enum SheetPieces {
       stuck.card.title, stuck.card.reason,
       live.title, live.sub,
       job.title,
-      documents.count, documents.more,
       try quiet(),
       SignedInBanner.words, Scenes.signInURL,
     ]
@@ -430,8 +458,6 @@ enum SheetPieces {
     words += try documentRows().flatMap { row -> [String] in
       [row.title, row.sub] + row.actions.map(\.tip)
     }
-    let log = try logRow()
-    words += [log.title, log.value] + [log.sub].compactMap { $0 }
     words += ButtonWord.allCases.map(\.rawValue)
     words += StripLabel.allCases.map(\.rawValue)
     return words.filter { !$0.isEmpty }
@@ -458,23 +484,11 @@ func panelVocabulary() throws -> Set<String> {
       switch section {
       case .now: break
       case .documents(let documents):
-        words.formUnion([documents.count, documents.empty].compactMap { $0 })
-        words.formUnion(
-          ShowMore(total: documents.rows.count, collapsed: documents.collapsed, isOpen: false)
-            .title.map { [$0] } ?? [])
+        words.formUnion([documents.empty].compactMap { $0 })
         for row in documents.rows {
           words.formUnion([row.title, row.sub])
           words.formUnion(row.actions.flatMap(actionWords))
         }
-      case .today(let log):
-        words.formUnion([log.empty].compactMap { $0 })
-        words.formUnion(
-          ShowMore(total: log.rows.count, collapsed: log.collapsed, isOpen: false)
-            .title.map { [$0] } ?? [])
-        for row in log.rows { words.formUnion(logWords(row)) }
-      case .yesterday(let yesterday):
-        words.insert(yesterday.summary)
-        for row in yesterday.rows { words.formUnion(logWords(row)) }
       case .settings(let rows):
         for row in rows {
           words.formUnion([row.kind.label, row.value])
@@ -485,7 +499,7 @@ func panelVocabulary() throws -> Set<String> {
     }
   }
   // The words that belong to no row and no record: the two buttons of the
-  // hold card, the four labels of the strip once, and the one sentence a
+  // hold card, the five labels of the strip once, and the one sentence a
   // machine with no token is met with.
   words.formUnion(ButtonWord.allCases.map(\.rawValue))
   words.formUnion(StripLabel.allCases.map(\.rawValue))
@@ -533,7 +547,19 @@ private func nowWords(_ item: NowItem) -> [String] {
   }
 }
 
-/// One log row's own strings.
-private func logWords(_ row: LogRowModel) -> [String] {
-  [row.title, row.value] + [row.sub].compactMap { $0 }
+/// Every Swift file the panel is drawn by, so a test can state what the
+/// drawing does not contain. The one claim read this way is that nothing
+/// scrolls: a view nobody put in a tree is the one thing a render cannot
+/// show, and a source with no `ScrollView` in it draws none in any state.
+func uiSourceFiles() throws -> [URL] {
+  let root = presencePackageRoot().appendingPathComponent("Sources/PresenceUI")
+  let found = try XCTUnwrap(
+    FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil),
+    "Sources/PresenceUI is not a directory")
+  var files: [URL] = []
+  for case let next as URL in found where next.pathExtension == "swift" {
+    files.append(next)
+  }
+  XCTAssertGreaterThan(files.count, 20, "the panel is more files than that")
+  return files
 }

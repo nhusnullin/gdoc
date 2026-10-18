@@ -211,11 +211,14 @@ final class SourceRulesTests: XCTestCase {
   /// The system is asked for something in two files, so what this app can
   /// put in front of a person is a list one person can read.
   ///
-  /// The opener is the five verbs the panel has: the four a row's icons do,
-  /// and the folder panel the Hub row opens. The relauncher opens this app's
-  /// own bundle and nothing else. Both names are here rather than in a
-  /// review, because the next person to add a convenience will not have read
-  /// the specification.
+  /// The opener is the four verbs the panel has, which are what a row's
+  /// icons do. The relauncher opens this app's own bundle and nothing else.
+  /// Both names are here rather than in a review, because the next person
+  /// to add a convenience will not have read the specification.
+  ///
+  /// The folder panel was the fifth verb until the third look. The note is
+  /// found rather than configured now, so this app opens no window of the
+  /// system's at all, and `NSOpenPanel` is named in neither file.
   func testTheSystemIsAskedOnlyThroughTheOpenerAndTheRelauncher() throws {
     let workspace = "NSWork" + "space"
     let board = "NSPaste" + "board"
@@ -225,8 +228,10 @@ final class SourceRulesTests: XCTestCase {
     var asking: Set<String> = []
     try eachSwiftFile { path, text in
       guard path.hasPrefix("Sources/") else { return }
+      XCTAssertFalse(
+        word(chooser, isIn: text), "\(path) opens a window of the system's")
       let named = text.split(separator: "\n").filter { line in
-        [workspace, board, running, chooser].contains { word($0, isIn: String(line)) }
+        [workspace, board, running].contains { word($0, isIn: String(line)) }
       }
       guard [Self.opener, Self.relauncher].contains(path) else {
         for line in named {
@@ -239,14 +244,6 @@ final class SourceRulesTests: XCTestCase {
     XCTAssertEqual(
       asking, [Self.opener, Self.relauncher],
       "both files are there and both ask the system, so this test guards something")
-
-    // The folder panel is the opener's own, and it chooses a folder: a file
-    // somebody picked is a file this app would then have to read.
-    let text = try String(
-      contentsOf: packageRoot().appendingPathComponent(Self.opener), encoding: .utf8)
-    XCTAssertTrue(text.contains("canChooseFiles = false"), "the panel chooses no file")
-    XCTAssertTrue(
-      text.contains("canChooseDirectories = true"), "and a folder is what the hub is")
   }
 
   /// One file opens an application at a path, and the application is this

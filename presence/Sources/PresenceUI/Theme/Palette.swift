@@ -81,8 +81,8 @@ public struct Palette: Sendable, Equatable {
   public let textTertiary: Swatch
 
   // `.act`'s own colour, which is --t3 in the dark block and a grey of its
-  // own in the light one, so an action icon is not the same grey as a
-  // chevron there.
+  // own in the light one, so an action icon is not the same grey as the
+  // words beside it there.
   public let actionIcon: Swatch
 
   // The hairlines, --hair and --hair-strong, each one device pixel wide.
@@ -93,6 +93,12 @@ public struct Palette: Sendable, Equatable {
   public let ok: Swatch
   public let hold: Swatch
   public let bad: Swatch
+
+  // --accent, which the screens file keeps outside the panel's own three.
+  // The header's update glyph is the one thing in the panel that draws in
+  // it: a release somebody can take is not a state of the work, so it is
+  // neither ok nor hold nor bad, and the brightest ink is a live watch's.
+  public let accent: Swatch
 
   // The hold card: its tint, the half-pixel edge inside it, and the ink the
   // light block gives it so a warm plate keeps its contrast.
@@ -105,12 +111,11 @@ public struct Palette: Sendable, Equatable {
   public let stuckTint: Swatch
   public let stuckTintEdge: Swatch
 
-  // The controls: the ring's track, the switch, the scroll thumb, the one
-  // filled button, the confirm pair's fill and the danger edge.
+  // The controls: the ring's track, the switch, the one filled button, the
+  // confirm pair's fill and the danger edge.
   public let ringTrack: Swatch
   public let switchTrack: Swatch
   public let switchKnob: Swatch
-  public let scrollThumb: Swatch
   public let primaryFill: Swatch
   public let primaryInk: Swatch
   public let confirmFill: Swatch
@@ -145,6 +150,7 @@ public struct Palette: Sendable, Equatable {
     ok: Swatch(0x5C_C4_89),
     hold: Swatch(0xD9_A0_3C),
     bad: Swatch(0xE5_48_4D),
+    accent: Swatch(0x8F_B3_DC),
     holdTint: Swatch(0xD9_A0_3C, alpha: 0.07),
     holdTintEdge: Swatch(0xD9_A0_3C, alpha: 0.22),
     holdInk: Swatch(0xF2_F2_F7),
@@ -154,7 +160,6 @@ public struct Palette: Sendable, Equatable {
     ringTrack: Swatch(0xFF_FF_FF, alpha: 0.10),
     switchTrack: Swatch(0xFF_FF_FF, alpha: 0.24),
     switchKnob: Swatch(0xFF_FF_FF),
-    scrollThumb: Swatch(0xFF_FF_FF, alpha: 0.22),
     primaryFill: Swatch(0xFF_FF_FF, alpha: 0.92),
     primaryInk: Swatch(0x11_11_11),
     confirmFill: Swatch(0xE5_48_4D, alpha: 0.10),
@@ -187,6 +192,7 @@ public struct Palette: Sendable, Equatable {
     ok: Swatch(0x1B_9E_4B),
     hold: Swatch(0xE6_87_0A),
     bad: Swatch(0xE0_31_2E),
+    accent: Swatch(0x3B_5F_8A),
     holdTint: Swatch(0xFF_F6_E5),
     holdTintEdge: Swatch(0xE6_87_0A, alpha8: 0x66),
     holdInk: Swatch(0x8A_55_00),
@@ -196,7 +202,6 @@ public struct Palette: Sendable, Equatable {
     ringTrack: Swatch(0x00_00_00, alpha8: 0x1F),
     switchTrack: Swatch(0x00_00_00, alpha: 0.12),
     switchKnob: Swatch(0xFF_FF_FF),
-    scrollThumb: Swatch(0x00_00_00, alpha: 0.22),
     primaryFill: Swatch(0x11_11_13),
     primaryInk: Swatch(0xFF_FF_FF),
     // The stylesheet leaves .btn.confirm's fill alone in the light block, so

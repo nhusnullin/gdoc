@@ -5,8 +5,8 @@
 // test can state, and a render adds only whether the pixels came out.
 //
 // It is built from three things and nothing else: the events, the facts
-// about the machine, and what the person did to the panel. The four folds
-// are taken here so the shell hands over a list of events and never four
+// about the machine, and what the person did to the panel. The three folds
+// are taken here so the shell hands over a list of events and never three
 // lists that could disagree with each other.
 //
 // Two words are this file's own, and both are the reading the app is allowed
@@ -41,16 +41,12 @@ public enum ActionKind: String, Sendable, Equatable, CaseIterable {
   case installExtension
   case openLoginItems
   case toggleLoginItem
-  /// The Hub row: the system's folder panel, and the folder it comes back
-  /// with written down.
-  case chooseHub
   case quit
   /// The safe half of every confirm, which does nothing but put the
   /// question away.
   case keep
-  /// The three a document row's own menu has: a pin, taking it back, and a
-  /// hide. None of them is an icon, because the four icons on a row stay
-  /// four.
+  /// A pin, taking it back, and a hide. The first two are the row's fifth
+  /// icon since the third look; the hide is the one word of its menu.
   case pinDoc
   case unpinDoc
   case hideDoc
@@ -104,19 +100,14 @@ public struct ActionModel: Sendable, Equatable, Identifiable {
 
 /// What the panel does when something is pressed.
 ///
-/// One function and one toggle, so a view that gains a button gains no
-/// knowledge of what the button reaches. The shell fills these in; every
-/// test and every still leaves them alone.
+/// One function, so a view that gains a button gains no knowledge of what
+/// the button reaches. The shell fills it in; every test and every still
+/// leaves it alone.
 public struct PanelActions {
   public var perform: (ActionKind, String?) -> Void
-  public var toggle: (PanelList) -> Void
 
-  public init(
-    perform: @escaping (ActionKind, String?) -> Void = { _, _ in },
-    toggle: @escaping (PanelList) -> Void = { _ in }
-  ) {
+  public init(perform: @escaping (ActionKind, String?) -> Void = { _, _ in }) {
     self.perform = perform
-    self.toggle = toggle
   }
 }
 
@@ -147,26 +138,14 @@ public struct DocumentRowModel: Sendable, Equatable, Identifiable {
   /// The document is in the trash. The v1 record never says so, so this is
   /// false until M24b.
   public let gone: Bool
-  /// Whether the person pinned it, which the row draws in its own column
-  /// before the state glyph.
+  /// Whether the person pinned it, which the row draws as the state of its
+  /// fifth icon: the tack is filled on a pinned row and hollow on the rest.
   public let isPinned: Bool
   public let actions: [ActionModel]
-  /// The row's own menu: Pin or Unpin, and Hide from the list.
+  /// The row's own menu: Hide from the list, and nothing on a pinned row.
   public let menu: [MenuItemModel]
 
   public var id: String { doc }
-}
-
-/// One row of TODAY or of Yesterday.
-public struct LogRowModel: Sendable, Equatable, Identifiable {
-  public let key: String
-  public let glyph: GlyphKind
-  public let tone: GlyphTone
-  public let title: String
-  public let value: String
-  public let sub: String?
-
-  public var id: String { key }
 }
 
 /// A question asked in place of a row: the words, what follows from them,
@@ -190,7 +169,7 @@ public struct SettingsRowModel: Sendable, Equatable, Identifiable {
   public let quiet: String?
   public let actions: [ActionModel]
   public let isOn: Bool?
-  /// Pressing the row itself, which Hub, Quit and the Login Items row do.
+  /// Pressing the row itself, which Quit and the Login Items row do.
   ///
   /// No row here is ever a question. The one destructive confirm in the
   /// panel is the sign-out, and it is asked in the header since 2026-10-18:
@@ -216,36 +195,34 @@ public struct SettingsRowModel: Sendable, Equatable, Identifiable {
   }
 }
 
-/// DOCUMENTS: its count, its rows, and how much of them is on the screen.
+/// DOCUMENTS: its rows, every one of which is drawn.
 public struct DocumentsSectionModel: Sendable, Equatable {
-  public let count: String?
   public let rows: [DocumentRowModel]
-  public let collapsed: Int
-  public let isOpen: Bool
   /// The one line a panel with no documents says instead.
   public let empty: String?
-  /// Whether the four labels are drawn under the first row.
+  /// Whether the five labels are drawn under the first row.
   public let showsStrip: Bool
-}
-
-/// TODAY, or Yesterday opened.
-public struct LogSectionModel: Sendable, Equatable {
-  public let rows: [LogRowModel]
-  public let collapsed: Int
-  public let isOpen: Bool
-  public let empty: String?
-}
-
-/// Yesterday: one chevron row that opens in place.
-public struct YesterdayModel: Sendable, Equatable {
-  public let summary: String
-  public let isOpen: Bool
-  public let rows: [LogRowModel]
 }
 
 /// The address said once at its full size, for five seconds after a sign-in.
 public struct BannerModel: Sendable, Equatable {
   public let account: String
+}
+
+/// How the header's update glyph is drawn, which is the whole of what the
+/// panel says about what is published.
+///
+/// Running is not here: the ring stands in the glyph's place while a child
+/// of the app's own is up, which is `versionWaiting`, and there is nothing
+/// to press. The one-second check after a run that installed nothing is the
+/// glyph's own `ActionState`, as a copied link's is.
+public enum UpdateLook: String, Sendable, Equatable, CaseIterable {
+  /// Nothing newer is known. The icon is the caption grey, and pressing it
+  /// is how a person asks before the six hours are up.
+  case quiet
+  /// `help --json` listed a newer stable release: the accent ink, the dot,
+  /// and the published version in the quiet line under the header.
+  case available
 }
 
 /// The panel's own line, as values: the mark and the name, the version with
@@ -270,9 +247,13 @@ public struct HeaderModel: Sendable, Equatable {
   /// The ring beside the version, which an update child of the app's own
   /// draws while it is up.
   public let versionWaiting: Bool
-  /// Take the release GitHub lists, where one is newer than this binary.
-  /// Nothing where there is none.
+  /// The update glyph, which is in the header whenever there is a binary to
+  /// update and no child of the app's own up. Pressing it runs `gdoc
+  /// update` whatever state it is in, because that command is the one that
+  /// asks GitHub.
   public let update: ActionModel?
+  /// Which of the two the glyph is drawn as.
+  public let updateLook: UpdateLook
   /// The address, or nothing where no token has been read.
   public let account: String?
   public let glyph: GlyphKind
@@ -301,6 +282,7 @@ public struct HeaderModel: Sendable, Equatable {
     versionTone: GlyphTone = .dim,
     versionWaiting: Bool = false,
     update: ActionModel? = nil,
+    updateLook: UpdateLook = .quiet,
     account: String? = nil,
     glyph: GlyphKind = .blank,
     tone: GlyphTone = .quiet,
@@ -317,6 +299,7 @@ public struct HeaderModel: Sendable, Equatable {
     self.versionTone = versionTone
     self.versionWaiting = versionWaiting
     self.update = update
+    self.updateLook = updateLook
     self.account = account
     self.glyph = glyph
     self.tone = tone
@@ -333,8 +316,6 @@ public struct HeaderModel: Sendable, Equatable {
 public enum PanelSection: Sendable, Equatable, Identifiable {
   case now([NowItem])
   case documents(DocumentsSectionModel)
-  case today(LogSectionModel)
-  case yesterday(YesterdayModel)
   case settings([SettingsRowModel])
 
   /// The label over the section, as the screens file writes it.
@@ -342,8 +323,6 @@ public enum PanelSection: Sendable, Equatable, Identifiable {
     switch self {
     case .now: return "Now"
     case .documents: return "Documents"
-    case .today: return "Today"
-    case .yesterday: return "Yesterday"
     case .settings: return "Settings"
     }
   }
@@ -392,13 +371,6 @@ public struct PanelModel: Sendable, Equatable {
     return nil
   }
 
-  public var today: LogSectionModel? {
-    for section in sections {
-      if case .today(let model) = section { return model }
-    }
-    return nil
-  }
-
   /// Every sentence the panel writes under a title, which the render tests
   /// hold to the stuck card's eighty characters.
   public var reasons: [String] {
@@ -423,37 +395,30 @@ extension PanelModel {
     let nowFold = Now.fold(events, now: now, dismissed: ui.dismissed, alive: alive)
     let sessions = Live.sessions(events, now: now, alive: alive)
     let docs = Documents.fold(
-      events, now: now, calendar: calendar, pinned: ui.pinned, hidden: ui.hidden, alive: alive)
-    // The cards NOW is keeping are not rows TODAY writes as well: the
-    // horizon and the dismissals are the NOW fold's, so it is folded first
-    // and its keys are handed over.
-    let days = Days.fold(
-      events, now: now, calendar: calendar, carded: Set(nowFold.stuck.map(\.key)), alive: alive)
+      events, now: now, pinned: ui.pinned, hidden: ui.hidden, alive: alive)
 
     return build(
-      now: nowFold, sessions: sessions, days: days, documents: docs, facts: facts, ui: ui,
+      now: nowFold, sessions: sessions, documents: docs, facts: facts, ui: ui,
       at: now, calendar: calendar)
   }
 
   /// The same panel out of folds the caller already took.
   ///
-  /// Each of those four is a walk and a sort of every line the app holds, and
-  /// the app takes all four on every tick to decide whether anything moved.
-  /// Reading them again here made one redraw nine of those walks where four
-  /// would do, on the main thread, at one second apiece while the ring or
-  /// the sign-in countdown is moving. The folds and the words also share one
-  /// reading of the clock this way, so the glyph and the panel beside it
-  /// cannot describe two different moments.
+  /// Each of those three is a walk and a sort of every line the app holds,
+  /// and the app takes all three on every tick to decide whether anything
+  /// moved. Reading them again here made one redraw seven of those walks
+  /// where three would do, on the main thread, at one second apiece while
+  /// the ring or the sign-in countdown is moving. The folds and the words
+  /// also share one reading of the clock this way, so the glyph and the
+  /// panel beside it cannot describe two different moments.
   public static func build(
-    now nowFold: NowFold, sessions: [LiveSession], days: DaysFold, documents docs: DocumentsFold,
+    now nowFold: NowFold, sessions: [LiveSession], documents docs: DocumentsFold,
     facts: Facts, ui: UIState = UIState(), at now: Date, calendar: Calendar
   ) -> PanelModel {
     let words = Phrases(facts: facts, now: now, calendar: calendar)
     let items = nowItems(nowFold, sessions: sessions, facts: facts, ui: ui, words: words)
     let documents = documentsSection(
       docs, facts: facts, ui: ui, words: words, busy: !items.isEmpty)
-    let today = todaySection(days, ui: ui, words: words)
-    let yesterday = yesterdaySection(days, ui: ui, words: words)
     let settings = settingsRows(facts: facts)
     let header = self.header(
       facts: facts, ui: ui, now: now, stopping: stopping(nowFold, sessions: sessions))
@@ -472,15 +437,9 @@ extension PanelModel {
     if pinned { sections.append(.settings(settings)) }
     if !items.isEmpty { sections.append(.now(items)) }
     sections.append(.documents(documents))
-    // An empty TODAY under a pinned SETTINGS is a label over one grey word,
-    // between the person and the row they opened the panel for. NOW is
-    // already dropped when it is empty, and this is the same rule.
-    if !(pinned && today.rows.isEmpty) { sections.append(.today(today)) }
-    if let yesterday { sections.append(.yesterday(yesterday)) }
     if !pinned { sections.append(.settings(settings)) }
 
-    let bare =
-      items.isEmpty && documents.rows.isEmpty && today.rows.isEmpty && yesterday == nil
+    let bare = items.isEmpty && documents.rows.isEmpty
 
     return PanelModel(
       header: header,
@@ -541,8 +500,8 @@ extension PanelModel {
   /// The watches NOW draws: the open ones, and the ones a sign-in that
   /// stopped working ended, while it is still not working.
   ///
-  /// A watch Google refused the token on is over, and DOCUMENTS and TODAY
-  /// say so, but it is the one ending nobody asked for: signing in does not
+  /// A watch Google refused the token on is over, and DOCUMENTS says so,
+  /// but it is the one ending nobody asked for: signing in does not
   /// start it again, and NOW is where the panel keeps what is waiting on the
   /// person. Once the token works the row leaves, because then the day's log
   /// is the whole of it: testE9SaysTheWatchIsStoppedInEverySectionAndDrawsNoStop.
@@ -656,14 +615,12 @@ extension PanelModel {
           openNote(row.doc, facts: facts, ui: ui, forced: ui.forcedTooltip),
           openChat(row.doc, facts: facts, forced: ui.forcedTooltip),
           copyLink(row.doc, ui: ui, now: words.now),
+          pin(row),
         ],
         menu: menu(row))
     }
     return DocumentsSectionModel(
-      count: count(fold),
       rows: rows,
-      collapsed: Documents.defaultRows,
-      isOpen: ui.isOpen(.documents),
       // The hint is the first run's: it tells a person who has never
       // published how to start. With a write already running it tells
       // them to do the thing they are doing, so the line is the quiet one
@@ -672,41 +629,38 @@ extension PanelModel {
       showsStrip: !ui.stripSeen && !rows.isEmpty)
   }
 
-  /// A row's own menu: the pin either way round, and the hide on a row that
-  /// is not pinned.
+  /// A row's own menu: the hide, on a row that is not pinned.
   ///
-  /// A pinned row says Unpin, because the one thing a person wants from a
-  /// pin they have already made is to take it back. It offers no Hide: a pin
-  /// is never away, whatever a hide of it says, so the press would do
-  /// nothing on the screen and then take the row away at the Unpin, which is
-  /// not what either press asked for. Unpin first, and the row offers Hide.
+  /// Pin left it at the third look. It was the one way to pin a document and
+  /// Nail never found it, so it is the row's fifth icon now, and Hide is
+  /// what the menu is for.
+  ///
+  /// A pinned row offers nothing, so it opens no menu. A pin is the louder
+  /// answer and is never away, whatever a hide of it says, so the press
+  /// would do nothing on the screen and then take the row away at the unpin,
+  /// which is not what either press asked for. Unpin first, and the row
+  /// offers Hide.
   ///
   /// There is no Unhide: a hidden document has no row to open a menu on, and
   /// what brings it back is gdoc doing something on it again.
   private static func menu(_ row: DocumentRow) -> [MenuItemModel] {
-    guard !row.isPinned else {
-      return [MenuItemModel(.unpinDoc, word: Menus.unpin, target: row.doc)]
-    }
-    return [
-      MenuItemModel(.pinDoc, word: Menus.pin, target: row.doc),
-      MenuItemModel(.hideDoc, word: Menus.hide, target: row.doc),
-    ]
+    guard !row.isPinned else { return [] }
+    return [MenuItemModel(.hideDoc, word: Menus.hide, target: row.doc)]
   }
 
-  /// One rule, and one number in it: `3 today` where every row in the list
-  /// is from today, and `14 days · 12` where one of them is older.
+  /// The pin, in the state the row is in: the outline tack that pins, or the
+  /// filled one that takes the pin back.
   ///
-  /// The number is the list's and never the screen's, because a row behind
-  /// "Show more" is a document the person has. A pinned row is one of them,
-  /// however old it is, and a hidden document is not one at all: both are
-  /// rows of the list or not, and the number counts the list. `1 today` over four rows
-  /// from three days, which is what the old rule drew on scene e2, is a
-  /// count of one thing over a list of another:
-  /// testTheDocumentsHeaderCountsTheWholeList.
-  private static func count(_ fold: DocumentsFold) -> String? {
-    guard !fold.rows.isEmpty else { return nil }
-    if fold.today == fold.rows.count { return "\(fold.today) today" }
-    return "14 days · \(fold.rows.count)"
+  /// It is live on every row there is. A pin is the person's own answer
+  /// about a document and nothing about the document can refuse it: a row
+  /// whose id Drive could not have written still pins, because the row is
+  /// there and the pin is what keeps it there.
+  private static func pin(_ row: DocumentRow) -> ActionModel {
+    ActionModel(
+      row.isPinned ? .unpinDoc : .pinDoc,
+      icon: row.isPinned ? .pinOn : .pin,
+      tip: row.isPinned ? Tips.unpin : Tips.pin,
+      target: row.doc)
   }
 
   private static func glyph(for state: DocumentState) -> (kind: GlyphKind, tone: GlyphTone) {
@@ -725,30 +679,6 @@ extension PanelModel {
     }
   }
 
-  // MARK: TODAY and Yesterday
-
-  private static func todaySection(_ fold: DaysFold, ui: UIState, words: Phrases)
-    -> LogSectionModel
-  {
-    LogSectionModel(
-      rows: fold.today.enumerated().map { words.logRow($1, index: $0) },
-      collapsed: Days.defaultRows,
-      isOpen: ui.isOpen(.today),
-      empty: fold.today.isEmpty ? Sentences.nothingYet : nil)
-  }
-
-  private static func yesterdaySection(_ fold: DaysFold, ui: UIState, words: Phrases)
-    -> YesterdayModel?
-  {
-    guard !fold.yesterday.isEmpty else { return nil }
-    let summary = fold.yesterdaySummary
-    return YesterdayModel(
-      summary: "\(Sentences.count(summary.actions, "action")) · "
-        + Sentences.count(summary.documents, "document"),
-      isOpen: ui.isOpen(.yesterday),
-      rows: fold.yesterday.enumerated().map { words.logRow($1, index: $0 + 1_000) })
-  }
-
   // MARK: the one line about the app itself
 
   private static func notice(_ facts: Facts) -> String? {
@@ -764,7 +694,7 @@ extension PanelModel {
     return facts.newerRecord ? "gdoc is newer than this app" : nil
   }
 
-  // MARK: the four document icons
+  // MARK: the five document icons
 
   /// Open in Google Docs, greyed where the id is not one Drive could have
   /// written.
@@ -794,24 +724,22 @@ extension PanelModel {
   /// went nowhere would leave the icon live and say nothing:
   /// testAFailedOpenGreysTheIconWithItsReason.
   ///
-  /// With no hub chosen the words name the row in SETTINGS instead. Without
-  /// a hub nothing is paired with anything, so every icon on the screen is
-  /// grey, and "No note is paired with this document" sends the person
-  /// looking for a note: testTheHubRowIsTheFolderOrTheWayToChooseOne.
+  /// Where no note was found the reason is the finder's own: no note names
+  /// this document, or two do and it will not pick between them. Nothing
+  /// sends the person to SETTINGS for either since the third look, because
+  /// there is no hub to choose:
+  /// testTheMdIconIsGreyOnlyWhenNoNoteNamesTheDocument and
+  /// testTwoNotesNamingOneDocumentSaySoOnTheIcon.
   private static func openNote(
     _ doc: String, facts: Facts, ui: UIState, forced: String? = nil
   ) -> ActionModel {
-    let paired = facts.note(for: doc) != nil
-    let noHub = facts.hub?.isEmpty ?? true
     let state: ActionState =
       if let fault = ui.noteFault[doc] {
         .off(fault.tip)
-      } else if noHub {
-        .off(Tips.noHub)
-      } else if paired {
+      } else if facts.note(for: doc) != nil {
         .live
       } else {
-        .off(Tips.noNote)
+        .off((facts.noteFaults[doc] ?? .notPaired).tip)
       }
     return ActionModel(
       .openNote, icon: .md, tip: Tips.openNote, state: state,

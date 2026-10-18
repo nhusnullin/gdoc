@@ -24,15 +24,16 @@ final class RowTests: XCTestCase {
   private let eighty =
     "Second-quarter liquidity and settlement reviews for the Amsterdam trading office"
 
-  // The title column is 140 pt in a document row, which is the narrowest the
+  // The title column is 112 pt in a document row, which is the narrowest the
   // panel has, and the head never falls under eight characters in it: a
   // title whose last word is wide enough to squeeze it drops the tail and
-  // goes in whole instead.
+  // goes in whole instead. It was 140 pt until the pin became the row's
+  // fifth icon and took 28 pt of the row for it.
   func testNoHeadUnderEightCharactersAtPanelWidth() {
     XCTAssertEqual(
-      MiddleTitle.narrowestColumn, 140,
+      MiddleTitle.narrowestColumn, 112,
       "320 less the panel's 8 twice, the row's 12 twice, the 16 pt glyph, two 8 pt gaps "
-        + "and the 108 pt action column")
+        + "and the 136 pt action column")
 
     // The ellipsis is part of what the column carries. Scene r9's second
     // document is the title that proved it: a tail the counted rule admits,
@@ -66,18 +67,15 @@ final class RowTests: XCTestCase {
   // `.row{min-height:32px}`, `.row.two{min-height:44px}`,
   // `.row.compact{min-height:28px}`, and the document row is a two-line row.
   func testRowHeightsAreTheGrid() throws {
-    XCTAssertEqual(RowShape.allCases, [.plain, .two, .compact, .doc, .more])
+    XCTAssertEqual(RowShape.allCases, [.plain, .two, .compact, .doc])
     XCTAssertEqual(RowShape.plain.minHeight, 32)
     XCTAssertEqual(RowShape.two.minHeight, 44)
     XCTAssertEqual(RowShape.compact.minHeight, 28)
     XCTAssertEqual(RowShape.doc.minHeight, 44)
-    XCTAssertEqual(RowShape.more.minHeight, 28)
     XCTAssertEqual(RowShape.two.verticalPadding, 6)
     XCTAssertEqual(RowShape.plain.verticalPadding, 0)
 
-    let drawn: [RowShape: CGFloat] = [
-      .plain: 32, .two: 44, .compact: 28, .doc: 44, .more: 28,
-    ]
+    let drawn: [RowShape: CGFloat] = [.plain: 32, .two: 44, .compact: 28, .doc: 44]
     for (shape, height) in drawn {
       let row = RowView(
         shape, glyph: .check, tone: .ok, title: twenty,
@@ -103,7 +101,6 @@ final class RowTests: XCTestCase {
     XCTAssertEqual(RowShape.doc.subLines, 2)
     XCTAssertEqual(RowShape.plain.subLines, 1, "a one-line row has no second line")
     XCTAssertEqual(RowShape.compact.subLines, 1)
-    XCTAssertEqual(RowShape.more.subLines, 1)
 
     // The hold's own sub-line, as scene e3 draws it.
     let held = "Proposal held by rule Unread target · waiting in Desktop chat"
@@ -141,16 +138,16 @@ final class RowTests: XCTestCase {
     XCTAssertEqual(height, 56)
   }
 
-  // `.row.docrow{grid-template-columns:16px minmax(0,1fr) 108px}`: four
-  // icons in 108 pt, so every document row in a list breaks its title at the
-  // same place.
-  func testTheDocRowActionColumnIs108() throws {
-    XCTAssertEqual(Grid.actionColumn, 108)
-    XCTAssertEqual(RowShape.doc.trailingColumn, 108)
+  // `.row.docrow{grid-template-columns:16px minmax(0,1fr) 136px}`: five
+  // icons in 136 pt since the pin joined them, so every document row in a
+  // list breaks its title at the same place.
+  func testTheDocRowActionColumnIs136() throws {
+    XCTAssertEqual(Grid.actionColumn, 136)
+    XCTAssertEqual(RowShape.doc.trailingColumn, 136)
     XCTAssertNil(RowShape.plain.trailingColumn, "every other row is as wide as it asks for")
 
-    // Four 24 pt icons and three 4 pt gaps are 108 pt, which is the number.
-    XCTAssertEqual(4 * Grid.actionSize + 3 * Grid.actionGap, 108)
+    // Five 24 pt icons and four 4 pt gaps are 136 pt, which is the number.
+    XCTAssertEqual(5 * Grid.actionSize + 4 * Grid.actionGap, 136)
 
     // The row is scene e6's own, so the words under the measurement are
     // words the panel draws: a count beside a verb is one of the things
@@ -164,10 +161,11 @@ final class RowTests: XCTestCase {
           ActionButton(.md, tip: Tips.openNote)
           ActionButton(.branch, tip: Tips.openChat)
           ActionButton(.link, tip: Tips.copyLink)
+          ActionButton(.pin, tip: Tips.pin)
         }
       })
     let measured = try probes(row, scheme: .dark)
-    XCTAssertEqual(measured["row.trailing"]?.width, 108)
+    XCTAssertEqual(measured["row.trailing"]?.width, 136)
 
     // `.row.is-busy .acts{display:none}`: a busy row carries no action at
     // all, so the column goes with them.
@@ -178,52 +176,38 @@ final class RowTests: XCTestCase {
     XCTAssertNil(busyMeasured["row.trailing"], "a busy row draws no action column")
   }
 
-  /// A document row keeps the panel's one left edge until its list has a
-  /// pin, and then every row of that list keeps the pin's 8 pt.
+  /// Every row in the panel, a document row included, starts on the panel's
+  /// one left edge.
   ///
-  /// The slot belongs to the list and not to the shape. A fixed 26 pt column
-  /// drew it on every row of every list, so DOCUMENTS stood 10 pt right of
-  /// its own section label and of every other row in the panel, with
-  /// nothing in the room it took.
-  func testTheDocRowKeepsThePanelsLeftEdge() throws {
-    XCTAssertEqual(Grid.pinSize, 8)
-    XCTAssertNil(RowShape.doc.leadingColumn, "the document row is as wide as its own glyph")
-    for shape in RowShape.allCases where shape != .doc {
+  /// A document row kept 8 pt in front of its glyph for the pin until the
+  /// third look, and the rows under a pinned one kept it empty, so DOCUMENTS
+  /// stood right of its own section label and of every other row in the
+  /// panel. The pin is the row's fifth icon now, at the trailing edge where
+  /// the other four are, and the leading column is the glyph's own 16 pt in
+  /// every shape there is.
+  func testEveryRowShapeKeepsTheGlyphsOwnLeadingColumn() throws {
+    for shape in RowShape.allCases {
       XCTAssertEqual(shape.leadingColumn, 16, "\(shape) keeps the glyph's own column")
     }
 
     let drawn = try SheetPieces.documentRows()[0]
-    func row(_ pin: PinColumn) -> some View {
-      RowView(
-        .doc, title: drawn.title, sub: drawn.sub,
-        leading: { DocumentGlyph(drawn.glyph, tone: drawn.tone, pin: pin) },
-        trailing: { ActionButton(.gdocs, tip: Tips.openDoc) })
-    }
-
-    let measured = try probes(row(.pinned), scheme: .dark)
-    XCTAssertEqual(measured["row.pin"]?.width, 8, "the pin's own slot")
-    XCTAssertEqual(measured["row.pin"]?.height, 8)
-    XCTAssertEqual(measured["row.status"]?.width, 24, "the slot and the glyph")
-
-    let slot = try probes(row(.slot), scheme: .dark)
+    let row = RowView(
+      .doc, glyph: drawn.glyph, tone: drawn.tone, title: drawn.title, sub: drawn.sub,
+      trailing: { ActionButton(.gdocs, tip: Tips.openDoc) })
+    let measured = try probes(row, scheme: .dark)
     XCTAssertEqual(
-      slot["row.pin"]?.width, 8, "a row under a pinned one keeps the slot, so the titles line up")
-    XCTAssertEqual(
-      slot["row.status"]?.width, measured["row.status"]?.width,
-      "and a pin changes no width at all")
+      measured["row.leading"]?.width, Grid.glyphSize,
+      "the document row's glyph column is every other row's")
 
-    let alone = try probes(row(.none), scheme: .dark)
-    XCTAssertNil(alone["row.pin"], "a list with no pin draws no slot at all")
+    let left = try XCTUnwrap(
+      try probeList(row, scheme: .dark).first { $0.name == "row.leading" })
+    let plain = try XCTUnwrap(
+      try probeList(
+        RowView(.plain, glyph: drawn.glyph, tone: drawn.tone, title: drawn.title),
+        scheme: .dark
+      ).first { $0.name == "row.leading" })
     XCTAssertEqual(
-      alone["row.status"]?.width, Grid.glyphSize,
-      "so the row's glyph column is every other row's")
-
-    // The pin draws ink, and the empty slot draws none.
-    XCTAssertGreaterThan(
-      try inkedPixels(
-        DocumentGlyph(.check, tone: .ok, pin: .pinned), scheme: .dark, side: 24),
-      try inkedPixels(DocumentGlyph(.check, tone: .ok, pin: .slot), scheme: .dark, side: 24),
-      "a pinned row draws something a plain one does not")
+      left.origin.x, plain.origin.x, "and it starts where every other row starts")
   }
 
   /// `.acts{margin-right:-4px}`: the icons and not their boxes meet the
@@ -236,14 +220,14 @@ final class RowTests: XCTestCase {
   func testAnActionStripMeetsTheColumnEveryValueEndsOn() throws {
     let drawn = try SheetPieces.documentRows()[0]
     let row = RowView(
-      .doc, title: drawn.title, sub: drawn.sub,
-      leading: { DocumentGlyph(drawn.glyph, tone: drawn.tone) },
+      .doc, glyph: drawn.glyph, tone: drawn.tone, title: drawn.title, sub: drawn.sub,
       trailing: {
         HStack(spacing: Grid.actionGap) {
           ActionButton(.gdocs, tip: Tips.openDoc)
           ActionButton(.md, tip: Tips.openNote)
           ActionButton(.branch, tip: Tips.openChat)
           ActionButton(.link, tip: Tips.copyLink)
+          ActionButton(.pin, tip: Tips.pin)
         }
       })
     let strip = try XCTUnwrap(
@@ -256,21 +240,27 @@ final class RowTests: XCTestCase {
       "so the artwork inside it ends on the row's own edge, where a value ends")
   }
 
-  // A chevron sits in the middle of the row its words are in.
+  // Whatever is at the trailing edge of a one-line row sits in the middle
+  // of it.
   //
-  // `.row-chevron` is one 28 pt row with the words on the left and a 12 pt
-  // chevron on the right, and a chevron a quarter of a row below the line it
-  // belongs to reads as a mark on an empty line.
-  func testTheChevronIsLevelWithItsWords() throws {
-    for scheme in [ColorScheme.dark, .light] {
-      let row = ChevronRow("Show 3 more")
-      let words = try inkBand(row, scheme: scheme, from: 0, to: 160)
-      let chevron = try inkBand(row, scheme: scheme, from: 280, to: Grid.panelWidth)
-      let middle = { (band: ClosedRange<CGFloat>) in (band.lowerBound + band.upperBound) / 2 }
-      XCTAssertEqual(
-        middle(chevron), middle(words), accuracy: 1,
-        "the chevron is \(middle(chevron) - middle(words)) pt off its words in \(scheme)")
-    }
+  // A one-line row has nothing to hang its three columns from, so they are
+  // centred: a 24 pt icon in a 28 pt row drawn a quarter of a row under its
+  // words reads as a mark on an empty line. The SETTINGS row with an icon
+  // on it is the one the panel draws today.
+  func testAOneLineRowCentresWhatIsOnIt() throws {
+    let drawn = try probeList(
+      RowView(
+        .compact, glyph: .blank, title: twenty,
+        trailing: { ActionButton(.down, tip: Tips.installExtension) }),
+      scheme: .dark)
+    let row = try XCTUnwrap(drawn.first { $0.name == "row.compact" })
+    let trailing = try XCTUnwrap(drawn.first { $0.name == "row.trailing" })
+
+    XCTAssertEqual(trailing.size.height, Grid.actionSize, "the icon's own box")
+    XCTAssertEqual(
+      trailing.origin.y + trailing.size.height / 2,
+      row.origin.y + row.size.height / 2, accuracy: 0.5,
+      "a one-line row centres what is on its right")
   }
 
   // One right edge for every value in the panel.
@@ -309,9 +299,36 @@ final class RowTests: XCTestCase {
     }
   }
 
-  // `.section-label{height:28px;text-transform:uppercase}` with its count
-  // on the right in ordinary letters.
-  func testASectionLabelIs28AndUppercaseWithTheCount() throws {
+  /// The switch stops where every other right edge stops.
+  ///
+  /// A row pulls its trailing column 4 pt out over the content edge,
+  /// because an action's 16 pt of artwork sits in a 24 pt box and it is the
+  /// artwork that meets the edge. The switch is a 26 pt pill with no such
+  /// margin inside it, so the same pull put the one control in the panel
+  /// 4 pt right of every icon, every time and the ⌘Q directly under it. It
+  /// is drawn on nearly every screen since Launch at login went off by
+  /// default, which is what made it the thing an eye lands on.
+  func testTheSwitchStopsWhereTheKeystrokeUnderItStops() throws {
+    for scheme in [ColorScheme.dark, .light] {
+      let keystroke = try inkEnds(
+        SettingsRows(
+          rows: [SettingsRow(.quit, value: SettingsRows.quitShortcut, glyph: .check, tone: .ok)]),
+        scheme: scheme)
+      for isOn in [true, false] {
+        let settings = try inkEnds(
+          SettingsRows(rows: [SettingsRow(.launchAtLogin, value: "", glyph: .blank, isOn: isOn)]),
+          scheme: scheme)
+        XCTAssertEqual(
+          settings, keystroke, accuracy: 1,
+          "the switch is off the panel's one right edge in \(scheme), on: \(isOn)")
+      }
+    }
+  }
+
+  // `.section-label{height:28px;text-transform:uppercase}`, and the name of
+  // the section is the whole of what it says: the count on its right went
+  // with the lists it was a number about.
+  func testASectionLabelIs28AndUppercase() throws {
     XCTAssertEqual(Grid.sectionLabelHeight, 28)
     XCTAssertEqual(SectionLabel.text("Documents"), "DOCUMENTS")
     XCTAssertEqual(Typography.sectionLabel.size, 11)
@@ -324,23 +341,9 @@ final class RowTests: XCTestCase {
     XCTAssertEqual(SectionLabel.ink(in: .light), Palette.light.textSecondary)
 
     for scheme in [ColorScheme.dark, .light] {
-      let measured = try probes(
-        SectionLabel("Documents", count: "14 days · 11"),
-        scheme: scheme)
+      let measured = try probes(SectionLabel("Documents"), scheme: scheme)
       XCTAssertEqual(measured["section-label"]?.height, 28, "the label in \(scheme)")
       XCTAssertEqual(measured["section-label"]?.width, Grid.panelWidth)
-    }
-
-    // The count is ink on the screen and not a field nobody drew: the label
-    // with one carries more than the label without.
-    for scheme in [ColorScheme.dark, .light] {
-      let bare = try inkWeight(
-        SectionLabel("Documents").frame(width: Grid.panelWidth), scheme: scheme,
-        side: Grid.panelWidth)
-      let counted = try inkWeight(
-        SectionLabel("Documents", count: "14 days · 11").frame(width: Grid.panelWidth),
-        scheme: scheme, side: Grid.panelWidth)
-      XCTAssertGreaterThan(counted, bare, "the count reached the screen in \(scheme)")
     }
 
     // `.section:first-of-type{margin-top:0;padding-top:0;border-top:0}`: the
@@ -349,7 +352,7 @@ final class RowTests: XCTestCase {
     let first = try probes(
       SectionView("Now", isFirst: true) { RowView(title: twenty) }, scheme: .dark)
     let later = try probes(
-      SectionView("Today") { RowView(title: twenty) }, scheme: .dark)
+      SectionView("Documents") { RowView(title: twenty) }, scheme: .dark)
     let firstHeight = try XCTUnwrap(first["section"]?.height)
     let laterHeight = try XCTUnwrap(later["section"]?.height)
     XCTAssertEqual(laterHeight - firstHeight, Grid.unit + 4, "8 pt of air and 4 pt of padding")
@@ -368,7 +371,9 @@ final class RowTests: XCTestCase {
 
     let account = "nail@example.com"
     let signedIn = HeaderModel(
-      mark: "⁘", version: "v2.16.0", account: account, glyph: .check, tone: .ok,
+      mark: "⁘", version: "v2.16.0",
+      update: ActionModel(.update, icon: .down, tip: Tips.checkUpdate, target: "gdoc"),
+      account: account, glyph: .check, tone: .ok,
       actions: [ActionModel(.signOut, icon: .signout, tip: Tips.signOut, target: "auth")])
     let measured = try probes(PanelHeader(model: signedIn), scheme: .dark, width: line)
     XCTAssertEqual(measured["header"]?.height, 36 + 4, "the header and its 4 pt margin under it")
@@ -379,7 +384,9 @@ final class RowTests: XCTestCase {
     XCTAssertNotNil(measured["header.glyph"], "the check over a token that works")
     XCTAssertNotNil(measured["header.account"], "the address")
     XCTAssertNotNil(measured["header.signOut"], "and the one action")
-    XCTAssertNil(measured["header.update"], "nothing newer is published, so there is no icon")
+    XCTAssertNotNil(measured["header.update"], "the update glyph, which is always on the line")
+    XCTAssertNil(
+      measured["header.update.dot"], "and nothing newer is known, so it carries no dot")
 
     // The account is the quietest grey in the panel, and the name is the
     // brightest: whose account it is decides nothing, so it is never loud.
@@ -396,21 +403,43 @@ final class RowTests: XCTestCase {
       measured["header.account"]?.width, wanted["alone"]?.width,
       "the address is squeezed on the line, so nobody can read the end of it")
 
-    // A newer release is the same icon the gdoc row carried, beside the
-    // version it would replace.
+    // A newer release is the same icon with the accent dot over it, and the
+    // version that is published is the line under, not a second number on
+    // this one: both of them here squeeze the address to half, which is the
+    // one thing the morning of the same day was about.
     let behind = try probes(
       PanelHeader(
         model: HeaderModel(
           mark: "⁘", version: "v2.16.0",
           update: ActionModel(.update, icon: .down, tip: "Update to v2.17.0", target: "gdoc"),
+          updateLook: .available,
+          account: account, glyph: .check, tone: .ok,
+          actions: [ActionModel(.signOut, icon: .signout, tip: Tips.signOut, target: "auth")],
+          quiet: ["v2.17.0 is published"])),
+      scheme: .dark, width: line)
+    XCTAssertNotNil(behind["header.update"], "there is a release to take")
+    XCTAssertEqual(
+      behind["header.update.dot"]?.width, Grid.updateDotSize, "and the dot says so at a glance")
+    XCTAssertEqual(behind["header.line"]?.height, 36, "the line itself is where it was")
+    XCTAssertEqual(
+      behind["header.account"]?.width, wanted["alone"]?.width,
+      "and the address is whole, which is what the line has room for")
+
+    // The measurement that decided it: both versions in the version slot
+    // take the address down to half of itself.
+    let crowded = try probes(
+      PanelHeader(
+        model: HeaderModel(
+          mark: "⁘", version: "v2.16.0 → v2.17.0",
+          update: ActionModel(.update, icon: .down, tip: "Update to v2.17.0", target: "gdoc"),
+          updateLook: .available,
           account: account, glyph: .check, tone: .ok,
           actions: [ActionModel(.signOut, icon: .signout, tip: Tips.signOut, target: "auth")])),
       scheme: .dark, width: line)
-    XCTAssertNotNil(behind["header.update"], "there is a release to take")
-    XCTAssertEqual(behind["header"]?.height, 36 + 4, "and the line is the same height")
-    XCTAssertEqual(
-      behind["header.account"]?.width, wanted["alone"]?.width,
-      "the whole line fits with the update icon on it as well")
+    XCTAssertLessThan(
+      try XCTUnwrap(crowded["header.account"]?.width),
+      try XCTUnwrap(wanted["alone"]?.width) / 2 + 1,
+      "which is nail@ex… on every screen, and why the number is under the line")
 
     // The mark is a setting and may be empty, and the empty mark draws
     // nothing rather than a gap.
@@ -476,8 +505,8 @@ final class RowTests: XCTestCase {
 
   // MARK: the renders
 
-  /// The sheet: the five shapes, a section, a header and a quiet line, in
-  /// both appearances, so the layout is looked at once.
+  /// The sheet: the four shapes, a header, a quiet line and the two labels,
+  /// in both appearances, so the layout is looked at once.
   ///
   /// Every word on it is a scene's, through `SheetPieces`: the sheet is the
   /// one page with no record behind it, and a string written by hand here
@@ -486,28 +515,38 @@ final class RowTests: XCTestCase {
     let shots = try shotsDirectory()
     let labels = try SheetPieces.sectionLabels()
     let live = try SheetPieces.live()
-    let log = try SheetPieces.logRow()
-    let documents = try SheetPieces.documents()
     let rows = try SheetPieces.documentRows()
     let compact = try XCTUnwrap(
       SheetPieces.settings().first { $0.kind == .quit }, "no scene drew the Quit row")
     let quiet = try SheetPieces.quiet()
     let header = try SheetPieces.header()
+    let glyph = try SheetPieces.headerStates()
 
     for scheme in [ColorScheme.dark, .light] {
       let palette = Palette.of(scheme)
-      // The five row shapes, and the two labels as components of their own.
+      // The four row shapes, and the two labels as components of their own.
       //
       // A label over rows is a section, and a section's header makes a claim
-      // about what is under it: NOW over a log row and a SETTINGS row, or
-      // "14 days · 12" over two rows and a Show more, is this page saying
-      // something no panel says. The pieces here are pieces, in the order
-      // `RowShape` names them, and the labels stand at the foot with nothing
-      // under them: testASheetPutsNoLabelOverRowsFromAnotherScene.
+      // about what is under it: NOW over a document row and a SETTINGS row
+      // is this page saying something no panel says. The pieces here are
+      // pieces, in the order `RowShape` names them, and the labels stand at
+      // the foot with nothing under them:
+      // testASheetPutsNoLabelOverRowsFromAnotherScene.
       let sheet = VStack(alignment: .leading, spacing: 0) {
+        // The header four times, because the update glyph is drawn four
+        // ways and a panel shows one of them at a time: the accent ink with
+        // its dot and the published line under it, the caption grey of a
+        // machine told of nothing newer, the second after a press that
+        // installed nothing, and the ring while the child is up. The last
+        // two are on no scene of a day, which is the whole reason they are
+        // here:
+        // testTheRowSheetDrawsTheUpdateGlyphInEveryDrawingItHas.
         PanelHeader(model: header)
+        PanelHeader(model: glyph.quiet)
+        PanelHeader(model: glyph.checked)
+        PanelHeader(model: glyph.running)
         RowView(.two, glyph: .dot, tone: .live, title: live.title, sub: live.sub)
-        RowView(.plain, glyph: .check, tone: .ok, title: log.title, value: log.value)
+        RowView(.plain, glyph: .check, tone: .ok, title: rows[0].title)
         RowView(.compact, glyph: .blank, title: compact.kind.label, value: compact.value)
         ForEach(rows) { row in
           RowView(
@@ -521,14 +560,13 @@ final class RowTests: XCTestCase {
               }
             })
         }
-        ChevronRow(documents.more, isOpen: false)
         QuietLine(quiet)
         // The two labels, each on its own and with air around it: stacked,
         // the first reads as a header over the second.
         Spacer(minLength: 2 * Grid.unit)
         SectionLabel(labels.now)
         Spacer(minLength: 2 * Grid.unit)
-        SectionLabel(labels.documents, count: documents.count)
+        SectionLabel(labels.documents)
       }
       .frame(width: Grid.panelWidth)
       .padding(Grid.unit)
@@ -538,6 +576,61 @@ final class RowTests: XCTestCase {
       let name = scheme == .dark ? "rows-dark.png" : "rows-light.png"
       try data.write(to: shots.appendingPathComponent(name))
       XCTAssertGreaterThan(data.count, 1_000, "\(name) is too small to be the sheet")
+    }
+  }
+
+  /// Every drawing of the update glyph is on the page.
+  ///
+  /// The rule is the second morning's: every state a milestone adds is on a
+  /// screen, or it is new surface nobody has looked at. The third look gave
+  /// the glyph the accent ink with a dot, the caption grey, the check a
+  /// second long after a press that installed nothing, and the ring while
+  /// the child is up. The first two are on scenes of a day, r8 and e1. The
+  /// other two last as long as a press does and belong to no moment of a
+  /// day, so the sheet is the only page they can be on: both were drawn
+  /// nowhere until this pass.
+  ///
+  /// The weights are read off the drawn pixels rather than off the model,
+  /// because a header the panel hands the right look and draws the same way
+  /// twice is the thing this is for.
+  func testTheRowSheetDrawsTheUpdateGlyphInEveryDrawingItHas() throws {
+    let available = try SheetPieces.header()
+    let states = try SheetPieces.headerStates()
+
+    XCTAssertEqual(available.updateLook, .available, "r8 is the screen with a release")
+    XCTAssertEqual(available.update?.state, .live, "and nothing has been pressed on it")
+    XCTAssertEqual(states.quiet.updateLook, .quiet)
+    XCTAssertEqual(states.quiet.update?.state, .live)
+    XCTAssertEqual(states.checked.update?.state, .done, "the second after a press")
+    XCTAssertEqual(
+      states.checked.updateLook, .quiet,
+      "a check that found nothing is a machine told of nothing newer")
+    XCTAssertTrue(states.running.versionWaiting, "the ring while the child is up")
+    XCTAssertNil(states.running.update, "and nothing to press beside it")
+
+    // The published version is the available header's own line and nobody
+    // else's: a machine told of nothing newer has nothing to say under the
+    // header.
+    XCTAssertEqual(available.quiet, ["v2.15.0 is published"])
+    XCTAssertEqual(states.quiet.quiet, [])
+    XCTAssertEqual(states.checked.quiet, [])
+    XCTAssertEqual(states.running.quiet, [])
+
+    // Four headers, four images. Two of them drawing the same weight is two
+    // states a person cannot tell apart.
+    for scheme in [ColorScheme.dark, .light] {
+      let drawn = [available, states.quiet, states.checked, states.running]
+      let weights = try drawn.map {
+        try inkWeight(PanelHeader(model: $0), scheme: scheme, side: Grid.panelWidth)
+      }
+      XCTAssertGreaterThan(
+        weights[0], weights[1],
+        "the available header carries the dot and the published line in \(scheme)")
+      for (first, second) in [(1, 2), (1, 3), (2, 3)] {
+        XCTAssertNotEqual(
+          weights[first], weights[second], accuracy: 0.5,
+          "headers \(first) and \(second) are one image in \(scheme)")
+      }
     }
   }
 }

@@ -1,11 +1,13 @@
-// One row of the panel, in the five shapes the panel has.
+// One row of the panel, in the four shapes the panel has.
 //
 // `.row` in docs/design/2026-10-17-presence-screens-v3.html is a grid of
 // three columns, 16 pt for the glyph, the rest for the title, and as much as
 // the right-hand side asks for; and of up to three rows, the title with its
 // value, a sub-line under both, and a line of text buttons under that. The
-// five shapes are that grid's five variants: `.row`, `.row.two`,
-// `.row.compact`, `.row.docrow` and `.row-more`.
+// four shapes are that grid's variants: `.row`, `.row.two`,
+// `.row.compact` and `.row.docrow`. The fifth was `.row-more`, the quiet
+// row that opened a longer list, and it went on 2026-10-18 with the one
+// list that was ever behind one.
 //
 // Nothing here decides anything. The caller hands over the words, the shape,
 // what sits in the glyph column and what sits on the right, and the row puts
@@ -19,7 +21,7 @@
 
 import SwiftUI
 
-/// The five grids a row is laid out on.
+/// The four grids a row is laid out on.
 public enum RowShape: String, Sendable, CaseIterable {
   /// `.row`: one line, 32 pt.
   case plain
@@ -27,17 +29,15 @@ public enum RowShape: String, Sendable, CaseIterable {
   case two
   /// `.row.compact`: one line, 28 pt, for a list of short facts.
   case compact
-  /// `.row.docrow`: a title, a sub-line of two, and 108 pt of actions.
+  /// `.row.docrow`: a title, a sub-line of two, and 136 pt of actions.
   case doc
-  /// `.row-more`: the quiet 12 pt line that opens a longer list.
-  case more
 
   /// `min-height`.
   public var minHeight: CGFloat {
     switch self {
     case .plain: return Grid.rowHeight
     case .two, .doc: return Grid.twoLineRowHeight
-    case .compact, .more: return Grid.compactRowHeight
+    case .compact: return Grid.compactRowHeight
     }
   }
 
@@ -46,53 +46,43 @@ public enum RowShape: String, Sendable, CaseIterable {
   public var verticalPadding: CGFloat {
     switch self {
     case .two, .doc: return 6
-    case .plain, .compact, .more: return 0
+    case .plain, .compact: return 0
     }
   }
 
-  /// `grid-template-columns`' first column: 16 pt for the glyph in every
-  /// shape but the document row, which has no number of its own.
+  /// `grid-template-columns`' first column: 16 pt for the glyph, in every
+  /// shape there is.
   ///
-  /// A document row is handed its own leading view, and that view is the
-  /// glyph alone where nothing in the list is pinned and the glyph behind an
-  /// 8 pt slot where something is, so the column is as wide as what it is
-  /// handed. A fixed 26 pt here drew that slot on every row of every list,
-  /// pinned or not, which put DOCUMENTS 10 pt right of its own label and of
-  /// every other row in the panel: testTheDocRowKeepsThePanelsLeftEdge.
-  public var leadingColumn: CGFloat? {
-    self == .doc ? nil : Grid.glyphSize
-  }
+  /// The document row kept 8 pt in front of its glyph for a pin until the
+  /// third look, and every row of a list with a pin in it kept the slot
+  /// whether it was pinned or not, which put DOCUMENTS right of its own
+  /// label and of every other row in the panel. The pin is the row's fifth
+  /// icon now, at the trailing edge with the other four, so the panel has
+  /// one left edge again: testEveryRowShapeKeepsTheGlyphsOwnLeadingColumn.
+  public var leadingColumn: CGFloat { Grid.glyphSize }
 
   /// `grid-template-columns`' third column, where the document row is the
-  /// one shape that fixes it: four icons in 108 pt, so every document row
+  /// one shape that fixes it: five icons in 136 pt, so every document row
   /// in a list breaks its title at the same place.
   public var trailingColumn: CGFloat? {
     self == .doc ? Grid.actionColumn : nil
   }
 
-  /// The title's type role. `.row-more .row-title{font-size:12px}`.
-  public var titleRole: TypeRole {
-    self == .more ? Typography.rowValue : Typography.rowTitle
-  }
-
-  /// `.row-more .row-title{color:var(--t3)}`: the row that opens a list is
-  /// not one of the list's own rows.
-  public func titleInk(in palette: Palette) -> Swatch? {
-    self == .more ? palette.textTertiary : nil
-  }
+  /// The title's type role, which is one role: every shape left draws its
+  /// title at the row's own size.
+  public var titleRole: TypeRole { Typography.rowTitle }
 
   /// Where the row's three columns meet.
   ///
   /// A two-line row hangs them from the top, so the glyph sits against the
   /// title and not between the two lines. A one-line row has nothing to
   /// hang from: its words, its glyph and whatever is at its trailing edge
-  /// are one line, and a 24 pt icon beside a 16 pt line of words put the
-  /// chevron of every Show more 6 pt under the words it opens.
-  /// testTheChevronIsLevelWithItsWords.
+  /// are one line, and a 24 pt icon beside a 16 pt line of words sat 6 pt
+  /// under the words it belongs to: testAOneLineRowCentresWhatIsOnIt.
   public var crossAlignment: VerticalAlignment {
     switch self {
     case .two, .doc: return .top
-    case .plain, .compact, .more: return .center
+    case .plain, .compact: return .center
     }
   }
 
@@ -106,7 +96,7 @@ public enum RowShape: String, Sendable, CaseIterable {
   public var subLines: Int {
     switch self {
     case .two, .doc: return 2
-    case .plain, .compact, .more: return 1
+    case .plain, .compact: return 1
     }
   }
 }
@@ -159,19 +149,19 @@ public struct RowView<Leading: View, Trailing: View>: View {
     return HStack(alignment: shape.crossAlignment, spacing: Grid.columnGap) {
       // The glyph column, as tall as the title's own line, so a glyph beside
       // a two-line row sits against the title and not between the two
-      // lines. It is 16 pt wide everywhere but a document row, which is as
-      // wide as the glyph it was handed: 16 pt, or 24 where that list has a
-      // pin in it.
+      // lines. It is the glyph's own 16 pt in every shape, which is the
+      // panel's one left edge.
       leading
         .frame(
           width: shape.leadingColumn, height: Typography.rowTitle.lineHeight,
-          alignment: .trailing)
+          alignment: .trailing
+        )
+        .metricProbe("row.leading")
 
       VStack(alignment: .leading, spacing: 0) {
         HStack(alignment: .firstTextBaseline, spacing: Grid.columnGap) {
           MiddleTitle(
-            title, role: shape.titleRole, gone: gone,
-            quietInk: titleInk ?? shape.titleInk(in: palette))
+            title, role: shape.titleRole, gone: gone, quietInk: titleInk)
           Spacer(minLength: 0)
           if let value {
             Text(value)

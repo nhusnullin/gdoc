@@ -4,13 +4,12 @@
 // may have lost its end, two month files may arrive in either order, and an
 // end may have arrived whose start was in a month the binary has since
 // removed. None of that may make a fold throw or lose a row, so each of the
-// four sections walks the events through these first.
+// three sections walks the events through these first.
 //
 // What each section then makes of them is its own file: NOW is Now.swift,
-// the live watches are LiveSession.swift, TODAY and Yesterday are Days.swift
-// and DOCUMENTS is Documents.swift. SETTINGS takes one fact from the record and
-// the rest from two commands, and that one is Reachability.swift. Nothing
-// judges here.
+// the live watches are LiveSession.swift and DOCUMENTS is Documents.swift.
+// SETTINGS takes one fact from the record and the rest from two commands,
+// and that one is Reachability.swift. Nothing judges here.
 
 import Foundation
 
@@ -149,8 +148,8 @@ extension Fold {
   /// where the record named no document, and the line's own where it named
   /// neither.
   ///
-  /// It is here and not in Now and Days because the card in NOW and the row
-  /// in TODAY must name one write the same way, and two copies of three
+  /// It is here and not in Now because the card in NOW and the row in
+  /// DOCUMENTS must name one write the same way, and two copies of three
   /// lines is how they stop doing that.
   public static func title(
     _ event: Event, titles: [String: String], calls: [String: String]

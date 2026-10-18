@@ -22,7 +22,7 @@ final class SessionTests: XCTestCase {
   private var root: URL!
   private var session: Session?
 
-  /// One document, in the Drive shape, so its row carries the four icons.
+  /// One document, in the Drive shape, so its row carries the five icons.
   private static let doc = "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789"
 
   /// A second document, for the tests that need two.
@@ -193,6 +193,74 @@ final class SessionTests: XCTestCase {
     XCTAssertFalse(session.installing, "the slot is free again once the child ended")
   }
 
+  /// A press on the update glyph is owed an answer even where there was
+  /// nothing to install. `gdoc update` asks GitHub on every run, and the
+  /// one word for a machine already on the newest release is `up_to_date`:
+  /// the glyph shows the check for a second and goes quiet by itself.
+  ///
+  /// A run that did replace the binary says nothing here. The version moves
+  /// when `help --json` is asked again, and where the release carried a new
+  /// app the bundle under this process changes and it reopens itself, which
+  /// is M24's: testAChildOfThisAppsOwnHoldsTheReopenAndThenLetsItGo.
+  func testAnUpdateThatInstalledNothingShowsTheCheckForASecond() throws {
+    try writeTheRecord([])
+    let session = made()
+    answered(session)
+    XCTAssertNil(session.updateChecked, "nothing has been pressed")
+    XCTAssertEqual(
+      session.model.header.update?.state, .live, "and the glyph is there to press")
+
+    let ended = expectation(description: "the update run reached the panel")
+    ended.assertForOverFulfill = false
+    session.start { [weak session] in
+      guard let session, session.updateChecked != nil else { return }
+      ended.fulfill()
+    }
+    session.perform(.update, "gdoc")
+    wait(for: [ended], timeout: 20)
+
+    XCTAssertTrue(try argv().contains("update"), "the run went with no flag at all")
+    XCTAssertFalse(session.installing, "the slot is free again")
+    XCTAssertEqual(
+      session.model.header.update?.state, .done,
+      "the press is answered with the check")
+    XCTAssertEqual(session.model.header.update?.tip, "This is the newest release")
+    let armed = try XCTUnwrap(session.revertTimer, "and its end is on the one revert slot")
+    XCTAssertLessThanOrEqual(
+      armed.fireDate.timeIntervalSinceNow, Timing.doneFlash,
+      "which is the copied link's own second")
+  }
+
+  /// The check the glyph shows lasts one second from the child's end, and
+  /// the two polls that follow the run are two processes. So the facts carry
+  /// it before those are asked, not after they answer: on a slow pair the
+  /// one redraw the second is up would otherwise draw the ring of a run that
+  /// had already ended, and the check would never reach the screen at all.
+  func testTheCheckIsOnTheScreenBeforeTheTwoPollsComeBack() throws {
+    try writeTheRecord([])
+    let session = made()
+    answered(session)
+
+    var askedWhenTheCheckLanded: [String] = []
+    let landed = expectation(description: "the check reached the facts")
+    landed.assertForOverFulfill = false
+    session.start { [weak session] in
+      guard let session, session.facts.updateChecked != nil else { return }
+      if askedWhenTheCheckLanded.isEmpty {
+        askedWhenTheCheckLanded = (try? self.argv()) ?? []
+      }
+      landed.fulfill()
+    }
+    session.perform(.update, "gdoc")
+    wait(for: [landed], timeout: 20)
+
+    XCTAssertEqual(
+      askedWhenTheCheckLanded.last, "update",
+      "the facts carried the check before help --json and auth status were asked")
+    XCTAssertEqual(
+      session.model.header.update?.state, .done, "and the glyph draws it")
+  }
+
   /// The banner after a sign-in is five seconds of the clock and no fact of
   /// its own, so the session schedules its own end. Nothing else would take
   /// it off: a refold that did not move redraws nothing, and the next fact
@@ -253,7 +321,6 @@ final class SessionTests: XCTestCase {
     XCTAssertEqual(session.facts.versions.latestStable, "v2.14.1")
     XCTAssertEqual(session.facts.versions.app, "2.15.0", "the app's own version is the places'")
     XCTAssertEqual(session.facts.gdocPath, gdoc.path, "the binary this session resolved")
-    XCTAssertEqual(session.facts.hub, preferences.hub, "the hub is the store's")
     XCTAssertEqual(
       session.facts.loginItem, .off, "the register says this app is not a login item")
 
@@ -300,14 +367,15 @@ final class SessionTests: XCTestCase {
 
     asked.count = 0
     _ = Drawn(
-      session.events, now: Date(), dismissed: session.ui.dismissed, calendar: Calendar.current,
+      session.events, now: Date(), dismissed: session.ui.dismissed,
       alive: { _ in asked.bump() })
-    XCTAssertEqual(redraw, asked.count, "one redraw is the four folds and nothing over them")
+    XCTAssertEqual(redraw, asked.count, "one redraw is the three folds and nothing over them")
   }
 
   // MARK: what a press reaches
 
-  /// The four icons on a row, each through the one room that does it, and the
+  /// The four that open, copy or dismiss, each through the one room that does
+  /// it, and the
   /// strip of labels that goes after the first of them.
   func testEachIconLeavesThroughTheOneRoomThatDoesIt() throws {
     try writeTheRecord([line(kind: "start", command: "reply", call: 1, doc: Self.doc)])
@@ -335,16 +403,16 @@ final class SessionTests: XCTestCase {
     session.perform(.openChat, Self.doc)
     XCTAssertEqual(desk.activated, [Opener.claudeDesktop], "one activation, no prefill")
 
-    // No hub is chosen, so there is no note to open and nothing is opened.
-    // The click keeps why, which is what greys the icon.
+    // No note names this document, so there is nothing to open. The click
+    // keeps why, which is what greys the icon.
     session.perform(.openNote, Self.doc)
     XCTAssertEqual(desk.opened.count, 1, "the note icon opened nothing")
-    XCTAssertEqual(session.ui.noteFault[Self.doc], .noHub, "and the click kept why")
+    XCTAssertEqual(session.ui.noteFault[Self.doc], .notPaired, "and the click kept why")
   }
 
   /// A fault on Open md greys the icon, and a greyed icon cannot be pressed,
   /// so the panel going away is the one thing that ends it. Without that, a
-  /// hub chosen after the click would leave the icon grey until the app
+  /// note written after the click would leave the icon grey until the app
   /// quit, and the comment about the next click working would be about a
   /// click nobody can make.
   func testAFaultGoesWhenThePanelOpensAgain() throws {
@@ -352,11 +420,12 @@ final class SessionTests: XCTestCase {
     let session = made()
     answered(session)
 
-    // No hub is chosen, so the click goes nowhere and the icon says why.
+    // No note names this document, so the click goes nowhere and the icon
+    // says why.
     session.perform(.openNote, Self.doc)
-    XCTAssertEqual(session.ui.noteFault[Self.doc], .noHub)
+    XCTAssertEqual(session.ui.noteFault[Self.doc], .notPaired)
     let greyed = try noteIcon(of: session)
-    XCTAssertEqual(greyed.state, .off(NoteFault.noHub.tip))
+    XCTAssertEqual(greyed.state, .off(NoteFault.notPaired.tip))
     XCTAssertFalse(
       ActionButton.isPressable(greyed.state), "so no second click can take it away")
 
@@ -373,13 +442,12 @@ final class SessionTests: XCTestCase {
     let ended = try Event.decode(
       line(kind: "end", command: "comments", call: 1, doc: Self.doc, extra: "\"ok\":true"))
     let events = [started, ended]
-    let calendar = Calendar(identifier: .gregorian)
 
     let between = Drawn(
-      events, now: ended.at.addingTimeInterval(10), dismissed: [], calendar: calendar,
+      events, now: ended.at.addingTimeInterval(10), dismissed: [],
       alive: { _ in false })
     let quiet = Drawn(
-      events, now: ended.at.addingTimeInterval(Live.gap + 1), dismissed: [], calendar: calendar,
+      events, now: ended.at.addingTimeInterval(Live.gap + 1), dismissed: [],
       alive: { _ in false })
 
     XCTAssertTrue(between.sessions.allSatisfy(\.isOpen), "a wait between two polls is a watch")
@@ -392,17 +460,14 @@ final class SessionTests: XCTestCase {
   /// `Words.duration` counts in whole minutes. A screen with neither on it
   /// is drawn again only when the record or the facts move.
   func testAQuietMinuteRedrawsAHoldAndAWatchAndNothingElse() throws {
-    let calendar = Calendar(identifier: .gregorian)
     let watching = try Event.decode(
       line(kind: "start", command: "comments", call: 1, doc: Self.doc, wait: true))
     let held = try Event.decode(
       line(
         kind: "held", command: "reply", call: nil, doc: Self.doc,
         extra: "\"hold\":\"h_ab12\",\"rule\":\"echo\",\"until\":\"\(stamp(inAnHour: true))\""))
-    // Pinned to the middle of a UTC day, because the two folds below are
-    // ten minutes apart and this calendar carries the machine's own zone: a
-    // moment the real clock handed over would move from TODAY to Yesterday
-    // between them for the ten minutes before every local midnight.
+    // Pinned to the middle of a UTC day, so the moments below are literals
+    // like every other moment in this file.
     let over = try Event.decode(
       line(
         kind: "end", command: "reply", call: 4, doc: Self.doc, extra: "\"ok\":true",
@@ -410,9 +475,9 @@ final class SessionTests: XCTestCase {
 
     for (what, events) in [("a watch", [watching]), ("a hold", [held])] {
       let now = Drawn(
-        events, now: watching.at, dismissed: [], calendar: calendar, alive: { _ in true })
+        events, now: watching.at, dismissed: [], alive: { _ in true })
       let later = Drawn(
-        events, now: watching.at.addingTimeInterval(60), dismissed: [], calendar: calendar,
+        events, now: watching.at.addingTimeInterval(60), dismissed: [],
         alive: { _ in true })
       XCTAssertNotEqual(later, now, "\(what) counts the minutes, so the screen is owed one")
     }
@@ -426,10 +491,10 @@ final class SessionTests: XCTestCase {
         extra: "\"hold\":\"h_cd34\",\"rule\":\"echo\",\"until\":\"2026-10-17T11:00:00Z\"",
         at: "2026-10-17T10:00:30Z"))
     let atTheWallMinute = Drawn(
-      [raised], now: raised.at.addingTimeInterval(30), dismissed: [], calendar: calendar,
+      [raised], now: raised.at.addingTimeInterval(30), dismissed: [],
       alive: { _ in true })
     let atItsOwnMinute = Drawn(
-      [raised], now: raised.at.addingTimeInterval(60), dismissed: [], calendar: calendar,
+      [raised], now: raised.at.addingTimeInterval(60), dismissed: [],
       alive: { _ in true })
     XCTAssertEqual(atTheWallMinute.counting, [0], "nothing is a minute old yet")
     XCTAssertEqual(atItsOwnMinute.counting, [1], "and a minute after it was raised, one is")
@@ -438,79 +503,207 @@ final class SessionTests: XCTestCase {
 
     // Nothing on this screen counts a stretch, so nothing moved.
     let still = Drawn(
-      [over], now: over.at, dismissed: [], calendar: calendar, alive: { _ in false })
+      [over], now: over.at, dismissed: [], alive: { _ in false })
     let stillLater = Drawn(
-      [over], now: over.at.addingTimeInterval(600), dismissed: [], calendar: calendar,
+      [over], now: over.at.addingTimeInterval(600), dismissed: [],
       alive: { _ in false })
     XCTAssertEqual(stillLater, still, "a finished day redraws on nothing")
     XCTAssertNil(still.counting)
   }
 
-  /// Choosing the hub: the row opens the system's folder panel, the folder
-  /// that comes back is written down, and the notes in it are read at once.
+  /// The `hubPath` override is asked before Spotlight, and the finder is
+  /// never asked about a document it already pairs.
   ///
-  /// The panel is injected, so no window opens here and the choice is a
-  /// literal. Nothing is written down when the person cancels it, which is
-  /// the nil: a cancel that stored an empty path would be the app choosing
-  /// for them.
-  func testChoosingTheHubWritesItDownAndReadsTheNotesAtOnce() throws {
+  /// The override is a `defaults write` since the third look: there is no
+  /// row that sets it, and a machine nobody has written one on has none.
+  /// Where there is one, the notes under it are read at start, so the md
+  /// icon of a document it pairs is live on the first draw.
+  func testTheOverrideIsAskedBeforeSpotlight() throws {
     try writeTheRecord([
       line(kind: "end", command: "reply", call: 1, doc: Self.doc, extra: "\"ok\":true")
     ])
     let hub = root.appendingPathComponent("hub")
     try FileManager.default.createDirectory(
       at: hub.appendingPathComponent("notes"), withIntermediateDirectories: true)
-    let note = """
-      ---
-      gdoc:
-        schema: 1
-        document_id: \(Self.doc)
-      ---
-
-      # Scope
-      """
-    try note.write(
+    try note(pairing: Self.doc).write(
       to: hub.appendingPathComponent("notes/scope.md"), atomically: true, encoding: .utf8)
 
     let store = Store()
-    let desk = FakeDesk()
-    let session = made(preferences: Preferences(store: store), desk: desk)
+    let preferences = Preferences(store: store)
+    preferences.hub = hub.path
+    let search = StatedSearch()
+    let session = made(preferences: preferences, noteSearch: search)
     answered(session)
-    XCTAssertNil(session.facts.hub, "no hub is chosen on a machine nobody has asked")
-    XCTAssertEqual(
-      session.model.settings.first { $0.kind == .hub }?.value, "Choose…",
-      "so the row offers to choose one")
 
-    // Cancelled: the panel was opened, and nothing was written down.
-    session.perform(.chooseHub, nil)
-    XCTAssertEqual(desk.chosen, 1, "the row opened the folder panel")
-    XCTAssertNil(store.object(forKey: Preferences.Key.hubPath.rawValue), "a cancel stores nothing")
-
-    desk.willChoose(hub)
-    session.perform(.chooseHub, nil)
-    XCTAssertEqual(desk.chosen, 2)
-    XCTAssertEqual(
-      store.object(forKey: Preferences.Key.hubPath.rawValue) as? String, hub.path,
-      "the folder is the one key the row writes")
-    XCTAssertEqual(session.preferences.hub, hub.path)
-
-    refreshed(session)
-    XCTAssertEqual(session.facts.hub, hub.path, "and the facts carry it")
-    XCTAssertEqual(
-      session.model.settings.first { $0.kind == .hub }?.value, "~/hub",
-      "the row says the folder, with this home as a tilde")
-
-    // The notes under it are read without waiting for a file to change, so
-    // the md icon of a document the hub pairs is live on the next draw.
-    try waitUntil("the hub was read") { session.facts.pairing[Self.doc] != nil }
+    try waitUntil("the override was read") { session.facts.pairing[Self.doc] != nil }
     XCTAssertEqual(session.index.notes[Self.doc], "notes/scope.md")
+    XCTAssertEqual(
+      session.facts.pairing[Self.doc], hub.appendingPathComponent("notes/scope.md").path,
+      "the pairing is the absolute path, whichever route found it")
     XCTAssertEqual(try noteIcon(of: session).state, .live, "so Open md works")
+    XCTAssertEqual(search.asked, [], "and Spotlight was never asked about it")
+
+    XCTAssertFalse(
+      SettingsRowKind.allCases.contains { $0.label == "Hub" },
+      "and no row offers to choose a folder any more")
   }
 
-  /// The watcher follows the folder. A second choice is a different vault,
-  /// and a watcher left on the first one would rescan the folder nobody
-  /// chose on its next file event: that scan is the newest one, so the
-  /// pairing would flip back to the notes of the hub a person moved off.
+  /// With no override the finder answers, and the md icon is grey only
+  /// while no note names the document.
+  func testTheMdIconIsGreyOnlyWhenNoNoteNamesTheDocument() throws {
+    try writeTheRecord([
+      line(kind: "end", command: "reply", call: 1, doc: Self.doc, extra: "\"ok\":true")
+    ])
+    let search = StatedSearch()
+    let paired = note(pairing: Self.doc)
+    let session = made(noteSearch: search, noteRead: { _ in paired })
+    answered(session)
+
+    try waitUntil("the finder answered") { session.notes[Self.doc] != nil }
+    XCTAssertEqual(search.asked, [Self.doc], "the one document on the screen, once")
+    XCTAssertEqual(try noteIcon(of: session).state, .off(Tips.noNote), "nothing names it yet")
+
+    // Spotlight finds the note, says so, and the next draw is a live icon.
+    search.willAnswer([Self.doc: ["/notes/scope.md"]])
+    let told = expectation(description: "the finder threw its answer away")
+    Task { @MainActor in
+      await session.finder.forget(Self.doc)
+      told.fulfill()
+    }
+    wait(for: [told], timeout: 20)
+    try waitUntil("the second answer landed") { session.facts.pairing[Self.doc] != nil }
+    XCTAssertEqual(session.facts.pairing[Self.doc], "/notes/scope.md")
+    XCTAssertEqual(try noteIcon(of: session).state, .live)
+    XCTAssertEqual(search.asked, [Self.doc, Self.doc], "the notice is what made it ask again")
+  }
+
+  /// Two notes naming one document is the icon's own sentence, not "no note
+  /// is paired with this document". The finder will not pick between them,
+  /// and the panel has to say which of the two greys it is: the pairing
+  /// carries the notes that were found, so the fault travels beside it.
+  func testTwoNotesNamingOneDocumentSaySoOnTheIcon() throws {
+    try writeTheRecord([
+      line(kind: "end", command: "reply", call: 1, doc: Self.doc, extra: "\"ok\":true")
+    ])
+    let search = StatedSearch([Self.doc: ["/notes/a.md", "/notes/b.md"]])
+    let paired = note(pairing: Self.doc)
+    let session = made(noteSearch: search, noteRead: { _ in paired })
+    answered(session)
+
+    try waitUntil("the facts took the fault") {
+      session.facts.noteFaults[Self.doc] != nil
+    }
+    XCTAssertEqual(session.facts.noteFaults[Self.doc], .twoNotes)
+    XCTAssertNil(session.facts.pairing[Self.doc], "neither of the two is picked")
+    XCTAssertEqual(
+      try noteIcon(of: session).state, .off(Tips.twoNotes),
+      "and the icon says which grey it is")
+  }
+
+  /// A query that did not answer inside the finder's ceiling is no answer,
+  /// and the draw that asked gives up rather than writing "no note" down.
+  ///
+  /// Writing it down would be the one wrong answer nothing could take back:
+  /// a query that hit the ceiling was stopped, so no Spotlight notice is
+  /// coming for that document, and a notice is the only thing that frees a
+  /// cached answer. The icon would stay grey until the app quit over a note
+  /// sitting in the vault. A cold index right after login is where this
+  /// happens.
+  func testADrawThatHitTheCeilingAsksAgainOnTheNext() throws {
+    try writeTheRecord([
+      line(kind: "end", command: "reply", call: 1, doc: Self.doc, extra: "\"ok\":true")
+    ])
+    let search = StatedSearch()
+    search.willSayNothing(about: [Self.doc])
+    let paired = note(pairing: Self.doc)
+    let session = made(noteSearch: search, noteRead: { _ in paired })
+    answered(session)
+
+    try waitUntil("the first lookup gave up") {
+      search.asked == [Self.doc] && !session.looking.contains(Self.doc)
+    }
+    XCTAssertNil(session.notes[Self.doc], "the ceiling wrote nothing down")
+    XCTAssertEqual(
+      try noteIcon(of: session).state, .off(Tips.noNote), "the icon is grey for this draw")
+
+    // And opening the panel asks again, which is the whole of the
+    // difference: there is no notice coming for a query that was stopped.
+    search.willAnswer([Self.doc: ["/notes/scope.md"]])
+    session.opened()
+    try waitUntil("the second lookup landed") { session.facts.pairing[Self.doc] != nil }
+    XCTAssertEqual(search.asked, [Self.doc, Self.doc], "the draw is what asked again")
+    XCTAssertEqual(try noteIcon(of: session).state, .live)
+  }
+
+  /// The clock does not ask again about a document whose query hit the
+  /// ceiling, for a minute.
+  ///
+  /// Nothing is written into `notes` for one of those, so every refold
+  /// wants it: the five-second tick and every batch of new lines. A
+  /// Spotlight that is rebuilding its index answers nothing for hours, and
+  /// that would be a two-second query every five seconds for the life of
+  /// the app. The backoff is what makes the recovery above a redraw
+  /// somebody asked for rather than a loop.
+  func testACeilingIsNotAskedAgainUntilTheBackoffIsUp() throws {
+    try writeTheRecord([
+      line(kind: "end", command: "reply", call: 1, doc: Self.doc, extra: "\"ok\":true")
+    ])
+    let search = StatedSearch()
+    search.willSayNothing(about: [Self.doc])
+    let paired = note(pairing: Self.doc)
+    let session = made(noteSearch: search, noteRead: { _ in paired })
+    answered(session)
+
+    try waitUntil("the first lookup gave up") {
+      search.asked == [Self.doc] && !session.looking.contains(Self.doc)
+    }
+    XCTAssertNotNil(session.ceilings[Self.doc], "the moment it gave up is what is kept")
+
+    // What a tick does, and what a new line does, twice over.
+    search.willAnswer([Self.doc: ["/notes/scope.md"]])
+    session.lookUpTheNotes()
+    session.lookUpTheNotes()
+    XCTAssertEqual(search.asked, [Self.doc], "the clock leaves that document alone")
+    XCTAssertFalse(session.looking.contains(Self.doc), "and nothing is out for it")
+
+    // A minute later it is asked again, which is the icon recovering on its
+    // own for somebody who never opens the panel.
+    session.ceilings[Self.doc] = Date(timeIntervalSinceNow: -61)
+    session.lookUpTheNotes()
+    try waitUntil("the lookup after the backoff landed") {
+      session.facts.pairing[Self.doc] != nil
+    }
+    XCTAssertEqual(search.asked, [Self.doc, Self.doc], "once the minute is up")
+    XCTAssertNil(session.ceilings[Self.doc], "and the answer took the backoff away")
+  }
+
+  /// A lookup that was out when the notice arrived is dropped.
+  ///
+  /// The query walks an index off the main actor, so an answer about the
+  /// files as they were can land after the notice that says they changed.
+  /// Writing it back would put the stale answer in with nothing left to
+  /// take it away again, the same bug an older hub scan replacing a newer
+  /// one is: testAnOlderHubScanDoesNotReplaceANewerOne.
+  func testANoticeDropsTheLookupItInterrupted() throws {
+    let session = made()
+    answered(session)
+
+    session.noteAsks[Self.doc] = 1
+    session.looking.insert(Self.doc)
+    session.noteWentStale(Self.doc)
+    XCTAssertEqual(session.noteAsks[Self.doc], 2, "the notice asked for a fresher answer")
+
+    session.tookTheNote(Self.doc, 1, .success("/notes/stale.md"))
+    XCTAssertNil(session.notes[Self.doc], "the older lookup's answer is dropped")
+
+    session.tookTheNote(Self.doc, 2, .success("/notes/fresh.md"))
+    XCTAssertEqual(try session.notes[Self.doc]?.get(), "/notes/fresh.md")
+  }
+
+  /// The watcher follows the folder the override names. A second override
+  /// is a different vault, and a watcher left on the first one would
+  /// rescan the folder nobody named on its next file event: that scan is
+  /// the newest one, so the pairing would flip back to the old notes.
   func testASecondHubIsTheOneTheWatcherWatches() throws {
     let first = root.appendingPathComponent("first")
     let second = root.appendingPathComponent("second")
@@ -521,24 +714,23 @@ final class SessionTests: XCTestCase {
     try note(pairing: Self.doc).write(
       to: first.appendingPathComponent("notes/first.md"), atomically: true, encoding: .utf8)
 
-    let desk = FakeDesk()
-    let session = made(desk: desk)
+    let session = made()
     answered(session)
 
-    desk.willChoose(first)
-    session.perform(.chooseHub, nil)
+    session.preferences.hub = first.path
+    session.readTheHub()
     try waitUntil("the first hub was read") { session.index.notes[Self.doc] != nil }
-    XCTAssertEqual(session.hubWatched, first.path, "the watcher is on the folder chosen")
+    XCTAssertEqual(session.hubWatched, first.path, "the watcher is on the folder named")
 
-    desk.willChoose(second)
-    session.perform(.chooseHub, nil)
-    XCTAssertEqual(session.hubWatched, second.path, "and moves with the second choice")
+    session.preferences.hub = second.path
+    session.readTheHub()
+    XCTAssertEqual(session.hubWatched, second.path, "and moves with the second")
 
-    // A note written into the new hub reaches the pairing, which is the
-    // whole of what watching that folder is for.
+    // A note written into the new folder reaches the pairing, which is the
+    // whole of what watching it is for.
     let path = second.appendingPathComponent("notes/second.md")
     let written = note(pairing: Self.other)
-    let landed = expectation(description: "the new hub's own note was read")
+    let landed = expectation(description: "the new folder's own note was read")
     Task { @MainActor in
       // One write a second, which is longer than the watcher's own
       // debounce: a write every quarter second would keep putting the one
@@ -779,20 +971,6 @@ final class SessionTests: XCTestCase {
     XCTAssertEqual(register.settingsOpened, 1, "it opened the pane that allows it")
   }
 
-  /// A section a person opened stays open, because what is open lives outside
-  /// every view.
-  func testASectionAPersonOpenedStaysOpen() throws {
-    try writeTheRecord([])
-    let session = made()
-    answered(session)
-
-    session.toggle(.documents)
-    XCTAssertTrue(session.ui.isOpen(.documents))
-    XCTAssertEqual(session.model.documents?.isOpen, true)
-    session.toggle(.documents)
-    XCTAssertFalse(session.ui.isOpen(.documents))
-  }
-
   /// A redraw is decided by the folds the screen is drawn from, so a line
   /// only one of them reads still moves the panel. A `step` is that line:
   /// nothing but the ring and the job card changes when one arrives, and a
@@ -897,12 +1075,38 @@ final class SessionTests: XCTestCase {
       session.tookTheScan(2, new), "a walk that found what is already there redraws nothing")
   }
 
+  /// The fifth icon on a row pins the document and takes the pin back, and
+  /// it retires the labels like the other four.
+  ///
+  /// Pin was a word in the row's menu until the third look, and Nail never
+  /// found the menu. The strip of labels now has five words, so the press
+  /// that reads the fifth one is the press that takes them away.
+  func testThePinIconPinsTheDocumentAndRetiresTheStrip() throws {
+    try writeTheRecord([line(kind: "start", command: "reply", call: 1, doc: Self.doc)])
+    let store = Store()
+    let session = made(preferences: Preferences(store: store))
+    answered(session)
+    XCTAssertFalse(session.ui.stripSeen, "the labels have not been read yet")
+
+    session.perform(.pinDoc, Self.doc)
+    XCTAssertEqual(session.ui.pinned.map(\.doc), [Self.doc], "the pin is written down")
+    XCTAssertTrue(session.ui.stripSeen, "and the fifth icon is an icon, so the labels go")
+    XCTAssertTrue(
+      store.object(forKey: Preferences.Key.stripSeen.rawValue) as? Bool ?? false,
+      "once and for every later launch")
+
+    session.perform(.unpinDoc, Self.doc)
+    XCTAssertTrue(session.ui.pinned.isEmpty, "and the filled tack takes it back")
+  }
+
   // MARK: a session over this test's own machine
 
   private func made(
     preferences: Preferences = Preferences(store: Store()),
     desk: Desk = FakeDesk(),
     loginService: LoginService = FakeRegister(),
+    noteSearch: NoteSearch = StatedSearch(),
+    noteRead: @escaping @Sendable (String) -> String = { _ in "" },
     alive: @escaping (Int32) -> Bool = { _ in false },
     quit: @escaping () -> Void = {},
     clock: @escaping () -> Date = Date.init
@@ -915,6 +1119,8 @@ final class SessionTests: XCTestCase {
       preferences: preferences,
       desk: desk,
       loginService: loginService,
+      noteSearch: noteSearch,
+      noteRead: noteRead,
       environment: ["HOME": root.path, "PATH": "/usr/bin:/bin"],
       alive: alive,
       clock: clock,
@@ -1011,6 +1217,9 @@ final class SessionTests: XCTestCase {
         printf 'https://accounts.google.com/o/oauth2/auth?client_id=x\\n' >&2
         printf '{"ok":true,"data":{"account":"someone@example.com"}}\\n'
         ;;
+      "update")
+        printf '{"ok":true,"data":{"action":"up_to_date","installed":"v2.14.0"}}\\n'
+        ;;
       "update --desktop")
         printf 'not really an extension' > "$(dirname "$0")/gdoc.mcpb"
         printf '{"ok":true,"data":{"installed":"v2.14.0",\
@@ -1040,9 +1249,6 @@ final class SessionTests: XCTestCase {
     private var urls: [URL] = []
     private var strings: [String] = []
     private var apps: [String] = []
-    private var folder: URL?
-    private var openings = 0
-    private var from: [String?] = []
 
     var opened: [URL] { lock.withLock { urls } }
     var copied: [String] { lock.withLock { strings } }
@@ -1062,25 +1268,6 @@ final class SessionTests: XCTestCase {
       lock.withLock { strings.append(text) }
     }
 
-    /// The folder panel, as the answer it was given: nothing until a test
-    /// says what the person picked, which is the cancel.
-    func chooseFolder(startingAt directory: String?) -> URL? {
-      lock.withLock {
-        openings += 1
-        from.append(directory)
-        return folder
-      }
-    }
-
-    /// What the next press of the Hub row comes back with.
-    func willChoose(_ url: URL) {
-      lock.withLock { folder = url }
-    }
-
-    /// How many times the folder panel was opened, and where each of them
-    /// was asked to start.
-    var chosen: Int { lock.withLock { openings } }
-    var startedAt: [String?] { lock.withLock { from } }
   }
 
   /// This machine's login items, untouched.

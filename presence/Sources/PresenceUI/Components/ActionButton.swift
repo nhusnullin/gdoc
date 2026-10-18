@@ -2,7 +2,7 @@
 //
 // `.act` in docs/design/2026-10-17-presence-screens-v3.html is a 24 px box
 // with a 16 px icon inside it and no label, because the actions of a row sit
-// four across in 108 px and words would not fit. The tooltip is the whole of
+// five across in 136 px and words would not fit. The tooltip is the whole of
 // the label, so every button carries one.
 //
 // The three states are the stylesheet's: the plain `.act`, `.act.off` at
@@ -50,6 +50,10 @@ public struct ActionButton: View {
   /// wants; an icon drawn anywhere else in a line says which one it is by
   /// sitting under it: testTheHeadersUpdateTooltipHangsUnderItsOwnIcon.
   public let align: TooltipAlign
+  /// The ink this one icon draws in, where it is not the panel's own action
+  /// grey. The header's update glyph is the one caller: a release there to
+  /// take is the accent ink, and nothing else in the panel asks.
+  public let tint: Swatch?
   public let action: () -> Void
 
   @Environment(\.colorScheme) private var scheme
@@ -57,13 +61,14 @@ public struct ActionButton: View {
 
   public init(
     _ icon: Icon, tip: String, state: ActionState = .live, forcedTooltip: Bool = false,
-    align: TooltipAlign = .trailing, action: @escaping () -> Void = {}
+    align: TooltipAlign = .trailing, tint: Swatch? = nil, action: @escaping () -> Void = {}
   ) {
     self.icon = icon
     self.tip = tip
     self.state = state
     self.forcedTooltip = forcedTooltip
     self.align = align
+    self.tint = tint
     self.action = action
   }
 
@@ -87,8 +92,16 @@ public struct ActionButton: View {
 
   /// `.act.is-done{color:var(--ok)}`, and `.act`'s own grey otherwise, which
   /// the light block is the one to change.
-  public static func ink(state: ActionState, in palette: Palette) -> Swatch {
-    state == .done ? palette.ok : palette.actionIcon
+  ///
+  /// A tint handed in takes the grey's place and never the green: the check
+  /// means one thing wherever it is drawn, and a caller that colours its
+  /// icon is colouring the icon and not the press that just happened:
+  /// testATintColoursTheIconAndNeverTheCheck.
+  public static func ink(
+    state: ActionState, in palette: Palette, tint: Swatch? = nil
+  ) -> Swatch {
+    if state == .done { return palette.ok }
+    return tint ?? palette.actionIcon
   }
 
   /// `show-tip`: a person who just pressed Copy link is not hovering for
@@ -117,23 +130,26 @@ public struct ActionButton: View {
     return Button {
       if pressable { action() }
     } label: {
-      IconView(Self.shown(icon: icon, state: state), ink: Self.ink(state: state, in: palette))
-        .frame(width: Self.size, height: Self.size)
-        .background(
-          RoundedRectangle(cornerRadius: Self.radius, style: .continuous)
-            // The mock is a still, so it draws no hover on an action. The
-            // row's own hover colour is the only one in the sheet, and a
-            // button that answers the pointer is why `.act` carries a
-            // radius with nothing behind it.
-            .fill(hovering && pressable ? palette.hover.color : Color.clear)
-        )
-        .opacity(Self.opacity(for: state))
-        .contentShape(RoundedRectangle(cornerRadius: Self.radius, style: .continuous))
+      IconView(
+        Self.shown(icon: icon, state: state),
+        ink: Self.ink(state: state, in: palette, tint: tint)
+      )
+      .frame(width: Self.size, height: Self.size)
+      .background(
+        RoundedRectangle(cornerRadius: Self.radius, style: .continuous)
+          // The mock is a still, so it draws no hover on an action. The
+          // row's own hover colour is the only one in the sheet, and a
+          // button that answers the pointer is why `.act` carries a
+          // radius with nothing behind it.
+          .fill(hovering && pressable ? palette.hover.color : Color.clear)
+      )
+      .opacity(Self.opacity(for: state))
+      .contentShape(RoundedRectangle(cornerRadius: Self.radius, style: .continuous))
     }
     .buttonStyle(.plain)
     .onHover { hovering = $0 }
     // `.acts [data-tip]::after{right:0}`: an action's words hang off its own
-    // right edge, so the last of four icons keeps them inside the panel.
+    // right edge, so the last of five icons keeps them inside the panel.
     // The caller may say otherwise, and the header's update icon does.
     .tooltip(
       Self.tooltip(tip, state: state), align: align,

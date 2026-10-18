@@ -63,14 +63,15 @@ enum SceneDocuments {
   /// It is the one a person pinned, which is why it is drawn first.
   static let wallet = "1Ex06GgHhIiJjKkLlMmNnOoPpQqRrSsTt"
 
-  /// The hub index: a document, and the note paired with it. Northwind and
-  /// Partner bank are in no note, which is what greys their md icon.
+  /// A document and the note the finder answered for it, as the absolute
+  /// path the opener is handed. Northwind and Partner bank are in no note,
+  /// which is what greys their md icon.
   static let pairing: [String: String] = [
-    chapter4: "falcon/chapters/04.md",
-    chapter5: "falcon/chapters/05.md",
-    policy: "05-rules/group-channel.md",
-    concept: "falcon/b2b2c-concept.md",
-    proposal: "falcon/proposal-mea-v1.md",
+    chapter4: "/Users/nail/hub/falcon/chapters/04.md",
+    chapter5: "/Users/nail/hub/falcon/chapters/05.md",
+    policy: "/Users/nail/notes/05-rules/group-channel.md",
+    concept: "/Users/nail/hub/falcon/b2b2c-concept.md",
+    proposal: "/Users/nail/hub/falcon/proposal-mea-v1.md",
   ]
 }
 
@@ -83,6 +84,11 @@ enum Scenes {
   /// goes against, and where it can be seen. They are product choices and
   /// not findings: a reviewer who rates one of them blocking is rating
   /// Nail's call, which is why they are on the page rather than in a task.
+  ///
+  /// A line leaves the list on the day Nail settles it. The third look took
+  /// off the one about the DOCUMENTS header count, which asked which form
+  /// of "N today" and "14 days · N" was right: the answer of 2026-10-18 is
+  /// the label on its own, so no render draws a count and no choice is left.
   static let stillYourCall: [String] = [
     "Launch at login is off until you turn it on, which is product decision 32. The "
       + "2026-10-18 decision withdrew the registration M24 made on the first run. A gdoc "
@@ -100,17 +106,12 @@ enum Scenes {
     "The header counts the sign-in's three minutes down, as product decision 39 asks. "
       + "Principle 5 allows facts and not promises, and the countdown is the one number in "
       + "the panel about something that has not happened.",
-    "The DOCUMENTS header is \"N today\" where every row is from today and \"14 days · N\" "
-      + "otherwise, counting the rows behind Show more. The mockup wrote three forms of it "
-      + "on different screens. Since the second morning it counts a pinned row as well, "
-      + "however old that document is, and counts a hidden one not at all: the number is "
-      + "the list, and a pin and a hide are what the list is.",
     "SETTINGS is pinned above DOCUMENTS on the two screens the group is the whole of the "
       + "panel on, no token and a sign-in in flight, which is e5 and e8. It is the one "
       + "place Quit is not the last row in the panel, and the plan of the second morning "
       + "says both things: Task 3 keeps the pinned-first rule for those two screens and "
       + "Task 4 makes SETTINGS the foot of every panel. The code does what Task 3 says. "
-      + "Dropping the rule costs nothing on the first-run screen, which is 409 pt, so "
+      + "Dropping the rule costs nothing on the first-run screen, which is 381 pt, so "
       + "which of the two sentences wins is yours.",
     "The tooltip's plate in light is rgb(242,242,243) on the white panel, about 1.1 to 1, "
       + "with a one-pixel rgb(208,208,209) edge and its shadow for the rest. In dark it is "
@@ -141,9 +142,9 @@ enum Scenes {
   /// reviewer comparing two screens reads a missing row as a bug.
   static let settingsRowRule =
     "The group is SETTINGS, not HEALTH: what is left in it is two facts about the machine, "
-    + "the two settings the panel has and Quit. The Hub row is one of the two: it says the folder the "
-    + "notes are in, or offers to choose one, and pressing it opens the system's folder "
-    + "panel. It ends in Quit on every screen, and the rows "
+    + "the one setting the panel has and Quit. The Hub row went with the third look: the "
+    + "note is found through Spotlight, so there is no folder to choose and no row that "
+    + "chooses one. It ends in Quit on every screen, and the rows "
     + "above it keep their places. Network and Claude Desktop are drawn only where a fact "
     + "carries them: the record's own network stop, and no extension beside the binary. "
     + "The account, the version and the thread mark are not rows at all since the second "
@@ -161,22 +162,25 @@ enum Scenes {
     ("glyphs", "The 16 px status glyph in every kind and tone, and the ring in its two sizes."),
     (
       "icons",
-      "The action icons at 16 px, live and dimmed, and the Copy check; then the pin, "
-        + "which is no action: it is drawn in the column it sits in, before a state "
-        + "glyph, beside the empty slot the other rows of that list keep and beside a "
-        + "row from a list with no pin at all."
+      "The action icons at 16 px, live and dimmed, and the Copy check. The last two "
+        + "are the pin, which the third look made the fifth icon of a document row: the "
+        + "outline a document carries while it is not pinned, and the filled tack it "
+        + "carries while it is."
     ),
     (
       "rows",
-      "The header with the version, the update icon, the account and Sign out; then the "
-        + "five row shapes, the chevron, the quiet line, and the two labels as pieces."
+      "The header with the version, the account and Sign out, drawn four times for the "
+        + "four ways the update glyph is: a release to take, with the published "
+        + "version under the line; nothing newer known; the second after a press that "
+        + "installed nothing; and the ring while the child is up. Then the four row "
+        + "shapes, the quiet line, and the two labels as pieces."
     ),
     (
       "cards",
       "The hold card asking and offering, the stuck card, the live row, the job card; "
-        + "then the hint strip of four labels, the sign-in URL on its plate, the "
-        + "signed-in account with its one sentence, and the SETTINGS rows, the Hub row "
-        + "among them."
+        + "then the hint strip of five labels, the sign-in URL on its plate, the "
+        + "signed-in account with its one sentence, and the SETTINGS rows, which are "
+        + "the machine's own facts, Launch at login and Quit."
     ),
     (
       "controls",
@@ -186,9 +190,8 @@ enum Scenes {
   ]
 
   static let account = "nail@example.com"
-  static let hub = "/Users/nail/hub"
-  /// The home the Hub row writes its tilde against, so every render says
-  /// `~/hub` whoever's machine drew it.
+  /// The home a note's path is written with a tilde against, so every
+  /// render says `~/hub/...` whoever's machine drew it.
   static let home = "/Users/nail"
   static let gdocPath = "/Users/nail/.local/bin/gdoc"
   static let signInURL =
@@ -217,7 +220,9 @@ enum Scenes {
     loginItem: LoginItemState = .off,
     signIn: SignInPhase? = nil,
     signedInAt: Date? = nil,
-    hub: String? = Scenes.hub
+    pairing: [String: String] = SceneDocuments.pairing,
+    updateChecked: Date? = nil,
+    updating: Bool = false
   ) -> Facts {
     Facts(
       account: account,
@@ -227,14 +232,15 @@ enum Scenes {
         app: "2.14.0", gdoc: gdocFound ? "v2.14.0" : nil, latestStable: latestStable),
       mark: "⁘",
       gdocPath: gdocFound ? gdocPath : nil,
-      hub: hub,
       home: home,
       extensionState: extensionState,
       network: network,
       loginItem: loginItem,
       signIn: signIn,
-      pairing: SceneDocuments.pairing,
-      signedInAt: signedInAt)
+      pairing: pairing,
+      signedInAt: signedInAt,
+      updating: updating,
+      updateChecked: updateChecked)
   }
 
   /// Every scene, in the order the screens file tells the day.
@@ -261,11 +267,12 @@ enum Scenes {
     Scene(
       id: "r3", title: "A comment and a reply, both read back",
       caption:
-        "Three writes landed and were verified: the restyle of 10:12 from the terminal, "
-        + "the comment of 11:38 from Claude Code and the reply of 11:40 from the "
-        + "terminal, which is why DOCUMENTS says three. The stuck card stays until the "
-        + "publish is run again, and Copy link on the first row is half a second into "
-        + "its green check.",
+        "Three writes landed and were verified: the restyle of 10:12, the comment of "
+        + "11:38 and the reply of 11:40, which is the three documents DOCUMENTS lists. "
+        + "A row says the word and the moment and not where the run came from: the "
+        + "source is a sub-line of NOW's, which this screen has none of. The stuck card "
+        + "stays until the publish is run again, and Copy link on the first row is half "
+        + "a second into its green check.",
       fixture: "r3", moment: "2026-10-17T11:40:30Z", alive: [],
       facts: machine(),
       ui: UIState(copied: SceneDocuments.chapter5, copiedAt: copiedOnR3), appearance: nil),
@@ -300,7 +307,9 @@ enum Scenes {
       facts: machine(), ui: UIState(), appearance: nil),
     Scene(
       id: "r7", title: "The hold was approved in chat",
-      caption: "The card is gone, the reply is a row in TODAY, and the watch carries on.",
+      caption:
+        "The card is gone, the reply the person approved is what the policy's row now "
+        + "says, and the watch carries on.",
       fixture: "r7", moment: "2026-10-17T16:41:30Z", alive: [7200],
       facts: machine(), ui: UIState(), appearance: nil),
     Scene(
@@ -309,7 +318,10 @@ enum Scenes {
         "The last poll failed, and the record says what kind of trouble it was in one "
         + "word. The row says the moment and that word, and SETTINGS says the same thing "
         + "about the machine: the app opens no connection, so Google not answering is "
-        + "only ever something gdoc wrote down.",
+        + "only ever something gdoc wrote down. The header changed at 17:05 as well: the "
+        + "check found v2.15.0, so the update glyph is in the accent ink with a dot and "
+        + "the published version is the quiet line under the line. It stays that way for "
+        + "the rest of the day.",
       fixture: "r8", moment: "2026-10-17T17:05:00Z", alive: [],
       facts: machine(
         latestStable: "v2.15.0",
@@ -318,29 +330,27 @@ enum Scenes {
     Scene(
       id: "r9", title: "You stopped the watch",
       caption:
-        "Nothing is running, so NOW is not drawn at all. The watch says you stopped it, "
-        + "because the wait's end said so, and the publish of 14:31 is a document because "
-        + "its end named the one it created. The day's log is behind Show more and "
-        + "yesterday is one row.",
+        "Nothing is running, so NOW is not drawn at all. The panel is the header, the "
+        + "last five documents and SETTINGS, which is every screen with nothing going "
+        + "on. The publish of 14:31 is one of those five because its end named the one "
+        + "it created, and the restyle of 10:12 is the one it pushed out. The header "
+        + "still carries the release the check found at 17:05.",
       fixture: "r9", moment: "2026-10-17T18:59:00Z", alive: [],
       facts: machine(latestStable: "v2.15.0"), ui: UIState(), appearance: nil),
     Scene(
-      id: "e1", title: "More than five documents, one of them pinned",
+      id: "e1", title: "Twelve documents, the pinned one and the last five",
       caption:
-        "DOCUMENTS opened: the list scrolls inside its own box with the thumb and the "
-        + "fade, and the panel stays under 600 pt. The middle of the panel scrolls as "
-        + "well on this screen, and its own indicator is hidden while the inner box "
-        + "carries one: two thumbs over one list is the panel saying which of them a "
-        + "drag would move, which it cannot. The first row is the wallet note, pinned "
-        + "two days ago: a pin puts a document first however old its last action is, "
-        + "the pin is the tack before its state glyph, and every row of a list with a "
-        + "pin in it keeps that slot, so the titles under it break where they would "
-        + "anyway. Pin, Unpin and Hide from the list are the row's own menu, which no "
-        + "still can show.",
+        "The record holds twelve documents and the panel draws six: the pin, and then "
+        + "the five gdoc touched last. Nothing scrolls and nothing opens, so the list "
+        + "is the whole of what DOCUMENTS has to say. The first row is the wallet note, "
+        + "pinned two days ago and worked on eight days ago: without the pin it would "
+        + "be one of the five the list leaves out. The pin is the fifth icon of every "
+        + "row: the filled tack on the pinned one, the outline on the five under it, "
+        + "and pressing it is how a document is pinned or let go. Hide is the row's "
+        + "own menu, which no still can show.",
       fixture: "e1", moment: "2026-10-17T18:10:00Z", alive: [],
       facts: machine(),
       ui: UIState(
-        expanded: [.documents],
         pinned: [
           DocumentChoice(
             doc: SceneDocuments.wallet, at: Date(timeIntervalSince1970: 1_792_141_200),
@@ -348,42 +358,53 @@ enum Scenes {
         ]),
       appearance: nil),
     Scene(
-      id: "e2", title: "Midnight: yesterday folds into one row",
+      id: "e2", title: "The next morning: a pin outlives the fortnight",
       caption:
-        "The local day decides. Yesterday is one chevron row with its two counts, and "
-        + "nothing older is in the log at all. DOCUMENTS keeps its own fourteen days, "
-        + "which is why two rows there are older than yesterday. This is the next "
-        + "morning, and the one screen whose Launch at login is on: the person turned "
-        + "the switch on the evening before, which is the only way it is ever on.",
+        "The first row is a note nobody has touched for twenty days. A document leaves "
+        + "the list fourteen days after its last action, and a pin is what holds one "
+        + "there: the row keeps the title and the moment of that last action, and says "
+        + "nothing a pin invented. The four under it are the fortnight's own, newest "
+        + "first, across three days. This is also the one screen whose Launch at login "
+        + "is on: the person turned the switch on the evening before, which is the only "
+        + "way it is ever on.",
       fixture: "e2", moment: "2026-10-18T09:12:00Z", alive: [],
-      facts: machine(loginItem: .on), ui: UIState(), appearance: nil),
+      facts: machine(loginItem: .on),
+      ui: UIState(
+        pinned: [
+          DocumentChoice(
+            doc: SceneDocuments.wallet, at: Date(timeIntervalSince1970: 1_792_152_000),
+            title: "Wallet note: the partner shortlist")
+        ]),
+      appearance: nil),
     Scene(
       id: "e3", title: "Everything at once: the order of NOW",
       caption:
         "Holds first, then what is stuck, then running jobs, then watches, oldest first "
-        + "inside each class. What is stuck here is an export: a failed publish names no "
-        + "document, so any later publish clears it, and this screen has one running.",
+        + "inside each class. What is stuck here is an export, so the publish running "
+        + "under it clears nothing: a stuck card leaves when the next run of its own "
+        + "command starts. It is a failed publish that names no document, and that is "
+        + "why any later publish clears one of those.",
       fixture: "e3", moment: "2026-10-17T17:20:00Z", alive: [7200, 7210, 7103],
       facts: machine(), ui: UIState(), appearance: nil),
     Scene(
       id: "e5", title: "The first run: no token at all",
       caption:
         "Nothing works without a sign-in, so the header says so and the one sentence "
-        + "names the icon to press. Nothing else on this machine is set up either: the "
-        + "Hub row offers to choose a folder, and this is the one screen that offer is "
-        + "drawn on. No document has run here yet, so the grey note icon a missing hub "
-        + "makes is on no screen at all. SETTINGS "
-        + "is still pinned above everything, because on this machine it is the whole of "
-        + "what the panel is for.",
+        + "names the icon to press. Nothing else on this machine is set up either: no "
+        + "extension has been written, so Claude Desktop carries the one thing to do "
+        + "about it. No document has run here yet, so there is no DOCUMENTS row on this "
+        + "screen and no note icon of any tone; the grey one is on e6, e9 and e10. "
+        + "SETTINGS is still pinned above everything, because on this machine it is the "
+        + "whole of what the panel is for.",
       fixture: nil, moment: "2026-10-17T10:00:00Z", alive: [],
       facts: machine(
         auth: .signedOut, account: nil, gdocFound: true, extensionState: .notInstalled,
-        hub: nil),
+        pairing: [:]),
       ui: UIState(), appearance: nil),
     Scene(
       id: "e6", title: "Icons with nothing to open, and the first hint",
       caption:
-        "An unpaired document greys its note icon and says why. The strip of four labels "
+        "An unpaired document greys its note icon and says why. The strip of five labels "
         + "is shown once under the first row. A document in the trash keeps its row: no "
         + "field says it is gone, so it is not struck through.",
       fixture: "e6", moment: "2026-10-17T11:00:00Z", alive: [],
@@ -418,8 +439,11 @@ enum Scenes {
       id: "e10", title: "Signing out, and changing account",
       caption:
         "The confirm names what will stop, in place of the header's own line, and waits "
-        + "for the answer. A changed address is the app's own memory and never a line of "
-        + "the log.",
+        + "for the answer. The line it replaced is the whole line: this is the one "
+        + "screen with no version on it and the one with no update glyph, and the quiet "
+        + "line about the address that changed is off it too. All four come back when "
+        + "the question is answered. A changed address is the app's own memory and never "
+        + "a line of the record.",
       fixture: "e10", moment: "2026-10-17T18:00:00Z", alive: [7200, 7210],
       facts: machine(previousAccount: "nail@gmail.example"),
       ui: UIState(
@@ -489,14 +513,14 @@ extension Scene {
       checkShowing: check.isShowing(now: at))
   }
 
-  /// This scene as a view, in the mode the renderer needs.
+  /// This scene as a view, drawn for an image.
   ///
-  /// `.clipped` is the panel the person opens, capped at 600 pt with the
-  /// rest under a scroll. `.whole` is the same panel with nothing hidden,
-  /// which is what the reviewer's pass reads: a PNG cannot be scrolled, so
-  /// a screen whose SETTINGS is past the cap is a screen nobody checked.
+  /// One view and not two. Until 2026-10-18 a scene was rendered twice, once
+  /// capped at 600 pt as the person opened it and once whole for the
+  /// reviewer, because a PNG cannot be scrolled. Nothing is capped now, so
+  /// the two images are one image.
   @MainActor
-  func view(_ mode: RenderMode = .clipped) throws -> some View {
-    PanelView(model: try model()).rendering(mode)
+  func view() throws -> some View {
+    PanelView(model: try model()).rendering()
   }
 }

@@ -1024,17 +1024,17 @@ measurement through a preference key still holds; nothing inside it reaches the
 canvas. One row is as empty as forty, so this is not clipping or a scroll
 offset: the renderer does not draw the scroller's content at all.
 
-So the scroll box carries a drawn mode. `ScrollBox` reads
-`\.isRendering` from the environment, and with it on it clips a plain stack
-with `.fixedSize` instead of scrolling. The scenes and every render test turn
-it on with one `rendering()` at the top of the tree; the app never does, so
-what a person sees is a real scroller. `ScrollTests`
-`testTheBoxCapsItsHeightAndScrollsInsideWithTheThumbAndTheFade` asserts the
-ScrollView's ink is zero, so the day the renderer learns to draw one, that test
-says so and the drawn mode can go.
+So the scroll box carried a drawn mode: with `\.isRendering` on it clipped a
+plain stack instead of scrolling, and the scenes turned that on with one
+`rendering()` at the top of the tree.
 
-Recheck on a macOS or Xcode upgrade, by that one assertion: it fails when the
-answer changes.
+The box itself went on 2026-10-18 with the third look, and with it the
+assertion that watched this answer. Nothing in the panel is a `ScrollView`
+any more, so the measurement is a record of what `ImageRenderer` does and no
+longer something the panel rests on. `rendering()` stays, for the one frame a
+render is: the ring reads it so a scene does not come out at whatever angle
+the animation was at. The day a scroller is wanted again, this section is
+what says to measure it first.
 
 ## What LaunchServices says about a `claude://` handler
 
@@ -1246,3 +1246,141 @@ makes it switch there is not the URL alone. So Open chat keeps the
 activation it has, the `session` field still goes into the record under
 `via: code`, and the day a form is found that switches, the opener has the
 id. Recheck on a Claude Desktop update by the same three lines.
+
+## Where the screen cuts a panel as tall as its content
+
+Measured 2026-10-18 on Nail's machine, M27 Task 1. Nothing in the panel
+scrolls since that evening and it has no cap, so a busy day draws a panel
+taller than the screen. The decision says that cut is the price Nail chose
+over any scroll, and this is the height it happens at.
+
+How it was taken. A throwaway `XCTestCase` in `presence/Tests/PresenceUITests`
+built scene e3's panel with the hold card of scene r6 repeated 1, 4, 8 and 12
+times in NOW, read each panel's height back through the `panel` metric probe
+and off `NSHostingView.fittingSize`, and asked `NSScreen.main` for its frames.
+It then placed a borderless `NSPanel` holding the twelve-card panel by the
+arithmetic `presence/Sources/Presence/Panel.swift` uses, with the status
+item's button taken as the top right of the screen. The file was deleted after
+the reading.
+
+| What was measured | Height |
+|---|---|
+| this screen, `NSScreen.main.frame` | 1728 x 1117 |
+| the same screen's `visibleFrame`, which is what the panel is placed in | 1675 x 1084 |
+| e3 with one hold card | 1092 pt |
+| e3 with four | 1512 pt |
+| e3 with eight | 2072 pt |
+| e3 with twelve | 2632 pt |
+| the tallest scene as the scenes stand, e3 | 1552 pt |
+| the next two, e1 and r9 | 1184 pt and 1124 pt |
+| the shortest, e8 | 372 pt |
+
+The twelve-card panel asked for 320 x 2632 and the window kept all of it:
+`setContentSize` is not clamped for a borderless panel. The placement is what
+decides which end is lost. It hangs the panel under the button and then
+raises the origin to `visibleFrame.minY + 8`, so the foot sits 8 pt above the
+screen's bottom edge, 1076 pt of the panel are on the screen and **1556 pt
+are above the screen's top edge**, where the window server shows nothing.
+
+**A panel taller than the screen loses its head, not its foot.** SETTINGS and
+Quit stay on the screen because the bottom is pinned; the header, the account
+and NOW go off the top. A panel of 1084 pt or less is whole, which every scene
+in the set is except e3 at 1552, and a day with one hold card in it is already
+past that on this screen.
+
+The window server's own bounds for that window could not be read from the test
+process: `CGWindowListCopyWindowInfo` reported 0 x 0 and no on-screen flag,
+because a `swift test` process composites no window. So the cut above is
+AppKit's geometry and the screen's frame, not a screenshot.
+
+Recheck on a screen of another size, or if the placement in `Panel.swift`
+changes which edge it pins. A later decision may cap NOW, which the 2026-10-18
+entry leaves open; that would be the one number to measure again.
+
+## What Spotlight answers for a document id
+
+Measured 2026-10-18 on Nail's machine, M27 Task 4. The hub folder was one
+setting for a thing that differs by document, so the note is found now: the
+app asks Spotlight for the Markdown files whose text holds the id and reads
+the `gdoc:` front-matter block of each. This is the query it runs, what it
+takes, and what comes back that is not the note.
+
+How it was taken. Three `mdfind -onlyin ~` runs of each form under
+`/usr/bin/time -p`, over the real vault at
+`~/src/altery/Altery-Platform-Hub`, for the id
+`1gH4y7uvT4QgpZBCHHlHz9g5L9R0R7dzONs9cJOTcY0c`, which one note's front matter
+names. Then a throwaway `swiftc` program ran the chosen form through
+`NSMetadataQuery` with `operationQueue` set and no run loop, to prove the app
+can ask the same question off the main actor. Both the program and the files
+below were deleted after the reading.
+
+| Query form | Seconds | Answered |
+|---|---|---|
+| `<id>`, mdfind's own parser | 0.10–0.14 | the three files |
+| `kMDItemTextContent == "*<id>*"` | 1.51–1.53 | the three files |
+| `kMDItemTextContent == "*<id>*" && kMDItemFSName == "*.md"` | 1.62–1.67 | the three files |
+| `kMDItemTextContent = "<id>"cdw` | 0.10–0.11 | the three files |
+| `kMDItemTextContent = "<id>"cdw && kMDItemFSName = "*.md"c` | 0.24–0.26 | the three files |
+| the last form through `NSMetadataQuery`, no run loop | 0.23 | the three files |
+
+**The word form is six times the substring form's speed over the same index.**
+`cdw` matches the id as a word, which the index can answer from; `*<id>*` is a
+substring scan. The app runs the last form, which is the one with the Markdown
+clause, and `SpotlightSearch.queryString` writes it:
+testTheQueryIsTheWordFormOverMarkdown.
+
+**Three files, and the front-matter check keeps one.** Two of the three were
+written for this measurement in `~/m27-spotlight-measure`: `document-map.md`,
+which names the id in a sentence the way Nail's own document maps do, and
+`decoy-key.md`, whose front matter holds `document_id` under a key that is not
+`gdoc:`. Spotlight returns both, because it answers on a file's text. The
+reading `HubIndex.documentIDs(inFrontMatterOf:)` already did for a whole hub
+throws both away and keeps
+`11-m2-crypto-project-eagle/2026-09-15-eagle-roles-and-responsibilities.md`:
+testAFileThatMerelyMentionsTheIdIsNotTheNote.
+
+**Not every Markdown file under the vault is indexed.** `mdfind -onlyin <vault>
+'kMDItemFSName == "*.md"'` answered 727 files where `find` counts 1764. Some of
+the difference is dot folders, which `find` walks and Spotlight does not, and
+the rest was not chased. It is the reason the `hubPath` override stays: a
+person whose notes Spotlight has not indexed still has a folder to name.
+
+The ceiling is two seconds, `NoteFinder.ceiling`, which is eight times the
+measured query. Nothing waits on it but one greyed icon, and nothing is written
+down for a query that hit it. The clock asks about that document again a minute
+later, and a panel somebody opens asks at once.
+
+Recheck after a Spotlight reindex, or on a vault an order of magnitude bigger
+than 727 files. The timings are one machine's and the shape of the answer is
+what matters: a handful of candidates, one of which the front matter proves.
+
+## What the header line holds, and what a second version costs it
+
+Measured 2026-10-18 on this machine, M27 Task 5, through the metric probes
+`RowTests` already reads. The decision of the third look asks for the newer
+version written after the current one, `v2.18.0 → v2.19.0`, on the header
+line. The line does not have the room.
+
+How it was taken. `RowTests.testTheHeaderIs36WithTheMarkTheNameTheVersionAndTheAccount`
+renders `PanelHeader` at the width the panel gives it, 320 less 8 either
+side, and reads the address's own box back twice: once drawn alone at the
+width it asks for, and once on the header line. The two numbers below are
+that comparison, and both are assertions in that test rather than a reading
+somebody wrote down.
+
+| The header line | The address's width |
+|---|---|
+| mark, name, one version, the update glyph, the account's glyph, its address and Sign out | 98 pt, which is the whole of `nail@example.com` |
+| the same line with `v2.16.0 → v2.17.0` in the version's place | 49.5 pt, which is `nail@ex…` |
+
+**So the published version is the line under the header and not a second
+number on it.** The address is the piece that gives, because it is the one
+thing on the line drawn without `fixedSize`, and an address cut in half is
+what the morning of the same day was about. The glyph keeps its accent ink
+and its dot, which is what catches an eye; the number is in the quiet line
+directly under the installed one, as `v2.15.0 is published`.
+
+Nail may still want both on the line. That is a new decision entry and one
+of these: a shorter address, no mark, or the name dropped. Dropping the
+leading `v` from both versions buys 12 pt of the 49 needed, so it is not
+one of them.

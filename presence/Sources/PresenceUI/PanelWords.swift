@@ -19,12 +19,11 @@ public enum Tips {
   public static let noDoc = "No Google Doc yet"
   public static let openNote = "Open the note in Obsidian"
   public static let noNote = "No note is paired with this document"
-  /// No hub is chosen, so nothing in it is paired with anything. The words
-  /// name the row that fixes it: a person told there is no note goes looking
-  /// for the note, which is where Nail went on the second morning.
-  public static let noHub = "Choose the hub in SETTINGS"
-  /// The index named a note that is not there any more. It is a fact about
-  /// the hub and never a complaint about the person who moved it.
+  /// Two notes name this document, which the app may not pick between. It
+  /// is somebody's own mistake and the words say only what was found.
+  public static let twoNotes = "Two notes name this document"
+  /// The note is not a file at that path any more. It is a fact and never a
+  /// complaint about the person who moved it.
   public static let noteMoved = "Note moved or deleted"
   public static let openChat = "Continue with Claude"
   public static let noExtension = "Install the Desktop extension in Settings"
@@ -34,6 +33,10 @@ public enum Tips {
   /// there is no document to open.
   public static let noLink = "No link yet"
   public static let copied = "Copied"
+  /// The fifth icon of a document row, in its two states. They are the words
+  /// the menu carried until the third look, on the icon that replaced it.
+  public static let pin = "Pin"
+  public static let unpin = "Unpin"
   public static let dismiss = ButtonWord.dismiss.rawValue
   public static let cannotStop = "This watch is not one gdoc presence can stop"
   public static let signIn = "Sign in with Google"
@@ -41,27 +44,37 @@ public enum Tips {
   public static let cancel = "Cancel"
   public static let copySignIn = "Copy sign-in link"
   public static let installExtension = "Install extension"
+  /// The header's update glyph while nothing newer is known. The press runs
+  /// `gdoc update`, which asks GitHub itself, so the words are about asking
+  /// and not about a release nobody has heard of.
+  public static let checkUpdate = "Check for a new version"
+  /// The same glyph for the second after a run that found nothing to
+  /// install. It is what the run answered and never a promise about later.
+  public static let newestRelease = "This is the newest release"
+
+  /// The glyph where `help --json` listed a newer stable release.
+  public static func updateTo(_ version: String) -> String {
+    "Update to \(version)"
+  }
 }
 
-/// The words of a document row's own menu, which is where a pin and a hide
-/// are, so the four icons on the row stay four.
+/// The word of a document row's own menu, which is one word since the third
+/// look: the pin is the row's fifth icon and Hide is what is left.
 public enum Menus {
-  public static let pin = "Pin"
-  public static let unpin = "Unpin"
   /// The one way out of the list. The way back is gdoc doing something on
   /// the document again, which the guide says and no menu word can.
   public static let hide = "Hide from the list"
 }
 
 extension NoteFault {
-  /// The words the greyed icon carries. A hub nobody chose has its own
-  /// sentence since the second morning: without a hub nothing is paired with
-  /// anything, and the row in SETTINGS is the one thing to do about it.
+  /// The words the greyed icon carries. Each is a fact about what was found
+  /// and none of them is a judgement about the note or about the person who
+  /// moved it.
   public var tip: String {
     switch self {
-    case .noHub: Tips.noHub
     case .notPaired: Tips.noNote
-    case .movedOrDeleted, .outsideTheHub, .notMarkdown: Tips.noteMoved
+    case .twoNotes: Tips.twoNotes
+    case .movedOrDeleted, .notMarkdown: Tips.noteMoved
     }
   }
 }
@@ -72,38 +85,30 @@ public enum Sentences {
   /// that has signed in and done nothing yet.
   public static let noDocuments =
     "Publish a note or review a document from Claude Code and it will appear here."
-  /// TODAY with nothing in it.
+  /// DOCUMENTS while a write that has named no document yet is running.
   public static let nothingYet = "nothing yet"
   /// A token with no address in it. Whose account it is decides nothing, so
   /// this is a fact and not a fault.
   public static let accountNotRead = "signed in, account not read"
   public static let loginItemApproval = "macOS is waiting for you to allow it in Login Items"
-  /// The Hub row with no folder chosen. It is the word on the row itself,
-  /// because the row is what opens the folder panel.
-  public static let chooseHub = "Choose…"
   /// What joins the parts of one line: the middle dot with a space either
   /// side. The stuck card breaks its title on it, so the two halves of
   /// "Export stopped · Chapter 4" are the card's two lines.
   public static let separator = " · "
+  /// A document row with no note behind it. It named the hub until the
+  /// third look, and there is no hub to name.
+  public static let noNoteYet = "no note"
 
-  /// A folder as the Hub row writes it: the path with the home directory as
-  /// a tilde, or the word that offers to choose one where there is none.
+  /// A path as a row writes it: with the home directory as a tilde, or
+  /// whole where it is somewhere else.
   ///
   /// The home is handed in rather than read here, which is the rule for
   /// every file in this target, and it is why a render of a scene says the
-  /// same thing on every machine. A folder outside that home is written in
-  /// full: a tilde there would name a folder that is not the one chosen.
-  public static func folder(_ path: String?, home: String) -> String {
-    guard let path, !path.isEmpty else { return chooseHub }
+  /// same thing on every machine. A path outside that home is written in
+  /// full: a tilde there would name a file that is not the one found.
+  public static func shortPath(_ path: String, home: String) -> String {
     guard !home.isEmpty, path == home || path.hasPrefix(home + "/") else { return path }
     return "~" + path.dropFirst(home.count)
-  }
-
-  /// A count and the thing counted, with the noun agreeing with it. One
-  /// document is a document, and the panel is read by somebody whose first
-  /// language is not English, so "1 documents" is a sentence that stops them.
-  public static func count(_ number: Int, _ noun: String) -> String {
-    "\(number) \(noun)\(number == 1 ? "" : "s")"
   }
 }
 
@@ -128,7 +133,7 @@ struct Phrases {
         sub: sub,
         quiet: "Nothing was written. The text is still in the chat.",
         question: "Dismiss this card?",
-        consequence: "The row in TODAY stays. Nothing is written either way.")
+        consequence: "Nothing is written either way.")
     }
 
     return HoldCardModel(
@@ -208,11 +213,9 @@ struct Phrases {
   /// The card's own title already says the write stopped, so a sentence
   /// that said it again would be the third place one screen says one thing.
   ///
-  /// The moment is on the card only where nothing else on the screen has
-  /// it. A write whose end said it failed has a row in TODAY and the row
-  /// carries the moment; a write whose process went away has no row at all
-  /// while the card is up, because `Days.every` leaves out what NOW is
-  /// carding, and NOW keeps such a card for fourteen days:
+  /// The moment is on the card, because nothing else on the screen carries
+  /// it: a write that stopped is one card and no row anywhere, and NOW
+  /// keeps such a card for fourteen days:
   /// testACardWithNoRowBehindItCarriesTheMoment.
   private func stuckReason(_ write: StuckWrite) -> String {
     let place = Self.places[write.via ?? ""] ?? "terminal"
@@ -291,8 +294,8 @@ struct Phrases {
       ]
       : [failed, expired ?? Words.cause(session.lastPollStop)]
 
-    // A watch that is over says so in its title, which is the word TODAY
-    // and DOCUMENTS use for it. The row kept opening with "Live" over a
+    // A watch that is over says so in its title, which is the word
+    // DOCUMENTS uses for it. The row kept opening with "Live" over a
     // sub-line that said the watch had stopped:
     // testE9SaysTheWatchIsStoppedInEverySectionAndDrawsNoStop.
     return LiveRowModel(
@@ -304,10 +307,11 @@ struct Phrases {
   /// How many writes of one kind a watch has to its name, in the word the
   /// rest of the panel uses for that write.
   ///
-  /// A count of nothing is left out. The word is the command's own past:
-  /// TODAY says Reply and DOCUMENTS says replied, so a third word here is a
-  /// second vocabulary for one thing, which is what the specification's own
-  /// sentence says ("since, replied and proposed counts"):
+  /// A count of nothing is left out. The word is the command's own past,
+  /// which is the word DOCUMENTS uses for that write: a third word here
+  /// would be a second vocabulary for one thing, which is what the
+  /// specification's own sentence says ("since, replied and proposed
+  /// counts"):
   /// testAWatchCountsItsWritesInTheWordsForThem.
   private func count(_ many: Int, of command: String) -> String? {
     guard many > 0 else { return nil }
@@ -320,8 +324,8 @@ struct Phrases {
   /// is. The state of an open action is one word, because the record has
   /// none and a person reading the list wants the state and not the verb.
   func documentSub(_ row: DocumentRow) -> String {
-    let note = facts.note(for: row.doc) ?? "not in the hub"
-    return sentence([state(row), note])
+    let note = facts.note(for: row.doc).map { Sentences.shortPath($0, home: facts.home) }
+    return sentence([state(row), note ?? Sentences.noNoteYet])
   }
 
   /// What the row says about the last thing that happened, or nothing at
@@ -339,105 +343,6 @@ struct Phrases {
     case .unknown: return "outcome unknown · \(clockInSentence(row.at))"
     case .pinnedOnly: return nil
     }
-  }
-
-  func logRow(_ row: DayRow, index: Int) -> LogRowModel {
-    let what = Words.verb(row.command)?.heading ?? row.command ?? "gdoc"
-    let title = row.title ?? row.doc
-
-    switch row.kind {
-    case .action:
-      let ok = row.ok ?? false
-      // A write the person approved in the chat says that instead of where
-      // it came from: "approved by you in chat" already names the place,
-      // and the row is one line. Scene r7 is that row.
-      return LogRowModel(
-        key: "\(index)",
-        glyph: ok ? .check : .exclamation,
-        tone: ok ? (row.verified == false ? .quiet : .ok) : .bad,
-        title: sentence([what, title]),
-        value: clock(row.at),
-        sub: sentence([
-          ending(row.ending) ?? Words.via(row.via), Words.verified(row.verified),
-          ok ? nil : (Words.cause(row.stop, line: row.line) ?? "stopped"),
-        ]))
-    case .outcomeUnknown:
-      return LogRowModel(
-        key: "\(index)", glyph: .empty, tone: .quiet, title: sentence([what, title]),
-        value: clock(row.at), sub: sentence([Words.via(row.via), "outcome unknown"]))
-    case .holdRaised:
-      // Where the hold is still open the row says so. Where it closed, the
-      // row is the moment it was raised and nothing else: the row above it
-      // carries how it ended, and a present tense under it says the write
-      // is still waiting half an hour after the person approved it.
-      // testAHoldThatClosedStopsSayingItIsWaiting.
-      return LogRowModel(
-        key: "\(index)", glyph: .pause, tone: .hold, title: sentence(["Hold", title]),
-        value: clock(row.at),
-        sub: sentence([
-          row.rule.map { "\(held(row.command)) held by rule \($0)" },
-          row.ending == nil ? "waiting in Desktop chat" : nil,
-        ]))
-    case .holdClosed:
-      return LogRowModel(
-        key: "\(index)", glyph: row.ending == .landed ? .check : .dot,
-        tone: row.ending == .landed ? .ok : .dim,
-        title: sentence(["Hold closed", title]), value: clock(row.at),
-        sub: ending(row.ending))
-    case .liveStarted:
-      return LogRowModel(
-        key: "\(index)", glyph: .dot, tone: .dim, title: sentence(["Live started", title]),
-        value: clock(row.at), sub: nil)
-    case .liveStopped:
-      // Who stopped it is the one thing the row can say about the ending,
-      // and only a wait a person interrupted says it. A watch whose process
-      // went away says nothing, because nobody wrote down what happened.
-      let byYou = row.totals?.stoppedByYou == true
-      return LogRowModel(
-        key: "\(index)", glyph: .dot, tone: .dim,
-        title: sentence([byYou ? "Live stopped by you" : "Live stopped", title]),
-        value: clock(row.at), sub: totals(row.totals))
-    }
-  }
-
-  /// What a held write is called: the command's own heading, which is the
-  /// word every other row in the panel uses for it. The record writes
-  /// `propose` and `annotate`; a person reads Proposal and Comment, and a
-  /// raw command name here would be a second vocabulary for one thing.
-  /// testAHeldWriteIsNamedByItsHeading.
-  private func held(_ command: String?) -> String {
-    Words.verb(command)?.heading ?? command ?? "write"
-  }
-
-  /// What the record said a hold came to, in the panel's words and with no
-  /// reading on top.
-  ///
-  /// `released` is the person pressing the card, which gdoc writes before it
-  /// sends, and `landed` is the write reaching the document with no card at
-  /// all: `HoldEnding` holds which line gdoc writes when, and neither of
-  /// them is a person saying no.
-  private func ending(_ ending: HoldEnding?) -> String? {
-    switch ending {
-    case .released: return "approved by you in chat"
-    case .landed: return "the write went out without the card"
-    case .expired: return "ran out"
-    case .dropped: return "the sign-in changed, nothing was sent"
-    case nil: return nil
-    }
-  }
-
-  /// What a watch came to. A count of nothing is left out and the two of
-  /// them together are said once: "replied 0 · proposed 0" is three words
-  /// for one fact.
-  private func totals(_ totals: LiveTotals?) -> String? {
-    guard let totals else { return nil }
-    let wrote = totals.replied + totals.proposed
-    return sentence([
-      Words.duration(totals.ran),
-      wrote == 0 ? "nothing written" : nil,
-      count(totals.replied, of: "reply"),
-      count(totals.proposed, of: "propose"),
-    ])
   }
 
   // MARK: the two small pieces
