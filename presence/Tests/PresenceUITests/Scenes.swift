@@ -81,9 +81,9 @@ enum Scenes {
   /// not findings: a reviewer who rates one of them blocking is rating
   /// Nail's call, which is why they are on the page rather than in a task.
   static let stillYourCall: [String] = [
-    "The idle menu bar draws the mark at 45 percent, where principle 1 says idle is nothing "
-      + "at all and the mockup's r9 draws nothing. A dim mark says gdoc is installed; a "
-      + "blank bar says only that nothing is running.",
+    "The mark at rest is as bright as the mark at work, where principle 1 says idle is "
+      + "nothing at all and the mockup's r9 draws nothing. The 45 percent idle mark was the "
+      + "one choice principle 1 argued against and Nail has now answered: he wants to see it.",
     "Launch at login is off until you turn it on, which is product decision 32. The "
       + "2026-10-18 decision withdrew the registration M24 made on the first run. A gdoc "
       + "command now opens the app when it is not running.",

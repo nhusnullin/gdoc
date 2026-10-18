@@ -12,6 +12,10 @@
 // badge is drawn here in one ink at a few opacities rather than reusing the
 // panel's `StatusGlyph` and `RingView`, which are the one place colour lives.
 //
+// The mark itself is drawn at full ink in every state, idle with the rest:
+// the 2026-10-18 decision answered the one 45 percent in the file with "the
+// mark at rest is as bright as the mark at work".
+//
 // The sizes are the `.status-item` rules of
 // docs/design/2026-10-17-presence-screens-v3.html: a 15 px mark, a 10 px
 // badge, and the gap between them. The shapes are the panel's own, because
@@ -153,10 +157,6 @@ public enum BarImage {
     fold.jobs.compactMap(\.progress).first
   }
 
-  /// What idle is drawn at. The mark stays there so the panel is reachable
-  /// when nothing is happening; the vote's "nothing at all" waits for Nail.
-  public static let idleOpacity: Double = 0.45
-
   /// The state one moment is in.
   ///
   /// The check is first because it is over any state: a write that read
@@ -186,11 +186,6 @@ public enum BarImage {
     if !fold.jobs.isEmpty || facts.signIn != nil { return .job }
     if !fold.watches.isEmpty || sessions.contains(where: \.isOpen) { return .live }
     return .idle
-  }
-
-  /// What the whole image is drawn at.
-  public static func opacity(for state: BarState) -> Double {
-    state == .idle ? idleOpacity : 1
   }
 
   /// What the pointer resting on the item says. The tooltip is the one
@@ -282,7 +277,6 @@ public struct BarGlyph: View {
       }
     }
     .frame(height: BarImage.height)
-    .opacity(BarImage.opacity(for: state))
     .accessibilityHidden(true)
   }
 }

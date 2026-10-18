@@ -36,12 +36,12 @@ final class BarTests: XCTestCase {
         "\(state) drew nothing at all")
     }
 
-    // The mark alone is live; idle is the same mark dimmed; the other four
-    // add the badge and its gap and nothing else.
+    // The mark alone is live; idle is that same mark; the other four add the
+    // badge and its gap and nothing else.
     let mark = BarImage.image(for: .live).size.width
     XCTAssertEqual(
       BarImage.image(for: .idle).size.width, mark, accuracy: 0.6,
-      "idle is the live mark at a lower opacity and not another shape")
+      "idle is the live mark and not another shape")
     for state in [BarState.stuck, .hold, .job, .check] {
       XCTAssertEqual(
         BarImage.image(for: state).size.width, mark + BarImage.badgeGap + BarImage.badgeSize,
@@ -54,12 +54,12 @@ final class BarTests: XCTestCase {
     XCTAssertNil(BarState.live.badge, "a live watch is the mark alone")
     XCTAssertNil(BarState.idle.badge, "idle is the mark alone")
 
-    // "Idle is the dim mark at 0.45, so the panel stays reachable."
-    XCTAssertEqual(BarImage.opacity(for: .idle), 0.45)
-    XCTAssertEqual(BarImage.opacity(for: .live), 1)
-    let dim = try inkWeight(BarGlyph(state: .idle), scheme: .dark, side: 32)
-    let full = try inkWeight(BarGlyph(state: .live), scheme: .dark, side: 32)
-    XCTAssertEqual(dim / full, 0.45, accuracy: 0.03, "the idle mark is the live one at 0.45")
+    // "The mark at rest is as bright as the mark at work", which is the
+    // 2026-10-18 decision answering the one choice principle 1 argued
+    // against. Nothing in the file says what idle is drawn at any more.
+    let rest = try inkWeight(BarGlyph(state: .idle), scheme: .dark, side: 32)
+    let work = try inkWeight(BarGlyph(state: .live), scheme: .dark, side: 32)
+    XCTAssertEqual(rest / work, 1, accuracy: 0.02, "the idle mark is not the live mark's own ink")
 
     try writeSheet()
   }

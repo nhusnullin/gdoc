@@ -581,8 +581,8 @@ final class RenderTests: XCTestCase {
     // What each of them is about, so a line that is quietly dropped is a
     // failure rather than a shorter page.
     let subjects = [
-      "45 percent", "decision 32", "decision 10", "trash", "decision 39", "14 days · N",
-      "nameless", "faintest control",
+      "as bright as the mark at work", "decision 32", "decision 10", "trash",
+      "decision 39", "14 days · N", "nameless", "faintest control",
     ]
     for subject in subjects {
       XCTAssertTrue(

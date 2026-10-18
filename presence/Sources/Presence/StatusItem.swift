@@ -6,9 +6,9 @@
 //
 // The item is of a variable length, because the image is not square: four of
 // the six states are the mark with a badge beside it. An idle app still keeps
-// its item, with the mark at 0.45, so the panel stays reachable when nothing
-// is happening. The item is the only thing the app shows when it is not
-// open.
+// its item, with the mark at the ink every other state is drawn in, so the
+// panel is as easy to reach when nothing is happening. The item is the only
+// thing the app shows when it is not open.
 
 import AppKit
 import PresenceUI

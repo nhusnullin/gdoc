@@ -97,12 +97,12 @@ branch.
 - Modify: `presence/Sources/PresenceUI/BarImage.swift`,
   `presence/Tests/PresenceUITests/BarTests.swift`
 
-- [ ] the idle mark is drawn at full opacity, the same ink as every other
+- [x] the idle mark is drawn at full opacity, the same ink as every other
       state's mark; `idleOpacity` goes, and the test that said 0.45 says the
       idle and the live mark are the same ink
-- [ ] the render index's "Still your call" line about the dim mark is
+- [x] the render index's "Still your call" line about the dim mark is
       replaced by the decision's sentence
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 2: the account lives in the header
 
