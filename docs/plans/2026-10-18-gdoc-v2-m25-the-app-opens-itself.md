@@ -220,15 +220,22 @@ branch.
 **Files:**
 - Modify: `docs/v2/MEASURED.md`
 
-- [ ] measured and written down, with the method: `open -g` on the installed
+- [x] measured and written down, with the method: `open -g` on the installed
       bundle while it is not running starts it and moves no focus from the
       terminal; `open -g` while it is running (lock held) is never issued, and
       issued by hand it brings nothing to the front; a gdoc command from a
       shell with no window session (`ssh localhost` or `launchctl asuser`
       with no GUI) answers exactly as before and leaves no error on stderr;
-      the lock is free within a second of `kill -9` of the app
-- [ ] where a measurement contradicts the mechanism paragraph, the task stops
-      and says so
+      the lock is free within a second of `kill -9` of the app. MEASURED.md,
+      2026-10-18, "The lock, `open -g`, and a command whose opener cannot
+      start anything". Two readings came out weaker than the sentence asked
+      for and say so there: the display was locked, so no focus could move in
+      either direction, and the no-window-session run could not be made
+      because Remote Login is off and the account has no administrator
+      rights, so a failing `open` stands in for it and the real run is a
+      recheck line
+- [x] where a measurement contradicts the mechanism paragraph, the task stops
+      and says so (nothing contradicted it)
 
 ### Task 6: the acceptance rows and the close
 
