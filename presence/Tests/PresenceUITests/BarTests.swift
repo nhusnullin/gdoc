@@ -36,12 +36,12 @@ final class BarTests: XCTestCase {
         "\(state) drew nothing at all")
     }
 
-    // The mark alone is live; idle is the same mark dimmed; the other four
-    // add the badge and its gap and nothing else.
+    // The mark alone is live; idle is that same mark; the other four add the
+    // badge and its gap and nothing else.
     let mark = BarImage.image(for: .live).size.width
     XCTAssertEqual(
       BarImage.image(for: .idle).size.width, mark, accuracy: 0.6,
-      "idle is the live mark at a lower opacity and not another shape")
+      "idle is the live mark and not another shape")
     for state in [BarState.stuck, .hold, .job, .check] {
       XCTAssertEqual(
         BarImage.image(for: state).size.width, mark + BarImage.badgeGap + BarImage.badgeSize,
@@ -54,12 +54,12 @@ final class BarTests: XCTestCase {
     XCTAssertNil(BarState.live.badge, "a live watch is the mark alone")
     XCTAssertNil(BarState.idle.badge, "idle is the mark alone")
 
-    // "Idle is the dim mark at 0.45, so the panel stays reachable."
-    XCTAssertEqual(BarImage.opacity(for: .idle), 0.45)
-    XCTAssertEqual(BarImage.opacity(for: .live), 1)
-    let dim = try inkWeight(BarGlyph(state: .idle), scheme: .dark, side: 32)
-    let full = try inkWeight(BarGlyph(state: .live), scheme: .dark, side: 32)
-    XCTAssertEqual(dim / full, 0.45, accuracy: 0.03, "the idle mark is the live one at 0.45")
+    // "The mark at rest is as bright as the mark at work", which is the
+    // 2026-10-18 decision answering the one choice principle 1 argued
+    // against. Nothing in the file says what idle is drawn at any more.
+    let rest = try inkWeight(BarGlyph(state: .idle), scheme: .dark, side: 32)
+    let work = try inkWeight(BarGlyph(state: .live), scheme: .dark, side: 32)
+    XCTAssertEqual(rest / work, 1, accuracy: 0.02, "the idle mark is not the live mark's own ink")
 
     try writeSheet()
   }
@@ -151,7 +151,7 @@ final class BarTests: XCTestCase {
 
   /// The three facts about the machine that are stuck without a line in the
   /// record: no token, a token that stopped working, and no binary to run.
-  /// Each of them is the same red exclamation the HEALTH row draws.
+  /// Each of them is the same red exclamation the SETTINGS row draws.
   func testNotSignedInExpiredAndGdocNotFoundAreStuck() throws {
     for word in [AuthWord.signedOut, .needsSignIn, .missingScopes] {
       XCTAssertEqual(
@@ -181,15 +181,20 @@ final class BarTests: XCTestCase {
     XCTAssertTrue(launching.gdocFound, "the binary is at a path, which is the location's fact")
     XCTAssertEqual(try bar([], facts: launching), .idle, "nothing is wrong yet")
 
-    let row = PanelModel.gdoc(facts: launching)
-    XCTAssertTrue(row.waiting, "the ring says the question is out")
-    XCTAssertEqual(row.value, "", "and no version is claimed")
-    XCTAssertNil(row.quiet)
+    let header = PanelModel.header(
+      facts: launching, ui: UIState(), now: Date(timeIntervalSince1970: 0),
+      stopping: PanelModel.Stopping(live: 0, holds: 0))
+    XCTAssertTrue(header.versionWaiting, "the ring says the question is out")
+    XCTAssertNil(header.version, "and no version is claimed")
+    XCTAssertEqual(header.quiet, [])
 
     let missing = Facts(auth: .ok, versions: Versions(app: "2.14.0"))
-    XCTAssertEqual(
-      PanelModel.gdoc(facts: missing).value, "not found",
-      "no path is the only not found there is")
+    let notFound = PanelModel.header(
+      facts: missing, ui: UIState(), now: Date(timeIntervalSince1970: 0),
+      stopping: PanelModel.Stopping(live: 0, holds: 0))
+    XCTAssertEqual(notFound.version, "not found", "no path is the only not found there is")
+    XCTAssertEqual(notFound.versionTone, .bad)
+    XCTAssertEqual(notFound.quiet, ["looked for it at ~/.local/bin/gdoc"])
   }
 
   /// A watch that cannot reach Google is still a watch: the decision table's
@@ -202,7 +207,7 @@ final class BarTests: XCTestCase {
     XCTAssertEqual(try bar([watch], facts: Scenes.machine()), .live)
     XCTAssertEqual(
       try bar([watch], facts: Scenes.machine(network: down)), .live,
-      "Google not answering is a HEALTH row and never an icon")
+      "Google not answering is a SETTINGS row and never an icon")
     XCTAssertEqual(try bar([], facts: Scenes.machine(network: down)), .idle)
   }
 

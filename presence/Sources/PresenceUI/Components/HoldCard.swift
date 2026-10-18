@@ -124,7 +124,7 @@ public struct HoldCard: View {
         // card carries no other action while it is asking.
         //
         // The consequence is a line of its own and not the row's sub-line,
-        // which is what HEALTH's Sign out does and for the same reason: the
+        // which is what the header's Sign out does and for the same reason: the
         // pair of buttons takes the right-hand column, and a sentence
         // squeezed into what is left is cut after its first clause.
         //

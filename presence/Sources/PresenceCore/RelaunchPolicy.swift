@@ -110,7 +110,7 @@ public enum RelaunchDecision: Sendable, Equatable {
 public enum AfterOpen: Sendable, Equatable {
   /// The new instance is up, so this one quits.
   case quit
-  /// Nothing opened, so the app stays up and HEALTH still says quit and
+  /// Nothing opened, so the app stays up and SETTINGS still says quit and
   /// reopen.
   case keepTheReopenRow
 }

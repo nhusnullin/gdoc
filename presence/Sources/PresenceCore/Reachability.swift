@@ -1,6 +1,6 @@
 // Whether Google answered the last command that tried.
 //
-// The one fact HEALTH takes from the record, and the only thing this app can
+// The one fact SETTINGS takes from the record, and the only thing this app can
 // know about the network: it opens no connection itself, so the answer is
 // what gdoc wrote down. `stop: "network"` is gdoc's own word for a request
 // that did not get there, and a later command that worked is the answer to

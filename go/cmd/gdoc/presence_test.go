@@ -46,6 +46,7 @@ func recording(t *testing.T) string {
 	dir := t.TempDir()
 	t.Setenv("GDOC_CONFIG_DIR", dir)
 	t.Setenv(claudeCodeEnv, "")
+	t.Setenv(claudeSessionEnv, "")
 	return dir
 }
 

@@ -1,11 +1,12 @@
 // The one room that asks the system to open or copy something.
 //
-// Four verbs: open a document in a browser, copy its link, open the note
-// paired with it in Obsidian, and bring Claude Desktop to the front. Every
-// NSWorkspace and NSPasteboard use in this package is here or in
-// Relauncher.swift, which opens this app's own bundle and nothing else, and
-// a source scan in PresenceCoreTests holds the pair, so what this app can
-// put in front of somebody is a list one person can read.
+// Five verbs: open a document in a browser, copy its link, open the note
+// paired with it in Obsidian, bring Claude Desktop to the front, and ask for
+// a folder. Every NSWorkspace, NSPasteboard and NSOpenPanel use in this
+// package is here or in Relauncher.swift, which opens this app's own bundle
+// and nothing else, and a source scan in PresenceCoreTests holds the pair,
+// so what this app can put in front of somebody is a list one person can
+// read.
 //
 // Nothing here decides a URL. A document's URL is built in
 // PresenceCore/LinkLine from an id held to the Drive shape, and a note's is
@@ -17,17 +18,20 @@
 // somebody's document text and a link needs only the id, so the two are
 // never in the same sentence here.
 //
-// Claude Desktop is activated and nothing more. A `claude:` scheme is
-// registered on this machine, but what a URL under it means is not written
-// down anywhere and was not measured, so there is no prefill: the panel
-// brings the app to the front and the person types. The measurement is in
-// `docs/v2/MEASURED.md`.
+// Claude Desktop is activated and nothing more, including for a document
+// whose latest run came from a Claude Code session the record names. The
+// bundle carries `claude://code/continue?session=...`, and the measurement of
+// 2026-10-18 in `docs/v2/MEASURED.md` found that from outside the app all
+// three of its Code forms activate the window and switch nothing, so there is
+// nothing to open: the panel brings the app to the front and the person
+// types. The link is built in `PresenceCore/LinkLine` and opened by nobody,
+// so the day a form switches, the id is already in the row.
 
 import AppKit
 import Foundation
 import PresenceCore
 
-/// What the app may ask of the system, as three verbs.
+/// What the app may ask of the system, as four verbs.
 ///
 /// A protocol so every test states what was asked without a browser opening:
 /// the app hands over `SystemDesk`, and a test hands over an object that
@@ -39,6 +43,9 @@ public protocol Desk: Sendable {
   @discardableResult func activate(_ bundleIdentifier: String) -> Bool
   /// Replace the pasteboard with one string.
   func copy(_ text: String)
+  /// Ask the person for a folder, starting where they last chose one.
+  /// Nothing where they cancelled, which stores nothing.
+  func chooseFolder(startingAt directory: String?) -> URL?
 }
 
 /// The system itself.
@@ -67,6 +74,29 @@ public struct SystemDesk: Desk {
     let board = NSPasteboard.general
     board.clearContents()
     board.setString(text, forType: .string)
+  }
+
+  /// The system's own folder panel, which is a window of this application's
+  /// and starts no program. Folders only: a file somebody picked would be a
+  /// file this app then had to read, and the hub is a directory.
+  ///
+  /// It is modal, and the Hub row is pressed on the main actor, which is
+  /// where AppKit runs a panel. Nothing is written down where the person
+  /// cancelled.
+  public func chooseFolder(startingAt directory: String?) -> URL? {
+    MainActor.assumeIsolated {
+      let panel = NSOpenPanel()
+      panel.canChooseDirectories = true
+      panel.canChooseFiles = false
+      panel.allowsMultipleSelection = false
+      panel.message = "Choose the folder your notes are in."
+      panel.prompt = "Choose"
+      if let directory, !directory.isEmpty {
+        panel.directoryURL = URL(fileURLWithPath: directory)
+      }
+      guard panel.runModal() == .OK else { return nil }
+      return panel.url
+    }
   }
 }
 

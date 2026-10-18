@@ -26,8 +26,9 @@ public enum AuthWord: String, Sendable, Equatable, CaseIterable {
   case missingScopes = "Missing scopes"
   case signedOut = "Not signed in"
 
-  /// Whether the token is good for the work. Everything else is a row a
-  /// person has to answer, which is why HEALTH is pinned first under it.
+  /// Whether the token is good for the work. Everything else is the header
+  /// asking the person for something, and a machine with no token at all is
+  /// why SETTINGS is pinned above everything under it.
   public var isWorking: Bool { self == .ok }
 }
 
@@ -92,7 +93,7 @@ public struct NetworkFact: Sendable, Equatable {
   }
 }
 
-/// The three version strings HEALTH can say.
+/// The three version strings the header can say.
 ///
 /// The skills are not among them. Nothing gdoc prints names a skills
 /// version, and the folders are symlinks into somebody's `~/.claude`, which
@@ -135,8 +136,9 @@ public struct Versions: Sendable, Equatable {
   }
 }
 
-/// A release tag as the three numbers it is, for the one comparison HEALTH
-/// makes. It is `go/internal/update`'s own rule: `vX.Y.Z`, nothing else.
+/// A release tag as the three numbers it is, for the one comparison the
+/// header makes. It is `go/internal/update`'s own rule: `vX.Y.Z`, nothing
+/// else.
 struct Release: Comparable {
   let major: Int
   let minor: Int
@@ -181,6 +183,11 @@ public struct Facts: Sendable, Equatable {
   public let gdocPathTried: String
   /// The hub folder the person chose, or nothing while none is chosen.
   public let hub: String?
+  /// This machine's home directory, which is the one thing the Hub row needs
+  /// to write a path with a tilde. It is handed over like every other fact
+  /// here, so a render of a scene says the same thing on every machine, and
+  /// it is empty where nobody asked.
+  public let home: String
   public let extensionState: ExtensionState
   /// What the last command said about reaching Google, or nothing.
   public let network: NetworkFact?
@@ -204,7 +211,7 @@ public struct Facts: Sendable, Equatable {
   /// `Stopper.unstoppable`, asked once per refold, and it greys one icon.
   public let unstoppable: Set<String>
   /// Whether the app's own `gdoc update` child is still up. It draws the
-  /// ring on the gdoc row, and the version beside it stays the installed one
+  /// ring in the header, and the version beside it stays the installed one
   /// until the child's end says what was put there.
   public let updating: Bool
 
@@ -217,6 +224,7 @@ public struct Facts: Sendable, Equatable {
     gdocPath: String? = nil,
     gdocPathTried: String = "~/.local/bin/gdoc",
     hub: String? = nil,
+    home: String = "",
     extensionState: ExtensionState = .unknown,
     network: NetworkFact? = nil,
     loginItem: LoginItemState = .off,
@@ -236,6 +244,7 @@ public struct Facts: Sendable, Equatable {
     self.gdocPath = gdocPath
     self.gdocPathTried = gdocPathTried
     self.hub = hub
+    self.home = home
     self.extensionState = extensionState
     self.network = network
     self.loginItem = loginItem
@@ -254,7 +263,7 @@ public struct Facts: Sendable, Equatable {
     Facts(versions: Versions(app: appVersion))
   }
 
-  /// Whether gdoc itself was there to be asked. It is the HEALTH row's own
+  /// Whether gdoc itself was there to be asked. It is the header's own
   /// question and the menu bar's: an app that cannot find the binary can do
   /// nothing at all, which is one of the three things that are stuck without
   /// a line in the record.

@@ -116,7 +116,7 @@ final class RelaunchPolicyTests: XCTestCase {
     XCTAssertEqual(
       RelaunchPolicy.after(opened: false),
       .keepTheReopenRow,
-      "nothing opened, so the app stays up and HEALTH still says quit and reopen")
+      "nothing opened, so the app stays up and SETTINGS still says quit and reopen")
 
     // The stamp is written when the attempt is made and not when it worked,
     // so an open that keeps failing is tried once in ten minutes and never

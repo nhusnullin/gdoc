@@ -73,6 +73,7 @@ public struct SignedInBanner: View {
       .frame(maxWidth: .infinity, alignment: .leading)
       ActionButton(.signout, tip: Self.signOutTip, action: onSignOut)
         .metricProbe("banner.sign-out")
+        .padding(.trailing, -Grid.actionOverhang)
     }
     .padding(.horizontal, Grid.rowInset)
     .padding(.vertical, 6)

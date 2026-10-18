@@ -1223,3 +1223,26 @@ picture, one Google Drawing, one floating picture, and a second tab titled
 here. If the second answer says the bytes are equal, `MatchByHash` is flipped to
 `true` in one commit with that section, and `TestLiveExportHashEquality` turns
 from a print into an assertion.
+
+## What `claude://code/continue` does from outside the app
+
+2026-10-18, M26. The strings of `/Applications/Claude.app/Contents/Resources/app.asar`
+(Claude 2.42304.0) carry three Code links: `claude://code/continue?session=last&source=desktop_action`,
+`claude://code/new?source=desktop_action` and
+`claude://code/needs-input?source=desktop_action`. Whether the first opens a
+named session when another process issues it was measured by Nail watching
+the window while this session ran `open` on each form, Claude Desktop
+already running and showing a Code session:
+
+| Link issued | What the window did |
+|---|---|
+| `claude://code/continue?session=<this session's id>&source=gdoc` | came to the front, stayed on the session it showed |
+| `claude://code/continue?session=<the publishing session's id>&source=desktop_action` | came to the front, stayed |
+| `claude://code/continue?session=last&source=desktop_action` | came to the front, stayed |
+
+**From outside the app the path does nothing but activate it.** The link is
+the desktop app's own, raised from its notifications and menus, and whatever
+makes it switch there is not the URL alone. So Open chat keeps the
+activation it has, the `session` field still goes into the record under
+`via: code`, and the day a form is found that switches, the opener has the
+id. Recheck on a Claude Desktop update by the same three lines.

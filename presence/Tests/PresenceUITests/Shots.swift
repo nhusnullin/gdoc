@@ -300,18 +300,18 @@ enum SheetPieces {
     return try XCTUnwrap(cards.first, "scene r1 drew no job card")
   }
 
-  /// HEALTH with every row that has a fact behind it, which no one screen
+  /// SETTINGS with every row that has a fact behind it, which no one screen
   /// has: r8 is the network stop and the update, e5 is the machine with no
-  /// extension and no token. One of each kind, in `HealthRowKind`'s order,
-  /// which is the order HEALTH is drawn in.
-  static func health() throws -> [HealthRowModel] {
-    var byKind: [HealthRowKind: HealthRowModel] = [:]
+  /// extension and no token. One of each kind, in `SettingsRowKind`'s order,
+  /// which is the order SETTINGS is drawn in.
+  static func settings() throws -> [SettingsRowModel] {
+    var byKind: [SettingsRowKind: SettingsRowModel] = [:]
     for id in ["r8", "e5"] {
-      for row in try scene(id).model().health where byKind[row.kind] == nil {
+      for row in try scene(id).model().settings where byKind[row.kind] == nil {
         byKind[row.kind] = row
       }
     }
-    return HealthRowKind.allCases.compactMap { byKind[$0] }
+    return SettingsRowKind.allCases.compactMap { byKind[$0] }
   }
 
   /// Scene e6's documents: the paired row the strip sits under, and the
@@ -326,6 +326,15 @@ enum SheetPieces {
   static func logRow() throws -> LogRowModel {
     let today = try XCTUnwrap(try scene("r3").model().today, "r3 drew no TODAY")
     return try XCTUnwrap(today.rows.first, "r3's TODAY is empty")
+  }
+
+  /// Scene r8's header: the mark, the version with a release to take, and
+  /// the account that works. It is the one scene whose header carries every
+  /// piece the line can hold at once.
+  static func header() throws -> HeaderModel {
+    let header = try scene("r8").model().header
+    XCTAssertNotNil(header.update, "r8 is the screen with a release to take")
+    return header
   }
 
   /// Scene e1's DOCUMENTS: its header count, and the chevron's own words
@@ -357,13 +366,15 @@ enum SheetPieces {
     return try XCTUnwrap(model.empty, "r1's DOCUMENTS says nothing about being empty")
   }
 
-  /// Scene e10's question: the words, what follows from them, and the loud
-  /// word. The controls sheet draws the one inline confirm the panel has
-  /// beside the Account row, so the sheet's question is that row's own.
-  static func signOut() throws -> QuestionModel {
-    let health = try scene("e10").model().health
-    let asked = health.compactMap(\.question)
-    return try XCTUnwrap(asked.first, "scene e10 asked nothing")
+  /// Scene e10's question, and the header it is asked in: the words, what
+  /// follows from them, the loud word and the account glyph the question
+  /// keeps. The controls sheet draws the one inline confirm the panel has,
+  /// which is the header's own since the second morning, and it draws it in
+  /// the shape the header draws it in: the question on one line, the
+  /// consequence as a quiet line under it.
+  static func signOut() throws -> (question: QuestionModel, header: HeaderModel) {
+    let header = try scene("e10").model().header
+    return (try XCTUnwrap(header.question, "scene e10 asked nothing"), header)
   }
 
   /// The words on two of a document row's icons, one live and one with
@@ -392,8 +403,9 @@ enum SheetPieces {
     let documents = try self.documents()
 
     let labels = try sectionLabels()
+    let header = try self.header()
     var words: [String] = [
-      Scenes.account, "⁘",
+      Scenes.account, "⁘", header.name,
       labels.now, labels.documents,
       hold.title, hold.sub, hold.quiet, hold.question, hold.consequence,
       stuck.card.title, stuck.card.reason,
@@ -403,14 +415,16 @@ enum SheetPieces {
       try quiet(),
       SignedInBanner.words, Scenes.signInURL,
     ]
-    let question = try signOut()
+    let question = try signOut().question
     words += [question.title, question.consequence, question.danger.rawValue]
     let tips = try self.tips()
     words += [tips.live, tips.dead.words]
     words += stuck.actions.map(\.tip)
     words += [job.sub].compactMap { $0 }
     words += job.steps.flatMap { [$0.title] + [$0.value].compactMap { $0 } }
-    words += try health().flatMap { row -> [String] in
+    words += [header.version].compactMap { $0 }
+    words += [header.update?.tip].compactMap { $0 }
+    words += try settings().flatMap { row -> [String] in
       [row.kind.label, row.value] + [row.quiet].compactMap { $0 } + row.actions.map(\.tip)
     }
     words += try documentRows().flatMap { row -> [String] in
@@ -436,7 +450,8 @@ func panelVocabulary() throws -> Set<String> {
   for scene in Scenes.all {
     let model = try scene.model()
     words.formUnion([model.mark])
-    words.formUnion([model.account, model.empty, model.notice, model.signInURL].compactMap { $0 })
+    words.formUnion([model.empty, model.notice].compactMap { $0 })
+    words.formUnion(headerWords(model.header))
     for item in model.now { words.formUnion(nowWords(item)) }
     for section in model.sections {
       words.insert(section.label)
@@ -460,17 +475,12 @@ func panelVocabulary() throws -> Set<String> {
       case .yesterday(let yesterday):
         words.insert(yesterday.summary)
         for row in yesterday.rows { words.formUnion(logWords(row)) }
-      case .health(let rows):
+      case .settings(let rows):
         for row in rows {
           words.formUnion([row.kind.label, row.value])
           words.formUnion([row.quiet].compactMap { $0 })
           words.formUnion(row.actions.map(\.tip))
-          if let question = row.question {
-            words.formUnion([question.title, question.consequence, question.danger.rawValue])
-          }
         }
-      case .signedIn(let banner):
-        words.formUnion([banner.account, SignedInBanner.words, SignedInBanner.signOutTip])
       }
     }
   }
@@ -481,6 +491,23 @@ func panelVocabulary() throws -> Set<String> {
   words.formUnion(StripLabel.allCases.map(\.rawValue))
   words.insert(EmptyState.firstRun)
   return words.filter { !$0.isEmpty }
+}
+
+/// The header's own strings: the name, the version, the address, the lines
+/// under them, and the question where it is asked.
+private func headerWords(_ header: HeaderModel) -> [String] {
+  var words = [header.name]
+  words += [header.version, header.account, header.signInURL].compactMap { $0 }
+  words += header.quiet
+  words += header.actions.flatMap(actionWords)
+  words += header.update.map(actionWords) ?? []
+  if let question = header.question {
+    words += [question.title, question.consequence, question.danger.rawValue]
+  }
+  if let banner = header.banner {
+    words += [banner.account, SignedInBanner.words, SignedInBanner.signOutTip]
+  }
+  return words
 }
 
 /// One action's own strings: the words under the pointer, and the reason an

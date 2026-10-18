@@ -178,6 +178,84 @@ final class RowTests: XCTestCase {
     XCTAssertNil(busyMeasured["row.trailing"], "a busy row draws no action column")
   }
 
+  /// A document row keeps the panel's one left edge until its list has a
+  /// pin, and then every row of that list keeps the pin's 8 pt.
+  ///
+  /// The slot belongs to the list and not to the shape. A fixed 26 pt column
+  /// drew it on every row of every list, so DOCUMENTS stood 10 pt right of
+  /// its own section label and of every other row in the panel, with
+  /// nothing in the room it took.
+  func testTheDocRowKeepsThePanelsLeftEdge() throws {
+    XCTAssertEqual(Grid.pinSize, 8)
+    XCTAssertNil(RowShape.doc.leadingColumn, "the document row is as wide as its own glyph")
+    for shape in RowShape.allCases where shape != .doc {
+      XCTAssertEqual(shape.leadingColumn, 16, "\(shape) keeps the glyph's own column")
+    }
+
+    let drawn = try SheetPieces.documentRows()[0]
+    func row(_ pin: PinColumn) -> some View {
+      RowView(
+        .doc, title: drawn.title, sub: drawn.sub,
+        leading: { DocumentGlyph(drawn.glyph, tone: drawn.tone, pin: pin) },
+        trailing: { ActionButton(.gdocs, tip: Tips.openDoc) })
+    }
+
+    let measured = try probes(row(.pinned), scheme: .dark)
+    XCTAssertEqual(measured["row.pin"]?.width, 8, "the pin's own slot")
+    XCTAssertEqual(measured["row.pin"]?.height, 8)
+    XCTAssertEqual(measured["row.status"]?.width, 24, "the slot and the glyph")
+
+    let slot = try probes(row(.slot), scheme: .dark)
+    XCTAssertEqual(
+      slot["row.pin"]?.width, 8, "a row under a pinned one keeps the slot, so the titles line up")
+    XCTAssertEqual(
+      slot["row.status"]?.width, measured["row.status"]?.width,
+      "and a pin changes no width at all")
+
+    let alone = try probes(row(.none), scheme: .dark)
+    XCTAssertNil(alone["row.pin"], "a list with no pin draws no slot at all")
+    XCTAssertEqual(
+      alone["row.status"]?.width, Grid.glyphSize,
+      "so the row's glyph column is every other row's")
+
+    // The pin draws ink, and the empty slot draws none.
+    XCTAssertGreaterThan(
+      try inkedPixels(
+        DocumentGlyph(.check, tone: .ok, pin: .pinned), scheme: .dark, side: 24),
+      try inkedPixels(DocumentGlyph(.check, tone: .ok, pin: .slot), scheme: .dark, side: 24),
+      "a pinned row draws something a plain one does not")
+  }
+
+  /// `.acts{margin-right:-4px}`: the icons and not their boxes meet the
+  /// column every value in the panel ends on.
+  ///
+  /// An action's artwork is 16 pt centred in a 24 pt box, so a strip whose
+  /// boxes ended on the row's content edge drew its icons 4 pt inside it:
+  /// every time in TODAY, every value in SETTINGS and the DOCUMENTS count
+  /// ended 4 pt right of every icon under them.
+  func testAnActionStripMeetsTheColumnEveryValueEndsOn() throws {
+    let drawn = try SheetPieces.documentRows()[0]
+    let row = RowView(
+      .doc, title: drawn.title, sub: drawn.sub,
+      leading: { DocumentGlyph(drawn.glyph, tone: drawn.tone) },
+      trailing: {
+        HStack(spacing: Grid.actionGap) {
+          ActionButton(.gdocs, tip: Tips.openDoc)
+          ActionButton(.md, tip: Tips.openNote)
+          ActionButton(.branch, tip: Tips.openChat)
+          ActionButton(.link, tip: Tips.copyLink)
+        }
+      })
+    let strip = try XCTUnwrap(
+      try probeList(row, scheme: .dark).first { $0.name == "row.trailing" })
+    XCTAssertEqual(
+      strip.origin.x + strip.size.width, Grid.panelWidth - Grid.rowInset + Grid.actionOverhang,
+      "the strip hangs 4 pt past the row's inset")
+    XCTAssertEqual(
+      strip.origin.x + strip.size.width - Grid.actionOverhang, Grid.panelWidth - Grid.rowInset,
+      "so the artwork inside it ends on the row's own edge, where a value ends")
+  }
+
   // A chevron sits in the middle of the row its words are in.
   //
   // `.row-chevron` is one 28 pt row with the words on the left and a 12 pt
@@ -199,33 +277,33 @@ final class RowTests: XCTestCase {
   //
   // `.row.compact` puts its value at the content edge, the same edge as a
   // log row's time; only a row with something on its right pulls the value
-  // in to make room for it. HEALTH's rows with no icon were handing the
-  // layout an empty action column, and 8 pt of nothing moved every version,
-  // mark and keystroke left of every time in TODAY.
+  // in to make room for it. SETTINGS's rows with no icon were handing the
+  // layout an empty action column, and 8 pt of nothing moved every mark and
+  // keystroke left of every time in TODAY.
   func testAValueEndsWhereEveryOtherValueEnds() throws {
-    let value = "v2.14.0"
+    let value = SettingsRows.quitShortcut
     for scheme in [ColorScheme.dark, .light] {
       let log = try inkEnds(
         RowView(.plain, glyph: .check, tone: .ok, title: "Reply", value: value), scheme: scheme)
-      let health = try inkEnds(
-        HealthRows(rows: [HealthRow(.gdoc, value: value, glyph: .check, tone: .ok)]),
+      let settings = try inkEnds(
+        SettingsRows(rows: [SettingsRow(.quit, value: value, glyph: .check, tone: .ok)]),
         scheme: scheme)
-      XCTAssertEqual(health, log, "the HEALTH value is not on the log's edge in \(scheme)")
+      XCTAssertEqual(settings, log, "the SETTINGS value is not on the log's edge in \(scheme)")
 
       // A row that does carry an icon keeps its value clear of it, which is
-      // the Account row and the one in flight.
+      // the Claude Desktop row.
       let withIcon = try probes(
-        HealthRows(
+        SettingsRows(
           rows: [
-            HealthRow(
-              .account, value: Scenes.account, glyph: .check, tone: .ok,
-              action: IconAction(.signout, tip: SignedInBanner.signOutTip))
+            SettingsRow(
+              .desktop, value: "not installed", glyph: .empty,
+              action: IconAction(.down, tip: Tips.installExtension))
           ]), scheme: scheme)
       XCTAssertNotNil(
         withIcon["row.trailing"], "a row with an icon draws the column in \(scheme)")
 
       let bare = try probes(
-        HealthRows(rows: [HealthRow(.gdoc, value: value, glyph: .check, tone: .ok)]),
+        SettingsRows(rows: [SettingsRow(.quit, value: value, glyph: .check, tone: .ok)]),
         scheme: scheme)
       XCTAssertNil(bare["row.trailing"], "a row with nothing on its right draws no column")
     }
@@ -277,16 +355,31 @@ final class RowTests: XCTestCase {
     XCTAssertEqual(laterHeight - firstHeight, Grid.unit + 4, "8 pt of air and 4 pt of padding")
   }
 
-  // `.panel-header{height:36px}` with the mark, the name and the account.
-  func testTheHeaderIs36WithTheMarkTheNameAndTheAccount() throws {
+  // `.panel-header{height:36px}`: the mark and the name, the version with
+  // its update, and the account with its glyph and its one action.
+  //
+  // Everything the header holds is on one 36 pt line, and the line is what
+  // the panel gives it: 320 pt less the panel's own 8 twice. Seven pieces
+  // at that width leave 4 pt over, so the test measures the address against
+  // the width it wants. A stack that spent 8 of those pt on a gap drew
+  // "nail@example…" on every screen.
+  func testTheHeaderIs36WithTheMarkTheNameTheVersionAndTheAccount() throws {
     XCTAssertEqual(Grid.headerHeight, 36)
 
-    let measured = try probes(
-      PanelHeader(mark: "⁘", account: "nail@example.com"), scheme: .dark)
+    let account = "nail@example.com"
+    let signedIn = HeaderModel(
+      mark: "⁘", version: "v2.16.0", account: account, glyph: .check, tone: .ok,
+      actions: [ActionModel(.signOut, icon: .signout, tip: Tips.signOut, target: "auth")])
+    let measured = try probes(PanelHeader(model: signedIn), scheme: .dark, width: line)
     XCTAssertEqual(measured["header"]?.height, 36 + 4, "the header and its 4 pt margin under it")
+    XCTAssertEqual(measured["header.line"]?.height, 36, "the line itself")
     XCTAssertNotNil(measured["header.mark"], "the mark in effect")
     XCTAssertNotNil(measured["header.name"], "the word gdoc")
-    XCTAssertNotNil(measured["header.account"], "the address, pushed right")
+    XCTAssertNotNil(measured["header.version"], "the version after it")
+    XCTAssertNotNil(measured["header.glyph"], "the check over a token that works")
+    XCTAssertNotNil(measured["header.account"], "the address")
+    XCTAssertNotNil(measured["header.signOut"], "and the one action")
+    XCTAssertNil(measured["header.update"], "nothing newer is published, so there is no icon")
 
     // The account is the quietest grey in the panel, and the name is the
     // brightest: whose account it is decides nothing, so it is never loud.
@@ -294,15 +387,71 @@ final class RowTests: XCTestCase {
     XCTAssertEqual(Typography.mark.size, 16)
     XCTAssertEqual(Typography.titleEmphasis.weight, .medium)
 
+    // The address is drawn at the width it asks for, which is the whole of
+    // it: the one thing on this line that is cut rather than wrapped.
+    let wanted = try probes(
+      Text(account).font(Typography.caption.font).fixedSize().metricProbe("alone"),
+      scheme: .dark, width: line)
+    XCTAssertEqual(
+      measured["header.account"]?.width, wanted["alone"]?.width,
+      "the address is squeezed on the line, so nobody can read the end of it")
+
+    // A newer release is the same icon the gdoc row carried, beside the
+    // version it would replace.
+    let behind = try probes(
+      PanelHeader(
+        model: HeaderModel(
+          mark: "⁘", version: "v2.16.0",
+          update: ActionModel(.update, icon: .down, tip: "Update to v2.17.0", target: "gdoc"),
+          account: account, glyph: .check, tone: .ok,
+          actions: [ActionModel(.signOut, icon: .signout, tip: Tips.signOut, target: "auth")])),
+      scheme: .dark, width: line)
+    XCTAssertNotNil(behind["header.update"], "there is a release to take")
+    XCTAssertEqual(behind["header"]?.height, 36 + 4, "and the line is the same height")
+    XCTAssertEqual(
+      behind["header.account"]?.width, wanted["alone"]?.width,
+      "the whole line fits with the update icon on it as well")
+
     // The mark is a setting and may be empty, and the empty mark draws
     // nothing rather than a gap.
-    let noMark = try probes(PanelHeader(mark: "", account: "nail@example.com"), scheme: .dark)
+    let noMark = try probes(
+      PanelHeader(model: HeaderModel(account: account)), scheme: .dark, width: line)
     XCTAssertNil(noMark["header.mark"])
     XCTAssertEqual(noMark["header"]?.height, 40, "an empty mark keeps the header's height")
 
-    // No token, no address: the header is the mark and the name.
-    let signedOut = try probes(PanelHeader(mark: "⁘"), scheme: .dark)
-    XCTAssertNil(signedOut["header.account"])
+    // No token, no address: the header is the mark, the name and Sign in.
+    let signedOut = try probes(
+      PanelHeader(
+        model: HeaderModel(
+          mark: "⁘", version: "v2.16.0", account: AuthWord.signedOut.rawValue,
+          glyph: .exclamation, tone: .bad,
+          actions: [ActionModel(.signIn, icon: .signin, tip: Tips.signIn, target: "auth")])),
+      scheme: .dark, width: line)
+    XCTAssertNil(signedOut["header.signOut"], "there is nothing to sign out of")
+    XCTAssertNotNil(signedOut["header.signIn"], "and one thing to do instead")
+  }
+
+  /// What the panel gives the header: its own width less its 8 pt padding
+  /// on either side.
+  private var line: CGFloat { Grid.panelWidth - 2 * Grid.unit }
+
+  // "Sign out?" is asked in place of the header's line: the question where
+  // the name was, the pair where the icon was, and the consequence under it.
+  func testTheQuestionAsksInPlaceOfTheHeaderLine() throws {
+    let asking = HeaderModel(
+      mark: "⁘",
+      question: QuestionModel(
+        title: "Sign out?", consequence: "2 live watches will stop.", danger: .signOut),
+      quiet: ["Account changed: first@example.com → second@example.com"])
+    let measured = try probes(PanelHeader(model: asking), scheme: .dark)
+
+    XCTAssertNil(measured["header.account"], "the address is not beside the question")
+    XCTAssertNil(measured["header.version"], "and neither is the version")
+    XCTAssertNotNil(measured["confirm.danger"], "Sign out is where the icon was")
+    XCTAssertNotNil(measured["confirm.keep"], "and Keep beside it")
+    XCTAssertGreaterThan(
+      try XCTUnwrap(measured["header"]?.height), 36 + 4,
+      "the consequence and the changed address are lines under it")
   }
 
   // `.row-title.gone{text-decoration:line-through;color:var(--t2)}`: a
@@ -340,25 +489,26 @@ final class RowTests: XCTestCase {
     let log = try SheetPieces.logRow()
     let documents = try SheetPieces.documents()
     let rows = try SheetPieces.documentRows()
-    let mark = try XCTUnwrap(
-      SheetPieces.health().first { $0.kind == .mark }, "no scene drew the mark row")
+    let compact = try XCTUnwrap(
+      SheetPieces.settings().first { $0.kind == .quit }, "no scene drew the Quit row")
     let quiet = try SheetPieces.quiet()
+    let header = try SheetPieces.header()
 
     for scheme in [ColorScheme.dark, .light] {
       let palette = Palette.of(scheme)
       // The five row shapes, and the two labels as components of their own.
       //
       // A label over rows is a section, and a section's header makes a claim
-      // about what is under it: NOW over a log row and a HEALTH row, or
+      // about what is under it: NOW over a log row and a SETTINGS row, or
       // "14 days · 12" over two rows and a Show more, is this page saying
       // something no panel says. The pieces here are pieces, in the order
       // `RowShape` names them, and the labels stand at the foot with nothing
       // under them: testASheetPutsNoLabelOverRowsFromAnotherScene.
       let sheet = VStack(alignment: .leading, spacing: 0) {
-        PanelHeader(mark: mark.value, account: Scenes.account)
+        PanelHeader(model: header)
         RowView(.two, glyph: .dot, tone: .live, title: live.title, sub: live.sub)
         RowView(.plain, glyph: .check, tone: .ok, title: log.title, value: log.value)
-        RowView(.compact, glyph: .blank, title: mark.kind.label, value: mark.value)
+        RowView(.compact, glyph: .blank, title: compact.kind.label, value: compact.value)
         ForEach(rows) { row in
           RowView(
             .doc, glyph: row.glyph, tone: row.tone, title: row.title, sub: row.sub,

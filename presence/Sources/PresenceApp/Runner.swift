@@ -53,7 +53,7 @@ public struct Location: Sendable, Equatable {
   /// The places tried, in order, in full.
   public let candidates: [String]
   /// The same places for a person to read, the home directory as a tilde. It
-  /// is the HEALTH row's "looked for it at ..." and nothing else.
+  /// is the panel's own "looked for it at ..." and nothing else.
   public let tried: String
 
   public init(path: String?, candidates: [String], tried: String) {
@@ -63,7 +63,7 @@ public struct Location: Sendable, Equatable {
   }
 
   /// Whether gdoc was there to be asked. An app that cannot find the binary
-  /// can do nothing at all, which is why HEALTH says so and the menu bar
+  /// can do nothing at all, which is why the panel says so and the menu bar
   /// counts it as stuck.
   public var found: Bool { path != nil }
 
@@ -103,7 +103,7 @@ public enum EnvelopeFault: String, Sendable, Equatable {
 
 /// Why no answer came back.
 public enum RunFailure: Error, Sendable, Equatable {
-  /// Neither place held a gdoc. The string is the places, as HEALTH says them.
+  /// Neither place held a gdoc. The string is the places, as the panel says them.
   case notFound(tried: String)
   /// A child of that kind is already up.
   case busy(Call)

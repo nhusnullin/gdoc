@@ -89,6 +89,23 @@
 // the process: TestChatWinsOverCode, with cmd/gdoc's
 // TestViaIsCodeUnderClaudeCode and TestViaChatWinsOverCodeInTheMcpSession.
 //
+// session is Claude Code's own id for the session a run came from, under
+// via: code and nowhere else. It is on the start line, because the start and
+// its end are the same run, and it is absent under terminal and chat, a chat
+// call of a session Claude Code started included. cmd/gdoc reads it out of
+// CLAUDE_CODE_SESSION_ID, beside the variable the via comes from, and the
+// value is cut at 64 runes: it comes out of an environment this package did
+// not choose, and the length of a line is the whole of what makes an append
+// atomic. TestTheSessionIsOnTheStartOfACodeRunAndNowhereElse,
+// TestTheSessionIsCappedAtSixtyFourRunes and cmd/gdoc's
+// TestTheSessionOfACodeRunIsOnItsStart.
+//
+// It is in the record so the panel can offer to go back to the session a
+// document was worked on from, and it is the one thing here about the
+// person's own session rather than about a document: an id of a session, no
+// document word and no account. Decided 2026-10-18, DECISIONS.md, "The second
+// morning".
+//
 // wait and interrupted are the two halves of one wait: the start says the run
 // is going to watch a document, and the end says a person stopped it. The
 // second is lifted out of the waited object `gdoc comments --wait` prints,

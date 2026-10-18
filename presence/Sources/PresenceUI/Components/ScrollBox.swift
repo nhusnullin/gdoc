@@ -17,6 +17,23 @@
 // edge: where a box inside this one is scrolling, the inner list keeps the
 // thumb and the outer box keeps only its fade.
 //
+// Since 2026-10-18 the thumb is also a thing that comes and goes: on a live
+// box it is drawn while the content moves and for one second after it
+// stopped, and never otherwise, which is what every other list on this
+// system does. The fade stays, because the fade is what says there is more
+// below when nothing is moving. A still draws the thumb whatever happened,
+// because a PNG cannot be scrolled and the screens file draws one.
+//
+// A box is capped in one of two ways. `.points` is its own number, which
+// the opened sections and NOW use. `.given` is as tall as the stack above
+// it has left, which is the panel's middle: `CappedHeight` is the one
+// layout, so a box in a still and the same box on the screen are laid out
+// by the same arithmetic. That matters because a plain frame cannot do
+// either job: a frame around a fixed stack is rigid at its cap, and a frame
+// around a scroll view is flexible from nothing to everything, so a stack
+// of three would split the panel between them instead of giving the middle
+// what is left.
+//
 // One measurement decides the inside of this file, and it is in
 // docs/v2/MEASURED.md: `ImageRenderer` lays a `ScrollView` out and draws it
 // empty, every time, even with one row inside. So the box carries a drawn
@@ -37,7 +54,7 @@ public enum RenderMode: Sendable {
   case clipped
   /// Into an image for somebody reviewing it, where nothing may be hidden:
   /// no cap, no clip, every row drawn. A reviewer cannot scroll a PNG, and
-  /// a screen whose HEALTH is below the cut is a screen nobody checked.
+  /// a screen whose SETTINGS is below the cut is a screen nobody checked.
   case whole
 }
 
@@ -101,20 +118,82 @@ extension EnvironmentValues {
   }
 }
 
+/// A box as tall as its content allows and never taller than its cap, or as
+/// tall as it is given where it has no cap of its own.
+///
+/// One layout for the box in a still and the box on the screen, because the
+/// two have to be the same panel. A plain frame is not that: around a fixed
+/// stack it is rigid at its cap, and around a scroll view it stretches from
+/// nothing to everything, so a stack of three boxes split the panel evenly
+/// between the two that could stretch. This reports its content's own height
+/// where it is asked for nothing, and takes whatever height it is offered,
+/// which is what makes the middle of the panel the one part that gives way.
+struct CappedHeight: Layout {
+  /// The most this box takes, or nothing where it takes what it is given.
+  let cap: CGFloat?
+
+  func sizeThatFits(
+    proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
+  ) -> CGSize {
+    let width = proposal.width ?? Grid.panelWidth
+    let asked = ProposedViewSize(width: width, height: nil)
+    let content = subviews.first?.sizeThatFits(asked).height ?? 0
+    guard let cap else {
+      return CGSize(width: width, height: proposal.height ?? content)
+    }
+    return CGSize(width: width, height: min(content, cap))
+  }
+
+  func placeSubviews(
+    in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
+  ) {
+    subviews.first?.place(
+      at: CGPoint(x: bounds.minX, y: bounds.minY), anchor: .topLeading,
+      proposal: ProposedViewSize(width: bounds.width, height: bounds.height))
+  }
+}
+
+/// How tall a box is.
+public enum ScrollCap: Equatable, Sendable {
+  /// Its own number of points, which the content scrolls inside.
+  case points(CGFloat)
+  /// As tall as the stack above it has left for it, which the panel's
+  /// middle is: the header, NOW and SETTINGS take theirs first.
+  case given
+
+  /// The cap in points, or nothing where the box takes what it is given.
+  public var points: CGFloat? {
+    if case .points(let height) = self { return height }
+    return nil
+  }
+}
+
 /// A list capped at the panel's scroll height, with the thumb and the fade.
 public struct ScrollBox<Content: View>: View {
-  /// `max-height:236px`, which the caller may lower and never raises.
-  public let height: CGFloat
+  /// `max-height:236px`, which the caller may lower and never raises, or
+  /// the height the stack above hands over.
+  public let cap: ScrollCap
   public let content: Content
 
   @Environment(\.colorScheme) private var scheme
   @Environment(\.renderMode) private var renderMode
   @Environment(\.scrollDepth) private var depth
+  /// When this box's content last moved. Nothing but a scroll sets it, so a
+  /// box nobody has touched carries no thumb.
+  @State private var movedAt: Date?
 
   public init(height: CGFloat = Grid.scrollBoxHeight, @ViewBuilder content: () -> Content) {
-    self.height = height
+    self.cap = .points(height)
     self.content = content()
   }
+
+  public init(_ cap: ScrollCap, @ViewBuilder content: () -> Content) {
+    self.cap = cap
+    self.content = content()
+  }
+
+  /// The cap in points, where the box has one of its own.
+  public var height: CGFloat? { cap.points }
 
   /// `.scrollbox::after{right:3px;top:6px;width:4px;height:88px;
   /// border-radius:2px}`. The height is the one the file drew, over the one
@@ -125,18 +204,31 @@ public struct ScrollBox<Content: View>: View {
   public static var thumbTop: CGFloat { 6 }
   public static var thumbRadius: CGFloat { 2 }
 
+  /// How long the thumb stays after the content stopped moving.
+  public static var thumbLife: TimeInterval { Timing.thumbLife }
+
+  /// Whether the thumb is on the screen: while the content is moving, and
+  /// for one second after it stopped. A list nobody has moved has none.
+  public static func thumbIsShowing(movedAt: Date?, now: Date) -> Bool {
+    guard let movedAt else { return false }
+    return now.timeIntervalSince(movedAt) < thumbLife
+  }
+
   public var body: some View {
     let palette = Palette.of(scheme)
     let capped = renderMode != .whole
     return
-      box
-      .frame(maxHeight: capped ? height : .infinity, alignment: .top)
-      .clipped()
+      laidOut(capped: capped)
       .overlayPreferenceValue(ScrollContent.self) { report in
-        if capped, report.height > height {
-          decoration(
-            palette, measured: report.height,
-            thumb: (report.overflowing ?? depth) <= depth)
+        // The box's own height, read off the drawing: a `.given` box learns
+        // it no other way, and a `.points` box has already been clamped to
+        // the shorter of its cap and its content.
+        GeometryReader { geometry in
+          if capped, report.height > geometry.size.height {
+            decoration(
+              palette, box: geometry.size.height, measured: report.height,
+              thumb: (report.overflowing ?? depth) <= depth && thumbShows)
+          }
         }
       }
       // The height stops here, so a box inside this one reports its list to
@@ -150,14 +242,68 @@ public struct ScrollBox<Content: View>: View {
       .metricProbe("scrollbox")
   }
 
+  /// The box at the height its cap allows, with the rest cut off.
+  ///
+  /// A whole render is the reviewer's copy, where nothing may be hidden, so
+  /// there is no cap and no clip over it at all.
+  @ViewBuilder private func laidOut(capped: Bool) -> some View {
+    if capped {
+      CappedHeight(cap: cap.points) { box }
+        .clipped()
+    } else {
+      box
+    }
+  }
+
   /// The rows, shown in a scroller or clipped in a stack.
   @ViewBuilder private var box: some View {
     if renderMode == .live {
-      ScrollView(.vertical) { measured }
+      ScrollView(.vertical) { tracked }
         .scrollIndicators(.hidden)
+        .coordinateSpace(.named(Self.space))
+        .task(id: movedAt) { await putTheThumbAway() }
     } else {
       measured.fixedSize(horizontal: false, vertical: true)
     }
+  }
+
+  /// The name of this box's own space, which the content's place inside it
+  /// is read in. A box inside a box takes the nearest one, which is its own.
+  private static var space: String { "scrollbox" }
+
+  /// Whether the thumb is drawn at all: a still draws it, and a live box
+  /// draws it while the content is moving and for a second after.
+  private var thumbShows: Bool {
+    renderMode != .live || Self.thumbIsShowing(movedAt: movedAt, now: Date())
+  }
+
+  /// The content, with the one thing that says it moved: where its top edge
+  /// sits inside this box. Nothing but a scroll changes that.
+  private var tracked: some View {
+    measured.background(alignment: .top) {
+      GeometryReader { geometry in
+        let top = geometry.frame(in: .named(Self.space)).minY
+        Color.clear.onChange(of: top) { _, _ in movedAt = Date() }
+      }
+    }
+  }
+
+  /// One second after the last move, the thumb goes. Each move starts this
+  /// again, because `.task(id:)` is cancelled and run afresh when the
+  /// moment changes.
+  ///
+  /// A cancelled sleep returns and clears nothing. The cancel is the next
+  /// move arriving, and a `try?` that dropped it put the thumb away in the
+  /// same frame the content moved in: while a hand scrolled, the moment and
+  /// nil took turns and the thumb flickered.
+  @MainActor private func putTheThumbAway() async {
+    guard movedAt != nil else { return }
+    do {
+      try await Task.sleep(for: .seconds(Self.thumbLife))
+    } catch {
+      return
+    }
+    movedAt = nil
   }
 
   private var measured: some View {
@@ -167,12 +313,20 @@ public struct ScrollBox<Content: View>: View {
       .background(
         GeometryReader { geometry in
           Color.clear.preference(
-            key: ScrollContent.self,
-            value: ScrollReport(
-              height: geometry.size.height,
-              overflowing: geometry.size.height > height ? depth : nil))
+            key: ScrollContent.self, value: report(geometry.size.height))
         }
       )
+  }
+
+  /// What the content came to, and whether it is past a cap of its own.
+  ///
+  /// A box with no cap of its own reports no overflow. It is the panel's
+  /// middle, which no other box encloses, and whether it carries a thumb is
+  /// decided against the height the stack above handed it rather than
+  /// against a number of its own.
+  private func report(_ content: CGFloat) -> ScrollReport {
+    guard let height = cap.points else { return ScrollReport(height: content) }
+    return ScrollReport(height: content, overflowing: content > height ? depth : nil)
   }
 
   /// How long the thumb is for a list of the height named.
@@ -197,7 +351,9 @@ public struct ScrollBox<Content: View>: View {
   /// fade, which is what says there is more below, and leaves the thumb to
   /// the list the pointer is over. Two thumbs 3 pt apart on one edge are
   /// two thumbs nobody can tell apart.
-  private func decoration(_ palette: Palette, measured: CGFloat, thumb: Bool) -> some View {
+  private func decoration(
+    _ palette: Palette, box: CGFloat, measured: CGFloat, thumb: Bool
+  ) -> some View {
     ZStack(alignment: .topTrailing) {
       LinearGradient(
         colors: [palette.surface.color.opacity(0), palette.surface.color],
@@ -211,7 +367,7 @@ public struct ScrollBox<Content: View>: View {
           .fill(palette.scrollThumb.color)
           .frame(
             width: Self.thumbWidth,
-            height: Self.thumbLength(box: height, measured: measured)
+            height: Self.thumbLength(box: box, measured: measured)
           )
           .metricProbe("scrollbox.thumb")
           .padding(.top, Self.thumbTop)

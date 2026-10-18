@@ -8,7 +8,7 @@
 //
 // What each section then makes of them is its own file: NOW is Now.swift,
 // the live watches are LiveSession.swift, TODAY and Yesterday are Days.swift
-// and DOCUMENTS is Documents.swift. HEALTH takes one fact from the record and
+// and DOCUMENTS is Documents.swift. SETTINGS takes one fact from the record and
 // the rest from two commands, and that one is Reachability.swift. Nothing
 // judges here.
 
@@ -77,6 +77,43 @@ extension Fold {
       when[doc] = event.at
     }
     return titles
+  }
+}
+
+extension Fold {
+  /// Every document's latest Claude Code session, by document id.
+  ///
+  /// The record carries a session on the start of a `via: code` run and
+  /// nowhere else, so this is the session the document was last worked on
+  /// from. The latest wins, as a title does: a document worked on from two
+  /// sessions belongs to the one a hand went to last.
+  ///
+  /// The session is read per call first, as `latestCallTitles` reads a
+  /// title, because a publish's start names no document: the id it brought
+  /// into the world is `made`, on its end. Taking the session off the start
+  /// line alone left every document gdoc had just published with no session,
+  /// which are the documents a hand is most likely to go back for:
+  /// testAPublishedDocumentRemembersTheSessionItWasPublishedFrom.
+  ///
+  /// A line is forgeable, so nothing here judges the value: what a session
+  /// id may look like before it goes into a URL is LinkLine's, and this is
+  /// the fold that remembers which document said which.
+  public static func latestSessions(_ events: [Event]) -> [String: String] {
+    var byCall: [String: String] = [:]
+    for event in events {
+      guard let session = event.session, !session.isEmpty else { continue }
+      byCall[event.pairing] = session
+    }
+
+    var sessions: [String: String] = [:]
+    var when: [String: Date] = [:]
+    for event in events {
+      guard let doc = subject(event), let session = byCall[event.pairing] else { continue }
+      if let had = when[doc], had > event.at { continue }
+      sessions[doc] = session
+      when[doc] = event.at
+    }
+    return sessions
   }
 }
 

@@ -62,9 +62,12 @@ final class SourceRulesTests: XCTestCase {
   private static let asking = "0"
 
   /// The schemes the app may name. `https` is a document and a sign-in;
-  /// `obsidian` is a note in the vault the person chose. A third is a
-  /// decision in `docs/v2/DECISIONS.md`.
-  private static let schemes = ["https", "obsidian"]
+  /// `obsidian` is a note in the vault the person chose; `claude` is the one
+  /// path of Claude Desktop's own scheme that names a session, built in
+  /// LinkLine and opened by nothing, because the measurement of 2026-10-18
+  /// found that it switches no window from outside the app. A fourth is a
+  /// decision in `docs/v2/DECISIONS.md`, as this third one is.
+  private static let schemes = ["https", "obsidian", "claude"]
 
   /// The hosts it may name, both Google's.
   private static let hosts = ["docs.google.com", "accounts.google.com"]
@@ -174,10 +177,17 @@ final class SourceRulesTests: XCTestCase {
   /// One file writes anything down, so "nothing else persists" is a rule
   /// somebody can read rather than a review.
   ///
-  /// The app's own six keys are the whole of what outlives the process. A
-  /// seventh key, or a second file writing one, is a decision in
+  /// The app's own eight keys are the whole of what outlives the process. A
+  /// ninth key, or a second file writing one, is a decision in
   /// `docs/v2/DECISIONS.md`: everything else this app knows comes out of the
   /// record, which is gdoc's file and not the app's.
+  ///
+  /// Eight since the second morning, and the two that were added are the
+  /// reason this count is written down: the pins and the hides name
+  /// somebody's documents, which every other key refuses to, and a pin
+  /// keeps the last title as well, because a pinned document whose lines
+  /// are past the horizon has its name nowhere else. That is the decision of
+  /// 2026-10-18, and a ninth key is the next one.
   func testOnlyThePreferencesPersist() throws {
     let store = "User" + "Defaults"
 
@@ -201,20 +211,22 @@ final class SourceRulesTests: XCTestCase {
   /// The system is asked for something in two files, so what this app can
   /// put in front of a person is a list one person can read.
   ///
-  /// The opener is the four verbs a row's icons have; the relauncher opens
-  /// this app's own bundle and nothing else. Both names are here rather than
-  /// in a review, because the next person to add a convenience will not have
-  /// read the specification.
+  /// The opener is the five verbs the panel has: the four a row's icons do,
+  /// and the folder panel the Hub row opens. The relauncher opens this app's
+  /// own bundle and nothing else. Both names are here rather than in a
+  /// review, because the next person to add a convenience will not have read
+  /// the specification.
   func testTheSystemIsAskedOnlyThroughTheOpenerAndTheRelauncher() throws {
     let workspace = "NSWork" + "space"
     let board = "NSPaste" + "board"
     let running = "NSRunning" + "Application"
+    let chooser = "NSOpen" + "Panel"
 
     var asking: Set<String> = []
     try eachSwiftFile { path, text in
       guard path.hasPrefix("Sources/") else { return }
       let named = text.split(separator: "\n").filter { line in
-        [workspace, board, running].contains { word($0, isIn: String(line)) }
+        [workspace, board, running, chooser].contains { word($0, isIn: String(line)) }
       }
       guard [Self.opener, Self.relauncher].contains(path) else {
         for line in named {
@@ -227,6 +239,14 @@ final class SourceRulesTests: XCTestCase {
     XCTAssertEqual(
       asking, [Self.opener, Self.relauncher],
       "both files are there and both ask the system, so this test guards something")
+
+    // The folder panel is the opener's own, and it chooses a folder: a file
+    // somebody picked is a file this app would then have to read.
+    let text = try String(
+      contentsOf: packageRoot().appendingPathComponent(Self.opener), encoding: .utf8)
+    XCTAssertTrue(text.contains("canChooseFiles = false"), "the panel chooses no file")
+    XCTAssertTrue(
+      text.contains("canChooseDirectories = true"), "and a folder is what the hub is")
   }
 
   /// One file opens an application at a path, and the application is this

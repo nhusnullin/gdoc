@@ -19,11 +19,15 @@ public enum Tips {
   public static let noDoc = "No Google Doc yet"
   public static let openNote = "Open the note in Obsidian"
   public static let noNote = "No note is paired with this document"
+  /// No hub is chosen, so nothing in it is paired with anything. The words
+  /// name the row that fixes it: a person told there is no note goes looking
+  /// for the note, which is where Nail went on the second morning.
+  public static let noHub = "Choose the hub in SETTINGS"
   /// The index named a note that is not there any more. It is a fact about
   /// the hub and never a complaint about the person who moved it.
   public static let noteMoved = "Note moved or deleted"
   public static let openChat = "Continue with Claude"
-  public static let noExtension = "Install the Desktop extension in Health"
+  public static let noExtension = "Install the Desktop extension in Settings"
   public static let copyLink = "Copy link"
   /// The link icon's own off word, which the screens file writes beside
   /// "No Google Doc yet": there is no link to copy for the same reason
@@ -39,13 +43,24 @@ public enum Tips {
   public static let installExtension = "Install extension"
 }
 
+/// The words of a document row's own menu, which is where a pin and a hide
+/// are, so the four icons on the row stay four.
+public enum Menus {
+  public static let pin = "Pin"
+  public static let unpin = "Unpin"
+  /// The one way out of the list. The way back is gdoc doing something on
+  /// the document again, which the guide says and no menu word can.
+  public static let hide = "Hide from the list"
+}
+
 extension NoteFault {
-  /// The words the greyed icon carries. The panel has no sentence of its own
-  /// for a hub nobody chose: without a hub there is no pairing, and the
-  /// person reads the same thing either way.
+  /// The words the greyed icon carries. A hub nobody chose has its own
+  /// sentence since the second morning: without a hub nothing is paired with
+  /// anything, and the row in SETTINGS is the one thing to do about it.
   public var tip: String {
     switch self {
-    case .noHub, .notPaired: Tips.noNote
+    case .noHub: Tips.noHub
+    case .notPaired: Tips.noNote
     case .movedOrDeleted, .outsideTheHub, .notMarkdown: Tips.noteMoved
     }
   }
@@ -63,10 +78,26 @@ public enum Sentences {
   /// this is a fact and not a fault.
   public static let accountNotRead = "signed in, account not read"
   public static let loginItemApproval = "macOS is waiting for you to allow it in Login Items"
+  /// The Hub row with no folder chosen. It is the word on the row itself,
+  /// because the row is what opens the folder panel.
+  public static let chooseHub = "Choose…"
   /// What joins the parts of one line: the middle dot with a space either
   /// side. The stuck card breaks its title on it, so the two halves of
   /// "Export stopped · Chapter 4" are the card's two lines.
   public static let separator = " · "
+
+  /// A folder as the Hub row writes it: the path with the home directory as
+  /// a tilde, or the word that offers to choose one where there is none.
+  ///
+  /// The home is handed in rather than read here, which is the rule for
+  /// every file in this target, and it is why a render of a scene says the
+  /// same thing on every machine. A folder outside that home is written in
+  /// full: a tilde there would name a folder that is not the one chosen.
+  public static func folder(_ path: String?, home: String) -> String {
+    guard let path, !path.isEmpty else { return chooseHub }
+    guard !home.isEmpty, path == home || path.hasPrefix(home + "/") else { return path }
+    return "~" + path.dropFirst(home.count)
+  }
 
   /// A count and the thing counted, with the noun agreeing with it. One
   /// document is a document, and the panel is read by somebody whose first
@@ -293,7 +324,10 @@ struct Phrases {
     return sentence([state(row), note])
   }
 
-  private func state(_ row: DocumentRow) -> String {
+  /// What the row says about the last thing that happened, or nothing at
+  /// all for a row that is only in the list because it is pinned: the pin is
+  /// not an action, and a sentence about one would be invented.
+  private func state(_ row: DocumentRow) -> String? {
     switch row.state {
     case .hold: return "hold"
     case .running: return (Words.running(row.command) ?? "running").lowercased()
@@ -303,6 +337,7 @@ struct Phrases {
       return "\(Words.verb(row.command)?.past ?? row.command) \(clockInSentence(row.at))"
     case .failed: return "stopped \(clockInSentence(row.at))"
     case .unknown: return "outcome unknown · \(clockInSentence(row.at))"
+    case .pinnedOnly: return nil
     }
   }
 

@@ -50,6 +50,19 @@ public enum RowShape: String, Sendable, CaseIterable {
     }
   }
 
+  /// `grid-template-columns`' first column: 16 pt for the glyph in every
+  /// shape but the document row, which has no number of its own.
+  ///
+  /// A document row is handed its own leading view, and that view is the
+  /// glyph alone where nothing in the list is pinned and the glyph behind an
+  /// 8 pt slot where something is, so the column is as wide as what it is
+  /// handed. A fixed 26 pt here drew that slot on every row of every list,
+  /// pinned or not, which put DOCUMENTS 10 pt right of its own label and of
+  /// every other row in the panel: testTheDocRowKeepsThePanelsLeftEdge.
+  public var leadingColumn: CGFloat? {
+    self == .doc ? nil : Grid.glyphSize
+  }
+
   /// `grid-template-columns`' third column, where the document row is the
   /// one shape that fixes it: four icons in 108 pt, so every document row
   /// in a list breaks its title at the same place.
@@ -144,11 +157,15 @@ public struct RowView<Leading: View, Trailing: View>: View {
   public var body: some View {
     let palette = Palette.of(scheme)
     return HStack(alignment: shape.crossAlignment, spacing: Grid.columnGap) {
-      // The glyph column, 16 pt wide and as tall as the title's own line, so
-      // a glyph beside a two-line row sits against the title and not
-      // between the two lines.
+      // The glyph column, as tall as the title's own line, so a glyph beside
+      // a two-line row sits against the title and not between the two
+      // lines. It is 16 pt wide everywhere but a document row, which is as
+      // wide as the glyph it was handed: 16 pt, or 24 where that list has a
+      // pin in it.
       leading
-        .frame(width: Grid.glyphSize, height: Typography.rowTitle.lineHeight)
+        .frame(
+          width: shape.leadingColumn, height: Typography.rowTitle.lineHeight,
+          alignment: .trailing)
 
       VStack(alignment: .leading, spacing: 0) {
         HStack(alignment: .firstTextBaseline, spacing: Grid.columnGap) {
@@ -186,6 +203,9 @@ public struct RowView<Leading: View, Trailing: View>: View {
           .frame(width: shape.trailingColumn, alignment: .trailing)
           .metricProbe("row.trailing")
           .frame(maxHeight: .infinity, alignment: .center)
+          // `.acts{margin-right:-4px}`: the icons and not their boxes meet
+          // the column every time and every value in the panel ends on.
+          .padding(.trailing, -Grid.actionOverhang)
       }
     }
     .padding(.horizontal, Grid.rowInset)

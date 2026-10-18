@@ -1,13 +1,17 @@
 // The action icons, against the SVG they were ported from.
 //
-// The twelve icons are the `IC` object of
+// Twelve of the thirteen are the `IC` object of
 // docs/design/2026-10-17-presence-screens-v3.html, drawn as Path rather than
 // as SF Symbols, because four of them sit side by side in one row and a
 // system symbol would be whatever the platform ships this year. The numbers
 // below are the `.act` and `.act svg` rules, read by hand and written as
 // literals.
 //
-// The sheet of all twelve goes out as a PNG under PRESENCE_SHOTS, so the
+// The thirteenth is the pin, which that file has no shape for: the pins are
+// the second morning's decision (docs/v2/DECISIONS.md, 2026-10-18) and the
+// shape is written here in the same grammar.
+//
+// The sheet of all thirteen goes out as a PNG under PRESENCE_SHOTS, so the
 // shapes are looked at once rather than trusted from a pixel count.
 
 import AppKit
@@ -25,9 +29,9 @@ final class IconTests: XCTestCase {
       Icon.allCases,
       [
         .gdocs, .md, .branch, .link, .done, .stop, .down, .signin, .signout, .x, .xmark,
-        .chevron,
+        .chevron, .pin,
       ],
-      "the twelve the panel draws, and no spare from the IC object")
+      "the thirteen the panel draws, and no spare from the IC object")
 
     // `.act svg{width:16px;height:16px;stroke-width:1.25;stroke-linecap:round;
     // stroke-linejoin:round}`, and `.row-chevron svg`, which is the one at 12.
@@ -69,6 +73,29 @@ final class IconTests: XCTestCase {
   /// A path this does not understand draws nothing, and the one input that
   /// could draw nothing for ever is a number after a close: the close
   /// consumes no number, so repeating it would never move the scanner on.
+  /// The pin's head is not a circle, and the pin is no action.
+  ///
+  /// It sits in a document row's leading column, which is a column of
+  /// circles: the hollow ring is a status glyph of its own, so a ring on a
+  /// stem beside one read as a magnifying glass standing next to a state.
+  /// And Pin is a word in the row's menu, so the pin in an action strip said
+  /// the panel had a pin to press, and a dimmed one that it had a dead one.
+  func testThePinIsNoActionAndNoCircle() throws {
+    for part in Icon.pin.parts {
+      guard case .path = part else {
+        return XCTFail("the pin's head is a circle, and its column is full of circles")
+      }
+    }
+    let ink = IconShape(.pin).path(in: CGRect(x: 0, y: 0, width: 16, height: 16)).boundingRect
+    XCTAssertGreaterThan(ink.height, ink.width, "a tack is taller than its head is wide")
+
+    XCTAssertFalse(Icon.actions.contains(.pin), "the pin is not something to press")
+    XCTAssertEqual(
+      Icon.actions.count, Icon.allCases.count - 1, "and it is the only one that is not")
+    XCTAssertEqual(
+      Set(Icon.allCases).subtracting(Icon.actions), [.pin])
+  }
+
   func testANumberAfterACloseDrawsNothing() throws {
     XCTAssertNil(SVGPath.parse("M0 0L4 4Z 2 2"), "a number after Z is a path, not a hang")
     XCTAssertNil(SVGPath.parse("M0 0L4 4z 2 2"))
@@ -155,7 +182,7 @@ final class IconTests: XCTestCase {
 
   // MARK: the renders
 
-  /// The sheet: the twelve in a row, live, off and done, in both
+  /// The sheet: the thirteen in a row, live, off and done, in both
   /// appearances, so the shapes are looked at once.
   private func writeSheet() throws {
     let shots = try shotsDirectory()
@@ -163,17 +190,26 @@ final class IconTests: XCTestCase {
       let palette = Palette.of(scheme)
       let sheet = VStack(alignment: .leading, spacing: 8) {
         HStack(spacing: 4) {
-          ForEach(Icon.allCases, id: \.self) { icon in
+          ForEach(Icon.actions, id: \.self) { icon in
             ActionButton(icon, tip: icon.rawValue)
           }
         }
         HStack(spacing: 4) {
-          ForEach(Icon.allCases, id: \.self) { icon in
+          ForEach(Icon.actions, id: \.self) { icon in
             ActionButton(icon, tip: icon.rawValue, state: .off("not here"))
           }
         }
         HStack(spacing: 4) {
           ActionButton(.link, tip: "Copied", state: .done)
+        }
+        // The pin is no action, so it is drawn where the panel draws it:
+        // a document row's leading column, at its own size, beside the
+        // state glyph it stands in front of and beside the empty slot the
+        // rows under a pinned one keep.
+        HStack(spacing: Grid.columnGap) {
+          DocumentGlyph(.check, tone: .ok, pin: .pinned)
+          DocumentGlyph(.check, tone: .ok, pin: .slot)
+          DocumentGlyph(.check, tone: .ok)
         }
       }
       .padding(16)

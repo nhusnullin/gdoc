@@ -178,8 +178,10 @@ final class ThemeTests: XCTestCase {
     XCTAssertEqual(Grid.compactRowHeight, 28)
     XCTAssertEqual(Grid.actionColumn, 108)
     XCTAssertEqual(Grid.glyphSize, 16)
+    XCTAssertEqual(Grid.pinSize, 8)
     XCTAssertEqual(Grid.actionSize, 24)
     XCTAssertEqual(Grid.controlRadius, 6)
+    XCTAssertEqual(Grid.actionOverhang, 4, "`.acts{margin-right:-4px}`")
   }
 
   // The rest of the stylesheet's layout numbers, each on the grid.
@@ -270,5 +272,6 @@ final class ThemeTests: XCTestCase {
     XCTAssertEqual(Timing.checkFlash, 5)
     XCTAssertEqual(Timing.signInCountdown, 180)
     XCTAssertEqual(Timing.relaunchGuard, 600)
+    XCTAssertEqual(Timing.menuHold, 0.5)
   }
 }

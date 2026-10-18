@@ -6,7 +6,7 @@
 // gdoc command now opens the app when it is not running, which is what the
 // registration was for.
 //
-// So the switch in HEALTH is the only route to a registration. It records the
+// So the switch in SETTINGS is the only route to a registration. It records the
 // person's answer, and macOS answering `requiresApproval` is a row and not a
 // retry, because a retry is another notice in somebody's menu bar for a
 // choice they have already been handed. What the switch shows is what macOS
@@ -66,7 +66,7 @@ final class LoginItemTests: XCTestCase {
   }
 
   func testAPersonsOffIsNeverOverridden() {
-    // Arrange: the HEALTH switch turned it off.
+    // Arrange: the SETTINGS switch turned it off.
     let service = Service(registration: .enabled, after: .notRegistered)
     let preferences = Preferences(store: Store())
     let item = LoginItem(service: service, preferences: preferences)

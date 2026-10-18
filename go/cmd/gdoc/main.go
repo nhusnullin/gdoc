@@ -348,6 +348,16 @@ func dispatch(ctx context.Context, args []string, errOut io.Writer, set settings
 // the field is for.
 const claudeCodeEnv = "CLAUDECODE"
 
+// claudeSessionEnv is Claude Code's own id for the session that started this
+// process, which it hands a child beside CLAUDECODE. Measured 2026-10-18 from
+// this session's own environment; the measurement is in docs/v2/MEASURED.md.
+//
+// It reaches the start line of a code run and nothing else, so the panel can
+// offer to go back to the session a document was worked on from. A Claude Code
+// that sets no session is still Claude Code, and the line then says nothing
+// about a session: TestTheSessionOfACodeRunIsOnItsStart.
+const claudeSessionEnv = "CLAUDE_CODE_SESSION_ID"
+
 // viaOfEnv marks the run's context for the record where the environment says
 // Claude Code started this process, and leaves every other run as it found it.
 //
@@ -358,7 +368,7 @@ func viaOfEnv(ctx context.Context, getenv func(string) string) context.Context {
 	if getenv(claudeCodeEnv) == "" {
 		return ctx
 	}
-	return presence.WithCode(ctx)
+	return presence.WithCode(ctx, getenv(claudeSessionEnv))
 }
 
 // presenceDoc is the document an event names: the id the first word of the line

@@ -19,11 +19,11 @@ let builtPid: Int32 = 6000
 /// own lines are the only name it has.
 func start(
   at text: String, command: String, run: String, doc: String?, call: Int64 = 1,
-  via: String = "terminal", wait: Bool = false, title: String? = nil
+  via: String = "terminal", wait: Bool = false, title: String? = nil, session: String? = nil
 ) -> Event {
   built(
     at: text, kind: .start, command: command, run: run, call: call, via: via, doc: doc,
-    wait: wait, title: title)
+    wait: wait, title: title, session: session)
 }
 
 /// An end, with the facts an end carries: how it went, what a publish
@@ -88,11 +88,12 @@ private func built(
   doc: String?, wait: Bool = false, ok: Bool? = nil, verified: Bool? = nil, title: String? = nil,
   ms: Int64? = nil, hold: String? = nil, rule: String? = nil, until: String? = nil,
   made: String? = nil, stop: String? = nil, line: Int? = nil, interrupted: Bool = false,
-  step: String? = nil, index: Int? = nil, count: Int? = nil
+  step: String? = nil, index: Int? = nil, count: Int? = nil, session: String? = nil
 ) -> Event {
   Event(
     schema: 1, at: text.asMoment, gdoc: "v2.14.0", pid: builtPid, run: run, call: call, kind: kind,
-    command: command, via: via, doc: doc, wait: wait, interrupted: interrupted, step: step,
+    command: command, via: via, session: session, doc: doc, wait: wait, interrupted: interrupted,
+    step: step,
     index: index, count: count, title: title, made: made, ok: ok, verified: verified, stop: stop,
     line: line, ms: ms, hold: hold, rule: rule, until: until?.asMoment)
 }

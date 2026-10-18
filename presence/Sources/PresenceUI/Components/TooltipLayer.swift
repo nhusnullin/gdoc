@@ -27,7 +27,7 @@ public enum TooltipAlign: String, Sendable, CaseIterable {
   /// centred under the anchor.
   case centred
   /// `.acts [data-tip]::after{left:auto;right:0}`: an action's bubble ends
-  /// on the panel's own right inset, which is how four icons in 108 pt keep
+  /// where the icons themselves end, which is how four icons in 108 pt keep
   /// their words inside the panel. The icon it belongs to is the one it
   /// hangs under; a plate that ended on each icon's own edge stepped left
   /// across the row and read as four different plates.
@@ -62,6 +62,12 @@ public enum Tooltip {
   /// How close to the panel's edge a bubble may sit, which is the panel's
   /// own padding: a tooltip that touches the edge reads as a clipped one.
   public static let margin: CGFloat = Grid.unit
+  /// Where an action's bubble ends: the row's own trailing edge, which is
+  /// the column every value, every time and every icon in the panel ends
+  /// on. The panel's bare 8 pt put it 12 pt right of the icon it belongs
+  /// to and over the scroll thumb, which is the one thing a bubble about a
+  /// row may not cover: testAnActionTooltipSitsUnderItsIconAndEndsOnTheIconColumn.
+  public static let actionMargin: CGFloat = Grid.unit + Grid.rowInset
   /// How long the pointer rests first.
   public static let delay: TimeInterval = Timing.tooltipDelay
 
@@ -83,8 +89,8 @@ public enum Tooltip {
   /// would be a bubble nobody reads.
   ///
   /// An action's bubble is the one that does not slide: it ends on the
-  /// panel's right inset whichever icon of a row it belongs to, and the
-  /// icon it hangs under is what says which one that is.
+  /// icon column's own right edge whichever icon of a row it belongs to,
+  /// and the icon it hangs under is what says which one that is.
   public static func place(
     anchor: CGRect, size: CGSize, in panel: CGSize, align: TooltipAlign
   ) -> TooltipPlacement {
@@ -92,7 +98,7 @@ public enum Tooltip {
     var x: CGFloat
     switch align {
     case .centred: x = anchor.midX - size.width / 2
-    case .trailing: x = rightmost
+    case .trailing: x = max(margin, panel.width - actionMargin - size.width)
     case .leading: x = anchor.minX
     }
     x = min(max(x, margin), rightmost)

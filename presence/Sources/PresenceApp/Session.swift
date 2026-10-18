@@ -82,6 +82,10 @@ public final class Session {
   var reopenHeld = false
   var index = HubIndex.empty
   var hubWatcher: HubWatcher?
+  /// The hub the watcher above was made for. A watcher watches the folder it
+  /// was built with and no other, so a second choice has to replace it:
+  /// testASecondHubIsTheOneTheWatcherWatches.
+  var hubWatched: String?
   /// Which hub scan was started last. A scan that comes back and is not it
   /// is an older walk of the folder, and it is dropped.
   var hubScans = 0
@@ -174,7 +178,8 @@ public final class Session {
     self.quit = quit
 
     self.ui = UIState(
-      dismissed: preferences.dismissals(now: clock()), stripSeen: preferences.stripSeen)
+      dismissed: preferences.dismissals(now: clock()), stripSeen: preferences.stripSeen,
+      pinned: preferences.pins, hidden: preferences.hides)
     self.facts = Facts.launching(appVersion: places.version)
     self.drawn = Drawn([], now: clock(), dismissed: [], calendar: calendar, alive: alive)
   }
@@ -215,8 +220,7 @@ public final class Session {
     bannerTimer = nil
     tail.stop()
     watcher?.stop()
-    hubWatcher?.stop()
-    hubWatcher = nil
+    stopWatchingTheHub()
   }
 
   /// The panel is on the screen. It is the one moment the app asks gdoc
@@ -263,7 +267,8 @@ public final class Session {
   public var screen: Screen {
     let moment = clock()
     let folds = Drawn(
-      events, now: moment, dismissed: ui.dismissed, calendar: calendar, alive: alive)
+      events, now: moment, dismissed: ui.dismissed, pinned: ui.pinned, hidden: ui.hidden,
+      calendar: calendar, alive: alive)
     return Screen(
       bar: BarImage.state(
         now: folds.now, sessions: folds.sessions, facts: facts,
@@ -336,7 +341,8 @@ public final class Session {
     let pending = ui.pendingStop
     ui.pendingStop = stopper.pendingDocs(in: events)
     drawn = Drawn(
-      events, now: clock(), dismissed: ui.dismissed, calendar: calendar, alive: alive)
+      events, now: clock(), dismissed: ui.dismissed, pinned: ui.pinned, hidden: ui.hidden,
+      calendar: calendar, alive: alive)
     return drawn != before || ui.pendingStop != pending
   }
 
@@ -362,13 +368,15 @@ public final class Session {
   }
 
   /// What the app knows about the machine before the polls have spoken: its
-  /// own version, the bundle under it, the hub, the switch, the extension,
+  /// own version, the bundle under it, the hub and the home it is written
+  /// against, the switch, the extension,
   /// what the record last said about reaching Google, and the waits it may
   /// not signal.
   private func machine() -> Facts {
     Facts(
       versions: Versions(app: version),
       hub: preferences.hub,
+      home: places.home,
       extensionState: extensionState(),
       network: Reachability.latest(in: events).map(NetworkFact.init(reachable:)),
       loginItem: loginItem.state,
@@ -521,17 +529,45 @@ public final class Session {
   func readTheHub() {
     guard let hub = preferences.hub, !hub.isEmpty else {
       index = HubIndex.empty
-      hubWatcher?.stop()
-      hubWatcher = nil
+      stopWatchingTheHub()
       return
     }
     rescanTheHub(hub)
+    // The Hub row made a second choice reachable, and a watcher holds the
+    // folder it was made for: left in place it would rescan the folder
+    // nobody chose on its next file event, and that scan is the newest one,
+    // so the pairing would flip back to the old vault's notes.
+    if hubWatched != hub { stopWatchingTheHub() }
     guard hubWatcher == nil else { return }
     let watcher = HubWatcher(hub: hub) { [weak self] in
-      Task { @MainActor [weak self] in self?.rescanTheHub(hub) }
+      Task { @MainActor [weak self] in self?.rescanIfWatched(hub) }
     }
     watcher.start()
     hubWatcher = watcher
+    hubWatched = hub
+  }
+
+  /// Let the watcher go, wherever it was watching. Stopping it cannot take
+  /// back a rescan its callback already handed to the main actor, so
+  /// `rescanIfWatched` is what drops that one.
+  private func stopWatchingTheHub() {
+    hubWatcher?.stop()
+    hubWatcher = nil
+    hubWatched = nil
+  }
+
+  /// A scan a watcher asked for, taken only where the folder it names is
+  /// still the one being watched.
+  ///
+  /// The callback arrives on a queue of its own and hops to the main actor,
+  /// so one that fired just before a second hub was chosen lands after the
+  /// new hub was read. Stopping the old watcher does not take that hop
+  /// back: its walk would be the newest one asked for, and the pairing
+  /// would flip back to the old vault's notes.
+  /// testAScanFromTheWatcherOnTheOldHubIsDropped.
+  func rescanIfWatched(_ hub: String) {
+    guard hubWatched == hub else { return }
+    rescanTheHub(hub)
   }
 
   /// One scan, numbered, because only the newest of them may stand.

@@ -97,12 +97,12 @@ branch.
 - Modify: `presence/Sources/PresenceUI/BarImage.swift`,
   `presence/Tests/PresenceUITests/BarTests.swift`
 
-- [ ] the idle mark is drawn at full opacity, the same ink as every other
+- [x] the idle mark is drawn at full opacity, the same ink as every other
       state's mark; `idleOpacity` goes, and the test that said 0.45 says the
       idle and the live mark are the same ink
-- [ ] the render index's "Still your call" line about the dim mark is
+- [x] the render index's "Still your call" line about the dim mark is
       replaced by the decision's sentence
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 2: the account lives in the header
 
@@ -112,27 +112,27 @@ branch.
   `presence/Tests/PresenceUITests/RowTests.swift`, `StateTests.swift`,
   `RenderTests.swift`, the scene fixtures that touch the account
 
-- [ ] the header carries the account's state: the status glyph (check when
+- [x] the header carries the account's state: the status glyph (check when
       the token works, exclamation when it does not, a ring while nobody has
       asked), the address, and the one action, Sign out, as the icon the
       HEALTH row carried; with no token the header shows Sign in where the
       icon was; a test states the three pieces and the height, which stays
       36 pt
-- [ ] "Sign out?" asks in place of the header line: the question, its
+- [x] "Sign out?" asks in place of the header line: the question, its
       consequence line under it, Sign out and Keep where the actions were;
       the question waits for its answer as PR 91 made it
-- [ ] the signed-in banner, the sign-in countdown and the Not-you line move
+- [x] the signed-in banner, the sign-in countdown and the Not-you line move
       with the account: they are drawn under the header, not under a HEALTH
       row
-- [ ] HEALTH loses the Account row; the Account changed quiet line goes with
+- [x] HEALTH loses the Account row; the Account changed quiet line goes with
       it under the header
-- [ ] the header carries the gdoc version after the name, in the caption
+- [x] the header carries the gdoc version after the name, in the caption
       grey ("gdoc" then "v2.16.0"), and the update action where a newer
       release is listed: the same icon and the same ring-while-it-runs the
       gdoc row had, now beside the version; with nothing newer, no icon;
       HEALTH loses the gdoc row too; a test states the header's pieces with
       and without an update
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 3: the group is SETTINGS
 
@@ -141,16 +141,16 @@ branch.
   `PanelHealth.swift` and its callers, `docs/guide/presence.md`, the scene
   captions
 
-- [ ] the bottom group's label is SETTINGS: Hub (Task 7), Launch at login,
+- [x] the bottom group's label is SETTINGS: Hub (Task 7), Launch at login,
       Quit, and the Network and Claude Desktop rows when a fact carries
       them; the Thread mark row goes, and the mark stays where it was, in the
       header's own mark; the type and file names follow the word where a
       name said health, and a test states the label and the absent row
-- [ ] `PanelModel`'s "pinned first" rule for the three screens stays for the
+- [x] `PanelModel`'s "pinned first" rule for the three screens stays for the
       two that are still about the group (no token, a sign-in in flight) and
       drops the question, which now lives in the header
-- [ ] `docs/guide/presence.md` names the group and what moved up
-- [ ] `make app-lint`, `make app-test`
+- [x] `docs/guide/presence.md` names the group and what moved up
+- [x] `make app-lint`, `make app-test`
 
 ### Task 4: the middle scrolls, the edges stay
 
@@ -159,17 +159,17 @@ branch.
   `Components/ScrollBox.swift`, `presence/Tests/PresenceUITests/ScrollTests.swift`,
   `RenderTests.swift`
 
-- [ ] the panel is header, NOW, the middle, SETTINGS, in that order; the
+- [x] the panel is header, NOW, the middle, SETTINGS, in that order; the
       header, NOW and SETTINGS never scroll; the middle (DOCUMENTS, TODAY, Yesterday)
       is the one `ScrollBox`, and its height is what is left of 600 pt after
       the three fixed parts; a test measures the four heights on scene e3
-- [ ] NOW, when it alone is taller than the panel allows, is capped at half
+- [x] NOW, when it alone is taller than the panel allows, is capped at half
       the body and scrolls inside itself, so SETTINGS is never pushed off; a test
       on a fixture with four hold cards
-- [ ] the scroll thumb is an overlay 3 pt inside the box's right edge, drawn
+- [x] the scroll thumb is an overlay 3 pt inside the box's right edge, drawn
       while the content moves and for one second after, and never otherwise;
       the fade stays; a test states the inset, the width and the second
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 5: DOCUMENTS by what was just made, then by use
 
@@ -178,16 +178,16 @@ branch.
   `presence/Tests/PresenceCoreTests/DocumentsTests.swift`, the scene
   fixtures and `RenderTests.swift`
 
-- [ ] the order: first every document with an action today, newest first;
+- [x] the order: first every document with an action today, newest first;
       then the rest of the fourteen days by the count of finished actions in
       those days, most first, ties newest first; a table test over a
       fixture with three documents touched today and four older ones with
       different counts
-- [ ] the row's sub-line keeps saying the last action and its time; a
+- [x] the row's sub-line keeps saying the last action and its time; a
       document listed by use shows nothing new, because a count is a
       judgement the panel does not print
-- [ ] "Show N more" and the horizon are unchanged
-- [ ] `make app-lint`, `make app-test`
+- [x] "Show N more" and the horizon are unchanged
+- [x] `make app-lint`, `make app-test`
 
 ### Task 6: pinned and hidden documents
 
@@ -197,28 +197,28 @@ branch.
   `presence/Sources/PresenceUI/PanelModel.swift`, `IconStrip.swift`,
   `IconShapes.swift`, `SessionActions.swift`, tests beside each
 
-- [ ] two more preferences keys, `pinned` and `hidden`: lists of document
+- [x] two more preferences keys, `pinned` and `hidden`: lists of document
       ids, each with the moment and the last title; never pruned by age; the
       source scan's count becomes eight and its sentence says why
-- [ ] the four icons stay four. A DOCUMENTS row has a menu, on a secondary
+- [x] the four icons stay four. A DOCUMENTS row has a menu, on a secondary
       click and on a press held half a second: "Pin" or "Unpin", and "Hide
       from the list". A pinned row shows a small pin glyph in its status
       column before the state glyph; a test over the menu's words in both
       states and the glyph
-- [ ] a hidden document leaves DOCUMENTS and its actions stop counting for
+- [x] a hidden document leaves DOCUMENTS and its actions stop counting for
       the order; TODAY and Yesterday still show its runs, because the log is
       the log; the next finished action gdoc does on that document brings it
       back into the list, which is the one way back, and the guide says so;
       a test over hide, the count, and the return
-- [ ] pinned documents are listed first in DOCUMENTS, in the order they were
+- [x] pinned documents are listed first in DOCUMENTS, in the order they were
       pinned, newest pin first, and never fall out of the list when their
       fourteen days pass; a pinned document that the record has no line for
       any more still draws its last known title and its open action from the
       pin's own stored title and id, which the pin keeps for that reason; a
       test over a fixture whose pinned document is sixty days old
-- [ ] the header count counts them: "14 days · N" counts pinned rows too and
+- [x] the header count counts them: "14 days · N" counts pinned rows too and
       hidden rows not, and the index caption says so
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 7: the hub is chosen in the panel
 
@@ -227,16 +227,16 @@ branch.
   rows), `presence/Sources/PresenceApp/SessionActions.swift`,
   `Preferences.swift`, `docs/guide/presence.md`, tests beside each
 
-- [ ] a Hub row in SETTINGS: the chosen folder as `~/…`, or "Choose…" when
+- [x] a Hub row in SETTINGS: the chosen folder as `~/…`, or "Choose…" when
       none; pressing it opens the system folder panel (`NSOpenPanel`, folders
       only, the app's own window and no program), and the choice goes into
       the `hubPath` key the guide already names; a test over the row's two
       states and the stored path through an injected chooser
-- [ ] the md icon's tooltip with no hub names the row ("Choose the hub in
+- [x] the md icon's tooltip with no hub names the row ("Choose the hub in
       SETTINGS"), so a grey icon says why
-- [ ] the guide's `defaults write` paragraph becomes the row, and keeps the
+- [x] the guide's `defaults write` paragraph becomes the row, and keeps the
       command as the way from a terminal
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 8: the session a run came from
 
@@ -247,26 +247,28 @@ branch.
   `Documents.swift`, `presence/Sources/PresenceApp/Opener.swift`,
   `presence/Tests/...`
 
-- [ ] the record gains `session`: the value of `CLAUDE_CODE_SESSION_ID`
+- [x] the record gains `session`: the value of `CLAUDE_CODE_SESSION_ID`
       when `via` is `code`, read in `viaOfEnv` beside `CLAUDECODE`, written
       on the start line and nowhere else; absent under terminal and chat; the
       allowlist test names it; a test shows the field under Claude Code and
       its absence elsewhere, and `TestTheFlagChangesNoByteOfTheObject` still
       holds
-- [ ] the Swift `Event` decodes `session`, and a document remembers the
+- [x] the Swift `Event` decodes `session`, and a document remembers the
       session of its latest `via: code` run
-- [ ] Open chat on a document whose latest run came from Claude Code with a
-      session opens `claude://code/continue?session=<id>&source=gdoc`; a
+- [x] Open chat on a document whose latest run came from Claude Code with a
+      session would open `claude://code/continue?session=<id>&source=gdoc`;
+      the link is built and opened by nobody, which is the box below; a
       document with a chat run keeps the activation it has; a document with
       neither keeps the activation; the URL is built by one function with a
       test over the three cases, and the opener's allowlist of schemes gains
       this one path and no other
-- [ ] the measurement: Nail opens one such link while watching the window,
-      and the result goes to `docs/v2/MEASURED.md` with the date; if the Code
-      tab does not take a session id, the link is not shipped and this task's
-      commit says so, leaving the activation as it is and the field in the
-      record for the day it does
-- [ ] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
+- [x] the measurement is done and is in `docs/v2/MEASURED.md` ("What
+      `claude://code/continue` does from outside the app", 2026-10-18): none
+      of the three forms switched the window, so the link is not shipped;
+      the opener keeps the activation, the URL-building function and its
+      test stay (the day a form switches, the opener has the id), and this
+      task's commit says so
+- [x] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
       `make app-lint`, `make app-test`
 
 ### Task 9: the words
@@ -276,27 +278,32 @@ branch.
   field list, if it names fields), `go/internal/presence/doc.go`,
   `docs/design/2026-10-17-presence-screens-v3.html` (scene captions only)
 
-- [ ] the guide walks the panel in its new order: header with the account
+- [x] the guide walks the panel in its new order: header with the account
       with its version and update, and Sign out, NOW, DOCUMENTS with pins,
       hides and the order rule, TODAY, Yesterday, SETTINGS with the Hub row
       and no Thread mark; and names the session link and when it is used
-- [ ] the scene captions in the screens file that say HEALTH or place the
-      account there say the new place
-- [ ] CLAUDE.md stays under 300 lines
-- [ ] `make test`, `make app-lint`
+      (`TestThePresencePageWalksTheSecondMorningsPanel` holds the phrases and
+      the walk's order)
+- [x] the scene captions in the screens file that say HEALTH or place the
+      account there say the new place (r8, e1, e5, e8, e9, e10 and the foot;
+      the drawn scenes stay the 17 October mockup, and each caption says what
+      moved)
+- [x] CLAUDE.md stays under 300 lines (300, at the ceiling; its presence
+      invariant names no field, so the `session` field changed nothing there)
+- [x] `make test`, `make app-lint`
 
 ### Task 10: the reviewer's pass
 
 **Files:**
 - Modify: whatever the pass finds under `presence/`
 
-- [ ] render every scene (`PRESENCE_SHOTS=... make app-test`) and run the
+- [x] render every scene (`PRESENCE_SHOTS=... make app-test`) and run the
       checklist of `docs/design/2026-10-17-presence-design-principles.md`
       over every scene as a reviewer who drew nothing (a subagent that reads
       images), against the mockup where it still applies and against this
       plan's sentences where it does not; every blocking or should-fix
       finding is fixed here and listed in the commit message
-- [ ] `make app-lint`, `make app-test`, `make app`
+- [x] `make app-lint`, `make app-test`, `make app`
 
 ### Task 11: the acceptance rows and the close
 
@@ -304,10 +311,37 @@ branch.
 - Modify: this plan, `docs/v2/DECISIONS.md` only if a task found the
   decision wrong
 
-- [ ] an acceptance table at the foot of this plan: each of Nail's ten
+- [x] an acceptance table at the foot of this plan: each of Nail's ten
       sentences with the test that holds its answer
-- [ ] the render index's "Still your call" list drops what this plan
-      decided and keeps the rest
-- [ ] move this plan to `docs/plans/completed/`
-- [ ] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
+- [x] the render index's "Still your call" list drops what this plan
+      decided and keeps the rest (the dim mark goes, and is said once as
+      `Scenes.markRule`, because the mockup still draws nothing at rest)
+- [x] move this plan to `docs/plans/completed/`
+- [x] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
       `make app-lint`, `make app-test`, `make app`
+
+## Acceptance
+
+Nail's ten sentences, in the order of this plan's first paragraph, with the
+answer that shipped and the test that holds it. A test named here is the one
+that fails if the answer is taken back.
+
+| Nail said | The answer | The test |
+|---|---|---|
+| the scrolling is wrong | header, NOW, SETTINGS never move; DOCUMENTS, TODAY and Yesterday are the one scroll box, and NOW stops at half the body | `testTheFourPartsAddUpToTheCapOnE3` (RenderTests), `testNowStopsAtHalfTheBodyAndSettingsKeepsItsPlace`, `testTheThumbSitsThreePointInAndLastsOneSecondAfterTheMove` (ScrollTests) |
+| the account and its sign-out belong at the top | the header is 36 pt and carries the glyph, the address and Sign out, and asks "Sign out?" in its own line | `testTheHeaderIs36WithTheMarkTheNameTheVersionAndTheAccount`, `testTheQuestionAsksInPlaceOfTheHeaderLine` (RowTests), `testTheHeaderClaimsNothingAboutTheAccountBeforeTheFirstAnswer` (StateTests) |
+| the group they leave is not HEALTH any more | the group is SETTINGS: Network, Claude Desktop, Hub, Launch at login, Quit | `testSettingsRowsKeepTheirOrderOnEveryScreen` (CardTests), `testSettingsKeepsItsOrderOnEveryScene` (RenderTests) |
+| Open chat opens Claude and not the session the document came from | the record carries `session` on a Claude Code start, a row remembers it, and the link is built; none of the three `claude://code` forms switched the window, so the opener keeps the activation and the link is not shipped | `TestTheSessionOfACodeRunIsOnItsStart`, `TestTheSessionIsOnTheStartOfACodeRunAndNowhereElse` (Go), `testARowRemembersTheSessionOfItsLatestCodeRun` (FieldsTests), `testTheSessionLinkIsBuiltFromASessionIdOnly` (LinkLineTests); the measurement is `docs/v2/MEASURED.md`, 2026-10-18 |
+| the menu bar mark is too dim | the idle mark is the live mark's own ink, and `idleOpacity` is gone | `testOneTemplateImagePerState` (BarTests) |
+| DOCUMENTS should put what gdoc just made first, then the most used, with a way to pin | today's documents newest first, then the fortnight by the count of finished actions; pins come before all of them, newest pin first, and never fall out | `testTheOrderIsTodayNewestFirstThenTheFortnightByUse`, `testADocumentListedByUseShowsNothingNew`, `testAPinnedDocumentIsFirstAndNeverFallsOutOfTheList` (DocumentsTests), `testAPinnedDocumentWithNoLinesDrawsThePinsOwnRow` (StateTests), `testPinsComeBackNewestFirstAndUnpinLeavesNothing` (PreferencesTests) |
+| the gdoc version and its update belong in the header too | the version follows the name in the caption grey, with the update icon beside it where a newer release is listed and no icon otherwise | `testTheHeaderIs36WithTheMarkTheNameTheVersionAndTheAccount` (RowTests) |
+| a document must be removable from the list and from the statistics | Hide from the list, in the row's own menu: the row goes and its actions stop counting, TODAY keeps its runs, and the next finished action brings it back | `testAHiddenDocumentLeavesTheListUntilTheNextActionOnIt` (DocumentsTests), `testTheRowMenuSaysPinOrUnpinAndHide` (StateTests), `testAHideKeepsItsMomentAndIsNeverPruned` (PreferencesTests) |
+| the md icon is grey on every row, because the hub has no picker | a Hub row in SETTINGS: the folder as `~/…` or "Choose…", the system folder panel behind it, and the grey icon's tooltip names the row | `testTheHubRowIsTheFolderOrTheWayToChooseOne` (StateTests), `testChoosingTheHubWritesItDownAndReadsTheNotesAtOnce` (SessionTests) |
+| the Thread mark row goes, "a pointless thing" | there is no mark row: the mark is the header's own, drawn at the panel's top left | `testSettingsRowsKeepTheirOrderOnEveryScreen` (CardTests) |
+
+Two more rows, for the two answers the questions above raised:
+
+| The question | The answer | The test |
+|---|---|---|
+| does the count count a pin and a hide | "14 days · N" counts a pinned row however old it is and a hidden one not at all | `testAPinnedDocumentIsFirstAndNeverFallsOutOfTheList`, `testAHiddenDocumentLeavesTheListUntilTheNextActionOnIt` (DocumentsTests) |
+| does the page say all of it | the guide walks the panel in its new order, names the session and the one way a hidden document comes back | `TestThePresencePageWalksTheSecondMorningsPanel` (`go/boundary`) |

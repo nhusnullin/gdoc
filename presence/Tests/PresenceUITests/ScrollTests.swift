@@ -164,6 +164,91 @@ final class ScrollTests: XCTestCase {
     XCTAssertEqual(ScrollBox<EmptyView>.thumbInset, 3, "3 pt inside the box it belongs to")
   }
 
+  // Half the body, and not a pixel more. Four holds and nothing else are
+  // taller than the whole panel, so NOW stops at its own cap and scrolls
+  // inside itself: SETTINGS is drawn at its own height under it, Quit is on
+  // the screen, and what gives way is the middle.
+  func testNowStopsAtHalfTheBodyAndSettingsKeepsItsPlace() throws {
+    XCTAssertEqual(PanelView.bodyHeight, 544, "600 less the header, its gap and the padding")
+    XCTAssertEqual(PanelView.nowHeight, 272, "half of it")
+
+    let four = try fourHolds()
+    let drawn = try probeList(PanelView(model: four).rendering(), scheme: .dark)
+    let now = try XCTUnwrap(drawn.first { $0.name == "panel.now" })
+    let settings = try XCTUnwrap(drawn.first { $0.name == "panel.settings" })
+
+    XCTAssertEqual(now.size.height, PanelView.nowHeight, "four holds are past the cap")
+    XCTAssertGreaterThan(settings.size.height, 0, "SETTINGS is still drawn")
+    XCTAssertNotNil(drawn.first { $0.name == "settings.quit" }, "and Quit is on the screen")
+    XCTAssertEqual(
+      try XCTUnwrap(drawn.first { $0.name == "panel" }).size.height, Grid.panelMaxHeight,
+      "the panel is at the cap and no taller")
+
+    // The fourth card is laid out inside the box, scrolled rather than
+    // dropped, and the box says so with a thumb of its own.
+    let cards = drawn.filter { $0.name == "hold.card" }
+    XCTAssertEqual(cards.count, 4, "every hold is in the box")
+    XCTAssertGreaterThan(
+      cards[3].origin.y + cards[3].size.height, now.origin.y + now.size.height,
+      "the fourth card is under the fold")
+    XCTAssertNotNil(
+      drawn.first {
+        $0.name == "scrollbox.thumb" && $0.origin.y < now.origin.y + now.size.height
+      }, "the NOW box carries a thumb")
+  }
+
+  /// The panel of scene e3 with four holds in NOW instead of its six items,
+  /// which is a day nobody has had yet and the one this cap is for. The
+  /// card is scene r6's own, so no words are invented here.
+  private func fourHolds() throws -> PanelModel {
+    let base = try XCTUnwrap(Scenes.all.first { $0.id == "e3" }).model()
+    let card = try SheetPieces.hold()
+    let holds = (1...4).map { number in
+      NowItem.hold(id: "hold-\(number)", card: card, asking: false)
+    }
+    let sections = base.sections.map { section -> PanelSection in
+      if case .now = section { return .now(holds) }
+      return section
+    }
+    return PanelModel(
+      header: base.header, empty: base.empty, notice: base.notice, sections: sections,
+      forcedTooltip: base.forcedTooltip)
+  }
+
+  // The thumb's place and its life. It is an overlay 3 pt inside the box's
+  // right edge, 6 pt down from its top, and on a live box it is drawn while
+  // the content moves and for one second after it stopped. The fade is not
+  // on that clock: it is what says there is more below when nothing is
+  // moving.
+  func testTheThumbSitsThreePointInAndLastsOneSecondAfterTheMove() throws {
+    XCTAssertEqual(ScrollBox<EmptyView>.thumbInset, 3)
+    XCTAssertEqual(ScrollBox<EmptyView>.thumbWidth, 4)
+    XCTAssertEqual(ScrollBox<EmptyView>.thumbLife, 1)
+    XCTAssertEqual(Timing.thumbLife, 1)
+
+    let drawn = try probeList(ScrollBox { plainRows(rows(40)) }.rendering(), scheme: .dark)
+    let box = try XCTUnwrap(drawn.first { $0.name == "scrollbox" })
+    let thumb = try XCTUnwrap(drawn.first { $0.name == "scrollbox.thumb" })
+    XCTAssertEqual(
+      box.origin.x + box.size.width - (thumb.origin.x + thumb.size.width), 3,
+      "3 pt inside the right edge of the box it belongs to")
+    XCTAssertEqual(thumb.origin.y - box.origin.y, ScrollBox<EmptyView>.thumbTop)
+    XCTAssertEqual(thumb.size.width, 4)
+    XCTAssertNotNil(drawn.first { $0.name == "scrollbox.fade" }, "the fade stays")
+
+    // The second, which is the only thing the box keeps a moment for.
+    let moved = Date(timeIntervalSince1970: 1_792_237_229)
+    XCTAssertTrue(ScrollBox<EmptyView>.thumbIsShowing(movedAt: moved, now: moved))
+    XCTAssertTrue(
+      ScrollBox<EmptyView>.thumbIsShowing(movedAt: moved, now: moved.addingTimeInterval(0.99)))
+    XCTAssertFalse(
+      ScrollBox<EmptyView>.thumbIsShowing(movedAt: moved, now: moved.addingTimeInterval(1)),
+      "a second after the last move the thumb goes")
+    XCTAssertFalse(
+      ScrollBox<EmptyView>.thumbIsShowing(movedAt: nil, now: moved),
+      "a list nobody has moved carries none at all")
+  }
+
   // `MORE('Show 3 more')` closed, `MORE('Show less',true)` open: one row
   // changes how much of a section is on the screen, and nothing else moves.
   func testShowMoreAndShowLessToggleTheList() throws {

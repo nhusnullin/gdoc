@@ -133,3 +133,79 @@ func TestAStoppedWaitsEndSaysSo(t *testing.T) {
 		}
 	})
 }
+
+// The session of a code run is on its start line, from the one variable
+// Claude Code hands a child beside CLAUDECODE, and nowhere else.
+//
+// It is the record's one word about the person's own session, and the panel
+// has it so Open chat can offer the session a document was worked on from. A
+// terminal run names none, and a chat call names none either, even where
+// Claude Code started the process: the session is a fact about the run, and a
+// tool call of gdoc mcp is a chat run.
+func TestTheSessionOfACodeRunIsOnItsStart(t *testing.T) {
+	const session = "0199c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d"
+
+	t.Run("a run Claude Code started", func(t *testing.T) {
+		dir := recording(t)
+		t.Setenv(claudeCodeEnv, "1")
+		t.Setenv(claudeSessionEnv, session)
+		stubSession(t, docsAndComments(t))
+
+		var out bytes.Buffer
+		if code := run(context.Background(), []string{"read", fixtureDocID}, &out, io.Discard, presenceOn()); code != 0 {
+			t.Fatalf("read failed: exit %d, %s", code, out.String())
+		}
+
+		events := presenceEvents(t, dir)
+		if len(events) != 2 {
+			t.Fatalf("want a start and an end, got %d: %+v", len(events), events)
+		}
+		if events[0].Session != session {
+			t.Errorf("the start says session %q, want %q", events[0].Session, session)
+		}
+		if events[1].Session != "" {
+			t.Errorf("the end says session %q, and the start already said it", events[1].Session)
+		}
+	})
+
+	t.Run("a person at a terminal", func(t *testing.T) {
+		dir := recording(t)
+		t.Setenv(claudeSessionEnv, session)
+		stubSession(t, docsAndComments(t))
+
+		var out bytes.Buffer
+		if code := run(context.Background(), []string{"read", fixtureDocID}, &out, io.Discard, presenceOn()); code != 0 {
+			t.Fatalf("read failed: exit %d, %s", code, out.String())
+		}
+
+		for _, e := range presenceEvents(t, dir) {
+			if e.Session != "" {
+				t.Errorf("a terminal run names a session: %+v", e)
+			}
+		}
+	})
+
+	t.Run("a tool call of the chat session", func(t *testing.T) {
+		dir := recording(t)
+		t.Setenv(claudeCodeEnv, "1")
+		t.Setenv(claudeSessionEnv, session)
+		signedIn(t)
+		stubWire(t, sessionWire(t))
+		stubAccount(t, gapi.Account{Email: "ada@example.org", Name: "Ada Lovelace"}, nil)
+
+		d := startSessionWith(t, presenceOn())
+		d.request("initialize", `{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"a test","version":"1"}}`)
+		d.notify("notifications/initialized")
+		code := codeFromGuide(t, d)
+		if got := d.call("read", argsWithCode(t, code, `{"url":"`+fixtureDocID+`"}`)); got.IsError {
+			t.Fatalf("the read was refused: %v", got.texts())
+		}
+		d.end()
+
+		for _, e := range presenceEvents(t, dir) {
+			if e.Session != "" {
+				t.Errorf("a chat call names a session: %+v", e)
+			}
+		}
+	})
+}

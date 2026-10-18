@@ -1,26 +1,38 @@
-// What the app remembers between two launches, and the six keys it keeps it
+// What the app remembers between two launches, and the eight keys it keeps it
 // under.
 //
 // The record is the whole of what gdoc did, and it is the Go binary's file.
-// This app writes nothing into it, ever. What it does write down is six
+// This app writes nothing into it, ever. What it does write down is eight
 // things about itself: the cards a person hid, the hub folder they chose,
 // whether the four labels under the first document row have been read, their
-// launch-at-login answer, the last self-relaunch it did, and the address it
-// last saw signed in. Nothing else persists, which is the specification's
-// own row, and a source scan in PresenceCoreTests holds the word
-// UserDefaults to this file so a seventh key cannot appear while something
-// else is being fixed.
+// launch-at-login answer, the last self-relaunch it did, the address it
+// last saw signed in, and the documents they pinned and hid. Nothing else
+// persists, which is the specification's own row, and a source scan in
+// PresenceCoreTests holds the word UserDefaults to this file so a ninth key
+// cannot appear while something else is being fixed.
 //
 // A dismissal names a run and a call, or a hold's own id, and nothing about
 // the document: a title or a document id in UserDefaults would be a word of
-// somebody's document kept outside the record, where nothing prunes it.
+// somebody's document kept outside the record, where nothing prunes it. The
+// two keys of the second morning are the written-down exception for the id,
+// and the decision of 2026-10-18 is where it is written: a pin and a hide
+// are the app's own answers about one document, so each has to name it. Only
+// the pin also holds the last title, because a pinned document whose lines
+// the tail can no longer see has its name nowhere else, and a list that lost
+// the name of the thing a person pinned is a list that lost the pin. A hide
+// holds the id and the moment alone: the row it takes away is drawn nowhere,
+// so taking it away needs no name.
+//
 // Sixty-two days is what prunes the two keys that are about a moment, the
 // dismissals and the relaunch stamp: the tail reads two month files, so a
 // key older than that is about a line this app can no longer see. The other
-// four are answers rather than moments, and an answer does not go stale: the
+// six are answers rather than moments, and an answer does not go stale: the
 // launch-at-login key is the person's own answer, kept because it is theirs,
 // and nothing in this app reads it to decide anything. What starts the app at
 // login is the login item macOS holds, and the switch shows what macOS says.
+// A pin and a hide are answers too, and age prunes neither: a pin a person
+// made is the one reason the row is still there, and a pruned hide would
+// put a document they took away back in the list.
 //
 // The store is handed in. UserDefaults is what the app passes; a test passes
 // a dictionary of its own, so no test writes to the defaults of the machine
@@ -52,8 +64,8 @@ public enum LoginItemChoice: String, Sendable, Equatable, CaseIterable {
 /// Unchecked Sendable: the store is reached under a lock, because a dismissal
 /// comes off the panel and a relaunch stamp off a watcher.
 public final class Preferences: @unchecked Sendable {
-  /// The six keys. A seventh is a decision in `docs/v2/DECISIONS.md`, never a
-  /// line added here.
+  /// The eight keys. A ninth is a decision in `docs/v2/DECISIONS.md`, never
+  /// a line added here.
   public enum Key: String, CaseIterable, Sendable {
     case dismissed
     case hubPath
@@ -61,13 +73,16 @@ public final class Preferences: @unchecked Sendable {
     case loginItemChoice = "loginItem.choice"
     case relaunch
     case lastAccount
+    case pinned
+    case hidden
   }
 
   /// How long the two keys that are about a moment are kept: sixty-two
   /// days, which is past both month files the tail reads. It is the
   /// dismissals and the relaunch stamp, and no other key: the hub, the
-  /// strip, the launch-at-login answer and the last account are answers
-  /// rather than moments, and nothing prunes an answer.
+  /// strip, the launch-at-login answer, the last account and the two lists
+  /// of documents are answers rather than moments, and nothing prunes an
+  /// answer.
   public static let keepFor: TimeInterval = 62 * 24 * 60 * 60
 
   private let store: DefaultsStore
@@ -144,6 +159,40 @@ public final class Preferences: @unchecked Sendable {
     set { write(newValue, .lastAccount) }
   }
 
+  // MARK: the pins and the hides
+
+  /// The documents a person pinned, newest pin first, which is the order
+  /// DOCUMENTS lists them in.
+  public var pins: [DocumentChoice] { choices(.pinned) }
+
+  /// The documents a person hid. The order says nothing: each hide is read
+  /// against that document's own actions.
+  public var hides: [DocumentChoice] { choices(.hidden) }
+
+  /// Pin one document, with the title the list was drawing. Pinning one
+  /// that is already pinned moves it to the front, because the moment is
+  /// the one the person just made.
+  public func pin(_ doc: String, title: String?, at moment: Date = Date()) {
+    note(doc, title: title, at: moment, under: .pinned)
+  }
+
+  /// Take the pin back. The document goes back to being an ordinary row,
+  /// and the horizon has it again.
+  public func unpin(_ doc: String) {
+    forget(doc, under: .pinned)
+  }
+
+  /// Hide one document from the list. The rows in TODAY stay: a hide hides
+  /// a row of DOCUMENTS and rewrites nothing.
+  ///
+  /// The id and the moment, and no title: a hide is read against that
+  /// document's own actions and nothing draws the name of a row that is not
+  /// there. The last title the pin keeps is the one title either key holds:
+  /// testAHideKeepsItsMomentAndIsNeverPruned.
+  public func hide(_ doc: String, at moment: Date = Date()) {
+    note(doc, title: nil, at: moment, under: .hidden)
+  }
+
   // MARK: the relaunch
 
   /// The last relaunch, where there is one inside the horizon.
@@ -184,6 +233,41 @@ public final class Preferences: @unchecked Sendable {
       store.set(inside, forKey: Key.dismissed.rawValue)
     }
     return inside
+  }
+
+  /// One list of documents, newest answer first.
+  private func choices(_ key: Key) -> [DocumentChoice] {
+    lock.lock()
+    defer { lock.unlock() }
+    let written = store.object(forKey: key.rawValue) as? [String: [String: Any]] ?? [:]
+    return written.compactMap { doc, fields in
+      guard let seconds = fields["at"] as? Double else { return nil }
+      return DocumentChoice(
+        doc: doc, at: Date(timeIntervalSince1970: seconds), title: fields["title"] as? String)
+    }
+    .sorted { $0.at == $1.at ? $0.doc < $1.doc : $0.at > $1.at }
+  }
+
+  private func note(_ doc: String, title: String?, at moment: Date, under key: Key) {
+    lock.lock()
+    defer { lock.unlock() }
+    var written = store.object(forKey: key.rawValue) as? [String: [String: Any]] ?? [:]
+    var fields: [String: Any] = ["at": moment.timeIntervalSince1970]
+    if let title, !title.isEmpty { fields["title"] = title }
+    written[doc] = fields
+    store.set(written, forKey: key.rawValue)
+  }
+
+  private func forget(_ doc: String, under key: Key) {
+    lock.lock()
+    defer { lock.unlock() }
+    var written = store.object(forKey: key.rawValue) as? [String: [String: Any]] ?? [:]
+    written.removeValue(forKey: doc)
+    if written.isEmpty {
+      store.removeObject(forKey: key.rawValue)
+      return
+    }
+    store.set(written, forKey: key.rawValue)
   }
 
   private func string(_ key: Key) -> String? {
