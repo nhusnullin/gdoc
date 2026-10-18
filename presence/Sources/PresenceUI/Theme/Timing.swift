@@ -12,9 +12,6 @@ public enum Timing {
   public static let tooltipDelay: TimeInterval = 0.5
   /// How long a copied icon stays green before it goes back.
   public static let doneFlash: TimeInterval = 1
-  /// How long an inline confirm waits before it reverts itself, so a press
-  /// nobody followed up on undoes itself.
-  public static let confirmRevert: TimeInterval = 3
   /// The green check in the menu bar after a verified write that arrived
   /// live, and the life of the signed-in banner.
   public static let checkFlash: TimeInterval = 5

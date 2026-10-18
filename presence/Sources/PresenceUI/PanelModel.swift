@@ -159,7 +159,7 @@ public struct HealthRowModel: Sendable, Equatable, Identifiable {
   public let isOn: Bool?
   /// Pressing the row itself, which Quit and the Login Items row do.
   public let select: ActionKind?
-  /// The question this row has become, for the three seconds it is asked.
+  /// The question this row has become, while it is asked.
   public let question: QuestionModel?
 
   public var id: String { kind.rawValue }
@@ -345,9 +345,9 @@ extension PanelModel {
     // HEALTH is last, where a person looks for it, except on the three
     // screens where it is the whole of what the panel is for: a machine
     // with no token at all, a sign-in in flight, which lives in the Account
-    // row with its countdown and its address, and the three seconds a
-    // question is asked in it. A question or a countdown that scrolled out
-    // of sight is one nobody answers.
+    // row with its countdown and its address, and the time a question is
+    // asked in it. A question or a countdown that scrolled out of sight is
+    // one nobody answers.
     let pinned =
       facts.auth == .signedOut || facts.signIn != nil || ui.isAsking(.signOut, now: now)
 

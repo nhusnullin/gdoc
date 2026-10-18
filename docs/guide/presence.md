@@ -51,7 +51,7 @@ the only settings in it are the switch for launching at login and Quit.
 
 The sections are always in this order, except that Health comes first on the
 three screens where Health is the whole point: no token at all, a sign-in in
-flight, and the three seconds Sign out asks its question in.
+flight, and while Sign out is asking its question.
 
 ### Now
 
@@ -212,11 +212,12 @@ terminates the child.
 
 ### Sign out
 
-Sign out asks first, inline, for three seconds, and the question names what will
-stop: the live watches and the holds, counted, or "Nothing is running. Only the
-token goes." Say yes and the app stops those watches, runs `gdoc auth logout`,
-and asks `gdoc auth status` again. `auth logout` removes the token file and
-nothing else.
+Sign out asks first, inline, and the question names what will stop: the live
+watches and the holds, counted, or "Nothing is running. Only the token goes."
+The question waits for you: Keep puts it away, and so does closing the panel.
+Say yes and the app stops those watches, runs `gdoc auth logout`, and asks
+`gdoc auth status` again. `auth logout` removes the token file and nothing
+else.
 
 Whose account it is decides nothing anywhere in gdoc, so the account row is a
 fact and not a gate. The one place the sign-in does decide something is a held

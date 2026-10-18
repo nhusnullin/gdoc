@@ -63,6 +63,10 @@ final class Panel: NSObject, NSWindowDelegate {
 
   var isOpen: Bool { panel.isVisible }
 
+  /// Called once each time the panel closes, however it closed: Esc, a click
+  /// elsewhere, the item's own click. The session puts its question away.
+  var onClose: (() -> Void)?
+
   /// Draw this view and open under that button. Opening again with the panel
   /// already up closes it, which is what a second click on a menu bar item
   /// means everywhere else on this system.
@@ -95,6 +99,10 @@ final class Panel: NSObject, NSWindowDelegate {
 
   func windowDidResignKey(_ notification: Notification) {
     close()
+  }
+
+  func windowWillClose(_ notification: Notification) {
+    onClose?()
   }
 
   private func show<Content: View>(_ content: Content, under button: NSStatusBarButton?) {

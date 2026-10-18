@@ -48,6 +48,7 @@ final class Shell: NSObject, NSApplicationDelegate {
     let item = StatusItem { [weak self] in self?.clicked() }
     self.session = session
     self.item = item
+    panel.onClose = { [weak session] in session?.closed() }
 
     session.start { [weak self] in self?.changed() }
     changed()

@@ -139,7 +139,7 @@ in code are in the commit; these are the rules that had to move.
   states a person tells apart at a glance.
 - **An empty TODAY is not drawn under a pinned HEALTH**, which is the rule
   the evening's amendment gave NOW. HEALTH is pinned first on three screens:
-  no token, a sign-in in flight, and the three seconds a question is asked.
+  no token, a sign-in in flight, and while a question is asked.
 
 Left as they are, with the reason:
 
@@ -384,6 +384,17 @@ findings themselves are in the commit.
   clears `Needs sign-in` except signing in, so the card carries the sign-in
   arrow alone, which is principle 4. The code has always done this; the
   amendment did not say it.
+
+## Amendments, 2026-10-18, after Nail's first sign-out
+
+- **A question waits for its answer.** The inline confirm reverted itself
+  after three seconds, by principle 3's "a press nobody followed up on undoes
+  itself". Nail pressed Sign out, read the sentence under "Sign out?", pressed
+  again and found the icon back under the pointer: the question had gone and
+  the press asked again, so `auth logout` never ran. The question now goes
+  with Keep, with the confirm, or with the panel closing, which is the Keep
+  nobody pressed, and never with the clock. The safe half still wins by
+  default: a panel closed on a question has answered Keep.
 
 ## The render for review
 

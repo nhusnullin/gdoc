@@ -201,18 +201,23 @@ final class ControlTests: XCTestCase {
     }
   }
 
-  // `.confirm .btn{height:20px;padding:0 8px}` with a 2 px gap, and three
-  // seconds: a press nobody followed up on undoes itself, so a panel left
-  // open on the screen is never waiting for an answer.
-  func testAConfirmRowRevertsAfterThreeSeconds() throws {
-    XCTAssertEqual(Timing.confirmRevert, 3)
+  // `.confirm .btn{height:20px;padding:0 8px}` with a 2 px gap. The question
+  // waits for its answer: it goes with Keep, with the confirm, or with the
+  // panel closing, and never with the clock. Three seconds was the rule
+  // until 2026-10-18, when a person reading the sentence under "Sign out?"
+  // found the question gone and the icon back under the pointer.
+  func testAConfirmRowWaitsForItsAnswer() throws {
     XCTAssertEqual(ConfirmRow.gap, 2)
 
     let asked = Date(timeIntervalSince1970: 1_000)
     XCTAssertTrue(ConfirmRow.isShowing(askedAt: asked, now: asked))
-    XCTAssertTrue(ConfirmRow.isShowing(askedAt: asked, now: asked.addingTimeInterval(2.99)))
-    XCTAssertFalse(ConfirmRow.isShowing(askedAt: asked, now: asked.addingTimeInterval(3)))
-    XCTAssertFalse(ConfirmRow.isShowing(askedAt: asked, now: asked.addingTimeInterval(30)))
+    XCTAssertTrue(ConfirmRow.isShowing(askedAt: asked, now: asked.addingTimeInterval(3)))
+    XCTAssertTrue(ConfirmRow.isShowing(askedAt: asked, now: asked.addingTimeInterval(30)))
+    XCTAssertTrue(ConfirmRow.isShowing(askedAt: asked, now: asked.addingTimeInterval(3600)))
+    XCTAssertFalse(ConfirmRow.isShowing(askedAt: nil, now: asked), "no question, nothing shown")
+    XCTAssertFalse(
+      ConfirmRow.isShowing(askedAt: asked, now: asked.addingTimeInterval(-1)),
+      "a question asked in the future is no question on the screen")
     XCTAssertFalse(ConfirmRow.isShowing(askedAt: nil, now: asked), "nobody asked anything")
 
     // The row is a two-line row with the pair where the actions would be,

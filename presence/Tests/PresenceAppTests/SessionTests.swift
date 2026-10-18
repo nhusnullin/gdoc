@@ -497,14 +497,14 @@ final class SessionTests: XCTestCase {
       "an empty slot is taken")
     XCTAssertFalse(
       Session.takesTheSlot(
-        waiting: now.addingTimeInterval(Timing.confirmRevert),
+        waiting: now.addingTimeInterval(Timing.checkFlash),
         due: now.addingTimeInterval(Timing.doneFlash)),
-      "the question's three seconds outlive the copied second, so the question keeps the slot")
+      "the banner's five seconds outlive the copied second, so the banner keeps the slot")
     XCTAssertTrue(
       Session.takesTheSlot(
         waiting: now.addingTimeInterval(Timing.doneFlash),
-        due: now.addingTimeInterval(Timing.confirmRevert)),
-      "and a question asked inside a copied second takes it, because it is the later moment")
+        due: now.addingTimeInterval(Timing.checkFlash)),
+      "and a banner raised inside a copied second takes it, because it is the later moment")
   }
 
   /// Sign out asks first, and the answer runs `auth logout` and asks gdoc
@@ -535,6 +535,40 @@ final class SessionTests: XCTestCase {
     XCTAssertTrue(
       ran.allSatisfy { Call.allCases.map { $0.arguments.joined(separator: " ") }.contains($0) },
       "every argv the session ran is one of the six: \(ran)")
+  }
+
+  /// The question waits for its answer. Nail pressed Sign out on 2026-10-18,
+  /// read the sentence under "Sign out?", pressed again and the icon was back
+  /// under the pointer: three seconds had passed and the question had
+  /// reverted, so the press asked again and `auth logout` never ran. A
+  /// question goes with Keep, with the confirm, or with the panel closing.
+  func testTheQuestionWaitsForItsAnswerAndGoesWithThePanel() throws {
+    try writeTheRecord([line(kind: "start", command: "read", call: 1, doc: Self.doc)])
+    var now = Date()
+    let session = made(clock: { now })
+    answered(session)
+
+    session.perform(.signOut, nil)
+    XCTAssertEqual(session.ui.question, .signOut)
+    now = now.addingTimeInterval(45)
+    XCTAssertTrue(
+      session.ui.isAsking(.signOut, now: now), "forty-five seconds later it is still asked")
+
+    session.closed()
+    XCTAssertNil(session.ui.question, "the panel closing is the Keep nobody pressed")
+    XCTAssertEqual(try argv(), ["help --json", "auth status"], "and nothing ran")
+
+    session.perform(.signOut, nil)
+    now = now.addingTimeInterval(45)
+    let out = expectation(description: "the second press, forty-five seconds later, ran the logout")
+    out.assertForOverFulfill = false
+    session.start { [weak self] in
+      guard let self, let ran = try? self.argv() else { return }
+      if ran.contains("auth logout") { out.fulfill() }
+    }
+    session.perform(.signOut, nil)
+    wait(for: [out], timeout: 20)
+    XCTAssertNil(session.ui.question)
   }
 
   /// Quit is the shell's own closure, because the run loop is the shell's.
@@ -707,7 +741,8 @@ final class SessionTests: XCTestCase {
     desk: Desk = FakeDesk(),
     loginService: LoginService = FakeRegister(),
     alive: @escaping (Int32) -> Bool = { _ in false },
-    quit: @escaping () -> Void = {}
+    quit: @escaping () -> Void = {},
+    clock: @escaping () -> Date = Date.init
   ) -> Session {
     let made = Session(
       places: Places(
@@ -719,6 +754,7 @@ final class SessionTests: XCTestCase {
       loginService: loginService,
       environment: ["HOME": root.path, "PATH": "/usr/bin:/bin"],
       alive: alive,
+      clock: clock,
       quit: quit)
     session = made
     return made

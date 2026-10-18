@@ -266,7 +266,7 @@ final class StateTests: XCTestCase {
   }
 
   private func question(of panel: PanelModel) throws -> QuestionModel {
-    try XCTUnwrap(try accountRow(of: panel).question, "the row is the question for three seconds")
+    try XCTUnwrap(try accountRow(of: panel).question, "the row is the question while it is asked")
   }
 
   /// A write a rule held, as gdoc writes it: one line, and no call.

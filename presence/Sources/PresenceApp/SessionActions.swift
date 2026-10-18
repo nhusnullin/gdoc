@@ -12,8 +12,9 @@
 // answering without saying so.
 //
 // The questions are the two the panel asks, and both of them are a second
-// press of the same kind inside three seconds: a hold's Dismiss and the
-// Account row's Sign out. Everything else happens at once.
+// press of the same kind while the question is up: a hold's Dismiss and the
+// Account row's Sign out. A question waits for its answer or for the panel to
+// close. Everything else happens at once.
 
 import Foundation
 import PresenceCore
@@ -177,8 +178,8 @@ extension Session {
     }
   }
 
-  /// Sign out, once. The first press is the question, which reverts itself
-  /// after three seconds; the second is the sign-out.
+  /// Sign out, once. The first press is the question, which waits for its
+  /// answer or for the panel to close; the second is the sign-out.
   private func askThenSignOut() {
     guard ui.isAsking(.signOut, now: clock()) else {
       asksFirst(.signOut)
@@ -200,6 +201,10 @@ extension Session {
     _ = try? await runner.run(.authLogout)
     signedInAt = nil
     await ask(.changed)
+    // One redraw whatever the facts did: the banner's clock moved, and a
+    // read that came back the same (a logout that was refused) is still the
+    // moment the row goes back from its question to its icon.
+    changed()
   }
 
   // MARK: the two runs in HEALTH
@@ -273,7 +278,6 @@ extension Session {
   private func asksFirst(_ question: PanelQuestion) {
     ui.question = question
     ui.questionAt = clock()
-    revert(after: Timing.confirmRevert)
     changed()
   }
 

@@ -236,6 +236,18 @@ public final class Session {
     Task { [weak self] in await self?.ask(.panelOpened) }
   }
 
+  /// The panel closed, by Esc, by a click elsewhere or by the item's own
+  /// click. A question still up goes with it: a panel closed on "Sign out?"
+  /// is the Keep nobody pressed, and the next open starts with nothing asked.
+  /// The clock never takes a question away; only this and an answer do:
+  /// testTheQuestionWaitsForItsAnswerAndGoesWithThePanel.
+  public func closed() {
+    guard ui.question != nil else { return }
+    ui.question = nil
+    ui.questionAt = nil
+    changed()
+  }
+
   // MARK: what the shell draws
 
   /// Everything one redraw draws: the glyph, its ring and the panel, out of
@@ -458,17 +470,16 @@ public final class Session {
     return true
   }
 
-  /// One redraw, that many seconds from now. It is what takes a copied icon,
-  /// a question and a green check back off the screen.
+  /// One redraw, that many seconds from now. It is what takes a copied icon
+  /// and a green check back off the screen. A question is not on this clock:
+  /// it waits for its answer or for the panel to close.
   ///
   /// The later of the two moments wins, because the slot is shared by two
   /// things that are not the same length: the copied check lasts a second
-  /// and a question three. A Copy link pressed inside those three seconds
-  /// would otherwise move the one redraw forward to its own second, and
-  /// nothing would be scheduled for the moment the question ran out: the
-  /// expired question would sit there until some fact moved, and a press on
-  /// it would ask again instead of acting:
-  /// testACopiedCheckDoesNotCutTheQuestionsRedrawShort.
+  /// and the signed-in banner five. A Copy link pressed inside the banner's
+  /// five seconds would otherwise move the one redraw forward to its own
+  /// second, and nothing would be scheduled for the moment the banner ran
+  /// out: testACopiedCheckDoesNotCutTheQuestionsRedrawShort.
   func revert(after seconds: TimeInterval) {
     let waiting = (revertTimer?.isValid ?? false) ? revertTimer?.fireDate : nil
     guard Session.takesTheSlot(waiting: waiting, due: Date().addingTimeInterval(seconds)) else {
