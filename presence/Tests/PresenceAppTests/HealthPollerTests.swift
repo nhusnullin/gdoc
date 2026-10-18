@@ -59,7 +59,14 @@ final class HealthPollerTests: XCTestCase {
     XCTAssertEqual(again, [.help, .authStatus, .authStatus], "ten minutes later, while live")
   }
 
-  func testHelpIsAskedOnOpenAndNeverOnATimer() async {
+  /// `help --json` is asked on open and every six hours after it, so a
+  /// release cut in the morning is on the header by the evening without the
+  /// panel being opened once. It is not this app asking GitHub: the command
+  /// carries gdoc's own 24-hour stamp, and three of four asks reach nothing
+  /// but the file beside the token.
+  func testHelpIsAskedOnOpenAndEverySixHours() async {
+    XCTAssertEqual(PollSchedule.helpGap, 6 * 3600)
+
     let fake = FakeGdoc()
     let poller = HealthPoller(location: Self.found, answer: fake.answer)
     let open = Date(timeIntervalSince1970: 2_000_000)
@@ -68,18 +75,24 @@ final class HealthPollerTests: XCTestCase {
     let onOpen = await fake.calls
     XCTAssertEqual(onOpen, [.help, .authStatus])
 
-    // `help --json` carries gdoc's own daily check of what is published, so
-    // asking it on a timer would be the app asking GitHub on gdoc's behalf.
-    for minutes in [10, 20, 30, 60, 120] {
+    // The ticks inside the six hours ask nothing of it. The app ticks every
+    // five seconds, so this is the ordinary minute of its life.
+    for minutes in [10, 20, 30, 60, 120, 359] {
       await poller.poll(
-        .timer, live: true, now: open.addingTimeInterval(Double(minutes) * 60))
+        .timer, live: false, now: open.addingTimeInterval(Double(minutes) * 60))
     }
-    let onTimers = await fake.calls.filter { $0 == .help }
-    XCTAssertEqual(onTimers, [.help], "help is asked once, on the open")
+    let inside = await fake.calls.filter { $0 == .help }
+    XCTAssertEqual(inside, [.help], "help is asked once inside the six hours")
 
-    await poller.poll(.panelOpened, live: true, now: open.addingTimeInterval(7200))
+    await poller.poll(.timer, live: false, now: open.addingTimeInterval(6 * 3600))
+    let onTheSixth = await fake.calls
+    XCTAssertEqual(
+      onTheSixth, [.help, .authStatus, .help],
+      "the sixth hour asks help, and the timer asks nothing else with no watch open")
+
+    await poller.poll(.panelOpened, live: true, now: open.addingTimeInterval(6 * 3600 + 60))
     let onTheNextOpen = await fake.calls.filter { $0 == .help }
-    XCTAssertEqual(onTheNextOpen.count, 2, "the next open asks again")
+    XCTAssertEqual(onTheNextOpen.count, 3, "and the next open asks again")
   }
 
   /// A sign-in, a sign-out or an update makes the last answer wrong, so the

@@ -42,6 +42,9 @@ final class ThemeTests: XCTestCase {
     XCTAssertEqual(dark.hold, Swatch(0xD9_A0_3C))
     XCTAssertEqual(dark.bad, Swatch(0xE5_48_4D))
 
+    // --accent, which the header's update glyph is the one reader of
+    XCTAssertEqual(dark.accent, Swatch(0x8F_B3_DC))
+
     // .hold and .stuck: the tint and the half-pixel edge inside it
     XCTAssertEqual(dark.holdTint, Swatch(0xD9_A0_3C, alpha: 0.07))
     XCTAssertEqual(dark.holdTintEdge, Swatch(0xD9_A0_3C, alpha: 0.22))
@@ -102,6 +105,9 @@ final class ThemeTests: XCTestCase {
     XCTAssertEqual(light.ok, Swatch(0x1B_9E_4B))
     XCTAssertEqual(light.hold, Swatch(0xE6_87_0A))
     XCTAssertEqual(light.bad, Swatch(0xE0_31_2E))
+
+    // --accent
+    XCTAssertEqual(light.accent, Swatch(0x3B_5F_8A))
 
     // the light hold card is a solid tint with its own ink, --hold-ink
     XCTAssertEqual(light.holdTint, Swatch(0xFF_F6_E5))

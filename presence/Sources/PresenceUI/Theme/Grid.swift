@@ -58,4 +58,10 @@ public enum Grid {
 
   /// The badge beside the mark in the menu bar.
   public static let badgeSize: CGFloat = 10
+
+  /// The dot on the header's update glyph while a release is there to take.
+  /// It is the menu bar badge's own size taken down to what reads beside a
+  /// 16 pt icon, and it is drawn in the accent ink the icon takes:
+  /// testTheUpdateGlyphCarriesItsDotOnlyWhenThereIsSomethingToTake.
+  public static let updateDotSize: CGFloat = 5
 }

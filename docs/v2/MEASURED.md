@@ -1352,3 +1352,34 @@ asks again on the next one.
 Recheck after a Spotlight reindex, or on a vault an order of magnitude bigger
 than 727 files. The timings are one machine's and the shape of the answer is
 what matters: a handful of candidates, one of which the front matter proves.
+
+## What the header line holds, and what a second version costs it
+
+Measured 2026-10-18 on this machine, M27 Task 5, through the metric probes
+`RowTests` already reads. The decision of the third look asks for the newer
+version written after the current one, `v2.18.0 → v2.19.0`, on the header
+line. The line does not have the room.
+
+How it was taken. `RowTests.testTheHeaderIs36WithTheMarkTheNameTheVersionAndTheAccount`
+renders `PanelHeader` at the width the panel gives it, 320 less 8 either
+side, and reads the address's own box back twice: once drawn alone at the
+width it asks for, and once on the header line. The two numbers below are
+that comparison, and both are assertions in that test rather than a reading
+somebody wrote down.
+
+| The header line | The address's width |
+|---|---|
+| mark, name, one version, the update glyph, the account's glyph, its address and Sign out | 98 pt, which is the whole of `nail@example.com` |
+| the same line with `v2.16.0 → v2.17.0` in the version's place | 49.5 pt, which is `nail@ex…` |
+
+**So the published version is the line under the header and not a second
+number on it.** The address is the piece that gives, because it is the one
+thing on the line drawn without `fixedSize`, and an address cut in half is
+what the morning of the same day was about. The glyph keeps its accent ink
+and its dot, which is what catches an eye; the number is in the quiet line
+directly under the installed one, as `v2.15.0 is published`.
+
+Nail may still want both on the line. That is a new decision entry and one
+of these: a shorter address, no mark, or the name dropped. Dropping the
+leading `v` from both versions buys 12 pt of the 49 needed, so it is not
+one of them.

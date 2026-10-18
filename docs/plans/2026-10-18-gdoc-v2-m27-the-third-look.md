@@ -183,7 +183,7 @@ branch.
   `presence/Sources/PresenceApp/HealthPoller.swift`, `UpdateAction.swift`,
   `Session.swift`, tests beside each
 
-- [ ] the update glyph is always in the header after the version, in three
+- [x] the update glyph is always in the header after the version, in three
       states: quiet, the icon in the caption grey, when nothing newer is
       known, and pressing it runs `gdoc update`, which asks GitHub and
       installs if there is something newer or answers that this is current;
@@ -192,14 +192,28 @@ branch.
       --json` listed a newer stable, and pressing it runs the same update;
       running, the ring, while the child is up; a test over the three states
       and their words
-- [ ] the app asks `help --json` on open as today and once every six hours
+- [x] the app asks `help --json` on open as today and once every six hours
       while it runs, so a release cut during the day is noticed by evening;
       gdoc's own stamp keeps GitHub to once in 24 hours, and the test shows
       the timer asks the runner and nothing else
-- [ ] after a successful update the app relaunches itself as M24 made it;
+- [x] after a successful update the app relaunches itself as M24 made it;
       after "already current" the glyph shows the check for one second and
       goes quiet
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
+
+**One sentence of the decision was not built, and this is where it is
+said.** The newer version is not on the header line after the current one.
+It does not fit: the line is 320 pt less 8 either side, and a second version
+in that slot takes the address from 98 pt to 49.5, which is "nail@ex…" on
+every screen, the one thing the morning of the same day was about. Both
+numbers are measured in
+`RowTests.testTheHeaderIs36WithTheMarkTheNameTheVersionAndTheAccount` and
+written down in `docs/v2/MEASURED.md`, "What the header line holds". So the
+published version is the quiet line directly under the installed one,
+"v2.15.0 is published", and the glyph keeps the accent ink and the dot.
+Everything else in the decision's paragraph is built as written. Nail's word
+puts it back on the line, as a new decision entry naming what leaves it: the
+mark, the name, or a cut address.
 
 ### Task 6: the words
 

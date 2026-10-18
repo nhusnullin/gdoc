@@ -29,7 +29,7 @@ extension PanelModel {
         nil
       }
 
-    let version = versionPieces(facts)
+    let version = versionPieces(facts, now: now)
     let account = accountPieces(facts)
 
     // The question is asked in place of the line. The pair of buttons takes
@@ -64,6 +64,7 @@ extension PanelModel {
       versionTone: version.tone,
       versionWaiting: version.waiting,
       update: version.update,
+      updateLook: version.look,
       account: account.text,
       glyph: account.glyph,
       tone: account.tone,
@@ -80,6 +81,7 @@ extension PanelModel {
     var tone: GlyphTone = .dim
     var waiting = false
     var update: ActionModel?
+    var look: UpdateLook = .quiet
     var quiet: String?
   }
 
@@ -94,7 +96,16 @@ extension PanelModel {
     var signInURL: String?
   }
 
-  private static func versionPieces(_ facts: Facts) -> VersionPieces {
+  /// What the header says about which gdoc this is, and what pressing the
+  /// glyph beside it would do.
+  ///
+  /// The glyph is there whenever there is a binary to update, because
+  /// `gdoc update` is the command that asks GitHub: a header that offered
+  /// nothing until the app's own six hours had passed would make a person
+  /// wait for a release they already know is out. What the states differ in
+  /// is what this app has been told, never what the press does.
+  /// testTheUpdateGlyphIsAlwaysThereInItsThreeStates.
+  private static func versionPieces(_ facts: Facts, now: Date) -> VersionPieces {
     guard facts.gdocFound else {
       return VersionPieces(
         text: "not found", tone: .bad, quiet: "looked for it at \(facts.gdocPathTried)")
@@ -113,12 +124,43 @@ extension PanelModel {
     if facts.updating {
       return VersionPieces(text: version, waiting: true)
     }
-    guard let latest = facts.versions.updateAvailable else {
-      return VersionPieces(text: version)
+
+    let latest = facts.versions.updateAvailable
+    // The published version is the line under the header and not a second
+    // number on it. Both of them on the line is what the decision of the
+    // third look asks for, and it does not fit: 320 pt holds the mark, the
+    // name, one version, the glyph, the account's own glyph, its address
+    // and Sign out with 4 pt to spare, and a second version squeezes the
+    // address from 98 pt to 49, which is "nail@ex…" on every screen. That
+    // is the one thing the morning before this evening was about. So the
+    // number is directly under the one installed, the dot on the glyph is
+    // what catches an eye, and the address stays whole:
+    // testTheHeaderIs36WithTheMarkTheNameTheVersionAndTheAccount measures
+    // both. Nail may still want it on the line, and that is his word to
+    // say.
+    let look: UpdateLook = latest == nil ? .quiet : .available
+    let published = latest.map { "\($0) is published" }
+
+    // The second after a run that installed nothing. The check stands in
+    // for the arrow, as a copied link's does, and it goes by itself.
+    if ActionButton.isDone(copiedAt: facts.updateChecked, now: now) {
+      return VersionPieces(
+        text: version,
+        update: ActionModel(
+          .update, icon: .down, tip: Tips.newestRelease, state: .done, target: "gdoc"),
+        look: look, quiet: published)
+    }
+
+    guard let latest else {
+      return VersionPieces(
+        text: version,
+        update: ActionModel(.update, icon: .down, tip: Tips.checkUpdate, target: "gdoc"),
+        look: .quiet)
     }
     return VersionPieces(
       text: version,
-      update: ActionModel(.update, icon: .down, tip: "Update to \(latest)", target: "gdoc"))
+      update: ActionModel(.update, icon: .down, tip: Tips.updateTo(latest), target: "gdoc"),
+      look: .available, quiet: published)
   }
 
   private static func accountPieces(_ facts: Facts) -> AccountPieces {

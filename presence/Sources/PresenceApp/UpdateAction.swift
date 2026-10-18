@@ -39,6 +39,14 @@ public enum UpdateStanding: Sendable, Equatable {
   case installed(String)
   /// It finished and installed nothing, carrying the word it printed.
   case unchanged(String)
+
+  /// Whether the run answered that this machine is on the newest release.
+  /// It is the one word of the six that says so: `major_available` is a
+  /// release this app declined to install by passing no flag, and a glyph
+  /// that showed a check for it would be saying there is nothing to take.
+  public var isCurrent: Bool {
+    self == .unchanged(UpdateReport.upToDate)
+  }
   /// Nothing was installed and the reason is the envelope's own.
   case failed(String)
 }
@@ -127,7 +135,8 @@ public actor UpdateAction {
       // Either run closes both buttons, so this never puts the flag down:
       // the session raises it on the press, for the extension's run as well,
       // and this raises it again while the child of a plain update is up.
-      updating: facts.updating || standing == .running)
+      updating: facts.updating || standing == .running,
+      updateChecked: facts.updateChecked)
   }
 
   /// The version this app installed, while it is newer than the reading
@@ -182,6 +191,10 @@ public actor UpdateAction {
 struct UpdateReport: Equatable {
   /// The one word that means something was replaced.
   static let updated = "updated"
+  /// The one word that means there was nothing to replace. It is
+  /// `update.UpToDate` in the Go, printed by a run that reached GitHub and
+  /// found this machine already on the newest release.
+  static let upToDate = "up_to_date"
 
   let action: String?
   let to: String?

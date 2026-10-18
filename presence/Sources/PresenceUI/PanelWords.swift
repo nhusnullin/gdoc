@@ -44,6 +44,18 @@ public enum Tips {
   public static let cancel = "Cancel"
   public static let copySignIn = "Copy sign-in link"
   public static let installExtension = "Install extension"
+  /// The header's update glyph while nothing newer is known. The press runs
+  /// `gdoc update`, which asks GitHub itself, so the words are about asking
+  /// and not about a release nobody has heard of.
+  public static let checkUpdate = "Check for a new version"
+  /// The same glyph for the second after a run that found nothing to
+  /// install. It is what the run answered and never a promise about later.
+  public static let newestRelease = "This is the newest release"
+
+  /// The glyph where `help --json` listed a newer stable release.
+  public static func updateTo(_ version: String) -> String {
+    "Update to \(version)"
+  }
 }
 
 /// The word of a document row's own menu, which is one word since the third

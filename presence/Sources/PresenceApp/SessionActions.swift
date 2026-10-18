@@ -254,17 +254,28 @@ extension Session {
 
   // MARK: the two runs the panel offers
 
-  /// `gdoc update`, with no flag: what the person would have typed. The row
-  /// draws a ring until the child's end, and the version beside it moves
-  /// only once `help --json` says what is installed.
+  /// `gdoc update`, with no flag: what the person would have typed. The
+  /// glyph draws a ring until the child's end, and the version beside it
+  /// moves only once `help --json` says what is installed.
+  ///
+  /// A run that replaced the binary needs nothing said: the version moves
+  /// and, where the release carried a new app as well, the bundle under
+  /// this process changes and it reopens itself, which is M24's and
+  /// `reopenIfTheBundleMoved`'s. A run that installed nothing is the one
+  /// that would otherwise answer a press with nothing at all, so the glyph
+  /// shows the check for a second and goes quiet.
   private func install() {
     guard !installing else { return }
     installing = true
     retick()
     Task { [weak self] in
       guard let self else { return }
-      _ = await self.updates.update()
+      let standing = await self.updates.update()
       self.installing = false
+      if standing.isCurrent {
+        self.updateChecked = self.clock()
+        self.revert(after: Timing.doneFlash)
+      }
       self.retick()
       await self.ask(.changed)
     }

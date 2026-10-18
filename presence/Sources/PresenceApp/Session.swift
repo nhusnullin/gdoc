@@ -123,6 +123,11 @@ public final class Session {
   /// row is the actor's own standing, and this is what makes the clock tick
   /// fast enough to show it.
   var installing = false
+  /// When an update run of this process last came back saying there was
+  /// nothing newer to install. The glyph draws the check for a second from
+  /// that moment and then goes quiet by itself, which is the copied link's
+  /// own second: testAnUpdateThatInstalledNothingShowsTheCheckForASecond.
+  var updateChecked: Date?
   /// Whether the last Install extension of this process handed the extension
   /// to Claude Desktop. True until a run says otherwise, because the file
   /// beside the binary is what answers before any run of this app's.
@@ -416,7 +421,8 @@ public final class Session {
       unstoppable: stopper.unstoppable(in: events),
       // The press and not the actor's standing, so the extension's own run
       // closes both buttons too: the actor moves no version for that one.
-      updating: installing)
+      updating: installing,
+      updateChecked: updateChecked)
   }
 
   /// Whether gdoc has ever written the Claude Desktop extension here. The

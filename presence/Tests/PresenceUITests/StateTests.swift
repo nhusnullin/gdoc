@@ -135,12 +135,72 @@ final class StateTests: XCTestCase {
     let behind = try drawn(
       [], at: "2026-10-17T09:00:00Z", facts: Scenes.machine(latestStable: "v2.15.0"))
     XCTAssertEqual(behind.header.version, "v2.14.0")
-    XCTAssertEqual(behind.header.update?.kind, .update)
+    XCTAssertEqual(behind.header.quiet, ["v2.15.0 is published"])
+    XCTAssertEqual(behind.header.updateLook, .available)
     XCTAssertEqual(behind.header.update?.tip, "Update to v2.15.0")
     let ahead = try drawn(
       [], at: "2026-10-17T09:00:00Z", facts: Scenes.machine(latestStable: "v2.13.0"))
-    XCTAssertEqual(ahead.header.version, "v2.14.0")
-    XCTAssertNil(ahead.header.update, "and there is no button to press")
+    XCTAssertEqual(ahead.header.version, "v2.14.0", "the line names one version")
+    XCTAssertEqual(
+      ahead.header.updateLook, .quiet, "and the glyph offers a check and no release")
+  }
+
+  /// The update glyph is on the line whenever there is a binary to update,
+  /// in the states of the third look. Pressing it runs `gdoc update` in
+  /// every one of them, because that command is the one that asks GitHub:
+  /// the states differ in what this app has been told, never in what the
+  /// press does.
+  func testTheUpdateGlyphIsAlwaysThereInItsThreeStates() throws {
+    let when = "2026-10-17T09:00:00Z"
+
+    // Quiet: nothing newer is known, so the words are about asking.
+    let quiet = try drawn([], at: when, facts: Scenes.machine())
+    XCTAssertEqual(quiet.header.version, "v2.14.0")
+    XCTAssertEqual(quiet.header.updateLook, .quiet)
+    let glyph = try XCTUnwrap(quiet.header.update, "the glyph is there with nothing published")
+    XCTAssertEqual(glyph.kind, .update)
+    XCTAssertEqual(glyph.icon, .down)
+    XCTAssertEqual(glyph.state, .live)
+    XCTAssertEqual(glyph.tip, "Check for a new version")
+
+    // Available: `help --json` listed a newer stable, so the line carries
+    // both versions and the glyph takes the accent ink and its dot.
+    let available = try drawn([], at: when, facts: Scenes.machine(latestStable: "v2.15.0"))
+    XCTAssertEqual(available.header.version, "v2.14.0", "the line names the one installed")
+    XCTAssertEqual(
+      available.header.quiet, ["v2.15.0 is published"],
+      "and the one published is directly under it, because the line has no room for both")
+    XCTAssertEqual(available.header.updateLook, .available)
+    XCTAssertEqual(available.header.update?.tip, "Update to v2.15.0")
+    XCTAssertEqual(available.header.update?.state, .live)
+
+    // Running: the ring stands where the glyph is, and the version beside
+    // it is the one still installed.
+    let running = try drawn([], at: when, facts: updating(true))
+    XCTAssertTrue(running.header.versionWaiting)
+    XCTAssertEqual(running.header.version, "v2.14.0")
+    XCTAssertNil(running.header.update, "there is nothing to press while the child is up")
+
+    // And the second after a run that installed nothing: the check, with
+    // the one thing the run said.
+    let answered = try at(when)
+    let checked = try drawn(
+      [], at: when, facts: Scenes.machine(updateChecked: answered))
+    XCTAssertEqual(checked.header.update?.state, .done)
+    XCTAssertEqual(checked.header.update?.tip, "This is the newest release")
+    let after = try drawn(
+      [], at: "2026-10-17T09:00:02Z", facts: Scenes.machine(updateChecked: answered))
+    XCTAssertEqual(after.header.update?.state, .live, "a second later it is quiet again")
+    XCTAssertEqual(after.header.update?.tip, "Check for a new version")
+  }
+
+  /// A machine with no gdoc on it has nothing to update, so there is no
+  /// glyph: the header says where it looked instead.
+  func testAMachineWithNoGdocOffersNoUpdate() throws {
+    let missing = try drawn(
+      [], at: "2026-10-17T09:00:00Z", facts: Scenes.machine(gdocFound: false))
+    XCTAssertEqual(missing.header.version, "not found")
+    XCTAssertNil(missing.header.update)
   }
 
   /// The md icon is grey for one reason since the third look: no note names

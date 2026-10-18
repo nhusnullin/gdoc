@@ -345,7 +345,9 @@ final class RowTests: XCTestCase {
 
     let account = "nail@example.com"
     let signedIn = HeaderModel(
-      mark: "⁘", version: "v2.16.0", account: account, glyph: .check, tone: .ok,
+      mark: "⁘", version: "v2.16.0",
+      update: ActionModel(.update, icon: .down, tip: Tips.checkUpdate, target: "gdoc"),
+      account: account, glyph: .check, tone: .ok,
       actions: [ActionModel(.signOut, icon: .signout, tip: Tips.signOut, target: "auth")])
     let measured = try probes(PanelHeader(model: signedIn), scheme: .dark, width: line)
     XCTAssertEqual(measured["header"]?.height, 36 + 4, "the header and its 4 pt margin under it")
@@ -356,7 +358,9 @@ final class RowTests: XCTestCase {
     XCTAssertNotNil(measured["header.glyph"], "the check over a token that works")
     XCTAssertNotNil(measured["header.account"], "the address")
     XCTAssertNotNil(measured["header.signOut"], "and the one action")
-    XCTAssertNil(measured["header.update"], "nothing newer is published, so there is no icon")
+    XCTAssertNotNil(measured["header.update"], "the update glyph, which is always on the line")
+    XCTAssertNil(
+      measured["header.update.dot"], "and nothing newer is known, so it carries no dot")
 
     // The account is the quietest grey in the panel, and the name is the
     // brightest: whose account it is decides nothing, so it is never loud.
@@ -373,21 +377,43 @@ final class RowTests: XCTestCase {
       measured["header.account"]?.width, wanted["alone"]?.width,
       "the address is squeezed on the line, so nobody can read the end of it")
 
-    // A newer release is the same icon the gdoc row carried, beside the
-    // version it would replace.
+    // A newer release is the same icon with the accent dot over it, and the
+    // version that is published is the line under, not a second number on
+    // this one: both of them here squeeze the address to half, which is the
+    // one thing the morning of the same day was about.
     let behind = try probes(
       PanelHeader(
         model: HeaderModel(
           mark: "⁘", version: "v2.16.0",
           update: ActionModel(.update, icon: .down, tip: "Update to v2.17.0", target: "gdoc"),
+          updateLook: .available,
+          account: account, glyph: .check, tone: .ok,
+          actions: [ActionModel(.signOut, icon: .signout, tip: Tips.signOut, target: "auth")],
+          quiet: ["v2.17.0 is published"])),
+      scheme: .dark, width: line)
+    XCTAssertNotNil(behind["header.update"], "there is a release to take")
+    XCTAssertEqual(
+      behind["header.update.dot"]?.width, Grid.updateDotSize, "and the dot says so at a glance")
+    XCTAssertEqual(behind["header.line"]?.height, 36, "the line itself is where it was")
+    XCTAssertEqual(
+      behind["header.account"]?.width, wanted["alone"]?.width,
+      "and the address is whole, which is what the line has room for")
+
+    // The measurement that decided it: both versions in the version slot
+    // take the address down to half of itself.
+    let crowded = try probes(
+      PanelHeader(
+        model: HeaderModel(
+          mark: "⁘", version: "v2.16.0 → v2.17.0",
+          update: ActionModel(.update, icon: .down, tip: "Update to v2.17.0", target: "gdoc"),
+          updateLook: .available,
           account: account, glyph: .check, tone: .ok,
           actions: [ActionModel(.signOut, icon: .signout, tip: Tips.signOut, target: "auth")])),
       scheme: .dark, width: line)
-    XCTAssertNotNil(behind["header.update"], "there is a release to take")
-    XCTAssertEqual(behind["header"]?.height, 36 + 4, "and the line is the same height")
-    XCTAssertEqual(
-      behind["header.account"]?.width, wanted["alone"]?.width,
-      "the whole line fits with the update icon on it as well")
+    XCTAssertLessThan(
+      try XCTUnwrap(crowded["header.account"]?.width),
+      try XCTUnwrap(wanted["alone"]?.width) / 2 + 1,
+      "which is nail@ex… on every screen, and why the number is under the line")
 
     // The mark is a setting and may be empty, and the empty mark draws
     // nothing rather than a gap.

@@ -217,7 +217,8 @@ enum Scenes {
     loginItem: LoginItemState = .off,
     signIn: SignInPhase? = nil,
     signedInAt: Date? = nil,
-    pairing: [String: String] = SceneDocuments.pairing
+    pairing: [String: String] = SceneDocuments.pairing,
+    updateChecked: Date? = nil
   ) -> Facts {
     Facts(
       account: account,
@@ -233,7 +234,8 @@ enum Scenes {
       loginItem: loginItem,
       signIn: signIn,
       pairing: pairing,
-      signedInAt: signedInAt)
+      signedInAt: signedInAt,
+      updateChecked: updateChecked)
   }
 
   /// Every scene, in the order the screens file tells the day.

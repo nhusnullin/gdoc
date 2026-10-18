@@ -8,16 +8,18 @@
 //
 // The schedule is a pure function of a reason, a clock and what was asked
 // before, so a person opening and closing the panel ten times in a minute
-// asks gdoc once. `help --json` is asked on open and never on a timer,
-// because that command carries gdoc's own once-a-day check of what is
-// published: a timer here would be this app asking GitHub on gdoc's behalf.
-// `auth status` is the one a live session needs to keep working, so it is
-// asked again every ten minutes while one is open.
+// asks gdoc once. `help --json` is asked on open and every six hours after
+// that, so a release cut during the day is noticed by the evening without
+// the panel ever being opened. It is not this app asking GitHub: the command
+// carries gdoc's own stamp, which holds that question to once in 24 hours,
+// and a person who wants to know sooner presses the update glyph, which runs
+// `gdoc update` and asks for itself. `auth status` is the one a live session
+// needs to keep working, so it is asked again every ten minutes while one is
+// open.
 //
 // The third reason is the app's own doing: a sign-in, a sign-out or an
 // `update` that replaced the binary makes the last answer wrong, so both
-// questions are asked again at once. It is still not a timer, which is the
-// rule that matters: nothing here asks on a schedule of its own.
+// questions are asked again at once, whatever the gaps say.
 
 import Foundation
 import PresenceCore
@@ -42,6 +44,11 @@ public enum PollSchedule {
   public static let openGap: TimeInterval = 60
   /// How often a live session's token is checked again.
   public static let liveGap: TimeInterval = 600
+  /// How often `help --json` is asked again while the app runs. Six hours
+  /// is a working day cut in four: a release published in the morning is on
+  /// the header by the afternoon, and gdoc's own 24-hour stamp means three
+  /// of the four ask GitHub nothing at all.
+  public static let helpGap: TimeInterval = 6 * 3600
 
   public static func asksAuth(
     _ reason: PollReason, live: Bool, now: Date, lastAsked: Date?
@@ -58,9 +65,13 @@ public enum PollSchedule {
 
   public static func asksHelp(_ reason: PollReason, now: Date, lastAsked: Date?) -> Bool {
     guard reason != .changed else { return true }
-    guard reason == .panelOpened else { return false }
     guard let lastAsked else { return true }
-    return now.timeIntervalSince(lastAsked) >= openGap
+    let since = now.timeIntervalSince(lastAsked)
+    switch reason {
+    case .changed: return true
+    case .panelOpened: return since >= openGap
+    case .timer: return since >= helpGap
+    }
   }
 }
 
@@ -179,7 +190,8 @@ public actor HealthPoller {
       bundle: facts.bundle,
       newerRecord: facts.newerRecord,
       unstoppable: facts.unstoppable,
-      updating: facts.updating)
+      updating: facts.updating,
+      updateChecked: facts.updateChecked)
   }
 
   // MARK: the two questions

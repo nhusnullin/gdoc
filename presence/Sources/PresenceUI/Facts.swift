@@ -213,6 +213,12 @@ public struct Facts: Sendable, Equatable {
   /// ring in the header, and the version beside it stays the installed one
   /// until the child's end says what was put there.
   public let updating: Bool
+  /// When an update run of the app's own came back having installed
+  /// nothing because this is the newest release. The glyph draws the check
+  /// for a second from that moment, which is the copied link's own second:
+  /// a press that did something is owed an answer, and "nothing to do" is
+  /// an answer.
+  public let updateChecked: Date?
 
   public init(
     account: String? = nil,
@@ -232,7 +238,8 @@ public struct Facts: Sendable, Equatable {
     bundle: BundleState = .same,
     newerRecord: Bool = false,
     unstoppable: Set<String> = [],
-    updating: Bool = false
+    updating: Bool = false,
+    updateChecked: Date? = nil
   ) {
     self.account = account
     self.auth = auth
@@ -252,6 +259,7 @@ public struct Facts: Sendable, Equatable {
     self.newerRecord = newerRecord
     self.unstoppable = unstoppable
     self.updating = updating
+    self.updateChecked = updateChecked
   }
 
   /// What the app knows before it has asked anything: its own version, and

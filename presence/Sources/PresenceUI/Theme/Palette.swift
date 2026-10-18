@@ -94,6 +94,12 @@ public struct Palette: Sendable, Equatable {
   public let hold: Swatch
   public let bad: Swatch
 
+  // --accent, which the screens file keeps outside the panel's own three.
+  // The header's update glyph is the one thing in the panel that draws in
+  // it: a release somebody can take is not a state of the work, so it is
+  // neither ok nor hold nor bad, and the brightest ink is a live watch's.
+  public let accent: Swatch
+
   // The hold card: its tint, the half-pixel edge inside it, and the ink the
   // light block gives it so a warm plate keeps its contrast.
   public let holdTint: Swatch
@@ -144,6 +150,7 @@ public struct Palette: Sendable, Equatable {
     ok: Swatch(0x5C_C4_89),
     hold: Swatch(0xD9_A0_3C),
     bad: Swatch(0xE5_48_4D),
+    accent: Swatch(0x8F_B3_DC),
     holdTint: Swatch(0xD9_A0_3C, alpha: 0.07),
     holdTintEdge: Swatch(0xD9_A0_3C, alpha: 0.22),
     holdInk: Swatch(0xF2_F2_F7),
@@ -185,6 +192,7 @@ public struct Palette: Sendable, Equatable {
     ok: Swatch(0x1B_9E_4B),
     hold: Swatch(0xE6_87_0A),
     bad: Swatch(0xE0_31_2E),
+    accent: Swatch(0x3B_5F_8A),
     holdTint: Swatch(0xFF_F6_E5),
     holdTintEdge: Swatch(0xE6_87_0A, alpha8: 0x66),
     holdInk: Swatch(0x8A_55_00),

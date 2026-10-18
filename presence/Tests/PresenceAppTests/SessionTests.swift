@@ -193,6 +193,44 @@ final class SessionTests: XCTestCase {
     XCTAssertFalse(session.installing, "the slot is free again once the child ended")
   }
 
+  /// A press on the update glyph is owed an answer even where there was
+  /// nothing to install. `gdoc update` asks GitHub on every run, and the
+  /// one word for a machine already on the newest release is `up_to_date`:
+  /// the glyph shows the check for a second and goes quiet by itself.
+  ///
+  /// A run that did replace the binary says nothing here. The version moves
+  /// when `help --json` is asked again, and where the release carried a new
+  /// app the bundle under this process changes and it reopens itself, which
+  /// is M24's: testAChildOfThisAppsOwnHoldsTheReopenAndThenLetsItGo.
+  func testAnUpdateThatInstalledNothingShowsTheCheckForASecond() throws {
+    try writeTheRecord([])
+    let session = made()
+    answered(session)
+    XCTAssertNil(session.updateChecked, "nothing has been pressed")
+    XCTAssertEqual(
+      session.model.header.update?.state, .live, "and the glyph is there to press")
+
+    let ended = expectation(description: "the update run reached the panel")
+    ended.assertForOverFulfill = false
+    session.start { [weak session] in
+      guard let session, session.updateChecked != nil else { return }
+      ended.fulfill()
+    }
+    session.perform(.update, "gdoc")
+    wait(for: [ended], timeout: 20)
+
+    XCTAssertTrue(try argv().contains("update"), "the run went with no flag at all")
+    XCTAssertFalse(session.installing, "the slot is free again")
+    XCTAssertEqual(
+      session.model.header.update?.state, .done,
+      "the press is answered with the check")
+    XCTAssertEqual(session.model.header.update?.tip, "This is the newest release")
+    let armed = try XCTUnwrap(session.revertTimer, "and its end is on the one revert slot")
+    XCTAssertLessThanOrEqual(
+      armed.fireDate.timeIntervalSinceNow, Timing.doneFlash,
+      "which is the copied link's own second")
+  }
+
   /// The banner after a sign-in is five seconds of the clock and no fact of
   /// its own, so the session schedules its own end. Nothing else would take
   /// it off: a refold that did not move redraws nothing, and the next fact
@@ -1048,6 +1086,9 @@ final class SessionTests: XCTestCase {
         printf 'Open this link in your browser to sign in:\\n' >&2
         printf 'https://accounts.google.com/o/oauth2/auth?client_id=x\\n' >&2
         printf '{"ok":true,"data":{"account":"someone@example.com"}}\\n'
+        ;;
+      "update")
+        printf '{"ok":true,"data":{"action":"up_to_date","installed":"v2.14.0"}}\\n'
         ;;
       "update --desktop")
         printf 'not really an extension' > "$(dirname "$0")/gdoc.mcpb"

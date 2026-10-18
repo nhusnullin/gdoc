@@ -209,6 +209,22 @@ public struct BannerModel: Sendable, Equatable {
   public let account: String
 }
 
+/// How the header's update glyph is drawn, which is the whole of what the
+/// panel says about what is published.
+///
+/// Running is not here: the ring stands in the glyph's place while a child
+/// of the app's own is up, which is `versionWaiting`, and there is nothing
+/// to press. The one-second check after a run that installed nothing is the
+/// glyph's own `ActionState`, as a copied link's is.
+public enum UpdateLook: String, Sendable, Equatable, CaseIterable {
+  /// Nothing newer is known. The icon is the caption grey, and pressing it
+  /// is how a person asks before the six hours are up.
+  case quiet
+  /// `help --json` listed a newer stable release: the accent ink, the dot,
+  /// and both versions in the line.
+  case available
+}
+
 /// The panel's own line, as values: the mark and the name, the version with
 /// the one action on it, and the account with its own.
 ///
@@ -231,9 +247,13 @@ public struct HeaderModel: Sendable, Equatable {
   /// The ring beside the version, which an update child of the app's own
   /// draws while it is up.
   public let versionWaiting: Bool
-  /// Take the release GitHub lists, where one is newer than this binary.
-  /// Nothing where there is none.
+  /// The update glyph, which is in the header whenever there is a binary to
+  /// update and no child of the app's own up. Pressing it runs `gdoc
+  /// update` whatever state it is in, because that command is the one that
+  /// asks GitHub.
   public let update: ActionModel?
+  /// Which of the two the glyph is drawn as.
+  public let updateLook: UpdateLook
   /// The address, or nothing where no token has been read.
   public let account: String?
   public let glyph: GlyphKind
@@ -262,6 +282,7 @@ public struct HeaderModel: Sendable, Equatable {
     versionTone: GlyphTone = .dim,
     versionWaiting: Bool = false,
     update: ActionModel? = nil,
+    updateLook: UpdateLook = .quiet,
     account: String? = nil,
     glyph: GlyphKind = .blank,
     tone: GlyphTone = .quiet,
@@ -278,6 +299,7 @@ public struct HeaderModel: Sendable, Equatable {
     self.versionTone = versionTone
     self.versionWaiting = versionWaiting
     self.update = update
+    self.updateLook = updateLook
     self.account = account
     self.glyph = glyph
     self.tone = tone
