@@ -107,21 +107,29 @@ branch.
 - Modify: `presence/Sources/PresenceApp/Places.swift` (the lock's path),
   `presence/Sources/Presence/main.swift`
 
-- [ ] `Places` names `presence/app.lock` under the config directory, beside
+- [x] `Places` names `presence/app.lock` under the config directory, beside
       the month files; a test pins the literal path
-- [ ] `AppLock.hold(at:)` opens the file (creating it, mode 0o644), takes
+- [x] `AppLock.hold(at:)` opens the file (creating it, mode 0o644), takes
       `flock(LOCK_EX | LOCK_NB)` and keeps the descriptor; it answers whether
       it got the lock, and a second hold on the same path from another
       process does not; the test proves the second half with a child
       `/bin/sh -c 'flock'`-free method: a second `open` + `flock(LOCK_NB)` in
       the test process on a different descriptor, which macOS refuses while
       the first is held
-- [ ] the app takes the lock as the first line of
+- [x] the app takes the lock as the first line of
       `applicationDidFinishLaunching`; a second instance that does not get it
       terminates at once without drawing a status item, and a test over the
       decision function pins that
-- [ ] the descriptor is never closed before `applicationWillTerminate`
-- [ ] `make app-lint`, `make app-test`
+      (`AppLock.decide`). One instance waits instead of leaving: the one an
+      update opened, which carries `--relaunched-by <pid>` and whose launcher
+      quits as soon as it is up. It asks again for `RelaunchPolicy.patience`
+      and then yields, so M24's relaunch still works; `AppLock.patience` is
+      that rule and `testOnlyAnInstanceAnotherOneLaunchedWaitsForTheLock`
+      pins it
+- [x] the descriptor is never closed before `applicationWillTerminate`
+      (`testTheShellTakesTheLockFirstAndLetsGoLast`, a source scan over the
+      shell, which no test can import)
+- [x] `make app-lint`, `make app-test`
 
 ### Task 2: gdoc opens the app it installed
 

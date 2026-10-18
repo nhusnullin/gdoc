@@ -30,6 +30,14 @@ public struct Places: Sendable, Equatable {
   /// The arguments this instance came up with, where the relaunch's own is.
   public let arguments: [String]
 
+  /// The file the app holds its lock on for its life, beside the month
+  /// files. gdoc asks for the same lock to learn whether the app is
+  /// running, and `go/cmd/gdoc` names this same path.
+  public var lock: URL { records.appendingPathComponent(Places.lockName) }
+
+  /// The lock's name, which both programs state as a literal.
+  public static let lockName = "app.lock"
+
   /// The version a bundle with no plist to read is taken to be at. It
   /// compares equal to nothing a release names, so the reopen row is never
   /// shown for it.
