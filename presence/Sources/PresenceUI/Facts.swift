@@ -196,6 +196,11 @@ public struct Facts: Sendable, Equatable {
   /// the third look it is what the finder answered, with the `hubPath`
   /// override's own notes first.
   public let pairing: [String: String]
+  /// Why a drawn document has no note, where what the finder answered was a
+  /// fault and not a path. It is the one sentence the greyed icon carries,
+  /// and the pairing above is what makes the icon live, so a document in
+  /// both is one the `hubPath` override paired.
+  public let noteFaults: [String: NoteFault]
   /// When this account signed in, which the banner's five seconds run from.
   public let signedInAt: Date?
   /// Whether the bundle under the running app is still the one it launched
@@ -234,6 +239,7 @@ public struct Facts: Sendable, Equatable {
     loginItem: LoginItemState = .off,
     signIn: SignInPhase? = nil,
     pairing: [String: String] = [:],
+    noteFaults: [String: NoteFault] = [:],
     signedInAt: Date? = nil,
     bundle: BundleState = .same,
     newerRecord: Bool = false,
@@ -254,6 +260,7 @@ public struct Facts: Sendable, Equatable {
     self.loginItem = loginItem
     self.signIn = signIn
     self.pairing = pairing
+    self.noteFaults = noteFaults
     self.signedInAt = signedInAt
     self.bundle = bundle
     self.newerRecord = newerRecord

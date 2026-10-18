@@ -128,6 +128,7 @@ public actor UpdateAction {
       loginItem: facts.loginItem,
       signIn: facts.signIn,
       pairing: facts.pairing,
+      noteFaults: facts.noteFaults,
       signedInAt: facts.signedInAt,
       bundle: facts.bundle,
       newerRecord: facts.newerRecord,

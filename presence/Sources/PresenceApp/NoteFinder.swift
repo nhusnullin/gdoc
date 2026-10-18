@@ -32,24 +32,31 @@ import PresenceCore
 /// with the document id when one of the files that query named changes, and
 /// the finder drops that id so the next ask looks again.
 public protocol NoteSearch: Sendable {
-  /// The Markdown files under the home folder whose text holds this id.
-  /// An empty list where the index answered nothing inside the ceiling,
-  /// which is no note rather than a fault of its own: the override and the
-  /// next ask are both still there.
+  /// The Markdown files under the home folder whose text holds this id, or
+  /// nothing at all where the index did not answer inside the ceiling.
+  ///
+  /// The two are not the same answer. An empty list is no note, and it is
+  /// written down; nothing at all is no answer, and the draw that asked
+  /// gives up while the next ask runs the query again.
   func candidates(
     naming id: String, changed: @escaping @Sendable (String) -> Void
-  ) async -> [String]
+  ) async -> [String]?
 }
 
 /// The note that names a document, and the answers already given.
 ///
 /// An actor because the lookups come off the main actor and the cache is one
-/// map: a document asked about twice at once waits on one query rather than
-/// starting two.
+/// map. It holds no query of its own against a second ask: an actor is
+/// reentrant, so a document asked about twice while the first query is out
+/// would run two. Nothing in the app asks twice, because the session keeps
+/// the one `looking` set and asks about a document once at a time.
 public actor NoteFinder {
-  /// How long a query may take before the answer is no note. Two seconds is
-  /// far above the measurement in `docs/v2/MEASURED.md`, and it is a ceiling
-  /// rather than a budget: nothing waits on it but one greyed icon.
+  /// How long a query may take before the draw gives up on it. Two seconds
+  /// is far above the measurement in `docs/v2/MEASURED.md`, and it is a
+  /// ceiling rather than a budget: nothing waits on it but one greyed icon,
+  /// and the next ask runs the query again. When that next ask comes is the
+  /// session's business, not the finder's: it holds the clock off that
+  /// document for a minute, and asks at once when the panel opens.
   public static let ceiling: TimeInterval = 2
 
   private let search: NoteSearch
@@ -74,14 +81,23 @@ public actor NoteFinder {
     self.forgot = forgot
   }
 
-  /// The note whose front matter names this document, or why there is none.
-  public func note(for id: String) async -> Result<String, NoteFault> {
+  /// The note whose front matter names this document, or why there is none,
+  /// or nothing where the query did not answer inside the ceiling.
+  ///
+  /// That third answer is not "no note". A query that hit the ceiling left
+  /// no live query behind, so no Spotlight notice can ever come for that
+  /// id, and writing "no note" down would grey one icon for the life of the
+  /// app over a note that is sitting there. The draw gives up, and the
+  /// session asks again a minute later, or at once when the panel opens:
+  /// testAQueryThatHitTheCeilingIsNotWrittenDown.
+  public func note(for id: String) async -> Result<String, NoteFault>? {
     if let already = answers[id] { return already }
 
     let generation = asked[id] ?? 0
-    let candidates = await search.candidates(naming: id) { [weak self] changed in
+    let answered = await search.candidates(naming: id) { [weak self] changed in
       Task { await self?.forget(changed) }
     }
+    guard let candidates = answered else { return nil }
     let naming = candidates.filter { path in
       HubIndex.documentIDs(inFrontMatterOf: read(path)).contains(id)
     }
@@ -101,9 +117,17 @@ public actor NoteFinder {
 
   /// Throw one answer away, which is what a Spotlight notice does. The next
   /// ask runs the query again.
+  ///
+  /// Whoever holds a copy is told whether or not there was an answer here to
+  /// drop. A notice can land in the moment between the live query going on,
+  /// which is inside the search, and the answer being written down: the
+  /// lookup out in that moment is one the count above throws away, and a
+  /// silence here would leave its stale answer in the session with the
+  /// watcher that would have taken it away already stopped:
+  /// testANoticeWithNothingWrittenDownYetIsStillForwarded.
   public func forget(_ id: String) {
     asked[id] = (asked[id] ?? 0) + 1
-    guard answers.removeValue(forKey: id) != nil else { return }
+    answers.removeValue(forKey: id)
     forgot(id)
   }
 }
@@ -142,7 +166,7 @@ public final class SpotlightSearch: NoteSearch, @unchecked Sendable {
 
   public func candidates(
     naming id: String, changed: @escaping @Sendable (String) -> Void
-  ) async -> [String] {
+  ) async -> [String]? {
     guard LinkLine.isDocumentID(id),
       let predicate = NSPredicate(fromMetadataQueryString: Self.queryString(for: id))
     else { return [] }
@@ -163,7 +187,7 @@ public final class SpotlightSearch: NoteSearch, @unchecked Sendable {
     }
     guard let paths = gathered else {
       held.stop()
-      return []
+      return nil
     }
 
     watch(held, for: id, changed: changed)

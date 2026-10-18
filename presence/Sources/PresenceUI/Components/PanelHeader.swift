@@ -157,9 +157,10 @@ public struct PanelHeader: View {
   /// The update glyph: the button, and the dot over it where there is a
   /// release to take.
   ///
-  /// The dot is drawn and not written, because the line beside it already
-  /// carries both version numbers: what the dot adds is that the header is
-  /// worth looking at, from the corner of an eye and at a glance.
+  /// The dot is drawn and not written, because the version published is
+  /// already the quiet line under the one installed, where it fits: what
+  /// the dot adds is that the header is worth looking at, from the corner
+  /// of an eye and at a glance.
   /// testTheUpdateGlyphCarriesItsDotOnlyWhenThereIsSomethingToTake.
   private func glyph(_ action: ActionModel, look: UpdateLook, palette: Palette) -> some View {
     button(action, tint: look == .available ? palette.accent : nil)

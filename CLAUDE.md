@@ -184,8 +184,9 @@ into `docs/v2/DECISIONS.md`, not a refactor.
   `update --desktop`, from `PresenceApp/Runner.swift` alone, at `~/.local/bin/gdoc`
   or beside the bundle and never from PATH, with four variables and no stdin; one
   SIGINT to a `comments --wait` the kernel agreed every claim about, from
-  `Stopper.swift` alone; the record, its plist and the `gdoc:` front matter of the
-  notes Spotlight names, and no other byte: `testTheArgvEnumIsClosedAtSix`,
+  `Stopper.swift` alone; the record, its plist and the `gdoc:` front matter of
+  the notes Spotlight names and of those under the `hubPath` override where one
+  is set, and no other byte: `testTheArgvEnumIsClosedAtSix`,
   `testGdocIsResolvedAtLocalBinThenBesideTheBundleNeverFromPATH`,
   `testASignalIsSentOnlyByTheStopper`, `testAFileThatMerelyMentionsTheIdIsNotTheNote`
   and `testStopSendsOneSIGINTOnlyAfterTheProcessCheck`.

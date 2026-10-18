@@ -37,6 +37,16 @@ private let refoldEvery: TimeInterval = 5
 /// move in seconds.
 private let whileAChildIsUp: TimeInterval = 1
 
+/// How long a document whose query hit the finder's ceiling is left alone by
+/// the clock. Nothing is written down for one of those, so the refold above
+/// would ask about it again five seconds later, and a Spotlight that is
+/// rebuilding its index stays slow for hours: that is a two-second query
+/// every five seconds for the life of the app, which is the load the finder
+/// exists to avoid. Opening the panel does not wait for it:
+/// testACeilingIsNotAskedAgainUntilTheBackoffIsUp and
+/// testADrawThatHitTheCeilingAsksAgainOnTheNext.
+private let askAgainAfterTheCeiling: TimeInterval = 60
+
 @MainActor
 public final class Session {
   /// The version the app launched at, read off the bundle on the disk at
@@ -93,6 +103,11 @@ public final class Session {
   /// over the fresher one: testANoticeDropsTheLookupItInterrupted.
   var looking: Set<String> = []
   var noteAsks: [String: Int] = [:]
+  /// When each document's query last hit the finder's ceiling. It is the
+  /// one answer that is not written into `notes`, so this is what keeps the
+  /// clock from asking about it again at once:
+  /// testACeilingIsNotAskedAgainUntilTheBackoffIsUp.
+  var ceilings: [String: Date] = [:]
   var hubWatcher: HubWatcher?
   /// The hub the watcher above was made for. A watcher watches the folder it
   /// was built with and no other, so a second choice has to replace it:
@@ -262,11 +277,17 @@ public final class Session {
   /// clear it can never happen: the panel going away is what ends it, and a
   /// hub chosen or a note renamed in between is a live icon on the next
   /// open: testAFaultGoesWhenThePanelOpensAgain.
+  ///
+  /// A document whose query hit the finder's ceiling is asked about again
+  /// here rather than when its minute is up: the person is looking at the
+  /// icons now, and this is the one redraw somebody asked for:
+  /// testADrawThatHitTheCeilingAsksAgainOnTheNext.
   public func opened() {
     if !ui.noteFault.isEmpty {
       ui.noteFault.removeAll()
       changed()
     }
+    ceilings.removeAll()
     lookUpTheNotes()
     Task { [weak self] in await self?.ask(.panelOpened) }
   }
@@ -415,6 +436,7 @@ public final class Session {
       loginItem: loginItem.state,
       signIn: phase,
       pairing: pairings(),
+      noteFaults: noteFaults(),
       signedInAt: signedInAt,
       bundle: bundle,
       newerRecord: newerGdoc,
@@ -629,8 +651,10 @@ public final class Session {
   /// and a query for a document it already pairs is a query for an answer
   /// nobody reads: testTheOverrideIsAskedBeforeSpotlight.
   func lookUpTheNotes() {
+    let moment = clock()
     let wanted = drawn.documents.rows.map(\.doc).filter {
       index.notes[$0] == nil && notes[$0] == nil && !looking.contains($0)
+        && !isBackingOff($0, at: moment)
     }
     guard !wanted.isEmpty else { return }
     looking.formUnion(wanted)
@@ -653,10 +677,31 @@ public final class Session {
   /// lookup is over for that document either way: "no note" is an answer,
   /// and asking again on every redraw would be a query a second for a
   /// document nobody has written a note for.
-  func tookTheNote(_ doc: String, _ at: Int, _ answer: Result<String, NoteFault>) {
+  ///
+  /// Nothing at all is the one case that is not written down: the query did
+  /// not answer inside the finder's ceiling, so there is no live query to
+  /// ever say otherwise, and keeping it would grey one icon for the life of
+  /// the app over a note that is sitting there. What is written down is the
+  /// moment it happened, which holds the clock off that document for a
+  /// minute while leaving the next panel open free to ask at once:
+  /// testADrawThatHitTheCeilingAsksAgainOnTheNext.
+  func tookTheNote(_ doc: String, _ at: Int, _ answer: Result<String, NoteFault>?) {
     guard noteAsks[doc] == at else { return }
     looking.remove(doc)
+    guard let answer else {
+      ceilings[doc] = clock()
+      return
+    }
+    ceilings.removeValue(forKey: doc)
     notes[doc] = answer
+  }
+
+  /// Whether this document's last query hit the ceiling recently enough that
+  /// the clock leaves it alone. A person opening the panel does not go
+  /// through here: `opened` drops what is written down first.
+  private func isBackingOff(_ doc: String, at moment: Date) -> Bool {
+    guard let hit = ceilings[doc] else { return false }
+    return moment.timeIntervalSince(hit) < askAgainAfterTheCeiling
   }
 
   /// A Spotlight notice about one document: the answer goes and the next
@@ -672,6 +717,7 @@ public final class Session {
     noteAsks[doc] = (noteAsks[doc] ?? 0) + 1
     looking.remove(doc)
     notes.removeValue(forKey: doc)
+    ceilings.removeValue(forKey: doc)
     lookUpTheNotes()
     Task { [weak self] in await self?.recompose() }
   }
@@ -688,6 +734,20 @@ public final class Session {
     for doc in index.notes.keys {
       guard let path = index.notePath(for: doc) else { continue }
       map[doc] = path
+    }
+    return map
+  }
+
+  /// Why a drawn document has no note, where the finder answered a fault
+  /// rather than a path. The pairing above carries the notes that were
+  /// found; this carries the sentence for the ones that were not, so a
+  /// document two notes name says so instead of saying none does:
+  /// testTwoNotesNamingOneDocumentSaySoOnTheIcon.
+  func noteFaults() -> [String: NoteFault] {
+    var map: [String: NoteFault] = [:]
+    for (doc, answer) in notes {
+      guard case .failure(let fault) = answer else { continue }
+      map[doc] = fault
     }
     return map
   }

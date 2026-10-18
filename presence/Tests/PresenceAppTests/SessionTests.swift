@@ -231,6 +231,36 @@ final class SessionTests: XCTestCase {
       "which is the copied link's own second")
   }
 
+  /// The check the glyph shows lasts one second from the child's end, and
+  /// the two polls that follow the run are two processes. So the facts carry
+  /// it before those are asked, not after they answer: on a slow pair the
+  /// one redraw the second is up would otherwise draw the ring of a run that
+  /// had already ended, and the check would never reach the screen at all.
+  func testTheCheckIsOnTheScreenBeforeTheTwoPollsComeBack() throws {
+    try writeTheRecord([])
+    let session = made()
+    answered(session)
+
+    var askedWhenTheCheckLanded: [String] = []
+    let landed = expectation(description: "the check reached the facts")
+    landed.assertForOverFulfill = false
+    session.start { [weak session] in
+      guard let session, session.facts.updateChecked != nil else { return }
+      if askedWhenTheCheckLanded.isEmpty {
+        askedWhenTheCheckLanded = (try? self.argv()) ?? []
+      }
+      landed.fulfill()
+    }
+    session.perform(.update, "gdoc")
+    wait(for: [landed], timeout: 20)
+
+    XCTAssertEqual(
+      askedWhenTheCheckLanded.last, "update",
+      "the facts carried the check before help --json and auth status were asked")
+    XCTAssertEqual(
+      session.model.header.update?.state, .done, "and the glyph draws it")
+  }
+
   /// The banner after a sign-in is five seconds of the clock and no fact of
   /// its own, so the session schedules its own end. Nothing else would take
   /// it off: a refold that did not move redraws nothing, and the next fact
@@ -545,6 +575,106 @@ final class SessionTests: XCTestCase {
     XCTAssertEqual(session.facts.pairing[Self.doc], "/notes/scope.md")
     XCTAssertEqual(try noteIcon(of: session).state, .live)
     XCTAssertEqual(search.asked, [Self.doc, Self.doc], "the notice is what made it ask again")
+  }
+
+  /// Two notes naming one document is the icon's own sentence, not "no note
+  /// is paired with this document". The finder will not pick between them,
+  /// and the panel has to say which of the two greys it is: the pairing
+  /// carries the notes that were found, so the fault travels beside it.
+  func testTwoNotesNamingOneDocumentSaySoOnTheIcon() throws {
+    try writeTheRecord([
+      line(kind: "end", command: "reply", call: 1, doc: Self.doc, extra: "\"ok\":true")
+    ])
+    let search = StatedSearch([Self.doc: ["/notes/a.md", "/notes/b.md"]])
+    let paired = note(pairing: Self.doc)
+    let session = made(noteSearch: search, noteRead: { _ in paired })
+    answered(session)
+
+    try waitUntil("the facts took the fault") {
+      session.facts.noteFaults[Self.doc] != nil
+    }
+    XCTAssertEqual(session.facts.noteFaults[Self.doc], .twoNotes)
+    XCTAssertNil(session.facts.pairing[Self.doc], "neither of the two is picked")
+    XCTAssertEqual(
+      try noteIcon(of: session).state, .off(Tips.twoNotes),
+      "and the icon says which grey it is")
+  }
+
+  /// A query that did not answer inside the finder's ceiling is no answer,
+  /// and the draw that asked gives up rather than writing "no note" down.
+  ///
+  /// Writing it down would be the one wrong answer nothing could take back:
+  /// a query that hit the ceiling was stopped, so no Spotlight notice is
+  /// coming for that document, and a notice is the only thing that frees a
+  /// cached answer. The icon would stay grey until the app quit over a note
+  /// sitting in the vault. A cold index right after login is where this
+  /// happens.
+  func testADrawThatHitTheCeilingAsksAgainOnTheNext() throws {
+    try writeTheRecord([
+      line(kind: "end", command: "reply", call: 1, doc: Self.doc, extra: "\"ok\":true")
+    ])
+    let search = StatedSearch()
+    search.willSayNothing(about: [Self.doc])
+    let paired = note(pairing: Self.doc)
+    let session = made(noteSearch: search, noteRead: { _ in paired })
+    answered(session)
+
+    try waitUntil("the first lookup gave up") {
+      search.asked == [Self.doc] && !session.looking.contains(Self.doc)
+    }
+    XCTAssertNil(session.notes[Self.doc], "the ceiling wrote nothing down")
+    XCTAssertEqual(
+      try noteIcon(of: session).state, .off(Tips.noNote), "the icon is grey for this draw")
+
+    // And opening the panel asks again, which is the whole of the
+    // difference: there is no notice coming for a query that was stopped.
+    search.willAnswer([Self.doc: ["/notes/scope.md"]])
+    session.opened()
+    try waitUntil("the second lookup landed") { session.facts.pairing[Self.doc] != nil }
+    XCTAssertEqual(search.asked, [Self.doc, Self.doc], "the draw is what asked again")
+    XCTAssertEqual(try noteIcon(of: session).state, .live)
+  }
+
+  /// The clock does not ask again about a document whose query hit the
+  /// ceiling, for a minute.
+  ///
+  /// Nothing is written into `notes` for one of those, so every refold
+  /// wants it: the five-second tick and every batch of new lines. A
+  /// Spotlight that is rebuilding its index answers nothing for hours, and
+  /// that would be a two-second query every five seconds for the life of
+  /// the app. The backoff is what makes the recovery above a redraw
+  /// somebody asked for rather than a loop.
+  func testACeilingIsNotAskedAgainUntilTheBackoffIsUp() throws {
+    try writeTheRecord([
+      line(kind: "end", command: "reply", call: 1, doc: Self.doc, extra: "\"ok\":true")
+    ])
+    let search = StatedSearch()
+    search.willSayNothing(about: [Self.doc])
+    let paired = note(pairing: Self.doc)
+    let session = made(noteSearch: search, noteRead: { _ in paired })
+    answered(session)
+
+    try waitUntil("the first lookup gave up") {
+      search.asked == [Self.doc] && !session.looking.contains(Self.doc)
+    }
+    XCTAssertNotNil(session.ceilings[Self.doc], "the moment it gave up is what is kept")
+
+    // What a tick does, and what a new line does, twice over.
+    search.willAnswer([Self.doc: ["/notes/scope.md"]])
+    session.lookUpTheNotes()
+    session.lookUpTheNotes()
+    XCTAssertEqual(search.asked, [Self.doc], "the clock leaves that document alone")
+    XCTAssertFalse(session.looking.contains(Self.doc), "and nothing is out for it")
+
+    // A minute later it is asked again, which is the icon recovering on its
+    // own for somebody who never opens the panel.
+    session.ceilings[Self.doc] = Date(timeIntervalSinceNow: -61)
+    session.lookUpTheNotes()
+    try waitUntil("the lookup after the backoff landed") {
+      session.facts.pairing[Self.doc] != nil
+    }
+    XCTAssertEqual(search.asked, [Self.doc, Self.doc], "once the minute is up")
+    XCTAssertNil(session.ceilings[Self.doc], "and the answer took the backoff away")
   }
 
   /// A lookup that was out when the notice arrived is dropped.

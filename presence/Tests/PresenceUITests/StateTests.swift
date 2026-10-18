@@ -203,12 +203,14 @@ final class StateTests: XCTestCase {
     XCTAssertNil(missing.header.update)
   }
 
-  /// The md icon is grey for one reason since the third look: no note names
-  /// the document.
+  /// The md icon is grey because no note names the document, which is the
+  /// reason it carries where nothing else was found.
   ///
   /// The Hub row was the other half of this test until that evening. The
   /// note is found now, so there is no folder to choose, and "Choose the hub
-  /// in SETTINGS" named a row that no longer exists.
+  /// in SETTINGS" named a row that no longer exists. The other sentence the
+  /// icon can carry is the finder's own, two notes naming one document:
+  /// testTwoNotesNamingOneDocumentSaySoOnTheIcon.
   func testTheMdIconIsGreyOnlyWhenNoNoteNamesTheDocument() throws {
     let paired = event(
       "2026-10-17T09:00:00Z", .end, command: "reply", doc: chapter4, ok: true)

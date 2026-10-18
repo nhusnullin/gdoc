@@ -47,14 +47,14 @@ final class NoteFinderTests: XCTestCase {
       read: { _ in Self.note(Self.doc) })
 
     let found = await finder.note(for: Self.doc)
-    XCTAssertEqual(try? found.get(), "/notes/paper.md")
+    XCTAssertEqual(try? found?.get(), "/notes/paper.md")
   }
 
   func testNoCandidateAtAllIsNotPaired() async {
     let finder = NoteFinder(search: StatedSearch([:]), read: { _ in "" })
 
     let found = await finder.note(for: Self.doc)
-    XCTAssertEqual(found.fault, .notPaired)
+    XCTAssertEqual(found?.fault, .notPaired)
     XCTAssertEqual(NoteFault.notPaired.tip, "No note is paired with this document")
   }
 
@@ -67,7 +67,7 @@ final class NoteFinderTests: XCTestCase {
       read: { _ in Self.note(Self.doc) })
 
     let found = await finder.note(for: Self.doc)
-    XCTAssertEqual(found.fault, .twoNotes)
+    XCTAssertEqual(found?.fault, .twoNotes)
     XCTAssertEqual(NoteFault.twoNotes.tip, "Two notes name this document")
   }
 
@@ -86,14 +86,14 @@ final class NoteFinderTests: XCTestCase {
       read: { texts[$0] ?? "" })
 
     let found = await finder.note(for: Self.doc)
-    XCTAssertEqual(try? found.get(), "/notes/paper.md")
+    XCTAssertEqual(try? found?.get(), "/notes/paper.md")
 
     // And with no note among them the two candidates pair nothing.
     let mapAlone = NoteFinder(
       search: StatedSearch([Self.doc: ["/notes/map.md", "/notes/decoy.md"]]),
       read: { texts[$0] ?? "" })
     let alone = await mapAlone.note(for: Self.doc)
-    XCTAssertEqual(alone.fault, .notPaired)
+    XCTAssertEqual(alone?.fault, .notPaired)
   }
 
   /// An answer is given once and kept, and a Spotlight notice is what throws
@@ -108,17 +108,17 @@ final class NoteFinderTests: XCTestCase {
       forgot: { _ in forgotten.add() })
 
     let first = await finder.note(for: Self.doc)
-    XCTAssertEqual(first.fault, .notPaired)
+    XCTAssertEqual(first?.fault, .notPaired)
     XCTAssertEqual(search.asked.count, 1)
     let again = await finder.note(for: Self.doc)
-    XCTAssertEqual(again.fault, .notPaired, "the answer is kept")
+    XCTAssertEqual(again?.fault, .notPaired, "the answer is kept")
     XCTAssertEqual(search.asked.count, 1, "and no second query was run")
 
     search.willAnswer([Self.doc: ["/notes/paper.md"]])
     await finder.forget(Self.doc)
     XCTAssertEqual(forgotten.count, 1, "the session is told its copy is stale")
     let afterwards = await finder.note(for: Self.doc)
-    XCTAssertEqual(try? afterwards.get(), "/notes/paper.md")
+    XCTAssertEqual(try? afterwards?.get(), "/notes/paper.md")
     XCTAssertEqual(search.asked.count, 2)
   }
 
@@ -142,6 +142,51 @@ final class NoteFinderTests: XCTestCase {
     XCTAssertEqual(search.asked.count, 2, "the other document's answer is untouched")
     _ = await finder.note(for: Self.doc)
     XCTAssertEqual(search.asked.count, 3)
+  }
+
+  /// A query that did not answer inside the ceiling is no answer at all,
+  /// and nothing is written down for it.
+  ///
+  /// It is the one case "no note" would be wrong about and never recover
+  /// from: a query that hit the ceiling was stopped, so no Spotlight notice
+  /// can come for that id, and the one thing that takes an answer away is a
+  /// notice. The icon is grey for that draw, and the session asks again a
+  /// minute later, or at once when the panel opens.
+  func testAQueryThatHitTheCeilingIsNotWrittenDown() async {
+    let search = StatedSearch([Self.doc: ["/notes/paper.md"]])
+    let forgotten = Counter()
+    let finder = NoteFinder(
+      search: search, read: { _ in Self.note(Self.doc) },
+      forgot: { _ in forgotten.add() })
+
+    search.willSayNothing(about: [Self.doc])
+    let silent = await finder.note(for: Self.doc)
+    XCTAssertNil(silent, "the ceiling came first, which is not an answer")
+    XCTAssertEqual(search.asked.count, 1)
+
+    // And the next ask runs the query again, with no notice to free it.
+    search.willAnswer([Self.doc: ["/notes/paper.md"]])
+    let found = await finder.note(for: Self.doc)
+    XCTAssertEqual(try? found?.get(), "/notes/paper.md")
+    XCTAssertEqual(search.asked.count, 2, "nothing had to be thrown away first")
+    XCTAssertEqual(forgotten.count, 0, "and nobody was told about a copy nobody has")
+  }
+
+  /// A notice that lands before the answer is written down is still passed
+  /// on, because the lookup it interrupted is one the finder drops.
+  ///
+  /// The live query goes on inside the search, so a file can change in the
+  /// moment between that and the answer reaching the map. The count the
+  /// finder keeps makes that lookup's answer stale here; saying nothing
+  /// would leave the session's own copy of it in place, with the watcher
+  /// that would have taken it away already stopped.
+  func testANoticeWithNothingWrittenDownYetIsStillForwarded() async {
+    let forgotten = Counter()
+    let finder = NoteFinder(
+      search: StatedSearch(), read: { _ in "" }, forgot: { _ in forgotten.add() })
+
+    await finder.forget(Self.doc)
+    XCTAssertEqual(forgotten.count, 1, "nothing cached is still somebody else's copy")
   }
 
   /// The query string is the word form over Markdown, written out, so the
@@ -175,6 +220,7 @@ final class StatedSearch: NoteSearch, @unchecked Sendable {
   private let lock = NSLock()
   private var answers: [String: [String]]
   private var questions: [String] = []
+  private var silent: Set<String> = []
 
   init(_ answers: [String: [String]] = [:]) {
     self.answers = answers
@@ -192,21 +238,32 @@ final class StatedSearch: NoteSearch, @unchecked Sendable {
   func willAnswer(_ answers: [String: [String]]) {
     lock.lock()
     self.answers = answers
+    silent.removeAll()
+    lock.unlock()
+  }
+
+  /// The documents the next query says nothing about at all, which is the
+  /// ceiling coming first. A real query that hit it left no live query
+  /// behind, and this stands in for that.
+  func willSayNothing(about ids: Set<String>) {
+    lock.lock()
+    silent = ids
     lock.unlock()
   }
 
   func candidates(
     naming id: String, changed: @escaping @Sendable (String) -> Void
-  ) async -> [String] {
+  ) async -> [String]? {
     take(id)
   }
 
   /// The answer, and one more ask written down. It is its own function
   /// because a lock may not be held across an `await`.
-  private func take(_ id: String) -> [String] {
+  private func take(_ id: String) -> [String]? {
     lock.lock()
     defer { lock.unlock() }
     questions.append(id)
+    if silent.contains(id) { return nil }
     return answers[id] ?? []
   }
 }

@@ -432,7 +432,8 @@ a fenced example pairs nothing, and every id is held to the Drive shape.
 The answer is kept until Spotlight says one of those files changed, so a note
 you wrote a minute ago lights the icon without you reopening anything. A query
 takes about a quarter of a second here, and the app gives it two before it
-gives up for that draw.
+gives up for that draw. It tries that document again a minute later, or at once
+when you open the panel.
 
 Three things the icon can say. "No note is paired with this document" is no
 file whose front matter names it. "Two notes name this document" is two, which

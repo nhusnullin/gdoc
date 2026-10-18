@@ -1346,8 +1346,9 @@ the rest was not chased. It is the reason the `hubPath` override stays: a
 person whose notes Spotlight has not indexed still has a folder to name.
 
 The ceiling is two seconds, `NoteFinder.ceiling`, which is eight times the
-measured query. Nothing waits on it but one greyed icon, and a draw that hit it
-asks again on the next one.
+measured query. Nothing waits on it but one greyed icon, and nothing is written
+down for a query that hit it. The clock asks about that document again a minute
+later, and a panel somebody opens asks at once.
 
 Recheck after a Spotlight reindex, or on a vault an order of magnitude bigger
 than 727 files. The timings are one machine's and the shape of the answer is

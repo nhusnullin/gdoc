@@ -221,7 +221,7 @@ public enum UpdateLook: String, Sendable, Equatable, CaseIterable {
   /// is how a person asks before the six hours are up.
   case quiet
   /// `help --json` listed a newer stable release: the accent ink, the dot,
-  /// and both versions in the line.
+  /// and the published version in the quiet line under the header.
   case available
 }
 
@@ -724,10 +724,12 @@ extension PanelModel {
   /// went nowhere would leave the icon live and say nothing:
   /// testAFailedOpenGreysTheIconWithItsReason.
   ///
-  /// It is grey for one reason since the third look: no note names this
-  /// document. There is no hub to choose, so there is no second sentence
-  /// and nothing to send the person to SETTINGS for:
-  /// testTheMdIconIsGreyOnlyWhenNoNoteNamesTheDocument.
+  /// Where no note was found the reason is the finder's own: no note names
+  /// this document, or two do and it will not pick between them. Nothing
+  /// sends the person to SETTINGS for either since the third look, because
+  /// there is no hub to choose:
+  /// testTheMdIconIsGreyOnlyWhenNoNoteNamesTheDocument and
+  /// testTwoNotesNamingOneDocumentSaySoOnTheIcon.
   private static func openNote(
     _ doc: String, facts: Facts, ui: UIState, forced: String? = nil
   ) -> ActionModel {
@@ -737,7 +739,7 @@ extension PanelModel {
       } else if facts.note(for: doc) != nil {
         .live
       } else {
-        .off(Tips.noNote)
+        .off((facts.noteFaults[doc] ?? .notPaired).tip)
       }
     return ActionModel(
       .openNote, icon: .md, tip: Tips.openNote, state: state,

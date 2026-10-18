@@ -264,6 +264,13 @@ extension Session {
   /// `reopenIfTheBundleMoved`'s. A run that installed nothing is the one
   /// that would otherwise answer a press with nothing at all, so the glyph
   /// shows the check for a second and goes quiet.
+  ///
+  /// The facts are taken again before the two polls below and not only
+  /// after them. The check lasts one second from the child's end, and the
+  /// polls are two processes: a screen that first hears about the check when
+  /// they come back is a screen that shows it late or not at all, and the
+  /// redraw the second is up would draw the ring the run already ended:
+  /// testTheCheckIsOnTheScreenBeforeTheTwoPollsComeBack.
   private func install() {
     guard !installing else { return }
     installing = true
@@ -277,6 +284,7 @@ extension Session {
         self.revert(after: Timing.doneFlash)
       }
       self.retick()
+      await self.recompose()
       await self.ask(.changed)
     }
   }
