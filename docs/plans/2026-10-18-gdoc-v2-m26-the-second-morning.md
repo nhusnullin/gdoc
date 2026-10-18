@@ -9,7 +9,11 @@ a way to pin a document so it never drops off. The sign-out that did nothing
 was a seventh and shipped alone as v2.17.0. His answers to the questions the
 list raised: the panel pins its top and bottom and scrolls its middle; the
 session is worth measuring; the duplication between DOCUMENTS and TODAY
-stays. The decision is `docs/v2/DECISIONS.md`, 2026-10-18, "The second
+stays. Four more came while this plan was written: the gdoc version and
+its update belong in the header too; a document must be removable from the
+list and from the statistics; the md icon is grey on every row, because the
+hub has no picker and his hub path was never set; and the Thread mark row
+goes, "a pointless thing". The decision is `docs/v2/DECISIONS.md`, 2026-10-18, "The second
 morning"; the spec paragraph is changed with it. One commit per task. Where
 the code, the spec and this plan disagree, the task stops and says so.
 
@@ -82,7 +86,7 @@ PRESENCE_SHOTS=/tmp/presence-shots make app-test
 
 ## Progress Tracking
 
-Ten tasks. A task is done when every box is ticked and its commit is on the
+Eleven tasks. A task is done when every box is ticked and its commit is on the
 branch.
 
 ## Tasks
@@ -122,19 +126,26 @@ branch.
       row
 - [ ] HEALTH loses the Account row; the Account changed quiet line goes with
       it under the header
+- [ ] the header carries the gdoc version after the name, in the caption
+      grey ("gdoc" then "v2.16.0"), and the update action where a newer
+      release is listed: the same icon and the same ring-while-it-runs the
+      gdoc row had, now beside the version; with nothing newer, no icon;
+      HEALTH loses the gdoc row too; a test states the header's pieces with
+      and without an update
 - [ ] `make app-lint`, `make app-test`
 
-### Task 3: the group is GDOC
+### Task 3: the group is SETTINGS
 
 **Files:**
 - Modify: `presence/Sources/PresenceUI/Words.swift` or `PanelWords.swift`,
   `PanelHealth.swift` and its callers, `docs/guide/presence.md`, the scene
   captions
 
-- [ ] the bottom group's label is GDOC: the gdoc version row, Thread mark,
-      Launch at login, Quit, and Network and Claude Desktop when a fact
-      carries them; the type and file names follow the word where a name
-      said health, and a test states the label
+- [ ] the bottom group's label is SETTINGS: Hub (Task 7), Launch at login,
+      Quit, and the Network and Claude Desktop rows when a fact carries
+      them; the Thread mark row goes, and the mark stays where it was, in the
+      header's own mark; the type and file names follow the word where a
+      name said health, and a test states the label and the absent row
 - [ ] `PanelModel`'s "pinned first" rule for the three screens stays for the
       two that are still about the group (no token, a sign-in in flight) and
       drops the question, which now lives in the header
@@ -148,12 +159,12 @@ branch.
   `Components/ScrollBox.swift`, `presence/Tests/PresenceUITests/ScrollTests.swift`,
   `RenderTests.swift`
 
-- [ ] the panel is header, NOW, the middle, GDOC, in that order; the header,
-      NOW and GDOC never scroll; the middle (DOCUMENTS, TODAY, Yesterday)
+- [ ] the panel is header, NOW, the middle, SETTINGS, in that order; the
+      header, NOW and SETTINGS never scroll; the middle (DOCUMENTS, TODAY, Yesterday)
       is the one `ScrollBox`, and its height is what is left of 600 pt after
       the three fixed parts; a test measures the four heights on scene e3
 - [ ] NOW, when it alone is taller than the panel allows, is capped at half
-      the body and scrolls inside itself, so GDOC is never pushed off; a test
+      the body and scrolls inside itself, so SETTINGS is never pushed off; a test
       on a fixture with four hold cards
 - [ ] the scroll thumb is an overlay 3 pt inside the box's right edge, drawn
       while the content moves and for one second after, and never otherwise;
@@ -178,7 +189,7 @@ branch.
 - [ ] "Show N more" and the horizon are unchanged
 - [ ] `make app-lint`, `make app-test`
 
-### Task 6: pinned documents
+### Task 6: pinned and hidden documents
 
 **Files:**
 - Modify: `presence/Sources/PresenceApp/Preferences.swift`,
@@ -186,24 +197,48 @@ branch.
   `presence/Sources/PresenceUI/PanelModel.swift`, `IconStrip.swift`,
   `IconShapes.swift`, `SessionActions.swift`, tests beside each
 
-- [ ] a seventh preferences key, `pinned`: a list of document ids with the
-      moment each was pinned; never pruned by age; the source scan's count
-      becomes seven and its sentence says why
-- [ ] a fifth icon on a DOCUMENTS row, pin, drawn after the four; pressed, it
-      pins the document and the icon fills; pressed again, it unpins; the
-      tooltip says "Pin" and "Unpin"; a test over the strip's five icons and
-      their order
+- [ ] two more preferences keys, `pinned` and `hidden`: lists of document
+      ids, each with the moment and the last title; never pruned by age; the
+      source scan's count becomes eight and its sentence says why
+- [ ] the four icons stay four. A DOCUMENTS row has a menu, on a secondary
+      click and on a press held half a second: "Pin" or "Unpin", and "Hide
+      from the list". A pinned row shows a small pin glyph in its status
+      column before the state glyph; a test over the menu's words in both
+      states and the glyph
+- [ ] a hidden document leaves DOCUMENTS and its actions stop counting for
+      the order; TODAY and Yesterday still show its runs, because the log is
+      the log; the next finished action gdoc does on that document brings it
+      back into the list, which is the one way back, and the guide says so;
+      a test over hide, the count, and the return
 - [ ] pinned documents are listed first in DOCUMENTS, in the order they were
       pinned, newest pin first, and never fall out of the list when their
       fourteen days pass; a pinned document that the record has no line for
       any more still draws its last known title and its open action from the
       pin's own stored title and id, which the pin keeps for that reason; a
       test over a fixture whose pinned document is sixty days old
-- [ ] the header count counts them: "14 days · N" counts pinned rows too,
-      and the index caption says so
+- [ ] the header count counts them: "14 days · N" counts pinned rows too and
+      hidden rows not, and the index caption says so
 - [ ] `make app-lint`, `make app-test`
 
-### Task 7: the session a run came from
+### Task 7: the hub is chosen in the panel
+
+**Files:**
+- Modify: `presence/Sources/PresenceUI/PanelHealth.swift` (the SETTINGS
+  rows), `presence/Sources/PresenceApp/SessionActions.swift`,
+  `Preferences.swift`, `docs/guide/presence.md`, tests beside each
+
+- [ ] a Hub row in SETTINGS: the chosen folder as `~/…`, or "Choose…" when
+      none; pressing it opens the system folder panel (`NSOpenPanel`, folders
+      only, the app's own window and no program), and the choice goes into
+      the `hubPath` key the guide already names; a test over the row's two
+      states and the stored path through an injected chooser
+- [ ] the md icon's tooltip with no hub names the row ("Choose the hub in
+      SETTINGS"), so a grey icon says why
+- [ ] the guide's `defaults write` paragraph becomes the row, and keeps the
+      command as the way from a terminal
+- [ ] `make app-lint`, `make app-test`
+
+### Task 8: the session a run came from
 
 **Files:**
 - Modify: `go/internal/presence/event.go`, `go/cmd/gdoc/main.go`,
@@ -234,7 +269,7 @@ branch.
 - [ ] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
       `make app-lint`, `make app-test`
 
-### Task 8: the words
+### Task 9: the words
 
 **Files:**
 - Modify: `docs/guide/presence.md`, `CLAUDE.md` (the presence invariant's
@@ -242,14 +277,15 @@ branch.
   `docs/design/2026-10-17-presence-screens-v3.html` (scene captions only)
 
 - [ ] the guide walks the panel in its new order: header with the account
-      and Sign out, NOW, DOCUMENTS with pins and the order rule, TODAY,
-      Yesterday, GDOC; and names the session link and when it is used
+      with its version and update, and Sign out, NOW, DOCUMENTS with pins,
+      hides and the order rule, TODAY, Yesterday, SETTINGS with the Hub row
+      and no Thread mark; and names the session link and when it is used
 - [ ] the scene captions in the screens file that say HEALTH or place the
       account there say the new place
 - [ ] CLAUDE.md stays under 300 lines
 - [ ] `make test`, `make app-lint`
 
-### Task 9: the reviewer's pass
+### Task 10: the reviewer's pass
 
 **Files:**
 - Modify: whatever the pass finds under `presence/`
@@ -262,13 +298,13 @@ branch.
       finding is fixed here and listed in the commit message
 - [ ] `make app-lint`, `make app-test`, `make app`
 
-### Task 10: the acceptance rows and the close
+### Task 11: the acceptance rows and the close
 
 **Files:**
 - Modify: this plan, `docs/v2/DECISIONS.md` only if a task found the
   decision wrong
 
-- [ ] an acceptance table at the foot of this plan: each of Nail's six
+- [ ] an acceptance table at the foot of this plan: each of Nail's ten
       sentences with the test that holds its answer
 - [ ] the render index's "Still your call" list drops what this plan
       decided and keeps the rest

@@ -5414,11 +5414,16 @@ never pushed off. Product decision 2's "each section scrolls inside itself"
 is narrowed to this. Nail chose it over per-section scrolling and over no
 cap.
 
-**The account is the header's.** The header carries the account's glyph,
-the address and Sign out, and asks "Sign out?" in its own line. The bottom
-group is GDOC: the gdoc version, Thread mark, Launch at login, Quit, and the
-Network and Claude Desktop rows when a fact carries them. HEALTH as a word
-goes.
+**The account and the version are the header's.** The header carries the
+account's glyph, the address and Sign out, and asks "Sign out?" in its own
+line; after the name it carries the gdoc version and, when a newer release
+is listed, the update action. The bottom group is SETTINGS: Hub, Launch at
+login, Quit, and the Network and Claude Desktop rows when a fact carries
+them. HEALTH as a word goes, and so does the Thread mark row: the mark is
+already the first thing in the header, and a row that repeats it was, in
+Nail's words, a pointless thing. The Hub row is the picker the guide's
+`defaults write` stood in for: on 2026-10-18 the md icon was grey on every
+row of Nail's panel because nothing had ever set the path.
 
 **DOCUMENTS orders by what was just made, then by use.** Documents with an
 action today come first, newest first; the rest of the fourteen days follow
@@ -5426,8 +5431,11 @@ by the count of finished actions, most first. The count is never printed:
 it orders and says nothing. A pinned document comes before all of these, in
 the order pinned, and never leaves the list; the pin keeps the id and the
 last title so a document whose lines aged out of the record still has its
-row and its open action. Pins are the app's own preference, never a line in
-the record.
+row and its open action. A document can also be hidden: it leaves the list
+and its actions stop counting, TODAY still shows its runs because the log is
+the log, and the next action gdoc does on it brings it back. Pins and hides
+are the app's own preferences, reached from the row's own menu so the four
+icons stay four; never a line in the record.
 
 **The mark at rest is as bright as the mark at work.** The 45 percent idle
 mark was the one choice principle 1 argued against and Nail has now

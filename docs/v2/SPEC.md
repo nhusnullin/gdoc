@@ -150,9 +150,11 @@ HEALTH switch on; no run registers it by itself. Decided 2026-10-18,
 DECISIONS.md.
 
 **The second morning.** The header carries the account, its state and Sign
-out; the bottom group is GDOC. The header, NOW and GDOC never scroll and the
+out, the gdoc version and its update; the bottom group is SETTINGS, with the
+Hub row that chooses the folder Open md reads, and no Thread mark row. The header, NOW and GDOC never scroll and the
 middle does. DOCUMENTS lists pinned documents first, then today's newest
-first, then the fourteen days by use; pins are the app's preference. The
+first, then the fourteen days by use, and never a hidden one until gdoc
+touches it again; pins and hides are the app's preferences. The
 mark at rest is full ink. Under `via: code` the start line carries
 `session`, Claude Code's own session id, and Open chat opens
 `claude://code/continue?session=<id>` where that is measured to work.
