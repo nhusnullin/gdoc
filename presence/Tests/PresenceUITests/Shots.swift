@@ -46,6 +46,17 @@ func inkWeight<V: View>(_ view: V, scheme: ColorScheme, side: CGFloat) throws ->
   return total
 }
 
+/// The heaviest single pixel, which is how much ink the view puts down at
+/// its darkest. A shape drawn once in a translucent ink peaks at that ink's
+/// own alpha; one drawn twice over peaks higher, and that is the difference
+/// this reads.
+@MainActor
+func heaviestPixel<V: View>(_ view: V, scheme: ColorScheme, side: CGFloat) throws -> Double {
+  var peak = 0.0
+  try eachPixel(view, scheme: scheme, side: side) { peak = max(peak, $0) }
+  return peak
+}
+
 @MainActor
 private func eachPixel<V: View>(
   _ view: V, scheme: ColorScheme, side: CGFloat, _ body: (Double) -> Void
@@ -331,6 +342,40 @@ enum SheetPieces {
     return header
   }
 
+  /// The update glyph's three other drawings, which no still of a day shows.
+  ///
+  /// Quiet is scene e1's, a machine that has been told of nothing newer.
+  /// The other two are a second and a few seconds long and belong to a
+  /// press rather than to a day, so no scene is drawn inside either: the
+  /// sheet takes e1's own record and facts with the check just back, and
+  /// with an update child up. It invents no word. The glyph has no words of
+  /// its own, and the line around each is the line e1 draws.
+  /// testTheRowSheetDrawsTheUpdateGlyphInEveryDrawingItHas.
+  static func headerStates() throws -> (
+    quiet: HeaderModel, checked: HeaderModel, running: HeaderModel
+  ) {
+    let scene = try scene("e1")
+    let quiet = try scene.model().header
+    XCTAssertEqual(quiet.updateLook, .quiet, "e1 is the screen told of nothing newer")
+
+    let at = try scene.now()
+    func header(_ facts: Facts) throws -> HeaderModel {
+      PanelModel.build(
+        events: try scene.events(), facts: facts, ui: scene.ui, now: at,
+        calendar: scene.calendar, alive: { _ in false }
+      ).header
+    }
+
+    let checked = try header(Scenes.machine(updateChecked: at))
+    XCTAssertEqual(
+      checked.update?.state, .done, "a check that found nothing leaves the glyph done")
+
+    let running = try header(Scenes.machine(updating: true))
+    XCTAssertTrue(running.versionWaiting, "the ring is beside the version while a child is up")
+    XCTAssertNil(running.update, "and there is nothing to press until it ends")
+    return (quiet, checked, running)
+  }
+
   /// The two labels the rows sheet draws, out of the model that names
   /// them: scene r4 carries NOW and DOCUMENTS both.
   static func sectionLabels() throws -> (now: String, documents: String) {
@@ -454,7 +499,7 @@ func panelVocabulary() throws -> Set<String> {
     }
   }
   // The words that belong to no row and no record: the two buttons of the
-  // hold card, the four labels of the strip once, and the one sentence a
+  // hold card, the five labels of the strip once, and the one sentence a
   // machine with no token is met with.
   words.formUnion(ButtonWord.allCases.map(\.rawValue))
   words.formUnion(StripLabel.allCases.map(\.rawValue))

@@ -107,6 +107,37 @@ final class IconTests: XCTestCase {
     }
   }
 
+  /// No pixel of the pinned tack is darker than the ink it is drawn in.
+  ///
+  /// The head is a fill with the outline's own stroke over it, which is one
+  /// silhouette for both states and the reason a press moves nothing. Drawn
+  /// as two layers of a translucent ink it composites to `1-(1-a)²`: the
+  /// action ink is 0.29 in dark, so the rim of the pinned head reached 0.49
+  /// and the dimmed one 0.61, where `.act.off{opacity:.38}` is the number
+  /// the second morning settled. The pinned row drew the brightest icon in
+  /// the panel, and the dimmed pin was brighter than a live icon beside it.
+  ///
+  /// One group, one alpha: the shapes are drawn opaque and the ink's own
+  /// alpha is put on the two of them together.
+  func testThePinnedTackIsOneLayerOfItsOwnInk() throws {
+    for scheme in [ColorScheme.dark, .light] {
+      let ink = Palette.of(scheme).actionIcon
+      let side = Grid.actionSize
+      // The heaviest a pixel of an icon may be is the ink's own alpha. An
+      // antialiased edge is lighter; nothing is heavier.
+      let heaviest = try heaviestPixel(IconView(.pinOn, ink: ink), scheme: scheme, side: side)
+      XCTAssertEqual(
+        heaviest, ink.alpha, accuracy: 0.02,
+        "the pinned head is drawn twice over in \(scheme)")
+
+      // And against the neighbour it stands beside in the same strip.
+      let neighbour = try heaviestPixel(IconView(.link, ink: ink), scheme: scheme, side: side)
+      XCTAssertEqual(
+        heaviest, neighbour, accuracy: 0.02,
+        "the tack is not its neighbour's weight in \(scheme)")
+    }
+  }
+
   /// A path this does not understand draws nothing, and the one input that
   /// could draw nothing for ever is a number after a close: the close
   /// consumes no number, so repeating it would never move the scanner on.

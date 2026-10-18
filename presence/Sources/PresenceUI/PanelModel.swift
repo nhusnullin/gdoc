@@ -200,7 +200,7 @@ public struct DocumentsSectionModel: Sendable, Equatable {
   public let rows: [DocumentRowModel]
   /// The one line a panel with no documents says instead.
   public let empty: String?
-  /// Whether the four labels are drawn under the first row.
+  /// Whether the five labels are drawn under the first row.
   public let showsStrip: Bool
 }
 

@@ -204,7 +204,14 @@ struct SettingsRowView: View {
   @ViewBuilder
   private var trailing: some View {
     if let isOn = row.isOn {
+      // A row pulls its trailing column 4 pt out, because an action's 16 pt
+      // of artwork sits in a 24 pt box and it is the artwork that meets the
+      // edge. A 26 pt pill has no such margin inside it, so the same pull
+      // put the one control in the panel 4 pt right of every icon, every
+      // value and the ⌘Q under it. Here it is given back:
+      // testTheSwitchStopsWhereTheKeystrokeUnderItStops.
       SwitchView(isOn: isOn, action: row.onToggle)
+        .padding(.trailing, Grid.actionOverhang)
     } else if !row.actions.isEmpty {
       HStack(spacing: Grid.actionGap) {
         ForEach(row.actions) { action in

@@ -2,7 +2,7 @@
 //
 // The group was HEALTH until 2026-10-18. Three of its rows left that
 // morning and the Hub row left that evening, and what is left is two facts
-// about the machine and the two settings the panel has, so the label says
+// about the machine and the one setting the panel has, so the label says
 // what the rows are.
 //
 // Every fact here is one somebody else produced. The network is the

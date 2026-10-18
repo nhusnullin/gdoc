@@ -491,6 +491,43 @@ final class CardTests: XCTestCase {
     }
   }
 
+  /// Each label is centred on the icon it names, and not 4 pt to its left.
+  ///
+  /// The cells and the gaps were the icons' own from the first draft, but
+  /// the trailing inset was a row's 12 pt where an action strip's is 8: the
+  /// strip hangs 4 pt out over the content edge, because an action's 16 pt
+  /// of artwork sits in a 24 pt box. So every word was drawn half a letter
+  /// left of its icon, on the one element whose whole job is saying which
+  /// word belongs to which icon. The third look made it worse by adding a
+  /// fifth: "Pin" under the gap beside the tack is the hint failing at the
+  /// icon Nail could not find.
+  ///
+  /// The two are measured in one tree here, because the claim is about one
+  /// against the other and two separate renders agree on nothing.
+  func testEachLabelIsCentredOnTheIconItNames() throws {
+    let row = VStack(alignment: .leading, spacing: 0) {
+      HStack(spacing: Grid.actionGap) {
+        Spacer(minLength: 0)
+        ForEach(StripLabel.allCases, id: \.rawValue) { label in
+          ActionButton(.link, tip: label.rawValue).metricProbe("icon.\(label.rawValue)")
+        }
+      }
+      .padding(.trailing, Grid.rowInset - Grid.actionOverhang)
+      IconStrip()
+    }
+    let measured = try probeList(row, scheme: .dark, width: Grid.panelWidth)
+    func centre(_ name: String) throws -> CGFloat {
+      let probe = try XCTUnwrap(measured.first { $0.name == name }, "nothing reported \(name)")
+      return probe.origin.x + probe.size.width / 2
+    }
+
+    for label in StripLabel.allCases {
+      XCTAssertEqual(
+        try centre("strip.\(label.rawValue)"), try centre("icon.\(label.rawValue)"),
+        accuracy: 0.01, "\(label.rawValue) is not centred under its own icon")
+    }
+  }
+
   // SETTINGS is the same list on every screen, with the rows that have
   // nothing to say left out: network, Claude Desktop, the switch, Quit. A
   // section whose rows move is a section nobody learns.

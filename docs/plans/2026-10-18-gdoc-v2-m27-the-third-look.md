@@ -244,12 +244,12 @@ mark, the name, or a cut address.
 **Files:**
 - Modify: whatever the pass finds under `presence/`
 
-- [ ] render every scene and run the checklist of the principles file over
+- [x] render every scene and run the checklist of the principles file over
       them as a reviewer who drew nothing (a subagent that reads images),
       against this plan's sentences; every blocking or should-fix finding is
       fixed here and listed in the commit message; the pass also states that
       no render shows a scroll thumb
-- [ ] `make app-lint`, `make app-test`, `make app`
+- [x] `make app-lint`, `make app-test`, `make app`
 
 ### Task 9: the close
 

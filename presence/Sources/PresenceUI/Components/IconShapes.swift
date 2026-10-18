@@ -227,15 +227,27 @@ public struct IconView: View {
   }
 
   public var body: some View {
+    // The two shapes are drawn opaque and the ink's own alpha is put on the
+    // pair of them, because an icon is one mark in one ink. Drawn as two
+    // translucent layers the filled tack's head composites to
+    // `1-(1-a)²`, which is 0.49 where the action ink is 0.29: the pinned
+    // row carried the brightest icon in the panel, and the dimmed tack was
+    // brighter than a live icon beside it:
+    // testThePinnedTackIsOneLayerOfItsOwnInk.
     ZStack {
-      IconShape(icon).stroke(ink.color, style: IconShape.style)
+      IconShape(icon).stroke(opaque.color, style: IconShape.style)
       if !icon.solidParts.isEmpty {
-        IconShape(icon, solid: true).fill(ink.color)
+        IconShape(icon, solid: true).fill(opaque.color)
       }
     }
+    .compositingGroup()
+    .opacity(ink.alpha)
     .frame(width: icon.side, height: icon.side)
     .accessibilityHidden(true)
   }
+
+  /// The ink with its alpha taken off, to be put back on the group.
+  private var opaque: Swatch { Swatch(ink.hex) }
 }
 
 // MARK: the parser

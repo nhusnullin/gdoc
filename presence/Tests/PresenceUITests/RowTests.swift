@@ -299,6 +299,32 @@ final class RowTests: XCTestCase {
     }
   }
 
+  /// The switch stops where every other right edge stops.
+  ///
+  /// A row pulls its trailing column 4 pt out over the content edge,
+  /// because an action's 16 pt of artwork sits in a 24 pt box and it is the
+  /// artwork that meets the edge. The switch is a 26 pt pill with no such
+  /// margin inside it, so the same pull put the one control in the panel
+  /// 4 pt right of every icon, every time and the ⌘Q directly under it. It
+  /// is drawn on nearly every screen since Launch at login went off by
+  /// default, which is what made it the thing an eye lands on.
+  func testTheSwitchStopsWhereTheKeystrokeUnderItStops() throws {
+    for scheme in [ColorScheme.dark, .light] {
+      let keystroke = try inkEnds(
+        SettingsRows(
+          rows: [SettingsRow(.quit, value: SettingsRows.quitShortcut, glyph: .check, tone: .ok)]),
+        scheme: scheme)
+      for isOn in [true, false] {
+        let settings = try inkEnds(
+          SettingsRows(rows: [SettingsRow(.launchAtLogin, value: "", glyph: .blank, isOn: isOn)]),
+          scheme: scheme)
+        XCTAssertEqual(
+          settings, keystroke, accuracy: 1,
+          "the switch is off the panel's one right edge in \(scheme), on: \(isOn)")
+      }
+    }
+  }
+
   // `.section-label{height:28px;text-transform:uppercase}`, and the name of
   // the section is the whole of what it says: the count on its right went
   // with the lists it was a number about.
@@ -494,6 +520,7 @@ final class RowTests: XCTestCase {
       SheetPieces.settings().first { $0.kind == .quit }, "no scene drew the Quit row")
     let quiet = try SheetPieces.quiet()
     let header = try SheetPieces.header()
+    let glyph = try SheetPieces.headerStates()
 
     for scheme in [ColorScheme.dark, .light] {
       let palette = Palette.of(scheme)
@@ -506,7 +533,18 @@ final class RowTests: XCTestCase {
       // the foot with nothing under them:
       // testASheetPutsNoLabelOverRowsFromAnotherScene.
       let sheet = VStack(alignment: .leading, spacing: 0) {
+        // The header four times, because the update glyph is drawn four
+        // ways and a panel shows one of them at a time: the accent ink with
+        // its dot and the published line under it, the caption grey of a
+        // machine told of nothing newer, the second after a press that
+        // installed nothing, and the ring while the child is up. The last
+        // two are on no scene of a day, which is the whole reason they are
+        // here:
+        // testTheRowSheetDrawsTheUpdateGlyphInEveryDrawingItHas.
         PanelHeader(model: header)
+        PanelHeader(model: glyph.quiet)
+        PanelHeader(model: glyph.checked)
+        PanelHeader(model: glyph.running)
         RowView(.two, glyph: .dot, tone: .live, title: live.title, sub: live.sub)
         RowView(.plain, glyph: .check, tone: .ok, title: rows[0].title)
         RowView(.compact, glyph: .blank, title: compact.kind.label, value: compact.value)
@@ -538,6 +576,61 @@ final class RowTests: XCTestCase {
       let name = scheme == .dark ? "rows-dark.png" : "rows-light.png"
       try data.write(to: shots.appendingPathComponent(name))
       XCTAssertGreaterThan(data.count, 1_000, "\(name) is too small to be the sheet")
+    }
+  }
+
+  /// Every drawing of the update glyph is on the page.
+  ///
+  /// The rule is the second morning's: every state a milestone adds is on a
+  /// screen, or it is new surface nobody has looked at. The third look gave
+  /// the glyph the accent ink with a dot, the caption grey, the check a
+  /// second long after a press that installed nothing, and the ring while
+  /// the child is up. The first two are on scenes of a day, r8 and e1. The
+  /// other two last as long as a press does and belong to no moment of a
+  /// day, so the sheet is the only page they can be on: both were drawn
+  /// nowhere until this pass.
+  ///
+  /// The weights are read off the drawn pixels rather than off the model,
+  /// because a header the panel hands the right look and draws the same way
+  /// twice is the thing this is for.
+  func testTheRowSheetDrawsTheUpdateGlyphInEveryDrawingItHas() throws {
+    let available = try SheetPieces.header()
+    let states = try SheetPieces.headerStates()
+
+    XCTAssertEqual(available.updateLook, .available, "r8 is the screen with a release")
+    XCTAssertEqual(available.update?.state, .live, "and nothing has been pressed on it")
+    XCTAssertEqual(states.quiet.updateLook, .quiet)
+    XCTAssertEqual(states.quiet.update?.state, .live)
+    XCTAssertEqual(states.checked.update?.state, .done, "the second after a press")
+    XCTAssertEqual(
+      states.checked.updateLook, .quiet,
+      "a check that found nothing is a machine told of nothing newer")
+    XCTAssertTrue(states.running.versionWaiting, "the ring while the child is up")
+    XCTAssertNil(states.running.update, "and nothing to press beside it")
+
+    // The published version is the available header's own line and nobody
+    // else's: a machine told of nothing newer has nothing to say under the
+    // header.
+    XCTAssertEqual(available.quiet, ["v2.15.0 is published"])
+    XCTAssertEqual(states.quiet.quiet, [])
+    XCTAssertEqual(states.checked.quiet, [])
+    XCTAssertEqual(states.running.quiet, [])
+
+    // Four headers, four images. Two of them drawing the same weight is two
+    // states a person cannot tell apart.
+    for scheme in [ColorScheme.dark, .light] {
+      let drawn = [available, states.quiet, states.checked, states.running]
+      let weights = try drawn.map {
+        try inkWeight(PanelHeader(model: $0), scheme: scheme, side: Grid.panelWidth)
+      }
+      XCTAssertGreaterThan(
+        weights[0], weights[1],
+        "the available header carries the dot and the published line in \(scheme)")
+      for (first, second) in [(1, 2), (1, 3), (2, 3)] {
+        XCTAssertNotEqual(
+          weights[first], weights[second], accuracy: 0.5,
+          "headers \(first) and \(second) are one image in \(scheme)")
+      }
     }
   }
 }

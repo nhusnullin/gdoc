@@ -4,7 +4,7 @@
 // The record is the whole of what gdoc did, and it is the Go binary's file.
 // This app writes nothing into it, ever. What it does write down is eight
 // things about itself: the cards a person hid, the hub folder they chose,
-// whether the four labels under the first document row have been read, their
+// whether the five labels under the first document row have been read, their
 // launch-at-login answer, the last self-relaunch it did, the address it
 // last saw signed in, and the documents they pinned and hid. Nothing else
 // persists, which is the specification's own row, and a source scan in
@@ -130,7 +130,7 @@ public final class Preferences: @unchecked Sendable {
     set { write(newValue, .hubPath) }
   }
 
-  /// Whether the four labels under the first document row have been read.
+  /// Whether the five labels under the first document row have been read.
   public var stripSeen: Bool {
     get {
       lock.lock()

@@ -35,7 +35,12 @@ public struct IconStrip: View {
   public static let cell: CGFloat = Grid.actionSize
   /// `.strip{gap:4px}`, which is the gap between the icons it labels.
   public static let gap: CGFloat = Grid.actionGap
-  /// `padding:0 12px 6px 44px`.
+  /// `padding:0 12px 6px 44px`. The trailing 12 is a row's, and the strip
+  /// is drawn under a strip of actions that is pulled 4 pt out over the
+  /// content edge, because an action's 16 pt of artwork sits in a 24 pt
+  /// box. A label that keeps the row's own 12 is a word 4 pt left of the
+  /// icon it names, which the third look made plain by adding a fifth:
+  /// testEachLabelIsCentredOnTheIconItNames.
   public static let leadingInset: CGFloat = Grid.quietInset
   public static let bottomPadding: CGFloat = 6
 
@@ -60,7 +65,7 @@ public struct IconStrip: View {
     .frame(maxWidth: .infinity, alignment: .trailing)
     .metricProbe("strip")
     .padding(.leading, Self.leadingInset)
-    .padding(.trailing, Grid.rowInset)
+    .padding(.trailing, Grid.rowInset - Grid.actionOverhang)
     .padding(.bottom, Self.bottomPadding)
   }
 }
