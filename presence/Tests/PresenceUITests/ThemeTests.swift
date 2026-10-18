@@ -267,7 +267,6 @@ final class ThemeTests: XCTestCase {
   func testTheTimingsAreTheDecisions() {
     XCTAssertEqual(Timing.tooltipDelay, 0.5)
     XCTAssertEqual(Timing.doneFlash, 1)
-    XCTAssertEqual(Timing.confirmRevert, 3)
     XCTAssertEqual(Timing.checkFlash, 5)
     XCTAssertEqual(Timing.signInCountdown, 180)
     XCTAssertEqual(Timing.relaunchGuard, 600)

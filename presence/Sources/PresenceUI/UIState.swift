@@ -21,8 +21,8 @@ public enum PanelList: String, Sendable, Equatable, CaseIterable {
   case yesterday
 }
 
-/// The one question on the screen, where there is one. Both revert after
-/// three seconds, which the clock outside decides.
+/// The one question on the screen, where there is one. Both wait for their
+/// answer, or for the panel to close; the clock never takes one away.
 public enum PanelQuestion: Sendable, Equatable {
   /// The HEALTH row's confirm, which names what will stop.
   case signOut

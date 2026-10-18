@@ -5,15 +5,17 @@
 // becomes the question. There is no sheet and no alert: a menu bar panel that
 // puts a modal window on the screen has lost the thing it was for.
 //
-// It reverts itself after three seconds. A panel left open with a question in
-// it is a panel waiting for an answer nobody is going to give, and the safe
-// half of every pair here is the one that does nothing, so letting the time
-// run out is the same as pressing Keep.
+// It waits for its answer. The question goes with Keep, with the confirm, or
+// with the panel closing, which is the Keep nobody pressed; the clock never
+// takes it away. Until 2026-10-18 it reverted after three seconds, and a
+// person reading the sentence under "Sign out?" found the question gone and
+// the icon back under the pointer, so the second press asked again and the
+// sign-out never ran.
 //
 // Two confirms exist: Sign out, and the hold card's Dismiss. Stop live has
 // none, because stopping a watch is cheap and reversible.
 //
-// ControlTests states the three seconds, the gap and the two heights.
+// ControlTests states the wait, the gap and the two heights.
 
 import SwiftUI
 
@@ -54,16 +56,14 @@ public struct ConfirmRow: View {
     self.onKeep = onKeep
   }
 
-  /// Whether the question is still on the screen.
+  /// Whether the question is on the screen: asked, and not in the future.
   ///
-  /// The clock is the caller's, so the revert is a value a test can state
-  /// rather than a timer it has to wait for.
   /// A question asked in the future is no question on the screen: a clock
-  /// that stepped backwards would otherwise leave it up for ever.
+  /// that stepped backwards is not a person asking. Nothing else ends it but
+  /// an answer or the panel closing: testAConfirmRowWaitsForItsAnswer.
   public nonisolated static func isShowing(askedAt: Date?, now: Date) -> Bool {
     guard let askedAt else { return false }
-    let since = now.timeIntervalSince(askedAt)
-    return since >= 0 && since < Timing.confirmRevert
+    return now.timeIntervalSince(askedAt) >= 0
   }
 
   public var body: some View {

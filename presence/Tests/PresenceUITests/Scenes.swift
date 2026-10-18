@@ -340,7 +340,7 @@ enum Scenes {
     Scene(
       id: "e10", title: "Signing out, and changing account",
       caption:
-        "The confirm names what will stop, in place and for three seconds. A changed "
+        "The confirm names what will stop, in place, and waits for the answer. A changed "
         + "address is the app's own memory and never a line of the log.",
       fixture: "e10", moment: "2026-10-17T18:00:00Z", alive: [7200, 7210],
       facts: machine(previousAccount: "nail@gmail.example"),
