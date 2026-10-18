@@ -11,11 +11,21 @@
 // produce facts and perform actions, and this file already draws both.
 //
 // The panel never grows past 600 pt. A section a person opens scrolls
-// inside itself, which is the decision table's rule, and everything under
-// the header block sits in a box of the same kind: four sections of an ordinary
-// day are taller than 600 pt, and a panel that clipped them would lose
-// SETTINGS with nothing saying so. The box draws its thumb and its fade only
-// when there is more under them.
+// inside itself, which is the decision table's rule.
+//
+// What scrolls under the header changed on 2026-10-18. Everything under it
+// used to be one box, and Nail's first sentence after a morning with the
+// panel was that the scrolling is wrong: NOW went away upwards and Quit
+// went off the bottom, so the two parts a hand reaches for were the two
+// that moved. The panel's edges are pinned now. The order is the header,
+// NOW, the middle and SETTINGS; the header, NOW and SETTINGS never scroll,
+// and the one box is the middle: DOCUMENTS, TODAY and Yesterday. The middle
+// takes what is left of the 600 pt, which is how SETTINGS keeps its place
+// whatever the day held.
+//
+// NOW has a cap of its own, half the body, because four holds and a watch
+// are taller than the whole panel. Past that it scrolls inside itself
+// rather than pushing Quit off the bottom.
 //
 // RenderTests draws every scene of the screens file through this view, in
 // both appearances, and reads its sizes back through the metric probes.
@@ -46,28 +56,51 @@ public struct PanelView: View {
     Grid.panelMaxHeight - Grid.headerHeight - Grid.headerGap - 2 * Grid.unit
   }
 
+  /// The most NOW takes before it scrolls inside itself: half the body.
+  ///
+  /// Half, because the two things under it are a list of documents and a
+  /// group of settings, and a NOW that took more than its share would leave
+  /// one row of each. A day with four holds in it is the day this matters
+  /// on, and on that day the person still reaches Quit.
+  public static var nowHeight: CGFloat { (Self.bodyHeight / 2).rounded(.down) }
+
   public var body: some View {
     let palette = Palette.of(scheme)
+    let parts = PanelParts(model.sections)
     return VStack(alignment: .leading, spacing: 0) {
       PanelHeader(model: model.header, forced: model.forcedTooltip, actions: actions)
 
-      ScrollBox(height: Self.bodyHeight) {
-        VStack(alignment: .leading, spacing: 0) {
-          if let notice = model.notice {
-            RowView(.plain, glyph: .exclamation, tone: .hold, title: notice)
-              .metricProbe("notice")
-          }
-          if let empty = model.empty {
-            EmptyState(mark: model.mark, words: empty)
-          }
-          ForEach(Array(model.sections.enumerated()), id: \.element.id) { index, section in
-            SectionView(section.label, count: count(of: section), isFirst: isFirst(index)) {
-              body(of: section)
-            }
+      VStack(alignment: .leading, spacing: 0) {
+        if let notice = model.notice {
+          RowView(.plain, glyph: .exclamation, tone: .hold, title: notice)
+            .fixedSize(horizontal: false, vertical: true)
+            .metricProbe("notice")
+        }
+        if let empty = model.empty {
+          EmptyState(mark: model.mark, words: empty)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        ForEach(parts.above) { pinned($0) }
+        ScrollBox(.given) {
+          VStack(alignment: .leading, spacing: 0) {
+            ForEach(parts.middle) { section($0) }
           }
         }
+        .metricProbe("panel.middle")
+        ForEach(parts.below) { pinned($0) }
       }
+      .metricProbe("panel.body")
     }
+    // The cap is here and not on the body, because the header is not always
+    // 36 pt: a sign-out question, a countdown and a banner are drawn in it,
+    // and a body capped at a number of its own would push the foot of a
+    // panel with a tall header off the screen. The header takes its own
+    // height, the two pinned parts take theirs, and the middle is what
+    // gives way.
+    .frame(
+      maxHeight: renderMode == .whole ? .infinity : Grid.panelMaxHeight - 2 * Grid.unit,
+      alignment: .top
+    )
     .padding(Grid.unit)
     .frame(width: Grid.panelWidth, alignment: .leading)
     .background(
@@ -87,6 +120,37 @@ public struct PanelView: View {
     .clipped()
     .tooltipLayer()
     .metricProbe("panel")
+  }
+
+  /// One of the panel's pinned parts: NOW under its own cap, or SETTINGS at
+  /// its own height.
+  @ViewBuilder private func pinned(_ placed: PlacedSection) -> some View {
+    switch placed.section {
+    case .now:
+      ScrollBox(height: Self.nowHeight) { section(placed) }
+        .metricProbe("panel.now")
+    default:
+      // SETTINGS, and nothing else: PanelParts puts the other three in the
+      // middle.
+      //
+      // At its own height, and not at the height a stack felt like giving
+      // it: a row states a minimum rather than a height, so a group of rows
+      // stretches into whatever it is offered, and the middle and SETTINGS
+      // would split the panel evenly between them.
+      section(placed)
+        .fixedSize(horizontal: false, vertical: true)
+        .metricProbe("panel.settings")
+    }
+  }
+
+  /// One section, with the hairline rule its place in the list decides.
+  private func section(_ placed: PlacedSection) -> some View {
+    SectionView(
+      placed.section.label, count: count(of: placed.section),
+      isFirst: isFirst(placed.index)
+    ) {
+      body(of: placed.section)
+    }
   }
 
   /// `.section:first-of-type`: the one under the header carries no hairline.
@@ -114,6 +178,56 @@ public struct PanelView: View {
       YesterdayList(model: yesterday, actions: actions)
     case .settings(let rows):
       SettingsList(rows: rows, forced: model.forcedTooltip, actions: actions)
+    }
+  }
+}
+
+/// One section with the place it had in the model's own list, which is what
+/// decides the hairline over it.
+struct PlacedSection: Identifiable {
+  let index: Int
+  let section: PanelSection
+
+  var id: String { section.id }
+}
+
+/// The sections sorted into the three parts of the panel: what is pinned
+/// above the box, what is in it, and what is pinned under it.
+///
+/// Which part a section belongs to is the section's own answer. Where it
+/// goes is the model's order: SETTINGS is above everything on the two
+/// screens the model pins it on, and under everything on the rest, and this
+/// reads that order rather than holding a rule of its own.
+struct PanelParts {
+  var above: [PlacedSection] = []
+  var middle: [PlacedSection] = []
+  var below: [PlacedSection] = []
+
+  init(_ sections: [PanelSection]) {
+    for (index, section) in sections.enumerated() {
+      let placed = PlacedSection(index: index, section: section)
+      if section.scrolls {
+        middle.append(placed)
+      } else if middle.isEmpty {
+        above.append(placed)
+      } else {
+        below.append(placed)
+      }
+    }
+  }
+}
+
+extension PanelSection {
+  /// Whether this section is in the box that scrolls.
+  ///
+  /// NOW and SETTINGS are the panel's pinned edges since the second
+  /// morning: the first is what gdoc is doing and the second is where Quit
+  /// is, and neither is a thing a person should have to scroll to. The
+  /// three in the middle are a log, and a log is what scrolling is for.
+  var scrolls: Bool {
+    switch self {
+    case .now, .settings: return false
+    case .documents, .today, .yesterday: return true
     }
   }
 }

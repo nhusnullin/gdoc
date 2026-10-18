@@ -118,21 +118,47 @@ final class RenderTests: XCTestCase {
     }
   }
 
-  /// The parts add up to the cap. `.frame(maxHeight:)` with a clip under it
-  /// reads 600 whatever was laid out inside, so a body one gap too tall is
-  /// 600 on the probe and a bottom edge, corner and fade cut off the screen.
-  func testTheHeaderAndTheBodyAddUpToTheCap() throws {
-    for id in ["e1", "e3"] {
-      let scene = try XCTUnwrap(Scenes.all.first { $0.id == id })
-      let drawn = try probeList(try scene.view(), scheme: .dark)
-      let header = try XCTUnwrap(drawn.first { $0.name == "header" }).size.height
-      let body = try XCTUnwrap(
-        drawn.filter { $0.name == "scrollbox" }.map { $0.size.height }.max(),
-        "\(id) drew no scroll box")
-      XCTAssertEqual(
-        header + body + 2 * Grid.unit, Grid.panelMaxHeight,
-        "\(id) laid out \(header + body + 2 * Grid.unit) pt inside the 600 pt frame")
-    }
+  /// The four parts add up to the cap. `.frame(maxHeight:)` with a clip
+  /// under it reads 600 whatever was laid out inside, so a part one gap too
+  /// tall is 600 on the probe and a bottom edge, corner and fade cut off
+  /// the screen.
+  ///
+  /// Scene e3 is the one with all four: a header, a NOW of six items, the
+  /// middle, and SETTINGS at the foot. They are drawn in that order, which
+  /// is what the origins say, and the middle is what is left of the 600 pt
+  /// once the other three have taken theirs.
+  func testTheFourPartsAddUpToTheCapOnE3() throws {
+    let scene = try XCTUnwrap(Scenes.all.first { $0.id == "e3" })
+    let drawn = try probeList(try scene.view(), scheme: .dark)
+    let header = try XCTUnwrap(drawn.first { $0.name == "header" })
+    let now = try XCTUnwrap(drawn.first { $0.name == "panel.now" }, "e3 drew no NOW")
+    let middle = try XCTUnwrap(drawn.first { $0.name == "panel.middle" })
+    let settings = try XCTUnwrap(drawn.first { $0.name == "panel.settings" })
+
+    XCTAssertEqual(header.size.height, Grid.headerHeight + Grid.headerGap)
+    XCTAssertEqual(now.size.height, PanelView.nowHeight, "NOW is at its own cap on e3")
+    XCTAssertEqual(middle.size.height, 176)
+    XCTAssertEqual(settings.size.height, 96)
+    XCTAssertEqual(
+      header.size.height + now.size.height + middle.size.height + settings.size.height
+        + 2 * Grid.unit,
+      Grid.panelMaxHeight,
+      "e3's four parts are \(now.size.height) + \(middle.size.height) + \(settings.size.height) "
+        + "under a \(header.size.height) pt header")
+
+    XCTAssertLessThan(header.origin.y, now.origin.y, "the header is above NOW")
+    XCTAssertLessThan(now.origin.y, middle.origin.y, "NOW is above the middle")
+    XCTAssertLessThan(middle.origin.y, settings.origin.y, "SETTINGS is under the middle")
+
+    // A screen with nothing running has three parts, and the middle takes
+    // what NOW is not using.
+    let quiet = try XCTUnwrap(Scenes.all.first { $0.id == "e1" })
+    let three = try probeList(try quiet.view(), scheme: .dark)
+    XCTAssertNil(three.first { $0.name == "panel.now" }, "nothing is running on e1")
+    let header1 = try XCTUnwrap(three.first { $0.name == "header" }).size.height
+    let middle1 = try XCTUnwrap(three.first { $0.name == "panel.middle" }).size.height
+    let settings1 = try XCTUnwrap(three.first { $0.name == "panel.settings" }).size.height
+    XCTAssertEqual(header1 + middle1 + settings1 + 2 * Grid.unit, Grid.panelMaxHeight)
   }
 
   /// The two busiest screens. The cap is the panel's own frame: a section a

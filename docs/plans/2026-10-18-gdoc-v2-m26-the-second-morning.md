@@ -159,17 +159,17 @@ branch.
   `Components/ScrollBox.swift`, `presence/Tests/PresenceUITests/ScrollTests.swift`,
   `RenderTests.swift`
 
-- [ ] the panel is header, NOW, the middle, SETTINGS, in that order; the
+- [x] the panel is header, NOW, the middle, SETTINGS, in that order; the
       header, NOW and SETTINGS never scroll; the middle (DOCUMENTS, TODAY, Yesterday)
       is the one `ScrollBox`, and its height is what is left of 600 pt after
       the three fixed parts; a test measures the four heights on scene e3
-- [ ] NOW, when it alone is taller than the panel allows, is capped at half
+- [x] NOW, when it alone is taller than the panel allows, is capped at half
       the body and scrolls inside itself, so SETTINGS is never pushed off; a test
       on a fixture with four hold cards
-- [ ] the scroll thumb is an overlay 3 pt inside the box's right edge, drawn
+- [x] the scroll thumb is an overlay 3 pt inside the box's right edge, drawn
       while the content moves and for one second after, and never otherwise;
       the fade stays; a test states the inset, the width and the second
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 5: DOCUMENTS by what was just made, then by use
 

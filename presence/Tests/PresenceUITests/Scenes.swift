@@ -275,10 +275,10 @@ enum Scenes {
       id: "e1", title: "More than five documents",
       caption:
         "DOCUMENTS opened: the list scrolls inside its own box with the thumb and the "
-        + "fade, and the panel stays under 600 pt. The panel scrolls as well on this "
-        + "screen, and its own indicator is hidden while the inner box carries one: two "
-        + "thumbs in one column is the panel saying which of them a drag would move, "
-        + "which it cannot.",
+        + "fade, and the panel stays under 600 pt. The middle of the panel scrolls as "
+        + "well on this screen, and its own indicator is hidden while the inner box "
+        + "carries one: two thumbs in one column is the panel saying which of them a "
+        + "drag would move, which it cannot.",
       fixture: "e1", moment: "2026-10-17T18:10:00Z", alive: [],
       facts: machine(), ui: UIState(expanded: [.documents]), appearance: nil),
     Scene(
