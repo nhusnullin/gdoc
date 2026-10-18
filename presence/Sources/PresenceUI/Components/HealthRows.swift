@@ -1,4 +1,4 @@
-// HEALTH: the same seven rows, in the same order, on every screen.
+// HEALTH: the same rows, in the same order, on every screen.
 //
 // `HROW` in docs/design/2026-10-17-presence-screens-v3.html is the 28 pt
 // compact row, and HEALTH is a list of them with one rule this file holds:
@@ -8,8 +8,8 @@
 // nobody learns.
 //
 // The order is the order of the list in `HealthRowKind`, which is also the
-// order of what a person can do something about: the account first, because
-// nothing works without it, and the two rows that are not facts at all last.
+// order of what a person can do something about: the facts first, and the
+// two rows that are not facts at all last.
 //
 // Two of the rows are not statuses. Launch at login is a setting, so it
 // carries the drawn switch and never a status colour. Quit is a row with a
@@ -19,14 +19,15 @@
 
 import SwiftUI
 
-/// The seven rows, in the order HEALTH draws them.
+/// The rows, in the order HEALTH draws them.
+///
+/// The account and the version were the first two until 2026-10-18, when
+/// they moved into the header: the account is the thing a person checks
+/// before a reply goes out under their name, and a row at the foot of a
+/// panel that scrolls is not where it goes.
 public enum HealthRowKind: String, Sendable, CaseIterable {
-  /// The signed-in address, with Sign in or Sign out beside it.
-  case account
   /// Whether Google answered, which changes no icon in the menu bar.
   case network
-  /// The binary's version, and the one a release named.
-  case gdoc
   /// Whether Claude Desktop can have an extension at all: none was ever
   /// written on this machine, or a run of this process wrote one and could
   /// not hand it over.
@@ -42,9 +43,7 @@ public enum HealthRowKind: String, Sendable, CaseIterable {
   /// the same row something else.
   public var label: String {
     switch self {
-    case .account: return "Account"
     case .network: return "Network"
-    case .gdoc: return "gdoc"
     case .desktop: return "Claude Desktop"
     case .mark: return "Thread mark"
     case .launchAtLogin: return "Launch at login"

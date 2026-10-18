@@ -85,10 +85,14 @@ final class StateTests: XCTestCase {
     let inFlight = try drawn(
       [], at: "2026-10-17T09:00:00Z",
       facts: Scenes.machine(auth: .needsSignIn, account: nil, signIn: phase))
-    XCTAssertTrue(inFlight.now.isEmpty, "the countdown in HEALTH is the whole of the request")
     XCTAssertTrue(
-      inFlight.health.contains { $0.kind == .account && $0.waiting },
-      "and that row is the one waiting for Google")
+      inFlight.now.isEmpty, "the countdown in the header is the whole of the request")
+    XCTAssertTrue(inFlight.header.waiting, "and the header is the thing waiting for Google")
+    XCTAssertEqual(inFlight.header.account, "Waiting for Google")
+    XCTAssertEqual(inFlight.header.signInURL, Scenes.signInURL)
+    XCTAssertEqual(
+      inFlight.header.quiet, ["2:43 left of the three minutes gdoc waits"],
+      "the child's own three minutes, as a clock")
   }
 
   /// `latest_stable` is a fact and not a judgement: gdoc prints the newest
@@ -123,17 +127,18 @@ final class StateTests: XCTestCase {
       Versions(app: "2.14.0", gdoc: "v2.14.0").updateAvailable,
       "and a check that heard nothing offers nothing")
 
-    // The row itself, so the rule reaches the screen it is about.
+    // The header itself, so the rule reaches the screen it is about. The
+    // version says the version and the icon says there is a newer one: the
+    // row said both in one string, and the header has no room for it.
     let behind = try drawn(
       [], at: "2026-10-17T09:00:00Z", facts: Scenes.machine(latestStable: "v2.15.0"))
-    XCTAssertEqual(
-      behind.health.first { $0.kind == .gdoc }?.value, "v2.14.0 · v2.15.0 available")
+    XCTAssertEqual(behind.header.version, "v2.14.0")
+    XCTAssertEqual(behind.header.update?.kind, .update)
+    XCTAssertEqual(behind.header.update?.tip, "Update to v2.15.0")
     let ahead = try drawn(
       [], at: "2026-10-17T09:00:00Z", facts: Scenes.machine(latestStable: "v2.13.0"))
-    XCTAssertEqual(ahead.health.first { $0.kind == .gdoc }?.value, "v2.14.0")
-    XCTAssertTrue(
-      ahead.health.first { $0.kind == .gdoc }?.actions.isEmpty ?? false,
-      "and there is no button to press")
+    XCTAssertEqual(ahead.header.version, "v2.14.0")
+    XCTAssertNil(ahead.header.update, "and there is no button to press")
   }
 
   /// While an update child of the app's own is up, neither row offers a
@@ -148,16 +153,17 @@ final class StateTests: XCTestCase {
     let at = "2026-10-17T09:00:00Z"
     let idle = try drawn([], at: at, facts: updating(false))
     XCTAssertEqual(
-      idle.health.first { $0.kind == .gdoc }?.actions.map(\.kind), [.update],
+      idle.header.update?.kind, .update,
       "with nothing running the update is there to take")
     XCTAssertEqual(
       idle.health.first { $0.kind == .desktop }?.actions.map(\.kind), [.installExtension])
 
     let running = try drawn([], at: at, facts: updating(true))
-    let gdoc = try XCTUnwrap(running.health.first { $0.kind == .gdoc })
-    XCTAssertTrue(gdoc.waiting, "the gdoc row is a ring while the child is up")
-    XCTAssertEqual(gdoc.value, "v2.14.0", "and the version is the one still installed")
-    XCTAssertTrue(gdoc.actions.isEmpty)
+    XCTAssertTrue(
+      running.header.versionWaiting, "the header is a ring while the child is up")
+    XCTAssertEqual(
+      running.header.version, "v2.14.0", "and the version is the one still installed")
+    XCTAssertNil(running.header.update)
     let desktop = try XCTUnwrap(running.health.first { $0.kind == .desktop })
     XCTAssertEqual(desktop.value, "not installed", "the row is where it was")
     XCTAssertTrue(desktop.actions.isEmpty, "and there is nothing on it to press")
@@ -166,23 +172,31 @@ final class StateTests: XCTestCase {
   /// The one fact the panel may not invent is whose account this is. `auth`
   /// is nothing until `gdoc auth status` has answered, which is every
   /// panel's first draw and the whole of a machine with no gdoc on it: the
-  /// row is a ring over no value, and it offers no Sign out.
-  func testTheAccountRowClaimsNothingBeforeTheFirstAnswer() throws {
+  /// header is a ring over no address, and it offers no Sign out.
+  func testTheHeaderClaimsNothingAboutTheAccountBeforeTheFirstAnswer() throws {
     let launching = Facts(versions: Versions(app: "2.15.0"), gdocPath: Scenes.gdocPath)
     XCTAssertNil(launching.auth, "nobody has asked")
 
-    let first = try accountRow(of: try drawn([], at: "2026-10-17T10:00:00Z", facts: launching))
+    let first = try drawn([], at: "2026-10-17T10:00:00Z", facts: launching).header
     XCTAssertTrue(first.waiting, "the ring says the question is out")
-    XCTAssertEqual(first.value, "", "and no sign-in is claimed")
+    XCTAssertNil(first.account, "and no sign-in is claimed")
     XCTAssertEqual(first.glyph, .blank, "no green check over a token nobody read")
     XCTAssertTrue(first.actions.isEmpty, "there is nothing to sign out of yet")
 
-    let answered = try accountRow(
-      of: try drawn([], at: "2026-10-17T10:00:00Z", facts: Scenes.machine()))
+    let answered = try drawn([], at: "2026-10-17T10:00:00Z", facts: Scenes.machine()).header
     XCTAssertFalse(answered.waiting)
     XCTAssertEqual(answered.glyph, .check)
-    XCTAssertEqual(answered.value, Scenes.account)
+    XCTAssertEqual(answered.account, Scenes.account)
     XCTAssertEqual(answered.actions.map(\.kind), [.signOut], "now there is")
+
+    // And no HEALTH row says any of it, which is where all of this was
+    // until the second morning.
+    XCTAssertFalse(
+      HealthRowKind.allCases.map(\.rawValue).contains("account"),
+      "the account is the header's, and is said in one place")
+    XCTAssertFalse(
+      HealthRowKind.allCases.map(\.rawValue).contains("gdoc"),
+      "and so is the version")
   }
 
   /// A sign-out drops every hold the chat is keeping, so the one destructive
@@ -248,25 +262,22 @@ final class StateTests: XCTestCase {
       account: "second@example.com", auth: .ok, previousAccount: before,
       versions: Versions(app: "2.15.0"), gdocPath: Scenes.gdocPath)
     XCTAssertEqual(
-      try accountRow(of: try drawn([], at: "2026-10-17T10:00:00Z", facts: signedIn)).quiet,
-      "Account changed: first@example.com → second@example.com")
+      try drawn([], at: "2026-10-17T10:00:00Z", facts: signedIn).header.quiet,
+      ["Account changed: first@example.com → second@example.com"])
 
     let signedOut = Facts(
       auth: .signedOut, previousAccount: before, versions: Versions(app: "2.15.0"),
       gdocPath: Scenes.gdocPath)
-    XCTAssertNil(
-      try accountRow(of: try drawn([], at: "2026-10-17T10:00:00Z", facts: signedOut)).quiet,
+    XCTAssertEqual(
+      try drawn([], at: "2026-10-17T10:00:00Z", facts: signedOut).header.quiet, [],
       "there is no second address, so there is no sentence")
   }
 
   // MARK: - The pieces a test states
 
-  private func accountRow(of panel: PanelModel) throws -> HealthRowModel {
-    try XCTUnwrap(panel.health.first { $0.kind == .account }, "HEALTH opens with the account")
-  }
-
   private func question(of panel: PanelModel) throws -> QuestionModel {
-    try XCTUnwrap(try accountRow(of: panel).question, "the row is the question while it is asked")
+    try XCTUnwrap(
+      panel.header.question, "the header is the question while it is asked")
   }
 
   /// A write a rule held, as gdoc writes it: one line, and no call.

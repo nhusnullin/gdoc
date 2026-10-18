@@ -208,8 +208,8 @@ final class SessionTests: XCTestCase {
     session.perform(.signIn, nil)
     wait(for: [signedIn], timeout: 20)
 
-    XCTAssertTrue(
-      session.model.sections.contains { if case .signedIn = $0 { true } else { false } },
+    XCTAssertNotNil(
+      session.model.header.banner,
       "the address is on the screen at the size a glance catches")
     let armed = try XCTUnwrap(session.bannerTimer, "and its end is on a timer of its own")
     XCTAssertGreaterThan(armed.fireDate.timeIntervalSinceNow, 0)

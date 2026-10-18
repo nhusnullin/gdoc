@@ -12,7 +12,7 @@
 //
 // The panel never grows past 600 pt. A section a person opens scrolls
 // inside itself, which is the decision table's rule, and everything under
-// the header sits in a box of the same kind: four sections of an ordinary
+// the header block sits in a box of the same kind: four sections of an ordinary
 // day are taller than 600 pt, and a panel that clipped them would lose
 // HEALTH with nothing saying so. The box draws its thumb and its fade only
 // when there is more under them.
@@ -49,7 +49,7 @@ public struct PanelView: View {
   public var body: some View {
     let palette = Palette.of(scheme)
     return VStack(alignment: .leading, spacing: 0) {
-      PanelHeader(mark: model.mark, account: model.account)
+      PanelHeader(model: model.header, forced: model.forcedTooltip, actions: actions)
 
       ScrollBox(height: Self.bodyHeight) {
         VStack(alignment: .leading, spacing: 0) {
@@ -113,9 +113,7 @@ public struct PanelView: View {
     case .yesterday(let yesterday):
       YesterdayList(model: yesterday, actions: actions)
     case .health(let rows):
-      HealthList(rows: rows, url: model.signInURL, forced: model.forcedTooltip, actions: actions)
-    case .signedIn(let banner):
-      SignedInBanner(account: banner.account) { actions.perform(.signOut, nil) }
+      HealthList(rows: rows, forced: model.forcedTooltip, actions: actions)
     }
   }
 }
@@ -229,35 +227,14 @@ struct YesterdayList: View {
   }
 }
 
-/// HEALTH: the rows in their one order, and the sign-in line under the
-/// Account row while a sign-in is in flight.
+/// HEALTH: the rows in their one order.
 struct HealthList: View {
   let rows: [HealthRowModel]
-  let url: String?
   let forced: String?
   let actions: PanelActions
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 0) {
-      ForEach(rows) { row in
-        if let question = row.question {
-          // The consequence is a line of its own rather than the row's
-          // sub-line: the pair of buttons takes the right-hand column, and
-          // a sentence squeezed into what is left reads as half a sentence.
-          ConfirmRow(
-            title: question.title, danger: question.danger,
-            onConfirm: { actions.perform(.signOut, nil) },
-            onKeep: { actions.perform(.keep, nil) })
-          QuietLine(question.consequence)
-          if let quiet = row.quiet { QuietLine(quiet) }
-        } else {
-          HealthRows(rows: [health(row)])
-        }
-        if row.kind == .account, let url {
-          URLLine(url: url)
-        }
-      }
-    }
+    HealthRows(rows: rows.map(health))
   }
 
   private func health(_ row: HealthRowModel) -> HealthRow {

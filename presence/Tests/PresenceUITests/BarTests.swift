@@ -181,15 +181,20 @@ final class BarTests: XCTestCase {
     XCTAssertTrue(launching.gdocFound, "the binary is at a path, which is the location's fact")
     XCTAssertEqual(try bar([], facts: launching), .idle, "nothing is wrong yet")
 
-    let row = PanelModel.gdoc(facts: launching)
-    XCTAssertTrue(row.waiting, "the ring says the question is out")
-    XCTAssertEqual(row.value, "", "and no version is claimed")
-    XCTAssertNil(row.quiet)
+    let header = PanelModel.header(
+      facts: launching, ui: UIState(), now: Date(timeIntervalSince1970: 0),
+      stopping: PanelModel.Stopping(live: 0, holds: 0))
+    XCTAssertTrue(header.versionWaiting, "the ring says the question is out")
+    XCTAssertNil(header.version, "and no version is claimed")
+    XCTAssertEqual(header.quiet, [])
 
     let missing = Facts(auth: .ok, versions: Versions(app: "2.14.0"))
-    XCTAssertEqual(
-      PanelModel.gdoc(facts: missing).value, "not found",
-      "no path is the only not found there is")
+    let notFound = PanelModel.header(
+      facts: missing, ui: UIState(), now: Date(timeIntervalSince1970: 0),
+      stopping: PanelModel.Stopping(live: 0, holds: 0))
+    XCTAssertEqual(notFound.version, "not found", "no path is the only not found there is")
+    XCTAssertEqual(notFound.versionTone, .bad)
+    XCTAssertEqual(notFound.quiet, ["looked for it at ~/.local/bin/gdoc"])
   }
 
   /// A watch that cannot reach Google is still a watch: the decision table's

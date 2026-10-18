@@ -415,13 +415,13 @@ final class CardTests: XCTestCase {
   }
 
   // `.empty` is the first open of a machine that never signed in: the mark
-  // at 28 pt and one sentence that names the row to press. Nothing else in
+  // at 28 pt and one sentence that names the icon to press. Nothing else in
   // the panel is centred.
   func testTheEmptyStateIsTheFirstRunText() throws {
     XCTAssertEqual(
       EmptyState.firstRun,
       "Not signed in. Sign in with the Google account that will post replies: "
-        + "the Account row below.")
+        + "the Sign in icon at the top.")
     XCTAssertEqual(Typography.markLarge.size, 28, "`.empty .mark{font-size:28px}`")
     XCTAssertEqual(EmptyState.topPadding, 28)
     XCTAssertEqual(EmptyState.bottomPadding, 20)
@@ -491,19 +491,18 @@ final class CardTests: XCTestCase {
   }
 
   // HEALTH is the same list on every screen, with the rows that have nothing
-  // to say left out: account, network, gdoc, Claude Desktop, the thread
-  // mark, the switch, Quit. A section whose rows move is a section nobody
-  // learns.
+  // to say left out: network, Claude Desktop, the thread mark, the switch,
+  // Quit. A section whose rows move is a section nobody learns.
+  //
+  // The account and the version are not on that list any more: the second
+  // morning moved them into the header, which is where a person looks for
+  // whose account a reply would go out under.
   func testHealthRowsKeepTheirOrderOnEveryScreen() throws {
     XCTAssertEqual(
-      HealthRowKind.allCases,
-      [.account, .network, .gdoc, .desktop, .mark, .launchAtLogin, .quit])
+      HealthRowKind.allCases, [.network, .desktop, .mark, .launchAtLogin, .quit])
     XCTAssertEqual(
       HealthRowKind.allCases.map(\.label),
-      [
-        "Account", "Network", "gdoc", "Claude Desktop", "Thread mark",
-        "Launch at login", "Quit",
-      ])
+      ["Network", "Claude Desktop", "Thread mark", "Launch at login", "Quit"])
     XCTAssertEqual(HealthRows.quitShortcut, "⌘Q")
 
     // Which rows each screen draws, out of that screen's own model. The
@@ -515,11 +514,11 @@ final class CardTests: XCTestCase {
     // and Claude Desktop only where no extension has been written, which is
     // why the two move screen to screen and the other five never do.
     let screens: [(String, [HealthRowKind])] = [
-      ("r8", [.account, .network, .gdoc, .mark, .launchAtLogin, .quit]),
-      ("e5", [.account, .gdoc, .desktop, .mark, .launchAtLogin, .quit]),
-      ("e8", [.account, .gdoc, .mark, .launchAtLogin, .quit]),
-      ("e9", [.account, .gdoc, .mark, .launchAtLogin, .quit]),
-      ("e10", [.account, .gdoc, .mark, .launchAtLogin, .quit]),
+      ("r8", [.network, .mark, .launchAtLogin, .quit]),
+      ("e5", [.desktop, .mark, .launchAtLogin, .quit]),
+      ("e8", [.mark, .launchAtLogin, .quit]),
+      ("e9", [.mark, .launchAtLogin, .quit]),
+      ("e10", [.mark, .launchAtLogin, .quit]),
     ]
     for (screen, expected) in screens {
       let scene = try XCTUnwrap(Scenes.all.first { $0.id == screen }, "\(screen) is not a scene")
@@ -533,18 +532,18 @@ final class CardTests: XCTestCase {
     // The quiet line under a row is that row's, so it never floats to the
     // foot of the section.
     let withQuiet = [
-      HealthRow(.gdoc, value: "v2.12.0"),
+      HealthRow(.mark, value: "⁘"),
       HealthRow(
         .network, value: "Google not reachable", glyph: .exclamation, tone: .bad,
         quiet: "the internet is up, the handshake with Google fails"),
-      HealthRow(.account, value: "nail@example.com", glyph: .check, tone: .ok),
+      HealthRow(.desktop, value: "not installed", glyph: .empty),
     ]
     let ordered = HealthRows.ordered(withQuiet)
-    XCTAssertEqual(ordered.map(\.kind), [.account, .network, .gdoc])
-    XCTAssertEqual(ordered[1].quiet, "the internet is up, the handshake with Google fails")
+    XCTAssertEqual(ordered.map(\.kind), [.network, .desktop, .mark])
+    XCTAssertEqual(ordered[0].quiet, "the internet is up, the handshake with Google fails")
 
     let measured = try probes(HealthRows(rows: withQuiet), scheme: .dark, width: cardWidth)
-    XCTAssertEqual(measured["health.account"]?.height, Grid.compactRowHeight)
+    XCTAssertEqual(measured["health.mark"]?.height, Grid.compactRowHeight)
     XCTAssertNotNil(measured["health.network.quiet"])
     let switched = try probes(
       HealthRows(rows: [HealthRow(.launchAtLogin, value: "", isOn: true)]), scheme: .dark,
@@ -580,10 +579,10 @@ final class CardTests: XCTestCase {
       StuckCard(model: stuck.card, actions: icons).actions.filter { $0.icon == .xmark }.count,
       1, "the sheet drew the dismiss twice")
     // HEALTH is drawn with every row a fact reaches, which no one screen
-    // has. The first-run sentence is not on this page: it names "the Account
-    // row below", and the row below it here is an account that is signed in,
-    // so the sheet would say signed out and signed in at once. Scene e5 is
-    // where that sentence belongs, and the index page draws it whole.
+    // has. The first-run sentence is not on this page: it names the Sign in
+    // icon at the top, and there is no header on this sheet to find it on.
+    // Scene e5 is where that sentence belongs, and the index page draws it
+    // whole.
     XCTAssertTrue(
       health.contains { $0.kind == .mark }, "no scene drew the mark row")
 

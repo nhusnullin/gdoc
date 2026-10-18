@@ -337,13 +337,12 @@ final class RenderTests: XCTestCase {
   func testTheUpdateNoticeStaysOnTheRestOfTheDay() throws {
     for id in ["r8", "r9"] {
       let scene = try XCTUnwrap(Scenes.all.first { $0.id == id })
-      let gdoc = try XCTUnwrap(
-        try scene.model().health.first { $0.kind == .gdoc }, "\(id) drew no gdoc row")
-      XCTAssertTrue(
-        gdoc.value.contains("v2.15.0"),
-        "\(id)'s gdoc row says “\(gdoc.value)”, which forgets the release r8 found")
-      XCTAssertTrue(
-        gdoc.actions.contains { $0.kind == .update }, "\(id) drew no way to take it")
+      let header = try scene.model().header
+      XCTAssertEqual(header.version, "v2.14.0", "\(id) forgot which binary is installed")
+      let update = try XCTUnwrap(header.update, "\(id) drew no way to take the release")
+      XCTAssertEqual(
+        update.tip, "Update to v2.15.0",
+        "\(id)'s header forgets the release r8 found")
     }
   }
 
@@ -599,7 +598,7 @@ final class RenderTests: XCTestCase {
     let said = page.components(separatedBy: escaped(Scenes.healthRowRule)).count - 1
     XCTAssertEqual(said, 1, "the HEALTH rule is on the page \(said) times")
 
-    for part in ["Account first", "Quit last", "no Skills row"] {
+    for part in ["ends in Quit", "not rows at all", "no Skills row"] {
       XCTAssertTrue(Scenes.healthRowRule.contains(part), "the rule does not say \(part)")
     }
   }

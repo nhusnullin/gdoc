@@ -215,6 +215,87 @@ public struct BannerModel: Sendable, Equatable {
   public let account: String
 }
 
+/// The panel's own line, as values: the mark and the name, the version with
+/// the one action on it, and the account with its own.
+///
+/// Both of those were HEALTH rows until 2026-10-18, at the foot of a panel
+/// that scrolls. The account is the first thing a person checks before a
+/// reply goes out under their name, and the version is which gdoc this is,
+/// so the two of them are what the header is about.
+public struct HeaderModel: Sendable, Equatable {
+  /// The mark in effect, which the binary's settings decide. It may be
+  /// empty, and the header draws whatever it is handed.
+  public let mark: String
+  /// The product's name, which is the one word here that never changes.
+  public let name: String
+  /// The version `help --json` answered with, "not found" where no binary
+  /// was there to ask, or nothing before the answer arrived.
+  public let version: String?
+  /// The version's ink: the quietest grey, or the bad one where there is no
+  /// binary to name a version of.
+  public let versionTone: GlyphTone
+  /// The ring beside the version, which an update child of the app's own
+  /// draws while it is up.
+  public let versionWaiting: Bool
+  /// Take the release GitHub lists, where one is newer than this binary.
+  /// Nothing where there is none.
+  public let update: ActionModel?
+  /// The address, or nothing where no token has been read.
+  public let account: String?
+  public let glyph: GlyphKind
+  public let tone: GlyphTone
+  /// The ring in the glyph's place, which nobody-has-asked-yet and a sign-in
+  /// in flight draw.
+  public let waiting: Bool
+  /// The account's own actions: Sign out, Sign in, or the sign-in's Copy
+  /// and Cancel.
+  public let actions: [ActionModel]
+  /// The question asked in place of the line, while it is asked.
+  public let question: QuestionModel?
+  /// The lines under the line, in the order they are drawn: the account's
+  /// own first, because the countdown belongs under the countdown, and the
+  /// version's after it.
+  public let quiet: [String]
+  /// The sign-in URL, as a line that can be read and copied.
+  public let signInURL: String?
+  /// The address at its full size, for five seconds after a sign-in.
+  public let banner: BannerModel?
+
+  public init(
+    mark: String = "",
+    name: String = "gdoc",
+    version: String? = nil,
+    versionTone: GlyphTone = .dim,
+    versionWaiting: Bool = false,
+    update: ActionModel? = nil,
+    account: String? = nil,
+    glyph: GlyphKind = .blank,
+    tone: GlyphTone = .quiet,
+    waiting: Bool = false,
+    actions: [ActionModel] = [],
+    question: QuestionModel? = nil,
+    quiet: [String] = [],
+    signInURL: String? = nil,
+    banner: BannerModel? = nil
+  ) {
+    self.mark = mark
+    self.name = name
+    self.version = version
+    self.versionTone = versionTone
+    self.versionWaiting = versionWaiting
+    self.update = update
+    self.account = account
+    self.glyph = glyph
+    self.tone = tone
+    self.waiting = waiting
+    self.actions = actions
+    self.question = question
+    self.quiet = quiet
+    self.signInURL = signInURL
+    self.banner = banner
+  }
+}
+
 /// The sections of the panel, in the order they are drawn.
 public enum PanelSection: Sendable, Equatable, Identifiable {
   case now([NowItem])
@@ -222,7 +303,6 @@ public enum PanelSection: Sendable, Equatable, Identifiable {
   case today(LogSectionModel)
   case yesterday(YesterdayModel)
   case health([HealthRowModel])
-  case signedIn(BannerModel)
 
   /// The label over the section, as the screens file writes it.
   public var label: String {
@@ -232,7 +312,6 @@ public enum PanelSection: Sendable, Equatable, Identifiable {
     case .today: return "Today"
     case .yesterday: return "Yesterday"
     case .health: return "Health"
-    case .signedIn: return "Signed in"
     }
   }
 
@@ -241,10 +320,8 @@ public enum PanelSection: Sendable, Equatable, Identifiable {
 
 /// The whole panel.
 public struct PanelModel: Sendable, Equatable {
-  /// The mark in effect, which the header and the empty state draw.
-  public let mark: String
-  /// The address in the header, or nothing.
-  public let account: String?
+  /// The panel's own line and everything drawn under it.
+  public let header: HeaderModel
   /// The centred first-run words, where there is nothing else at all.
   public let empty: String?
   /// The one line the app says about itself: the bundle on the disk, or a
@@ -254,8 +331,12 @@ public struct PanelModel: Sendable, Equatable {
   /// The one action whose words are held open with no pointer.
   public let forcedTooltip: String?
 
-  /// The sign-in URL under the Account row, where a sign-in is in flight.
-  public let signInURL: String?
+  /// The mark in effect, which the header and the empty state draw.
+  public var mark: String { header.mark }
+  /// The address in the header, or nothing.
+  public var account: String? { header.account }
+  /// The sign-in URL under the header, where a sign-in is in flight.
+  public var signInURL: String? { header.signInURL }
 
   public var now: [NowItem] {
     for section in sections {
@@ -339,15 +420,15 @@ extension PanelModel {
       docs, facts: facts, ui: ui, words: words, busy: !items.isEmpty)
     let today = todaySection(days, ui: ui, words: words)
     let yesterday = yesterdaySection(days, ui: ui, words: words)
-    let health = healthRows(
+    let health = healthRows(facts: facts)
+    let header = self.header(
       facts: facts, ui: ui, now: now, stopping: stopping(nowFold, sessions: sessions))
 
     // HEALTH is last, where a person looks for it, except on the three
     // screens where it is the whole of what the panel is for: a machine
-    // with no token at all, a sign-in in flight, which lives in the Account
-    // row with its countdown and its address, and the time a question is
-    // asked in it. A question or a countdown that scrolled out of sight is
-    // one nobody answers.
+    // with no token at all, a sign-in in flight, and the time a question is
+    // asked. A question or a countdown that scrolled out of sight is one
+    // nobody answers.
     let pinned =
       facts.auth == .signedOut || facts.signIn != nil || ui.isAsking(.signOut, now: now)
 
@@ -361,23 +442,16 @@ extension PanelModel {
     if !(pinned && today.rows.isEmpty) { sections.append(.today(today)) }
     if let yesterday { sections.append(.yesterday(yesterday)) }
     if !pinned { sections.append(.health(health)) }
-    if let account = facts.account,
-      SignedInBanner.isShowing(signedInAt: facts.signedInAt, now: now)
-    {
-      sections.append(.signedIn(BannerModel(account: account)))
-    }
 
     let bare =
       items.isEmpty && documents.rows.isEmpty && today.rows.isEmpty && yesterday == nil
 
     return PanelModel(
-      mark: facts.mark,
-      account: facts.account,
+      header: header,
       empty: bare && facts.auth == .signedOut ? EmptyState.firstRun : nil,
       notice: notice(facts),
       sections: sections,
-      forcedTooltip: ui.forcedTooltip,
-      signInURL: facts.signIn?.url)
+      forcedTooltip: ui.forcedTooltip)
   }
 
   // MARK: NOW

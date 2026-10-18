@@ -328,6 +328,15 @@ enum SheetPieces {
     return try XCTUnwrap(today.rows.first, "r3's TODAY is empty")
   }
 
+  /// Scene r8's header: the mark, the version with a release to take, and
+  /// the account that works. It is the one scene whose header carries every
+  /// piece the line can hold at once.
+  static func header() throws -> HeaderModel {
+    let header = try scene("r8").model().header
+    XCTAssertNotNil(header.update, "r8 is the screen with a release to take")
+    return header
+  }
+
   /// Scene e1's DOCUMENTS: its header count, and the chevron's own words
   /// for what is under it.
   static func documents() throws -> (count: String, more: String) {
@@ -358,12 +367,10 @@ enum SheetPieces {
   }
 
   /// Scene e10's question: the words, what follows from them, and the loud
-  /// word. The controls sheet draws the one inline confirm the panel has
-  /// beside the Account row, so the sheet's question is that row's own.
+  /// word. The controls sheet draws the one inline confirm the panel has,
+  /// which is the header's own since the second morning.
   static func signOut() throws -> QuestionModel {
-    let health = try scene("e10").model().health
-    let asked = health.compactMap(\.question)
-    return try XCTUnwrap(asked.first, "scene e10 asked nothing")
+    try XCTUnwrap(try scene("e10").model().header.question, "scene e10 asked nothing")
   }
 
   /// The words on two of a document row's icons, one live and one with
@@ -392,8 +399,9 @@ enum SheetPieces {
     let documents = try self.documents()
 
     let labels = try sectionLabels()
+    let header = try self.header()
     var words: [String] = [
-      Scenes.account, "⁘",
+      Scenes.account, "⁘", header.name,
       labels.now, labels.documents,
       hold.title, hold.sub, hold.quiet, hold.question, hold.consequence,
       stuck.card.title, stuck.card.reason,
@@ -410,6 +418,8 @@ enum SheetPieces {
     words += stuck.actions.map(\.tip)
     words += [job.sub].compactMap { $0 }
     words += job.steps.flatMap { [$0.title] + [$0.value].compactMap { $0 } }
+    words += [header.version].compactMap { $0 }
+    words += [header.update?.tip].compactMap { $0 }
     words += try health().flatMap { row -> [String] in
       [row.kind.label, row.value] + [row.quiet].compactMap { $0 } + row.actions.map(\.tip)
     }
@@ -436,7 +446,8 @@ func panelVocabulary() throws -> Set<String> {
   for scene in Scenes.all {
     let model = try scene.model()
     words.formUnion([model.mark])
-    words.formUnion([model.account, model.empty, model.notice, model.signInURL].compactMap { $0 })
+    words.formUnion([model.empty, model.notice].compactMap { $0 })
+    words.formUnion(headerWords(model.header))
     for item in model.now { words.formUnion(nowWords(item)) }
     for section in model.sections {
       words.insert(section.label)
@@ -469,8 +480,6 @@ func panelVocabulary() throws -> Set<String> {
             words.formUnion([question.title, question.consequence, question.danger.rawValue])
           }
         }
-      case .signedIn(let banner):
-        words.formUnion([banner.account, SignedInBanner.words, SignedInBanner.signOutTip])
       }
     }
   }
@@ -481,6 +490,23 @@ func panelVocabulary() throws -> Set<String> {
   words.formUnion(StripLabel.allCases.map(\.rawValue))
   words.insert(EmptyState.firstRun)
   return words.filter { !$0.isEmpty }
+}
+
+/// The header's own strings: the name, the version, the address, the lines
+/// under them, and the question where it is asked.
+private func headerWords(_ header: HeaderModel) -> [String] {
+  var words = [header.name]
+  words += [header.version, header.account, header.signInURL].compactMap { $0 }
+  words += header.quiet
+  words += header.actions.flatMap(actionWords)
+  words += header.update.map(actionWords) ?? []
+  if let question = header.question {
+    words += [question.title, question.consequence, question.danger.rawValue]
+  }
+  if let banner = header.banner {
+    words += [banner.account, SignedInBanner.words, SignedInBanner.signOutTip]
+  }
+  return words
 }
 
 /// One action's own strings: the words under the pointer, and the reason an

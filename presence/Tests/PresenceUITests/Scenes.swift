@@ -97,7 +97,7 @@ enum Scenes {
     "A document in the trash keeps an ordinary row, which is e6's last one. No field of "
       + "the record says a document is gone, so nothing is struck through and nothing "
       + "says why.",
-    "The Account row counts the sign-in's three minutes down, as product decision 39 asks. "
+    "The header counts the sign-in's three minutes down, as product decision 39 asks. "
       + "Principle 5 allows facts and not promises, and the countdown is the one number in "
       + "the panel about something that has not happened.",
     "The DOCUMENTS header is \"N today\" where every row is from today and \"14 days · N\" "
@@ -114,10 +114,12 @@ enum Scenes {
   /// is the one section whose length changes from screen to screen, and a
   /// reviewer comparing two screens reads a missing row as a bug.
   static let healthRowRule =
-    "HEALTH is Account first and Quit last on every screen, and the rows between them keep "
-    + "their places. Network and Claude Desktop are drawn only where a fact carries them: "
-    + "the record's own network stop, and no extension beside the binary. There is no "
-    + "Skills row at all, because nothing gdoc prints names a version of the skills."
+    "HEALTH ends in Quit on every screen, and the rows above it keep their places. Network "
+    + "and Claude Desktop are drawn only where a fact carries them: the record's own "
+    + "network stop, and no extension beside the binary. The account and the version are "
+    + "not rows at all since the second morning: they are the header, with Sign out and "
+    + "the update beside them. There is no Skills row either, because nothing gdoc prints "
+    + "names a version of the skills."
 
   /// The six pages of components, by the name they are written under and
   /// what each of them is. They are drawn by the files that measure those
@@ -298,8 +300,9 @@ enum Scenes {
     Scene(
       id: "e5", title: "The first run: no token at all",
       caption:
-        "Nothing works without a sign-in, so HEALTH is pinned above everything and the "
-        + "one sentence names the row to press.",
+        "Nothing works without a sign-in, so the header says so and the one sentence "
+        + "names the icon to press. HEALTH is still pinned above everything, because on "
+        + "this machine it is the whole of what the panel is for.",
       fixture: nil, moment: "2026-10-17T10:00:00Z", alive: [],
       facts: machine(
         auth: .signedOut, account: nil, gdocFound: true, extensionState: .notInstalled),
@@ -319,9 +322,10 @@ enum Scenes {
       id: "e8", title: "Waiting for Google, and just signed in",
       caption:
         "The sign-in is the child's own three minutes, with the URL as a line that can be "
-        + "copied. The address is said once at its full size for five seconds. The render "
-        + "stacks two moments on one panel, waiting for Google above and just signed in "
-        + "below, as the mockup did: on a real machine one of them is always gone.",
+        + "copied. Both of them are under the header now, where the account is. The "
+        + "address is said once at its full size for five seconds. The render stacks two "
+        + "moments on one panel, waiting for Google above and just signed in below, as "
+        + "the mockup did: on a real machine one of them is always gone.",
       fixture: nil, moment: "2026-10-17T09:01:00Z", alive: [],
       facts: machine(
         signIn: SignInPhase(url: signInURL, secondsLeft: 163),
@@ -340,8 +344,9 @@ enum Scenes {
     Scene(
       id: "e10", title: "Signing out, and changing account",
       caption:
-        "The confirm names what will stop, in place, and waits for the answer. A changed "
-        + "address is the app's own memory and never a line of the log.",
+        "The confirm names what will stop, in place of the header's own line, and waits "
+        + "for the answer. A changed address is the app's own memory and never a line of "
+        + "the log.",
       fixture: "e10", moment: "2026-10-17T18:00:00Z", alive: [7200, 7210],
       facts: machine(previousAccount: "nail@gmail.example"),
       ui: UIState(

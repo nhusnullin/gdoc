@@ -112,27 +112,27 @@ branch.
   `presence/Tests/PresenceUITests/RowTests.swift`, `StateTests.swift`,
   `RenderTests.swift`, the scene fixtures that touch the account
 
-- [ ] the header carries the account's state: the status glyph (check when
+- [x] the header carries the account's state: the status glyph (check when
       the token works, exclamation when it does not, a ring while nobody has
       asked), the address, and the one action, Sign out, as the icon the
       HEALTH row carried; with no token the header shows Sign in where the
       icon was; a test states the three pieces and the height, which stays
       36 pt
-- [ ] "Sign out?" asks in place of the header line: the question, its
+- [x] "Sign out?" asks in place of the header line: the question, its
       consequence line under it, Sign out and Keep where the actions were;
       the question waits for its answer as PR 91 made it
-- [ ] the signed-in banner, the sign-in countdown and the Not-you line move
+- [x] the signed-in banner, the sign-in countdown and the Not-you line move
       with the account: they are drawn under the header, not under a HEALTH
       row
-- [ ] HEALTH loses the Account row; the Account changed quiet line goes with
+- [x] HEALTH loses the Account row; the Account changed quiet line goes with
       it under the header
-- [ ] the header carries the gdoc version after the name, in the caption
+- [x] the header carries the gdoc version after the name, in the caption
       grey ("gdoc" then "v2.16.0"), and the update action where a newer
       release is listed: the same icon and the same ring-while-it-runs the
       gdoc row had, now beside the version; with nothing newer, no icon;
       HEALTH loses the gdoc row too; a test states the header's pieces with
       and without an update
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 3: the group is SETTINGS
 

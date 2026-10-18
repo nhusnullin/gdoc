@@ -4,8 +4,8 @@
 // centred thing in the panel: the mark at 28 pt and a sentence under it, with
 // 28 pt of air above and 20 below. It is scene e5, the first open of a
 // machine that has never signed in, and the sentence does one job: it names
-// the row to press. There is no large filled button, because one action is
-// one control, and that control is the sign-in icon on the Account row.
+// the icon to press. There is no large filled button, because one action is
+// one control, and that control is the sign-in icon in the header.
 //
 // The mark is a setting and may be empty, so the view takes it as a string
 // and draws whatever it is handed.
@@ -16,12 +16,13 @@ import SwiftUI
 
 /// The empty panel.
 public struct EmptyState: View {
-  /// The one sentence the first open says. It names the row rather than
-  /// describing a state, because a person reading it has nothing to do yet
-  /// and one thing to find.
+  /// The one sentence the first open says. It names where the control is
+  /// rather than describing a state, because a person reading it has
+  /// nothing to do yet and one thing to find. It said "the Account row
+  /// below" until 2026-10-18, when the account moved into the header.
   public nonisolated static let firstRun =
     "Not signed in. Sign in with the Google account that will post replies: "
-    + "the Account row below."
+    + "the Sign in icon at the top."
 
   /// `.empty{padding:28px 12px 20px}` and `.empty .mark{margin-bottom:8px}`.
   public static let topPadding: CGFloat = 28

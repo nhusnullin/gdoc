@@ -72,9 +72,10 @@ final class UpdateActionTests: XCTestCase {
     let facts = Self.facts(installed: "v2.14.0", latest: "v2.15.0")
 
     // Before: the row offers the update it was told about.
-    let before = Self.gdocRow(Self.facts(installed: "v2.14.0", latest: "v2.15.0"))
-    XCTAssertEqual(before.value, "v2.14.0 · v2.15.0 available")
-    XCTAssertFalse(before.waiting)
+    let before = Self.gdocHeader(Self.facts(installed: "v2.14.0", latest: "v2.15.0"))
+    XCTAssertEqual(before.version, "v2.14.0")
+    XCTAssertEqual(before.update?.tip, "Update to v2.15.0")
+    XCTAssertFalse(before.versionWaiting)
 
     // While the child is up: the ring stands in the glyph's place, and the
     // row offers nothing to press a second time.
@@ -82,19 +83,21 @@ final class UpdateActionTests: XCTestCase {
     await gate.entered()
     let mid = await action.standing
     XCTAssertEqual(mid, .running)
-    let ringing = Self.gdocRow(await action.applied(to: facts))
-    XCTAssertTrue(ringing.waiting, "the gdoc row draws a ring while the update is up")
-    XCTAssertEqual(ringing.value, "v2.14.0", "nothing says the new version before it is there")
-    XCTAssertTrue(ringing.actions.isEmpty)
+    let ringing = Self.gdocHeader(await action.applied(to: facts))
+    XCTAssertTrue(
+      ringing.versionWaiting, "the header draws a ring while the update is up")
+    XCTAssertEqual(
+      ringing.version, "v2.14.0", "nothing says the new version before it is there")
+    XCTAssertNil(ringing.update)
 
     // After the end: the version it installed, and no update left to take.
     await gate.open()
     let ended = await running.value
     XCTAssertEqual(ended, .installed("v2.15.0"))
-    let after = Self.gdocRow(await action.applied(to: facts))
-    XCTAssertFalse(after.waiting)
-    XCTAssertEqual(after.value, "v2.15.0")
-    XCTAssertTrue(after.actions.isEmpty, "there is nothing newer to take")
+    let after = Self.gdocHeader(await action.applied(to: facts))
+    XCTAssertFalse(after.versionWaiting)
+    XCTAssertEqual(after.version, "v2.15.0")
+    XCTAssertNil(after.update, "there is nothing newer to take")
   }
 
   /// A run that installed nothing moves no version. `gdoc update` declines a
@@ -109,8 +112,9 @@ final class UpdateActionTests: XCTestCase {
     let standing = await action.update()
 
     XCTAssertEqual(standing, .unchanged("major_available"))
-    let row = Self.gdocRow(await action.applied(to: facts))
-    XCTAssertEqual(row.value, "v2.14.0 · v3.0.0 available")
+    let row = Self.gdocHeader(await action.applied(to: facts))
+    XCTAssertEqual(row.version, "v2.14.0")
+    XCTAssertEqual(row.update?.tip, "Update to v3.0.0")
   }
 
   /// The version this app installed moves the row, and stops moving it the
@@ -131,16 +135,16 @@ final class UpdateActionTests: XCTestCase {
 
     // The stale reading: the poll has not answered yet, so it still says the
     // version this run replaced.
-    let stale = Self.gdocRow(
+    let stale = Self.gdocHeader(
       await action.applied(to: Self.facts(installed: "v2.14.0", latest: "v2.15.0")))
-    XCTAssertEqual(stale.value, "v2.15.0", "the child's end is newer than the last poll")
+    XCTAssertEqual(stale.version, "v2.15.0", "the child's end is newer than the last poll")
 
     // A terminal updated gdoc again. The reading wins, and no update is
     // offered for a release that is already there.
-    let later = Self.gdocRow(
+    let later = Self.gdocHeader(
       await action.applied(to: Self.facts(installed: "v2.16.0", latest: "v2.16.0")))
-    XCTAssertEqual(later.value, "v2.16.0", "a reading this run did not write stands")
-    XCTAssertTrue(later.actions.isEmpty, "and offers nothing to install")
+    XCTAssertEqual(later.version, "v2.16.0", "a reading this run did not write stands")
+    XCTAssertNil(later.update, "and offers nothing to install")
   }
 
   // MARK: the panel's own reading
@@ -152,11 +156,11 @@ final class UpdateActionTests: XCTestCase {
       gdocPath: "/Users/someone/.local/bin/gdoc")
   }
 
-  private static func gdocRow(_ facts: Facts) -> HealthRowModel {
-    let model = PanelModel.build(
+  private static func gdocHeader(_ facts: Facts) -> HeaderModel {
+    PanelModel.build(
       events: [], facts: facts, now: Date(timeIntervalSince1970: 1_792_000_000),
-      calendar: Calendar(identifier: .gregorian), alive: { _ in false })
-    return model.health.first { $0.kind == .gdoc }!
+      calendar: Calendar(identifier: .gregorian), alive: { _ in false }
+    ).header
   }
 }
 
