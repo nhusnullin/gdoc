@@ -247,27 +247,28 @@ branch.
   `Documents.swift`, `presence/Sources/PresenceApp/Opener.swift`,
   `presence/Tests/...`
 
-- [ ] the record gains `session`: the value of `CLAUDE_CODE_SESSION_ID`
+- [x] the record gains `session`: the value of `CLAUDE_CODE_SESSION_ID`
       when `via` is `code`, read in `viaOfEnv` beside `CLAUDECODE`, written
       on the start line and nowhere else; absent under terminal and chat; the
       allowlist test names it; a test shows the field under Claude Code and
       its absence elsewhere, and `TestTheFlagChangesNoByteOfTheObject` still
       holds
-- [ ] the Swift `Event` decodes `session`, and a document remembers the
+- [x] the Swift `Event` decodes `session`, and a document remembers the
       session of its latest `via: code` run
-- [ ] Open chat on a document whose latest run came from Claude Code with a
-      session opens `claude://code/continue?session=<id>&source=gdoc`; a
+- [x] Open chat on a document whose latest run came from Claude Code with a
+      session would open `claude://code/continue?session=<id>&source=gdoc`;
+      the link is built and opened by nobody, which is the box below; a
       document with a chat run keeps the activation it has; a document with
       neither keeps the activation; the URL is built by one function with a
       test over the three cases, and the opener's allowlist of schemes gains
       this one path and no other
-- [ ] the measurement is done and is in `docs/v2/MEASURED.md` ("What
+- [x] the measurement is done and is in `docs/v2/MEASURED.md` ("What
       `claude://code/continue` does from outside the app", 2026-10-18): none
       of the three forms switched the window, so the link is not shipped;
       the opener keeps the activation, the URL-building function and its
       test stay (the day a form switches, the opener has the id), and this
       task's commit says so
-- [ ] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
+- [x] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
       `make app-lint`, `make app-test`
 
 ### Task 9: the words

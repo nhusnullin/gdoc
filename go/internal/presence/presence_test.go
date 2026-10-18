@@ -22,8 +22,11 @@ import (
 const (
 	version = "v2.13.0"
 	docID   = "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789"
-	madeID  = "1PuBl15h9876543210987654321098765432"
-	fixedID = "9f1cb3a7d2e45608"
+	// The shape Claude Code hands a child in CLAUDE_CODE_SESSION_ID, measured
+	// 2026-10-18 and in docs/v2/MEASURED.md.
+	sessionID = "0199c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d"
+	madeID    = "1PuBl15h9876543210987654321098765432"
+	fixedID   = "9f1cb3a7d2e45608"
 )
 
 // scene points the config directory at a fresh temporary one and puts every
@@ -127,8 +130,9 @@ func TestOffTouchesNothing(t *testing.T) {
 func TestTheEventCarriesOnlyItsListedFields(t *testing.T) {
 	want := []string{
 		"v", "at", "gdoc", "pid", "run", "call", "event", "command", "via",
-		"doc", "wait", "interrupted", "step", "index", "count", "title", "made",
-		"ok", "verified", "stop", "line", "ms", "hold", "rule", "until",
+		"session", "doc", "wait", "interrupted", "step", "index", "count",
+		"title", "made", "ok", "verified", "stop", "line", "ms", "hold", "rule",
+		"until",
 	}
 	var got []string
 	ty := reflect.TypeOf(Event{})
@@ -653,7 +657,7 @@ func TestTheFixtureIsWhatTheWriterWrites(t *testing.T) {
 	// And the run a person was watching from Claude Code and stopped by hand:
 	// the via the environment named, and the one word the wait's own answer
 	// puts on the end.
-	stopped := Begin(WithCode(ctx), true, version, "comments", docID, true, false, errOut)
+	stopped := Begin(WithCode(ctx, sessionID), true, version, "comments", docID, true, false, errOut)
 	stopped.End(emit.Result{OK: true, Version: version, Data: map[string]any{
 		"title":  "Supplier register",
 		"waited": map[string]any{"polls": 6, "seconds": 12, "interrupted": true},
@@ -740,13 +744,72 @@ func TestChatWinsOverCode(t *testing.T) {
 		want string
 	}{
 		{"nobody marked it", ctx, viaTerminal},
-		{"Claude Code", WithCode(ctx), viaCode},
+		{"Claude Code", WithCode(ctx, sessionID), viaCode},
 		{"a chat session", WithChat(ctx), viaChat},
-		{"a chat session under Claude Code", WithCode(WithChat(ctx)), viaChat},
-		{"Claude Code under a chat session", WithChat(WithCode(ctx)), viaChat},
+		{"a chat session under Claude Code", WithCode(WithChat(ctx), sessionID), viaChat},
+		{"Claude Code under a chat session", WithChat(WithCode(ctx, sessionID)), viaChat},
 	} {
 		if got := viaOf(c.ctx); got != c.want {
 			t.Errorf("%s is via %q, want %q", c.name, got, c.want)
 		}
+	}
+}
+
+// The session a run came from is on the start of a Claude Code run and
+// nowhere else.
+//
+// It is the one thing in the record about the person's own session, and it is
+// there so the panel can offer to go back to the chat a document was worked
+// on from. A terminal run has no session, a chat call has none either even
+// where Claude Code started the process, and the end of a run says nothing
+// about it: the start already did, and the pair is the same run.
+func TestTheSessionIsOnTheStartOfACodeRunAndNowhereElse(t *testing.T) {
+	ctx := context.Background()
+	for _, c := range []struct {
+		name string
+		ctx  context.Context
+		want string
+	}{
+		{"a person at a terminal", ctx, ""},
+		{"a chat session", WithChat(ctx), ""},
+		{"a chat session under Claude Code", WithCode(WithChat(ctx), sessionID), ""},
+		{"Claude Code", WithCode(ctx, sessionID), sessionID},
+		{"Claude Code with no session in the environment", WithCode(ctx, ""), ""},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			dir, errOut := scene(t)
+			Begin(c.ctx, true, version, "read", docID, false, false, errOut).
+				End(emit.Result{OK: true})
+
+			events := decoded(t, dir, "2026-10.jsonl")
+			if len(events) != 2 {
+				t.Fatalf("want a start and an end, got %d: %+v", len(events), events)
+			}
+			if events[0].Session != c.want {
+				t.Errorf("the start of %s says session %q, want %q", c.name, events[0].Session, c.want)
+			}
+			if events[1].Session != "" {
+				t.Errorf("the end of %s says session %q", c.name, events[1].Session)
+			}
+			if c.want == "" && strings.Contains(strings.Join(written(t, dir, "2026-10.jsonl"), "\n"), "session") {
+				t.Errorf("a run with no session carries the word anyway:\n%s",
+					strings.Join(written(t, dir, "2026-10.jsonl"), "\n"))
+			}
+		})
+	}
+}
+
+// A variable longer than a session id is cut, because the length of a line is
+// the whole of what makes an append atomic, and this one comes out of an
+// environment nothing here chose.
+func TestTheSessionIsCappedAtSixtyFourRunes(t *testing.T) {
+	dir, errOut := scene(t)
+	long := strings.Repeat("ю", 200)
+	Begin(WithCode(context.Background(), long), true, version, "read", docID, false, false, errOut).
+		End(emit.Result{OK: true})
+
+	got := decoded(t, dir, "2026-10.jsonl")[0].Session
+	if len([]rune(got)) != 64 {
+		t.Fatalf("the session is %d runes long", len([]rune(got)))
 	}
 }

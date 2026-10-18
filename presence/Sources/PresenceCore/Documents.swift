@@ -36,6 +36,13 @@
 // which is the one way back; TODAY still carries its runs, because the log
 // is the log. A document that is both is kept: the pin is the louder answer.
 //
+// A row also remembers the Claude Code session its document was last worked
+// on from, where the record named one: the record carries a session on the
+// start of a `via: code` run, and Open chat is the one press that would use
+// it. Measured 2026-10-18, MEASURED.md: `claude://code/continue` activates
+// Claude Desktop from outside and switches nothing, so nothing opens that
+// link today and the row holds the id for the day a form does.
+//
 // The clock, the calendar and the kernel's answer about a pid come in as
 // arguments, so every row is reachable from a fixture and nothing here reads
 // the machine.
@@ -100,6 +107,10 @@ public struct DocumentRow: Sendable, Equatable {
   /// Whether the person pinned this document, which is why it is first and
   /// why it is still here.
   public let isPinned: Bool
+  /// The Claude Code session this document was last worked on from, where the
+  /// record named one. It is nothing for a document only a terminal or a chat
+  /// touched, which is every document until gdoc v2.17.0 wrote the field.
+  public let session: String?
 }
 
 /// DOCUMENTS, and the two numbers its label carries.
@@ -145,6 +156,7 @@ public enum Documents {
   ) -> DocumentsFold {
     let ordered = Fold.inOrder(events)
     let titles = Fold.latestTitles(ordered)
+    let sessions = Fold.latestSessions(ordered)
 
     var actions: [String: [Action]] = [:]
     for action in every(ordered, now: now, alive: alive) {
@@ -163,14 +175,16 @@ public enum Documents {
     var rows =
       actions
       .compactMap { doc, found in
-        row(doc, found, titles: titles, now: now, calendar: calendar, pinned: pins[doc] != nil)
+        row(
+          doc, found, titles: titles, session: sessions[doc], now: now, calendar: calendar,
+          pinned: pins[doc] != nil)
       }
       .filter { $0.at >= since || pins[$0.doc] != nil }
     for pin in pinned where actions[pin.doc] == nil {
       rows.append(
         DocumentRow(
           doc: pin.doc, title: pin.title, command: "", at: pin.at, state: .pinnedOnly,
-          isToday: false, isPinned: true))
+          isToday: false, isPinned: true, session: sessions[pin.doc]))
     }
 
     return DocumentsFold(rows: rows.sorted { before($0, $1, finished: finished, pins: pins) })
@@ -240,8 +254,8 @@ public enum Documents {
   /// A document's row: the open action where there is one, and the latest
   /// finished one otherwise, at the moment of the latest action either way.
   private static func row(
-    _ doc: String, _ actions: [Action], titles: [String: String], now: Date, calendar: Calendar,
-    pinned: Bool
+    _ doc: String, _ actions: [Action], titles: [String: String], session: String?, now: Date,
+    calendar: Calendar, pinned: Bool
   ) -> DocumentRow? {
     guard let last = actions.max(by: { $0.at < $1.at }) else { return nil }
     let open = actions.filter(\.isOpen).min { rank($0.state) < rank($1.state) }
@@ -249,7 +263,7 @@ public enum Documents {
 
     return DocumentRow(
       doc: doc, title: titles[doc], command: shown.command, at: last.at, state: shown.state,
-      isToday: calendar.isDate(last.at, inSameDayAs: now), isPinned: pinned)
+      isToday: calendar.isDate(last.at, inSameDayAs: now), isPinned: pinned, session: session)
   }
 
   /// Which open action wins: a hold waits for a person, so it is first; a

@@ -1,4 +1,4 @@
-// The two URLs the app may build, and the one it may accept.
+// The three URLs the app may build, and the one it may accept.
 //
 // Every value here is a literal. A URL the app opens is the one outbound act
 // of this app that is not a fixed argv, so what it may be is stated in this
@@ -36,6 +36,35 @@ final class LinkLineTests: XCTestCase {
     XCTAssertTrue(LinkLine.isDocumentID(String(repeating: "a", count: 20)))
     XCTAssertFalse(LinkLine.isDocumentID(String(repeating: "a", count: 19)))
     XCTAssertTrue(LinkLine.isDocumentID("Ab-9_0123456789abcdefgh"), "dash and underscore are in")
+  }
+
+  /// The session link, over the three documents a panel has: one last worked
+  /// on from Claude Code, which names a session; one worked on from chat,
+  /// which names none; and one a terminal touched, which names none either.
+  /// A session nobody could have written is the fourth case and no link.
+  ///
+  /// Nothing opens this link today. Measured 2026-10-18, MEASURED.md: from
+  /// outside the app the path activates Claude Desktop and switches no
+  /// window, so Open chat keeps its activation and this is the builder for
+  /// the day a form switches.
+  func testTheSessionLinkIsBuiltFromASessionIdOnly() {
+    let session = "0199c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d"
+    XCTAssertEqual(
+      LinkLine.codeSessionURL(for: session),
+      "claude://code/continue?session=0199c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d&source=gdoc")
+
+    XCTAssertNil(LinkLine.codeSessionURL(for: nil), "a chat run names no session, so no link")
+    XCTAssertNil(LinkLine.codeSessionURL(for: ""), "and an empty one is not a session")
+
+    for forged in [
+      "last",
+      "0199c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d&source=desktop_action",
+      "0199c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d/../new",
+      "../../wherever",
+      "0199c3d4 5e6f 7a8b 9c0d 1e2f3a4b5c6d",
+    ] {
+      XCTAssertNil(LinkLine.codeSessionURL(for: forged), "\(forged) is not a session id")
+    }
   }
 
   /// The sign-in link is taken from a child's output, so it is judged before

@@ -62,9 +62,12 @@ final class SourceRulesTests: XCTestCase {
   private static let asking = "0"
 
   /// The schemes the app may name. `https` is a document and a sign-in;
-  /// `obsidian` is a note in the vault the person chose. A third is a
-  /// decision in `docs/v2/DECISIONS.md`.
-  private static let schemes = ["https", "obsidian"]
+  /// `obsidian` is a note in the vault the person chose; `claude` is the one
+  /// path of Claude Desktop's own scheme that names a session, built in
+  /// LinkLine and opened by nothing, because the measurement of 2026-10-18
+  /// found that it switches no window from outside the app. A fourth is a
+  /// decision in `docs/v2/DECISIONS.md`, as this third one is.
+  private static let schemes = ["https", "obsidian", "claude"]
 
   /// The hosts it may name, both Google's.
   private static let hosts = ["docs.google.com", "accounts.google.com"]

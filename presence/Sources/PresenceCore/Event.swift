@@ -61,6 +61,10 @@ public struct Event: Sendable, Equatable {
   public let kind: EventKind
   public let command: String?
   public let via: String?
+  /// Claude Code's own id for the session a run came from, on the start of a
+  /// `via: code` run and nowhere else. A terminal run and a chat call carry
+  /// none, so this is nil for every line but those starts.
+  public let session: String?
   public let doc: String?
   public let wait: Bool
   /// Whether a person stopped this wait, on the end of a `comments --wait` and
@@ -97,7 +101,8 @@ public struct Event: Sendable, Equatable {
 
   public init(
     schema: Int, at: Date, gdoc: String?, pid: Int32, run: String, call: Int64?, kind: EventKind,
-    command: String?, via: String?, doc: String?, wait: Bool, interrupted: Bool = false,
+    command: String?, via: String?, session: String? = nil, doc: String?, wait: Bool,
+    interrupted: Bool = false,
     step: String? = nil, index: Int? = nil, count: Int? = nil, title: String?,
     made: String? = nil, ok: Bool?,
     verified: Bool?, stop: String? = nil, line: Int? = nil,
@@ -112,6 +117,7 @@ public struct Event: Sendable, Equatable {
     self.kind = kind
     self.command = command
     self.via = via
+    self.session = session
     self.doc = doc
     self.wait = wait
     self.interrupted = interrupted
@@ -196,6 +202,7 @@ private struct Wire: Decodable {
   var event: String?
   var command: String?
   var via: String?
+  var session: String?
   var doc: String?
   var wait: Bool?
   var interrupted: Bool?
@@ -245,7 +252,7 @@ private struct Wire: Decodable {
 
     return Event(
       schema: v, at: when, gdoc: gdoc, pid: pid, run: run, call: call, kind: kind,
-      command: command, via: via, doc: doc, wait: wait ?? false,
+      command: command, via: via, session: session, doc: doc, wait: wait ?? false,
       interrupted: interrupted ?? false,
       step: step, index: index, count: count, title: title, made: made,
       ok: ok, verified: verified, stop: stop, line: line, ms: ms, hold: hold, rule: rule,

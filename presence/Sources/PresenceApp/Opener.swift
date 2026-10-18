@@ -18,11 +18,14 @@
 // somebody's document text and a link needs only the id, so the two are
 // never in the same sentence here.
 //
-// Claude Desktop is activated and nothing more. A `claude:` scheme is
-// registered on this machine, but what a URL under it means is not written
-// down anywhere and was not measured, so there is no prefill: the panel
-// brings the app to the front and the person types. The measurement is in
-// `docs/v2/MEASURED.md`.
+// Claude Desktop is activated and nothing more, including for a document
+// whose latest run came from a Claude Code session the record names. The
+// bundle carries `claude://code/continue?session=...`, and the measurement of
+// 2026-10-18 in `docs/v2/MEASURED.md` found that from outside the app all
+// three of its Code forms activate the window and switch nothing, so there is
+// nothing to open: the panel brings the app to the front and the person
+// types. The link is built in `PresenceCore/LinkLine` and opened by nobody,
+// so the day a form switches, the id is already in the row.
 
 import AppKit
 import Foundation

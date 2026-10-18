@@ -81,6 +81,32 @@ extension Fold {
 }
 
 extension Fold {
+  /// Every document's latest Claude Code session, by document id.
+  ///
+  /// The record carries a session on the start of a `via: code` run and
+  /// nowhere else, so this is the session the document was last worked on
+  /// from. The latest wins, as a title does: a document worked on from two
+  /// sessions belongs to the one a hand went to last.
+  ///
+  /// A line is forgeable, so nothing here judges the value: what a session
+  /// id may look like before it goes into a URL is LinkLine's, and this is
+  /// the fold that remembers which document said which.
+  public static func latestSessions(_ events: [Event]) -> [String: String] {
+    var sessions: [String: String] = [:]
+    var when: [String: Date] = [:]
+    for event in events {
+      guard let doc = subject(event), let session = event.session, !session.isEmpty else {
+        continue
+      }
+      if let had = when[doc], had > event.at { continue }
+      sessions[doc] = session
+      when[doc] = event.at
+    }
+    return sessions
+  }
+}
+
+extension Fold {
   /// Every call's latest title, by the run and the call its events pair on.
   ///
   /// A publish is handed no document, so nothing `latestTitles` holds names

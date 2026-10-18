@@ -55,6 +55,46 @@ final class FieldsTests: XCTestCase {
     XCTAssertEqual(lost.today.map(\.doc), [nil], "the log keeps the row and names no document")
   }
 
+  // A document remembers the Claude Code session its latest `via: code` run
+  // came from, and remembers none where no run named one.
+  //
+  // The latest wins, as a title does: a document worked on from two sessions
+  // belongs to the one a hand went to last. A chat run and a terminal run
+  // name no session at all, which is what every document carried before gdoc
+  // wrote the field.
+  func testARowRemembersTheSessionOfItsLatestCodeRun() throws {
+    let at = try moment("2026-10-17T15:00:00Z")
+    let here = try amsterdam()
+    let first = "0199c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d"
+    let second = "0199dead-beef-4a8b-9c0d-1e2f3a4b5c6d"
+
+    let events =
+      [
+        start(
+          at: "2026-10-17T10:00:00Z", command: "propose", run: "r1", doc: chapter4, via: "code",
+          session: first),
+        end(
+          at: "2026-10-17T10:00:20Z", command: "propose", run: "r1", doc: chapter4, via: "code",
+          ok: true, verified: true, title: "Chapter 4"),
+        start(
+          at: "2026-10-17T13:00:00Z", command: "reply", run: "r2", doc: chapter4, via: "code",
+          session: second),
+        end(
+          at: "2026-10-17T13:00:20Z", command: "reply", run: "r2", doc: chapter4, via: "code",
+          ok: true, verified: true, title: "Chapter 4"),
+      ]
+      + pair(
+        at: "2026-10-17T11:00:00Z", command: "reply", run: "r3", doc: policy, via: "chat",
+        verified: true, title: "The policy")
+
+    let rows = Documents.fold(events, now: at, calendar: here, alive: { _ in false }).rows
+    XCTAssertEqual(
+      rows.first(where: { $0.doc == chapter4 })?.session, second,
+      "the session of the latest Claude Code run is the one the row remembers")
+    XCTAssertNil(
+      rows.first(where: { $0.doc == policy })?.session, "a chat run names no session")
+  }
+
   // A hold the sign-in changed under is dropped, which is a fourth ending
   // and not a fourth kind of row: the card goes, the document stops being
   // held, and TODAY carries the one line that says it closed.

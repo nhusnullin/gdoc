@@ -44,6 +44,13 @@ var publishSteps = []string{"build", "upload", "read_back", "link"}
 // that the first 200 runes do not: TestTheTitleIsCappedAtTwoHundredRunes.
 const titleRunes = 200
 
+// sessionRunes is the cap on the session a Claude Code run names. A session id
+// is 36 runes today, and the cap is here for the same reason the title's is:
+// the value comes out of an environment this package did not choose, and the
+// length of a line is the whole of what makes an append atomic.
+// TestTheSessionIsCappedAtSixtyFourRunes.
+const sessionRunes = 64
+
 // Event is one line of the record: the fixed, allowlisted shape, never the
 // envelope. Every field is in the specification's list and no field is not:
 // TestTheEventCarriesOnlyItsListedFields.
@@ -66,6 +73,7 @@ type Event struct {
 	Event       string `json:"event"`
 	Command     string `json:"command,omitempty"`
 	Via         string `json:"via,omitempty"`
+	Session     string `json:"session,omitempty"`
 	Doc         string `json:"doc,omitempty"`
 	Wait        bool   `json:"wait,omitempty"`
 	Interrupted bool   `json:"interrupted,omitempty"`
@@ -97,6 +105,7 @@ type Run struct {
 	version   string
 	command   string
 	via       string
+	session   string
 	doc       string
 	call      int64
 	readsBack bool
@@ -124,6 +133,7 @@ func Begin(ctx context.Context, on bool, version, command, doc string, wait, rea
 		version:   version,
 		command:   command,
 		via:       viaOf(ctx),
+		session:   sessionOf(ctx),
 		doc:       doc,
 		call:      calls.Add(1),
 		readsBack: readsBack,
@@ -136,6 +146,7 @@ func Begin(ctx context.Context, on bool, version, command, doc string, wait, rea
 		Event:   "start",
 		Command: r.command,
 		Via:     r.via,
+		Session: r.session,
 		Doc:     r.doc,
 		Wait:    wait,
 	}, errOut)
@@ -360,12 +371,23 @@ func WithChat(ctx context.Context) context.Context {
 // of gdoc mcp is a chat call whatever started the process, and that session
 // may well have been started by Claude Code: TestChatWinsOverCode and
 // cmd/gdoc's TestViaChatWinsOverCodeInTheMcpSession.
-func WithCode(ctx context.Context) context.Context {
+//
+// session is Claude Code's own id for the session the run came from, which
+// cmd/gdoc reads out of the same environment, and which reaches the start line
+// and nothing else. An empty one is a Claude Code that named none, and the
+// line then says nothing about a session rather than saying it is empty:
+// TestTheSessionIsOnTheStartOfACodeRunAndNowhereElse.
+func WithCode(ctx context.Context, session string) context.Context {
 	if viaOf(ctx) == viaChat {
 		return ctx
 	}
+	ctx = context.WithValue(ctx, sessionKey{}, capRunes(session, sessionRunes))
 	return context.WithValue(ctx, viaKey{}, viaCode)
 }
+
+// sessionKey is this package's own key type for the session a Claude Code run
+// came from, so no other package can set or read the value by accident.
+type sessionKey struct{}
 
 // runKey is this package's own key type for the command in flight, so no
 // other package can put a run there or read one by accident.
@@ -402,6 +424,20 @@ func viaOf(ctx context.Context) string {
 		return v
 	}
 	return viaTerminal
+}
+
+// sessionOf is the session a run came from, and the empty string for every run
+// that is not a Claude Code run. The via is asked first, so a chat session
+// that Claude Code started carries no session either: the mark the session put
+// on its context is what the record goes by, and a chat call is a chat call.
+func sessionOf(ctx context.Context) string {
+	if viaOf(ctx) != viaCode {
+		return ""
+	}
+	if s, ok := ctx.Value(sessionKey{}).(string); ok {
+		return s
+	}
+	return ""
 }
 
 // lift reads the three fields an end event keeps out of a command's data: the

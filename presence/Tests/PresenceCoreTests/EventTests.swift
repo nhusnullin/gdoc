@@ -102,6 +102,23 @@ final class EventTests: XCTestCase {
     XCTAssertTrue(fold.holds.isEmpty, "the dropped card is gone from NOW")
   }
 
+  // The one line of the fixture that came from Claude Code names the session
+  // it came from, and no other line names one: a terminal run has none, a
+  // chat call has none, and the end of the code run says nothing about it
+  // either, because its own start already did.
+  func testTheSessionIsOnTheStartOfTheCodeRunAlone() throws {
+    let lines = try Fixture.lines("events-v1")
+
+    let start = try Event.decode(lines[21])
+    XCTAssertEqual(start.kind, .start)
+    XCTAssertEqual(start.via, "code")
+    XCTAssertEqual(start.session, "0199c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d")
+
+    for index in 0..<lines.count where index != 21 {
+      XCTAssertNil(try Event.decode(lines[index]).session, "line \(index) names a session")
+    }
+  }
+
   // A run that failed says why in one of gdoc's seven words, and the picture
   // the house style cannot carry is the one cause that brings a line with it.
   // Both are absent everywhere else: a run that worked stopped for no reason,
