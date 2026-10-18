@@ -222,13 +222,13 @@ mark, the name, or a cut address.
   presence invariant, if it names the hub), `docs/design/2026-10-17-presence-screens-v3.html`
   (scene captions only)
 
-- [ ] the guide walks the panel as it now is: header with version and the
+- [x] the guide walks the panel as it now is: header with version and the
       update glyph's three states, NOW, DOCUMENTS as the pinned and the last
       five with the pin icon and Hide in the menu, SETTINGS with Launch at
       login and Quit; Open md through Spotlight and the `hubPath` override
-- [ ] CLAUDE.md names the app's reads: the record, its plist, the front
+- [x] CLAUDE.md names the app's reads: the record, its plist, the front
       matter of the notes Spotlight names; under 300 lines
-- [ ] `make test`, `make app-lint`
+- [x] `make test`, `make app-lint`
 
 ### Task 7: the acceptance rows
 
