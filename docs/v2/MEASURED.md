@@ -1126,6 +1126,68 @@ Recheck on a macOS upgrade, or if `gdoc update` ever stops renaming the
 running binary. `StopperTests` holds the reading that depends on this: the
 kernel's path is compared, never the record's `gdoc` field.
 
+## The lock, `open -g`, and a command whose opener cannot start anything
+
+Measured 2026-10-18, by hand on Nail's Mac (Darwin 25.3.0, arm64), against the
+bundle this branch builds and the binary this branch builds: `make app` wrote
+`bin/GdocPresence.app`, version 0.0.0, universal and ad-hoc signed, and `make
+build` wrote `bin/gdoc`. The installed bundle at
+`~/Applications/GdocPresence.app` is v2.15.0 and takes no lock, so it could not
+be the subject. It was stopped with `kill` for these readings and opened again
+afterwards, and the one trace left in the real presence directory is the empty
+`app.lock` the new app creates. No byte of the record was read.
+
+Every reading came from one `python3` process driving `/usr/bin/open`, `pgrep`,
+`/usr/bin/lsappinfo` and `flock` through `fcntl`, so the timings are off one
+clock. The app side first:
+
+| What was asked | The answer |
+|---|---|
+| `open -g <bundle>` with the app not running | exit 0, nothing on stdout or stderr, and the process at `<bundle>/Contents/MacOS/GdocPresence` alive 0.3 seconds later |
+| the lock after that launch | `presence/app.lock` where no file was, 0 bytes, mode 0644, and a non-blocking `flock` for it from another process refused with `Resource temporarily unavailable` |
+| the front application across the launch | `loginwindow` before and `loginwindow` after, and `lsappinfo` names no GdocPresence as a front application at all, which is what `LSUIElement` in the bundle's `Info.plist` buys |
+| `open -g <bundle>` again while it runs | exit 0, the same single pid, the front application unchanged |
+| `open <bundle>` without the flag while it runs | exit 0, the same pid, and the front application unchanged as well |
+| a second instance started past LaunchServices, by running the executable directly | exit 0 after 0.1 seconds with no output, and the first instance untouched |
+| the lock after `kill -9` of the app | free 0.032 seconds after the signal, with the file still there and still empty |
+
+Two of those rows need a sentence. The display was locked while this was
+measured, so `loginwindow` was the front application throughout and the flag's
+effect cannot be told apart from no flag by this reading. What the two rows do
+say is that `open -g` started the app and brought nothing forward, and that an
+app marked `LSUIElement` is not something the window server will put in front.
+The second-instance row is `AppLock.decide` on a real kernel: an instance that
+does not get the lock leaves at once rather than drawing a second glyph.
+
+Then the gdoc side, five runs of `bin/gdoc read <a url whose id is no
+document>` under `presence: true`, with `HOME` and `GDOC_CONFIG_DIR` pointed at
+a temporary directory so the opener's three questions could be set one at a
+time. That command fails at the token before it reaches the network, which is
+what makes it a cheap subject: its answer is one line, and the same line every
+time.
+
+| The three questions | The answer |
+|---|---|
+| no bundle under the temporary home | nothing started, and stdout was the same line as the same run with the setting off, stderr empty, exit 1 |
+| a bundle `open` cannot run, an `.app` directory with no executable | the opener was issued and the child failed: `The application cannot be opened because its executable is missing` and exit 1 from `open`. gdoc printed the same line, left stderr empty and exited 1 |
+| the bundle there and no lock file | the app was running 0.2 seconds after the command returned, out of the temporary home's copy, and the answer was the same line again |
+| the bundle there and the lock held by another process | nothing started in the two seconds after, and the same line again |
+| the same run once the holder let go | the app started again |
+
+One sentence of the mechanism is not measured here. Remote Login is off on this
+machine and the account has no administrator rights, so neither `ssh localhost`
+nor `launchctl asuser` could be run, and a shell with no window session was not
+reached. The broken-bundle row is what stands in for it: an `open` that fails
+costs the command nothing, because the child is started with no stderr of its
+own and its exit status is never read. Recheck the real thing with Remote Login
+on, by `ssh localhost` running one reporting command under the setting and
+comparing the object and stderr against the same command in a terminal.
+
+Nothing measured above contradicts the mechanism this milestone is built on.
+
+Recheck all of it on a macOS upgrade, if `open` ever changes what `-g` does, or
+if the app stops taking the lock as its first act.
+
 ## Not measured yet
 
 One of the M14 measurements stayed open on 2026-10-03: whether Google emails an

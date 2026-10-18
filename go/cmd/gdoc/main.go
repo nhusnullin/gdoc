@@ -314,6 +314,23 @@ func dispatch(ctx context.Context, args []string, errOut io.Writer, set settings
 		rec.Made(presenceMade(*c, r))
 		rec.End(r)
 	}()
+	// And where this run is recorded, the app that shows it is opened if it is
+	// not already open. Here, after the start line and before the work, so a
+	// person reading the panel sees the run that opened it; and only where rec
+	// is not nil, which is the presence setting and a command that reports, so
+	// the flag off starts nothing: desktop.go's openPresenceApp says what it
+	// asks before it starts anything, and
+	// TestACommandUnderTheFlagOpensTheAppOnceAndNothingWhenItIsRunning.
+	//
+	// Every command but the one that replaces the bundle. `gdoc update` opens
+	// the app once itself, after it has placed or rolled back the app, which
+	// is what the 2026-10-18 decision says; an open here would start the
+	// bundle this run is about to rename away, and the one it then placed
+	// would find the lock held by the build it replaced:
+	// TestAnUpdateOpensTheAppItPlacedAndNotTheOneItReplaces.
+	if rec != nil && c.name != updateCommand {
+		openPresenceApp()
+	}
 	// The run goes on the context, so the one command with parts can say which
 	// of them it is on without a run threaded through every room between here
 	// and the work: presence.WithRun and publish.go's three calls.

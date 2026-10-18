@@ -349,6 +349,42 @@ Left as they are, with the reason:
   the chat until it runs out. Nothing is written." A consequence on the offer
   as well is the same sentence twice on one plate.
 
+## Amendments, 2026-10-18, after the M25 pass
+
+Two reviewers who drew nothing read the renders of the branch that turned
+Launch at login off by default. The switch is now drawn off on every screen
+but one, where every earlier render drew it on, so the off state is new
+surface even though no line of its code changed. These are the rulings; the
+findings themselves are in the commit.
+
+- **The off switch in light is the mockup's own fill, so its weight is
+  Nail's call and not a defect.** `.screen.light .switch` is
+  `rgba(0,0,0,.12)`, which measures 1.3 to 1 against the white panel, and
+  the knob's drop shadow is the only edge it has. That is the faintest
+  control the panel draws, and from this milestone it is on nearly every
+  screen. It is on the index page's "Still your call" list with its
+  measurement rather than changed here, because changing it is changing a
+  drawing Nail approved.
+- **A HEALTH sub-line sits 8 pt right of its own title, and that is
+  drawn.** `.quiet` is `padding-left:44px` in the screens file where a
+  row's title starts at 36, so the Account row's countdown and its URL
+  field both hang in from the title. Every sub-line in DOCUMENTS and TODAY
+  is flush, because those are a different element. Two readings of one
+  page, not a drift.
+- **The eight-character head floor counts the head, and a TODAY line's head
+  is its verb and its document name together.** So
+  `Live stopped by you · Ch 5.… v0.1` passes the floor at 27 characters
+  while the name inside it is cut to five. The rule is kept as it is and
+  the row goes to
+  `docs/backlog/a-verb-prefix-eats-the-document-name-in-a-row.md`, because
+  fixing it means a TODAY row hands over two pieces instead of one string.
+- **A sign-in card is not a stuck card and carries no dismiss ×.** The
+  evening amendment that reversed principle 6 is about a write that
+  stopped: the next run of that command clears it. Nothing the person does
+  clears `Needs sign-in` except signing in, so the card carries the sign-in
+  arrow alone, which is principle 4. The code has always done this; the
+  amendment did not say it.
+
 ## The render for review
 
 Every scene is drawn twice: the panel as the person opens it, capped at

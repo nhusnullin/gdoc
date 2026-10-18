@@ -17,9 +17,10 @@
 // Sixty-two days is what prunes the two keys that are about a moment, the
 // dismissals and the relaunch stamp: the tail reads two month files, so a
 // key older than that is about a line this app can no longer see. The other
-// four are answers rather than moments, and an answer does not go stale: an
-// "off" dropped after two months would register somebody at login again,
-// which is the one thing the specification says never happens.
+// four are answers rather than moments, and an answer does not go stale: the
+// launch-at-login key is the person's own answer, kept because it is theirs,
+// and nothing in this app reads it to decide anything. What starts the app at
+// login is the login item macOS holds, and the switch shows what macOS says.
 //
 // The store is handed in. UserDefaults is what the app passes; a test passes
 // a dictionary of its own, so no test writes to the defaults of the machine
@@ -38,8 +39,9 @@ public protocol DefaultsStore: AnyObject {
 extension UserDefaults: DefaultsStore {}
 
 /// The person's answer about launching at login. It is their answer and not
-/// the system's state: an "off" is never overridden by a relaunch or an
-/// update, which is the only reason it is written down at all.
+/// the system's state, which the switch reads off macOS: nothing in this app
+/// registers a login item by itself, so the record is what they said and
+/// never a reason to ask the system for anything.
 public enum LoginItemChoice: String, Sendable, Equatable, CaseIterable {
   case on
   case off
@@ -128,8 +130,8 @@ public final class Preferences: @unchecked Sendable {
     }
   }
 
-  /// The person's launch-at-login answer, or nothing before the first run
-  /// ever has recorded one.
+  /// The person's launch-at-login answer, or nothing until they have pressed
+  /// the switch.
   public var loginItemChoice: LoginItemChoice? {
     get { string(.loginItemChoice).flatMap(LoginItemChoice.init(rawValue:)) }
     set { write(newValue?.rawValue, .loginItemChoice) }

@@ -251,7 +251,8 @@ final class SessionTests: XCTestCase {
     XCTAssertEqual(session.facts.versions.app, "2.15.0", "the app's own version is the places'")
     XCTAssertEqual(session.facts.gdocPath, gdoc.path, "the binary this session resolved")
     XCTAssertEqual(session.facts.hub, preferences.hub, "the hub is the store's")
-    XCTAssertEqual(session.facts.loginItem, .on, "the register answered")
+    XCTAssertEqual(
+      session.facts.loginItem, .off, "the register says this app is not a login item")
 
     // And the record reached the model, through the tail and the four folds.
     let row = session.model.documents?.rows.first
@@ -548,15 +549,28 @@ final class SessionTests: XCTestCase {
   }
 
   /// The switch records the person's answer and the register is told once.
+  /// Starting the session tells it nothing: no run of this app registers a
+  /// login item by itself, which is the 2026-10-18 decision.
   func testTheSwitchRecordsThePersonsAnswer() throws {
     try writeTheRecord([])
     let store = Store()
     let register = FakeRegister()
     let session = made(preferences: Preferences(store: store), loginService: register)
     answered(session)
-    XCTAssertEqual(register.registrations, 1, "the first run ever registers once")
+    XCTAssertEqual(register.registrations, 0, "a run registers nothing")
+    XCTAssertNil(
+      store.object(forKey: Preferences.Key.loginItemChoice.rawValue),
+      "and answers nothing for the person")
 
     session.perform(.toggleLoginItem, nil)
+    refreshed(session)
+    XCTAssertEqual(
+      store.object(forKey: Preferences.Key.loginItemChoice.rawValue) as? String, "on")
+    XCTAssertEqual(register.registrations, 1, "the switch is the one that registers")
+    XCTAssertEqual(session.facts.loginItem, .on, "and the row shows what macOS says")
+
+    session.perform(.toggleLoginItem, nil)
+    refreshed(session)
     XCTAssertEqual(
       store.object(forKey: Preferences.Key.loginItemChoice.rawValue) as? String, "off")
     XCTAssertEqual(register.unregistrations, 1)
@@ -576,8 +590,11 @@ final class SessionTests: XCTestCase {
     let register = FakeRegister(after: .requiresApproval)
     let session = made(loginService: register)
     answered(session)
+
+    session.perform(.toggleLoginItem, nil)
+    refreshed(session)
     XCTAssertEqual(session.facts.loginItem, .needsApproval, "the row macOS left")
-    XCTAssertEqual(register.registrations, 1, "the first run ever registers once")
+    XCTAssertEqual(register.registrations, 1, "the switch registered once")
 
     session.perform(.toggleLoginItem, nil)
 
@@ -705,6 +722,17 @@ final class SessionTests: XCTestCase {
       quit: quit)
     session = made
     return made
+  }
+
+  /// Take the facts again and wait for them, which is what a press does on
+  /// its own in a Task nothing here can wait on.
+  private func refreshed(_ session: Session) {
+    let done = expectation(description: "the facts were taken again")
+    Task { @MainActor in
+      _ = await session.recompose()
+      done.fulfill()
+    }
+    wait(for: [done], timeout: 20)
   }
 
   /// Start the session and wait for the two polls to answer, which is the

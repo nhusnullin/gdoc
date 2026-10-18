@@ -22,6 +22,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"sync"
@@ -1234,11 +1235,16 @@ func TestCheckNeverInstallsTheApp(t *testing.T) {
 	}
 }
 
-// gdoc never launches the app. A first install says the one thing a person has
-// to go and do, and a run that replaced an app says nothing of the sort: the
-// app that is running shows its own row about having been updated.
-func TestTheResultSaysToOpenTheAppOnce(t *testing.T) {
-	desktopSeams(t, "darwin")
+// An install is a running app. The run that placed the bundle starts it, with
+// the whole of the argv the opener ever hands the seam, and nothing on the
+// step line asks a person to go and open anything: the sentence that used to
+// is the thing this milestone took out.
+//
+// Once, on the first install: the bundle was not there when the run began, so
+// the opener the dispatch calls had nothing to open and the one withPresence
+// calls had.
+func TestAFirstInstallOpensTheAppAndTellsNobodyToOpenIt(t *testing.T) {
+	rec := desktopSeams(t, "darwin")
 	pl := &stubPlain{
 		listing: listing("v2.1.0", "v2.0.0"),
 		files:   publishedWith(t, "v2.1.0", []byte("new"), appEntries("v2.1.0")...),
@@ -1250,8 +1256,15 @@ func TestTheResultSaysToOpenTheAppOnce(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("the update must answer: exit %d", code)
 	}
-	if want := "open " + dest; !strings.Contains(stderr, want) {
-		t.Errorf("a first install names %q:\n%s", want, stderr)
+	want := []started{{name: "/usr/bin/open", wait: false, args: []string{"-g", dest}}}
+	if !reflect.DeepEqual(rec.calls, want) {
+		t.Errorf("the install asked for %+v, and an install opens the app it placed: %+v", rec.calls, want)
+	}
+	if strings.Contains(stderr, "open "+dest) {
+		t.Errorf("the run opened the app, so nothing tells a person to open it:\n%s", stderr)
+	}
+	if !strings.Contains(stderr, dest) {
+		t.Errorf("the step still names where the app was installed:\n%s", stderr)
 	}
 
 	pl2 := &stubPlain{
@@ -1264,7 +1277,7 @@ func TestTheResultSaysToOpenTheAppOnce(t *testing.T) {
 		t.Fatalf("the second update must answer: exit %d", code)
 	}
 	if strings.Contains(stderr, "open "+dest) {
-		t.Errorf("the app was already open, so nothing tells a person to open it:\n%s", stderr)
+		t.Errorf("a refresh tells a person to open nothing either:\n%s", stderr)
 	}
 	data := updateObject(t, got)
 	if data["presence_previous"] != dest+".previous" {
@@ -1272,5 +1285,70 @@ func TestTheResultSaysToOpenTheAppOnce(t *testing.T) {
 	}
 	if got := appVersionAt(t, dest); got != "2.1.0" {
 		t.Errorf("the app at %s says %q", dest, got)
+	}
+	// Twice over the two runs, once each: the refresh found the bundle of the
+	// build it was replacing and still asked for one open, the one after the
+	// bundle moved.
+	refreshed := []started{want[0], want[0]}
+	if !reflect.DeepEqual(rec.calls, refreshed) {
+		t.Errorf("the two runs asked for %+v, and each of them opens the app it placed: %+v", rec.calls, refreshed)
+	}
+}
+
+// The command that replaces the app's bundle is the one command the start
+// line does not open the app for: it opens the app itself, after the bundle
+// moved. Two runs, a refresh and a rollback, and each hands the seam one
+// argv. An open at the start line would have started the build this run then
+// renamed away, and the bundle it placed would have found the lock held by
+// the build it replaced.
+func TestAnUpdateOpensTheAppItPlacedAndNotTheOneItReplaces(t *testing.T) {
+	t.Run("a refresh", func(t *testing.T) {
+		rec := desktopSeams(t, "darwin")
+		pl := &stubPlain{
+			listing: listing("v2.1.0", "v2.0.0"),
+			files:   publishedWith(t, "v2.1.0", []byte("new"), appEntries("v2.1.0")...),
+		}
+		installedAt(t, "v2.0.0", []byte("old"), pl)
+		dest := appAt(t)
+		appInstalled(t, dest, "v2.0.0")
+
+		got, code := runJSONSet(t, presenceOn(), "update")
+		if code != 0 || got["ok"] != true {
+			t.Fatalf("the update must answer: %v (exit %d)", got, code)
+		}
+		if version := appVersionAt(t, dest); version != "2.1.0" {
+			t.Errorf("the app at %s says %q", dest, version)
+		}
+		wantOneOpen(t, rec, dest)
+	})
+	t.Run("a rollback", func(t *testing.T) {
+		rec := desktopSeams(t, "darwin")
+		pl := &stubPlain{}
+		path := installedAt(t, "v2.1.0", []byte("new"), pl)
+		if err := os.WriteFile(path+".previous", []byte("old"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		dest := appAt(t)
+		appInstalled(t, dest, "v2.1.0")
+		appInstalled(t, dest+".previous", "v2.0.0")
+
+		got, code := runJSONSet(t, presenceOn(), "update", "--rollback")
+		if code != 0 || got["ok"] != true {
+			t.Fatalf("the rollback must answer: %v (exit %d)", got, code)
+		}
+		if version := appVersionAt(t, dest); version != "2.0.0" {
+			t.Errorf("the app at %s says %q", dest, version)
+		}
+		wantOneOpen(t, rec, dest)
+	})
+}
+
+// wantOneOpen is the whole of what the seam was handed in one update run: one
+// `open -g` on the bundle under ~/Applications, and nothing else.
+func wantOneOpen(t *testing.T, rec *opened, bundle string) {
+	t.Helper()
+	want := []started{{name: "/usr/bin/open", wait: false, args: []string{"-g", bundle}}}
+	if !reflect.DeepEqual(rec.calls, want) {
+		t.Errorf("the run asked for %+v, and one run opens the app once, after the bundle moved: %+v", rec.calls, want)
 	}
 }

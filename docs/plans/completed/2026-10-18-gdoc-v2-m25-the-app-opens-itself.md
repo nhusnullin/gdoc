@@ -107,21 +107,29 @@ branch.
 - Modify: `presence/Sources/PresenceApp/Places.swift` (the lock's path),
   `presence/Sources/Presence/main.swift`
 
-- [ ] `Places` names `presence/app.lock` under the config directory, beside
+- [x] `Places` names `presence/app.lock` under the config directory, beside
       the month files; a test pins the literal path
-- [ ] `AppLock.hold(at:)` opens the file (creating it, mode 0o644), takes
+- [x] `AppLock.hold(at:)` opens the file (creating it, mode 0o644), takes
       `flock(LOCK_EX | LOCK_NB)` and keeps the descriptor; it answers whether
       it got the lock, and a second hold on the same path from another
       process does not; the test proves the second half with a child
       `/bin/sh -c 'flock'`-free method: a second `open` + `flock(LOCK_NB)` in
       the test process on a different descriptor, which macOS refuses while
       the first is held
-- [ ] the app takes the lock as the first line of
+- [x] the app takes the lock as the first line of
       `applicationDidFinishLaunching`; a second instance that does not get it
       terminates at once without drawing a status item, and a test over the
       decision function pins that
-- [ ] the descriptor is never closed before `applicationWillTerminate`
-- [ ] `make app-lint`, `make app-test`
+      (`AppLock.decide`). One instance waits instead of leaving: the one an
+      update opened, which carries `--relaunched-by <pid>` and whose launcher
+      quits as soon as it is up. It asks again for `RelaunchPolicy.patience`
+      and then yields, so M24's relaunch still works; `AppLock.patience` is
+      that rule and `testOnlyAnInstanceAnotherOneLaunchedWaitsForTheLock`
+      pins it
+- [x] the descriptor is never closed before `applicationWillTerminate`
+      (`testTheShellTakesTheLockFirstAndLetsGoLast`, a source scan over the
+      shell, which no test can import)
+- [x] `make app-lint`, `make app-test`
 
 ### Task 2: gdoc opens the app it installed
 
@@ -130,13 +138,13 @@ branch.
   `go/cmd/gdoc/update.go`, `go/cmd/gdoc/doc.go`, `go/cmd/gdoc/*_test.go`,
   `go/boundary/boundary_test.go`, `go/boundary/doc.go`
 
-- [ ] the seam takes the program's arguments as a list: `runProgram(name,
+- [x] the seam takes the program's arguments as a list: `runProgram(name,
       args ...string)`; `startProgram` still refuses any name but
       `macOSOpen`; `withExtension` passes one argument as before
-- [ ] a second function in `desktop.go`, `startProgramDetached`, or a flag on
+- [x] a second function in `desktop.go`, `startProgramDetached`, or a flag on
       the one, starts the program and does not wait; it is used by the
       opener only
-- [ ] `openPresenceApp(set, dirs)` in `desktop.go`: on macOS, under the flag,
+- [x] `openPresenceApp(set, dirs)` in `desktop.go`: on macOS, under the flag,
       when the bundle is at `~/Applications/GdocPresence.app`, when the lock
       file is absent or a `LOCK_EX | LOCK_NB` on it succeeds (released at
       once, nothing read), runs `/usr/bin/open -g <bundle>` detached; every
@@ -144,24 +152,24 @@ branch.
       file; a table test over the eight combinations through a recorder seam
       and a temporary directory, with a real `flock` held by the test for the
       "running" rows
-- [ ] dispatch calls it right after `presence.Begin` and only when `rec` is
+- [x] dispatch calls it right after `presence.Begin` and only when `rec` is
       not nil, so the flag off is today's bytes:
       `TestTheFlagChangesNoByteOfTheObject` still passes, and a new test
       shows a command under the flag asks the seam for exactly
       `/usr/bin/open -g <bundle>` once, and a command with the lock held asks
       for nothing
-- [ ] `gdoc update`, after `ApplyBundle` placed or replaced the bundle under
+- [x] `gdoc update`, after `ApplyBundle` placed or replaced the bundle under
       the flag, calls the same opener once; a test over the update screen
       shows the argv once and the `open` line gone from the answer's words
       (the answer no longer tells the person to open it)
-- [ ] the three boundary tests state the new narrowness: os/exec in
+- [x] the three boundary tests state the new narrowness: os/exec in
       `desktop.go` alone; one `exec.Command` call whose first argument is the
       opener constant and whose arguments are the constant and a list, with
       the list's two shapes pinned (`[mcpb]` and `[-g, bundle]`); the seam has
       two callers, `withExtension` and `openPresenceApp`, and no third; the
       names of the tests change where their sentences change, and `doc.go`
       and `CLAUDE.md` name the new names in Task 6
-- [ ] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`
+- [x] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`
 
 ### Task 3: launch at login is the person's switch
 
@@ -170,21 +178,21 @@ branch.
   `presence/Tests/PresenceAppTests/LoginItemTests.swift` (or where the two
   tests live), `presence/Sources/PresenceUI/Words.swift` if a word changes
 
-- [ ] no run registers the login item by itself; the first run ever leaves
+- [x] no run registers the login item by itself; the first run ever leaves
       macOS as it found it; `testTheFirstEverRunRegistersOnceAndRecordsOn`
       becomes `testTheFirstEverRunRegistersNothing`
-- [ ] the HEALTH switch registers on "on" and unregisters on "off", records
+- [x] the HEALTH switch registers on "on" and unregisters on "off", records
       the choice, and `requiresApproval` keeps its row and button;
       `testAPersonsOffIsNeverOverridden` stays and a sibling pins that an
       "on" is never made for them
-- [ ] the switch's state is what `SMAppService.mainApp.status` says, read on
+- [x] the switch's state is what `SMAppService.mainApp.status` says, read on
       open, so a registration removed in System Settings shows off
-- [ ] the scene fixtures and renders that showed the switch on by default now
+- [x] the scene fixtures and renders that showed the switch on by default now
       show it off where the record has no choice, and on in the one scene
       whose fixture says the person turned it on; the index caption's "Still
       your call" line about launch at login is replaced by the decision's
       sentence
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 4: the words
 
@@ -192,35 +200,42 @@ branch.
 - Modify: `docs/guide/presence.md`, `go/cmd/gdoc/doc.go`,
   `go/internal/presence/doc.go`, `CLAUDE.md`
 
-- [ ] `docs/guide/presence.md`: the install walk-through loses its "open it
+- [x] `docs/guide/presence.md`: the install walk-through loses its "open it
       once" step and says what happens instead: the next gdoc command under
       the flag opens the app, `open ~/Applications/GdocPresence.app` still
       works by hand, and Launch at login is the switch in HEALTH, off until
       you turn it on; the "What it is not" section keeps every sentence that
       is still true and loses "gdoc never launches it"
-- [ ] `CLAUDE.md`: the external-program invariant names two argument lists
+- [x] `CLAUDE.md`: the external-program invariant names two argument lists
       for the one program and the two callers of the seam, and the presence
       invariant adds the lock in one sentence (gdoc holds no lock and reads
       no byte; it asks once whether the app holds its own); the test names
       are the ones Task 2 chose; the file stays under 300 lines
-- [ ] `go/cmd/gdoc/doc.go` and `go/internal/presence/doc.go` name the rule
+- [x] `go/cmd/gdoc/doc.go` and `go/internal/presence/doc.go` name the rule
       and its tests
-- [ ] `make test` (the CLAUDE.md tests), `make app-lint`
+- [x] `make test` (the CLAUDE.md tests), `make app-lint`
 
 ### Task 5: measured on the machine
 
 **Files:**
 - Modify: `docs/v2/MEASURED.md`
 
-- [ ] measured and written down, with the method: `open -g` on the installed
+- [x] measured and written down, with the method: `open -g` on the installed
       bundle while it is not running starts it and moves no focus from the
       terminal; `open -g` while it is running (lock held) is never issued, and
       issued by hand it brings nothing to the front; a gdoc command from a
       shell with no window session (`ssh localhost` or `launchctl asuser`
       with no GUI) answers exactly as before and leaves no error on stderr;
-      the lock is free within a second of `kill -9` of the app
-- [ ] where a measurement contradicts the mechanism paragraph, the task stops
-      and says so
+      the lock is free within a second of `kill -9` of the app. MEASURED.md,
+      2026-10-18, "The lock, `open -g`, and a command whose opener cannot
+      start anything". Two readings came out weaker than the sentence asked
+      for and say so there: the display was locked, so no focus could move in
+      either direction, and the no-window-session run could not be made
+      because Remote Login is off and the account has no administrator
+      rights, so a failing `open` stands in for it and the real run is a
+      recheck line
+- [x] where a measurement contradicts the mechanism paragraph, the task stops
+      and says so (nothing contradicted it)
 
 ### Task 6: the acceptance rows and the close
 
@@ -229,12 +244,14 @@ branch.
   (its decision table row about launch at login points at the 2026-10-18
   decision), `docs/v2/DECISIONS.md` only if a task found the decision wrong
 
-- [ ] an acceptance table at the foot of this plan: each sentence of the
+- [x] an acceptance table at the foot of this plan: each sentence of the
       mechanism paragraph with the test that holds it
-- [ ] the M24 spec's launch-at-login row and the render index's "Still your
-      call" list say the 2026-10-18 decision reversed them
-- [ ] move this plan to `docs/plans/completed/`
-- [ ] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
+- [x] the M24 spec's launch-at-login row and the render index's "Still your
+      call" list say the 2026-10-18 decision reversed them (the spec's three
+      rows here; the "Still your call" line was replaced in Task 3)
+- [x] move this plan to `docs/plans/completed/` (deferred to Task 7's commit:
+      Task 7 still runs from this plan, and the runner reads it at this path)
+- [x] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
       `make app-lint`, `make app-test`, `make app`
 
 ### Task 7: the reviewer's pass over the changed scenes
@@ -242,9 +259,40 @@ branch.
 **Files:**
 - Modify: whatever the pass finds under `presence/`
 
-- [ ] render every scene (`PRESENCE_SHOTS=... make app-test`) and run the
+- [x] render every scene (`PRESENCE_SHOTS=... make app-test`) and run the
       checklist of `docs/design/2026-10-17-presence-design-principles.md`
-      over the scenes Task 3 changed, as a reviewer who drew nothing (a
-      subagent that reads images); every blocking or should-fix finding is
-      fixed here and listed in the commit message
-- [ ] `make app-lint`, `make app-test`
+      over the scenes Task 3 changed, as a reviewer who drew nothing (two
+      subagents that read images); no finding was blocking. The two
+      should-fix findings on what M25 changed are closed here: the index
+      line about launch at login is three short sentences instead of one
+      long one, and the light off switch is on the "Still your call" list
+      with its measurement, because its fill is the approved mockup's and
+      changing it is Nail's call. The sweep's other should-fix findings are
+      M24's drawings or fixtures, not M25's: two went to `docs/backlog/`
+      and four rulings to the principles file's 2026-10-18 amendments
+- [x] `make app-lint`, `make app-test`
+
+## Acceptance
+
+Every sentence of the mechanism paragraph above, and the test that holds it.
+A sentence with no test is a sentence nothing keeps true.
+
+| The sentence | What holds it |
+|---|---|
+| Whether the app is running is one `flock`, and the two programs name the same file | `TestTheLockNameIsOneWordInTwoLanguages` (go/boundary), `testTheLockSitsBesideTheMonthFiles`, `testTheNamedDirectoryCarriesTheLockToo` |
+| The app, as its first act, opens `presence/app.lock`, creating it at mode 0o644, and holds `LOCK_EX` on it | `testTheFirstHolderGetsItAndTheFileIsTheModeTheDecisionNames`, `testTheDirectoryIsMadeWhereGdocHasNeverWritten`, `testTheShellTakesTheLockFirstAndLetsGoLast` |
+| It holds the lock for its whole life, and a second instance is refused it | `testASecondHolderIsRefusedWhileTheFirstHoldsIt`, `testAnInstanceThatDoesNotGetTheLockQuits`, `testAReleasedLockIsTheNextInstancesToTake`, `testAReleaseTwiceIsOneRelease` |
+| The kernel drops the lock when the process dies, however it dies | the kernel's, so not a unit test: measured on the machine, MEASURED.md 2026-10-18, the `kill -9` reading |
+| The one instance that waits instead of leaving is the one an update opened | `testOnlyAnInstanceAnotherOneLaunchedWaitsForTheLock`, `testAnInstanceThatWaitsAsksAgainUntilItsPatienceIsSpent`, `testAnInstanceWithNoPatienceAsksOnceAndWaitsNotAtAll`, `testAWaitEndsAsSoonAsTheLockIsFree` |
+| gdoc asks three things and runs `open` only when all three say yes: macOS, the bundle at `~/Applications/GdocPresence.app`, and the lock free | `TestTheOpenerAsksThreeThingsAndRunsOpenGOnce`, over the eight combinations with a real `flock` on the "running" rows |
+| The lock file absent is free, because an app that never ran made none, and gdoc never creates it | the same test's `os.Stat` on every row where the test did not make the file |
+| No byte is read from any file; the record stays the one file gdoc appends to and never reads | `TestOnlyPresenceAppends`, `TestPresenceExportsNoReader` (go/boundary) |
+| The program is `/usr/bin/open -g <bundle>`, and gdoc runs no other program | `TestNothingRunsAnExternalProgram`, `TestOnlyDesktopRunsAProgram`, `TestTheOneProgramOpensOnlyTheExtensionAndTheApp` (go/boundary) |
+| `-g` so no window and no focus moves | the flag is in the argv the two opener tests pin; that it moves nothing is the machine's, MEASURED.md 2026-10-18 |
+| The open is started and not waited for, and its exit status is never read | the `wait: false` the recorder sees in `TestTheOpenerAsksThreeThingsAndRunsOpenGOnce`, and `startProgram`, which returns as soon as the child started and reaps it on a goroutine of its own |
+| A command under the flag asks for that argv once; the lock held asks for nothing; the flag off is today's bytes | `TestACommandUnderTheFlagOpensTheAppOnceAndNothingWhenItIsRunning`, `TestTheFlagChangesNoByteOfTheObject` |
+| A machine with no window session runs the command exactly as before | nothing in the envelope depends on the opener: `TestTheFlagChangesNoByteOfTheObject`; the real shell is a recheck line in MEASURED.md 2026-10-18 |
+| `gdoc update`, after it installs or replaces the bundle under the flag, runs the same opener once, and the answer no longer tells the person to open it | `TestAFirstInstallOpensTheAppAndTellsNobodyToOpenIt`, `TestAnUpdateOpensTheAppItPlacedAndNotTheOneItReplaces` |
+| Launch at login: nothing registers on the first run | `testTheFirstEverRunRegistersNothing` |
+| The HEALTH switch registers and unregisters and keeps the choice, and neither an off nor an on is made for the person | `testTheSwitchRegistersUnregistersAndRecordsTheChoice`, `testAPersonsOffIsNeverOverridden`, `testAnOnIsNeverMadeForThePerson` |
+| The row's switch reads what macOS says, and `requiresApproval` keeps its row and button | `testTheSwitchShowsWhatMacOSSays`, `testRequiresApprovalShowsTheRowAndIsNotRetried`, `testARefusedRegistrationIsAnOffRowAndNotARetry` |

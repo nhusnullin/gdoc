@@ -7,11 +7,15 @@
 // binary was just installed at and the release that was installed, writes
 // `gdoc.mcpb` beside the binary, and hands that file to Claude Desktop.
 //
-// Handing it over is the one place anything under go/ starts another program:
-// `/usr/bin/open` with the file as its only argument, on macOS only, only with
-// `--desktop`. The exception is as narrow as it can be, and it is held by
-// reading this file's syntax tree rather than by trusting this comment:
-// go/boundary's TestOnlyDesktopRunsAProgram.
+// Handing it over is one of the two places anything under go/ starts another
+// program, and both of them are `/usr/bin/open` on macOS from this file. The
+// other is the menu bar app: under the presence setting, a command whose run
+// is recorded opens `~/Applications/GdocPresence.app` where that app is
+// installed and not already running. The exception is as narrow as it can be,
+// one program and two argument lists, and it is held by reading this file's
+// syntax tree rather than by trusting this comment: go/boundary's
+// TestOnlyDesktopRunsAProgram and
+// TestTheOneProgramOpensOnlyTheExtensionAndTheApp.
 //
 // The extension has no settings. What differs from one machine to the next is
 // the binary's path and the release, which is why the template travels in the
@@ -25,12 +29,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 
 	"gdoc/internal/atomicfile"
+	"gdoc/internal/config"
 )
 
 // The three names the extension is made of. templateInZip is where the release
@@ -58,6 +64,28 @@ const mcpbMode = 0o644
 // would be whatever is first on somebody's PATH today.
 const macOSOpen = "/usr/bin/open"
 
+// openInBackground is the one flag gdoc hands the opener: `open -g` starts an
+// application and moves no window and no focus. The app has no window to bring
+// forward and the person is in a terminal or a chat, so a run that stole the
+// front would be the one thing this feature must never do.
+const openInBackground = "-g"
+
+// The two ways the one program is started, as words rather than as a bare
+// true and false at a call site. andWait is the extension: a person typed
+// --desktop and the sentence about what happened is what `open` says. andLeaveIt
+// is the app: the exit status is never read, so a shell with no window session
+// costs exactly what it cost before.
+const (
+	andWait    = true
+	andLeaveIt = false
+)
+
+// presenceLockName is the file the app holds its lock on, inside the presence
+// directory beside the month files. The app states the same literal in
+// presence/Sources/PresenceApp/Places.swift, and go/boundary's
+// TestTheLockNameIsOneWordInTwoLanguages holds the two together.
+const presenceLockName = "app.lock"
+
 // desktopOS is the operating system this run is on, behind a variable so a test
 // can ask what a Linux run would do from a Mac.
 var desktopOS = runtime.GOOS
@@ -66,21 +94,85 @@ var desktopOS = runtime.GOOS
 // tree measures the argv gdoc would hand it and starts nothing.
 var runProgram = startProgram
 
-// startProgram runs one program with one argument and waits for it.
+// startProgram runs one program with the arguments it is handed.
 //
 // The name it is handed is checked against the one name this tree may run, so
-// the narrowness does not rest on the one call site staying the only one. The
+// the narrowness does not rest on the two call sites staying the only two.
+//
+// wait says what the caller does afterwards. The extension waits, and the
 // output is kept for the failure message: `open` says why it could not open a
-// file, and that sentence is the whole of what a person needs.
-func startProgram(name, arg string) error {
+// file, and that sentence is the whole of what a person needs. The app is
+// started and left: a command may not grow the time an application takes to
+// come up, and nothing in this process reads that exit status, so there is
+// nothing to wait for.
+//
+// A child nobody waits for is a zombie until this process ends, and
+// os.Process.Release does not change that: it drops Go's handle and never
+// asks the kernel for the exit status. One run would never notice, but a
+// `gdoc mcp` session is one process for an afternoon of tool calls, so the
+// wait is done on a goroutine of its own: the command goes on at once and the
+// child is reaped when it exits.
+func startProgram(name string, wait bool, args ...string) error {
 	if name != macOSOpen {
 		return fmt.Errorf("gdoc runs %s and no other program, and this run asked for %s", macOSOpen, name)
 	}
-	out, err := exec.Command(macOSOpen, arg).CombinedOutput()
+	cmd := exec.Command(macOSOpen, args...)
+	if !wait {
+		if err := cmd.Start(); err != nil {
+			return fmt.Errorf("%s %s did not start: %v", macOSOpen, strings.Join(args, " "), err)
+		}
+		go func() { _ = cmd.Wait() }()
+		return nil
+	}
+	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%s %s did not run: %v: %s", macOSOpen, arg, err, strings.TrimSpace(string(out)))
+		return fmt.Errorf("%s %s did not run: %v: %s", macOSOpen, strings.Join(args, " "), err, strings.TrimSpace(string(out)))
 	}
 	return nil
+}
+
+// openPresenceApp opens the menu bar app where it is installed and not
+// running. It is the whole of M25: a person who turned the presence on sees
+// what gdoc is doing without remembering to open anything.
+//
+// Three questions, and all three have to say yes. The platform is macOS,
+// because the app is macOS only. The bundle is at the path `gdoc update`
+// installs it to, because gdoc opens the app it installed and never goes
+// looking for another. And the app does not hold its lock, which is the one
+// thing that says whether it is already running: lockIsFree asks the kernel,
+// creates nothing and reads no byte.
+//
+// Every other case does nothing and says nothing. There is no sentence for a
+// person here and no field in the envelope: the flag off is today's bytes and
+// the flag on is today's bytes too, which is what
+// TestTheFlagChangesNoByteOfTheObject measures. A failure to start the opener
+// is the same silence, because the command a person is waiting on has nothing
+// to do with a menu bar glyph that did not appear.
+//
+// The caller holds the one gate that is not here: it is called where the run
+// is recorded, which is the presence setting and a command that reports.
+//
+// TestTheOpenerAsksThreeThingsAndRunsOpenGOnce and
+// TestACommandUnderTheFlagOpensTheAppOnceAndNothingWhenItIsRunning.
+func openPresenceApp() {
+	if desktopOS != "darwin" {
+		return
+	}
+	bundle, err := presenceBundle()
+	if err != nil {
+		return
+	}
+	if _, err := os.Stat(bundle); err != nil {
+		return
+	}
+	dir, err := config.PresenceDir()
+	if err != nil {
+		return
+	}
+	if !lockIsFree(filepath.Join(dir, presenceLockName)) {
+		return
+	}
+	_ = runProgram(macOSOpen, andLeaveIt, openInBackground, bundle)
 }
 
 // mcpbPath is the extension file beside the binary at path. Beside it, because

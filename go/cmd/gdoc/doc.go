@@ -737,7 +737,7 @@
 // chat sets it in settings.yaml, which the session reads at its start like any
 // other run.
 //
-// # The presence app is installed beside the binary, and never started
+// # The presence app is installed beside the binary, and opened
 //
 // With the presence on, `gdoc update` installs the menu bar app too, out of
 // the same verified zip the binary came from: the darwin zips carry it at
@@ -781,12 +781,31 @@
 // TestRollbackWithThePresenceOnSwapsBoth and
 // TestRollbackWithNoPreviousAppWarnsAndKeepsIt.
 //
-// gdoc never launches the app. The first launch is the person, so a first
-// install says `open ~/Applications/GdocPresence.app` on its step line and a
-// refresh says nothing of the sort, because the app that is running shows its
-// own row about having been updated: TestTheResultSaysToOpenTheAppOnce.
-// withExtension stays the one caller of runProgram, which go/boundary's
-// TestTheOneProgramOpensOnlyTheExtension holds by reading the syntax tree.
+// An install is a running app, and so is the next command after one. Under
+// the flag, on macOS, a command whose run is recorded opens the installed app
+// where that app is not already running: dispatch calls desktop.go's
+// openPresenceApp right after the record's start line and only where the run
+// is recorded. Every command but `update`, which is the one command that
+// moves the bundle: it calls the same opener itself, once, after it placed or
+// rolled the app back, because an open at the start line would have started
+// the bundle the run then renamed away. So no step line asks a person to go
+// and open anything.
+// TestACommandUnderTheFlagOpensTheAppOnceAndNothingWhenItIsRunning,
+// TestTheOpenerAsksThreeThingsAndRunsOpenGOnce,
+// TestAFirstInstallOpensTheAppAndTellsNobodyToOpenIt and
+// TestAnUpdateOpensTheAppItPlacedAndNotTheOneItReplaces.
+//
+// Whether the app is running is one lock and never a byte. The app holds
+// flock on presence/app.lock in the config directory for its whole life, and
+// the opener asks LOCK_EX | LOCK_NB on that file and lets go at once: it
+// creates nothing, reads nothing, and a file that is not there is an app that
+// never ran. Everything else is silence, so the flag on is the same object
+// the flag off prints: TestTheFlagChangesNoByteOfTheObject, with go/boundary's
+// TestTheLockNameIsOneWordInTwoLanguages over the one name Go and Swift share.
+// The seam the one program goes through has those two callers and no third,
+// which go/boundary's TestTheOneProgramOpensOnlyTheExtensionAndTheApp holds by
+// reading the syntax tree. Decided 2026-10-18, DECISIONS.md, "The app opens
+// itself".
 //
 // # The update draws its steps on stderr
 //

@@ -596,11 +596,14 @@ func TestNothingRunsAnExternalProgram(t *testing.T) {
 // Three things, each of them the narrowness itself. os/exec is imported by that
 // one file and by no other, tests included, so no second call site can appear
 // anywhere. That file holds exactly one exec.Command call. And that call names
-// the opener by its full path, through the file's own constant, with one
-// argument after it: a program gdoc starts with a list of words a caller chose
-// would be a different thing entirely.
+// the opener by its full path, through the file's own constant, and hands it
+// the one list of arguments the seam was given: a second program, or a program
+// named by anything but that constant, is a failure here.
+//
+// What may be in the list is the other test's business, and it is pinned
+// there as two shapes rather than left to a comment:
+// TestTheOneProgramOpensOnlyTheExtensionAndTheApp.
 func TestOnlyDesktopRunsAProgram(t *testing.T) {
-	const opener = "/usr/bin/open"
 	calls := 0
 	seen := false
 	err := walkGo("..", func(rel, path string, f *ast.File) error {
@@ -640,8 +643,8 @@ func TestOnlyDesktopRunsAProgram(t *testing.T) {
 				t.Errorf("%s calls exec.%s; the one program is started by exec.Command", where, sel.Sel.Name)
 				return true
 			}
-			if len(call.Args) != 2 || call.Ellipsis.IsValid() {
-				t.Errorf("%s runs a program with %d arguments; it is one program and one argument", where, len(call.Args))
+			if len(call.Args) != 2 || !call.Ellipsis.IsValid() {
+				t.Errorf("%s runs a program with %d arguments; it is the one program and the one list the seam was handed", where, len(call.Args))
 				return true
 			}
 			if got := literalOrConst(call.Args[0], consts); got != opener {
@@ -662,22 +665,48 @@ func TestOnlyDesktopRunsAProgram(t *testing.T) {
 	}
 }
 
-// TestTheOneProgramOpensOnlyTheExtension holds the other half of that
-// narrowness: the seam the one program goes through has one caller, and it is
-// the step that hands the Claude Desktop extension to Claude Desktop.
+// TestTheOneProgramOpensOnlyTheExtensionAndTheApp holds the other half of that
+// narrowness: the seam the one program goes through has two callers, and each
+// of them hands it one argument list nobody chose at run time.
 //
-// It is the pin the presence is installed under. `gdoc update` now writes a
-// folder into ~/Applications as well as a binary, and the spec's rule is that
-// gdoc never launches the app: the first launch is the person. A route that
-// opened what it had just installed would be a second caller here, so this
-// test is what refuses it.
+// The step that hands the Claude Desktop extension to Claude Desktop is one.
+// The opener of the menu bar app is the other, and it is new on 2026-10-18:
+// gdoc opens the app it installed where that app is not already running, which
+// reverses the M23 sentence that gdoc never launches it. Nothing else may call
+// the seam, and neither caller may grow a word: the two shapes below are the
+// whole of what `/usr/bin/open` is ever handed, one file and `-g` with the
+// bundle.
 //
 // Test files are skipped. A test replaces runProgram with a recorder rather
 // than calling it, and an assignment is not a call.
-func TestTheOneProgramOpensOnlyTheExtension(t *testing.T) {
-	const seam, caller = "runProgram", "withExtension"
-	callers := map[string]int{}
+func TestTheOneProgramOpensOnlyTheExtensionAndTheApp(t *testing.T) {
+	const seam = "runProgram"
+	// The two callers, each with the shape of the list it hands over. A string
+	// literal is itself and anything else is a value this test does not read,
+	// because the file and the bundle are paths this machine decides.
+	want := map[string][]string{
+		"cmd/gdoc/update.go withExtension":    {"<value>"},
+		"cmd/gdoc/desktop.go openPresenceApp": {"-g", "<value>"},
+	}
+	got := map[string][]string{}
+	calls := map[string]int{}
+	// The constants of the whole tree, gathered first, because the caller in
+	// update.go names a constant desktop.go declares: one package is one scope
+	// and this test reads files one at a time.
+	consts := map[string]string{}
 	err := walkGo("..", func(rel, path string, f *ast.File) error {
+		if strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		for name, value := range stringConsts(f) {
+			consts[name] = value
+		}
+		return nil
+	}, parser.AllErrors)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = walkGo("..", func(rel, path string, f *ast.File) error {
 		if strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
@@ -692,9 +721,20 @@ func TestTheOneProgramOpensOnlyTheExtension(t *testing.T) {
 				if !ok {
 					return true
 				}
-				if id, ok := call.Fun.(*ast.Ident); ok && id.Name == seam {
-					callers[where+" "+fn.Name.Name]++
+				id, ok := call.Fun.(*ast.Ident)
+				if !ok || id.Name != seam {
+					return true
 				}
+				site := where + " " + fn.Name.Name
+				calls[site]++
+				if len(call.Args) < 2 {
+					t.Errorf("%s calls %s with %d arguments; it takes the program, whether this run waits, and the list", site, seam, len(call.Args))
+					return true
+				}
+				if name := literalOrConst(call.Args[0], consts); name != opener {
+					t.Errorf("%s asks %s for %q; the one program gdoc runs is %s", site, seam, name, opener)
+				}
+				got[site] = shapeOf(call.Args[2:], consts)
 				return true
 			})
 		}
@@ -703,15 +743,49 @@ func TestTheOneProgramOpensOnlyTheExtension(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := "cmd/gdoc/update.go " + caller
-	if got := callers[want]; got != 1 {
-		t.Errorf("%s calls %s %d times; it is the one caller and it calls it once", want, seam, got)
-	}
-	for where, calls := range callers {
-		if where != want {
-			t.Errorf("%s calls %s %d times; %s is the only place gdoc may start a program from", where, seam, calls, want)
+	for site, shape := range want {
+		if calls[site] != 1 {
+			t.Errorf("%s calls %s %d times; each caller calls it once", site, seam, calls[site])
+		}
+		if !reflect.DeepEqual(got[site], shape) {
+			t.Errorf("%s hands %s %v; the list it hands over is %v", site, seam, got[site], shape)
 		}
 	}
+	for site := range calls {
+		if _, ok := want[site]; !ok {
+			t.Errorf("%s calls %s; the two callers are %v and there is no third", site, seam, keysOf(want))
+		}
+	}
+}
+
+// opener is the one program gdoc may run, by its full path, as a literal here
+// because a test that read the constant would follow it wherever somebody
+// moved it.
+const opener = "/usr/bin/open"
+
+// shapeOf is an argument list as something a test can state: a string literal,
+// or a constant in the same file holding one, is itself, and anything else is
+// a value this machine decides at run time.
+func shapeOf(args []ast.Expr, consts map[string]string) []string {
+	out := make([]string, 0, len(args))
+	for _, arg := range args {
+		if s := literalOrConst(arg, consts); s != "" {
+			out = append(out, s)
+			continue
+		}
+		out = append(out, "<value>")
+	}
+	return out
+}
+
+// keysOf is a map's keys in order, for a failure message somebody reads.
+func keysOf(m map[string][]string) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // stringConsts is the file's own string constants, so a call that names one can

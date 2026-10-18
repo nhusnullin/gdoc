@@ -32,6 +32,12 @@ import (
 // grant the run opens, so it is also the whole of what the run may reach.
 const updateRepo = "nhusnullin/gdoc"
 
+// updateCommand is this command's name, as the table spells it and as the
+// dispatcher reads it. One constant because two files name it: the table
+// below, and main.go, which leaves the opener to this command because this is
+// the command that replaces the app's bundle.
+const updateCommand = "update"
+
 // releasesURL is the one call gdoc makes on api.github.com, and it asks for
 // the biggest page GitHub gives.
 //
@@ -315,8 +321,13 @@ func appHere(on bool) (bool, []string) {
 // wrong into a warning naming both the app and the binary, so a person reads
 // which of the two went back.
 //
-// TestRollbackWithThePresenceOnSwapsBoth and
-// TestRollbackWithNoPreviousAppWarnsAndKeepsIt.
+// The app that went back is then opened, where it is not already running, for
+// the same reason an install opens the one it placed and through the same one
+// call in the run.
+//
+// TestRollbackWithThePresenceOnSwapsBoth,
+// TestRollbackWithNoPreviousAppWarnsAndKeepsIt and
+// TestAnUpdateOpensTheAppItPlacedAndNotTheOneItReplaces.
 func rollbackPresence(data updateData, warns []string) (updateData, []string) {
 	dest, err := presenceBundle()
 	if err != nil {
@@ -326,6 +337,7 @@ func rollbackPresence(data updateData, warns []string) (updateData, []string) {
 	if err != nil {
 		return data, append(warns, fmt.Sprintf("%v, so the app at %s is the app that was there and the binary at %s is the earlier one", err, tildePath(dest), tildePath(data.Path)))
 	}
+	openPresenceApp()
 	data.Presence = dest
 	data.PresenceVersion = res.Version
 	data.PresenceSHA256 = res.TreeSum
@@ -649,13 +661,18 @@ func installDecided(ctx context.Context, reach plain, chosen update.Release, des
 // the binary, and the two may sit at different versions until the next run.
 // The app is what says so, because it reads its own plist.
 //
-// Nothing here opens the app. A first install says the one thing a person has
-// to go and do and leaves them to do it, which is why withExtension is still
-// the only caller of runProgram:
-// TestTheOneProgramOpensOnlyTheExtension in go/boundary.
+// The app that was just placed is then opened, where it is not already
+// running: an install is a running app, and nothing on the step line asks a
+// person to go and open anything. It is the same opener every other command
+// calls, which is why the seam has two callers and no third:
+// TestTheOneProgramOpensOnlyTheExtensionAndTheApp in go/boundary. It is
+// called once in a run, because the dispatcher leaves this command's opener
+// to this command: a start-line open would have started the bundle this run
+// then renamed away.
 //
-// TestAPresenceFailureIsAWarningNamingBothPathsAndTheBinaryIsUpdated and
-// TestTheResultSaysToOpenTheAppOnce.
+// TestAPresenceFailureIsAWarningNamingBothPathsAndTheBinaryIsUpdated,
+// TestAFirstInstallOpensTheAppAndTellsNobodyToOpenIt and
+// TestAnUpdateOpensTheAppItPlacedAndNotTheOneItReplaces.
 func withPresence(got fetched, rel update.Release, data updateData, warns []string, pr *progress) (updateData, []string) {
 	dest, err := presenceBundle()
 	if err != nil {
@@ -669,13 +686,14 @@ func withPresence(got fetched, rel update.Release, data updateData, warns []stri
 			return "", fmt.Errorf("%v. The gdoc at %s is the release this run installed, and it is not undone, so %s is the app of an earlier one until a later run installs it", err, tildePath(data.Path), tildePath(dest))
 		}
 		if res.Previous == "" {
-			return "open " + tildePath(dest) + " to start it", nil
+			return tildePath(dest), nil
 		}
 		return joinDetail(tildePath(dest), "the one that was there kept beside it"), nil
 	})
 	if err != nil {
 		return data, append(warns, err.Error())
 	}
+	openPresenceApp()
 	data.Presence = dest
 	data.PresenceVersion = res.Version
 	data.PresenceSHA256 = res.TreeSum
@@ -724,7 +742,7 @@ func withExtension(template []byte, version string, data updateData, warns []str
 		if desktopOS != "darwin" {
 			return joinDetail(tildePath(file), "written, and Claude Desktop runs on macOS, so open it there"), nil
 		}
-		if err := runProgram(macOSOpen, file); err != nil {
+		if err := runProgram(macOSOpen, andWait, file); err != nil {
 			return "", err
 		}
 		opened = true

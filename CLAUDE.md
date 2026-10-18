@@ -28,8 +28,7 @@ Two rules about the documents themselves:
 | `go/internal/tty/`, `go/internal/panel/` | the terminal, its colours and width, and the boxes drawn on it |
 | `go/internal/guard/` | the network policy, and the only place a client is built |
 | `go/internal/asset/` | one file in Drive read as bytes, held to what the caller states, and cached beside the token. The house logo is its one caller |
-| `go/internal/auth/` | the token file, its refresh, and the login flow |
-| `go/internal/auth/loopback/` | the one-shot localhost listener the browser redirect lands on |
+| `go/internal/auth/`, `go/internal/auth/loopback/` | the token file, its refresh, the login flow, and the one-shot localhost listener the browser redirect lands on |
 | `go/internal/config/` | where the per-user files live, per platform |
 | `go/internal/settings/` | `settings.yaml`, the arguments over it, and the mark in effect |
 | `go/internal/presence/` | the record of what gdoc is doing: the event, the month's file, the one append |
@@ -41,12 +40,10 @@ Two rules about the documents themselves:
 | `go/internal/docx/` | the docx export reader, and the witness match against threads |
 | `go/internal/probe/` | the throwaway document that asks whether SUGGEST is honoured today |
 | `go/internal/reply/` | one robot reply into a thread, and the thread read back |
-| `go/internal/propose/` | a change as a suggestion, its comment, and the three read-backs |
-| `go/internal/withdraw/` | gdoc taking back one of its own pending proposals |
+| `go/internal/propose/`, `go/internal/withdraw/` | a change as a suggestion, its comment, and the three read-backs; and gdoc taking back one of its own pending proposals |
 | `go/internal/annotate/` | a comment on the words a caller quotes, anchored, and nothing else |
 | `go/internal/publish/` | the upload with conversion, and the three read-backs on what came out |
-| `go/internal/export/` | a Google Doc as Markdown in the hub: one file per tab, the house prelude taken out, the pictures beside it, and nothing replaced |
-| `go/internal/markers/` | the eight openers gdoc writes into a file, so no route into a document carries one back |
+| `go/internal/export/`, `go/internal/markers/` | a Google Doc as Markdown in the hub: one file per tab, the house prelude taken out, the pictures beside it, and nothing replaced; and the eight openers gdoc writes into a file, so no route into a document carries one back |
 | `go/internal/restyle/` | the survey, and the house look applied where the document stands |
 | `go/internal/prelude/` | the house template as Docs requests, proposed rather than written, and the named range that marks it |
 | `go/internal/docsreq/` | the shapes a Docs request is made of: a measurement, a colour, an alignment, a length, a style object with its mask |
@@ -54,8 +51,7 @@ Two rules about the documents themselves:
 | `go/internal/plaintext/` | what gdoc may write into a comment thread: the mark, and no markdown |
 | `go/internal/frontmatter/` | the `gdoc:` block in a note's YAML front matter, and nothing else in the file |
 | `go/internal/house/` | the Altery house style as a parsed file, embedded in the binary |
-| `go/internal/render/` | the docx itself: the thirteen parts and the logo, the cover, the tables, the header and footer, the contents field |
-| `go/internal/body/`, `go/internal/cover/` | the note's markdown walked with goldmark into the house style's own paragraphs, and the words that reach the cover and the running head |
+| `go/internal/render/`, `go/internal/body/`, `go/internal/cover/` | the docx itself: the thirteen parts and the logo, the cover, the tables, the header and footer, the contents field; and the note's markdown walked with goldmark into the house style's own paragraphs, and the words that reach the cover and the running head |
 | `go/internal/drift/` | the one list of measured values, read out of a docx and out of a Docs answer |
 | `go/internal/atomicfile/` | the temp-file-and-rename write. The one room that replaces a file's contents |
 | `go/internal/update/`, `go/internal/lastcheck/` | the releases GitHub lists, the version comparison, the channel policy, this binary replaced from a zip it checked, and the stamp beside the token of when gdoc last asked GitHub what is published |
@@ -142,12 +138,13 @@ into `docs/v2/DECISIONS.md`, not a refactor.
   stdout, so every other room is handed a reader and a writer. It still refuses
   what it did not understand: `TestOnlyMainNamesStdinAndStdout`,
   `TestTrailingArgumentsAreRefused` and `TestUnknownCommandFailsAndNamesItself`.
-- **Nothing under `go/` runs an external program, except one `open`**, which is
-  `gdoc update --desktop` handing the extension it just wrote to Claude Desktop,
-  on macOS, from `desktop.go` alone, which is why the login prints a URL instead
-  of opening a browser. The menu bar app is never started by gdoc either, so its
-  first launch is the person's: `TestNothingRunsAnExternalProgram`,
-  `TestOnlyDesktopRunsAProgram` and `TestTheOneProgramOpensOnlyTheExtension`.
+- **Nothing under `go/` runs an external program, except one `open`**, from
+  `desktop.go` alone on macOS, which is why the login prints a URL instead of
+  opening a browser. Two argument lists, the extension handed to Claude Desktop
+  and `-g <bundle>` on the menu bar app, and two callers of the seam,
+  `withExtension` and `openPresenceApp`, and no third:
+  `TestNothingRunsAnExternalProgram`, `TestOnlyDesktopRunsAProgram` and
+  `TestTheOneProgramOpensOnlyTheExtensionAndTheApp`.
 - **Nothing runs git.** No command and no skill runs it, to commit or to ask
   whether a tree is a repository or a file dirty. Only `install.sh`, the
   Makefile's version stamp, `make tag` and the workflows read git, which is
@@ -177,9 +174,12 @@ into `docs/v2/DECISIONS.md`, not a refactor.
 - **The presence file is the one file gdoc appends to, and gdoc never reads
   it.** `presence/<yyyy>-<mm>.jsonl` in the config directory is written only
   under the `presence` setting, carries the listed fields and no document word
-  but the title, and nothing gdoc decides depends on a line in it:
-  `TestOnlyPresenceAppends`, `TestPresenceExportsNoReader`,
-  `TestTheEventCarriesOnlyItsListedFields` and `TestOffTouchesNothing`.
+  but the title, and nothing gdoc decides depends on a line in it. Beside those
+  files the app holds `flock` on `presence/app.lock` for its life, and gdoc holds
+  no lock and reads no byte: it asks once whether the app holds its own.
+  `TestOnlyPresenceAppends`, `TestPresenceExportsNoReader`, `TestOffTouchesNothing`,
+  `TestTheEventCarriesOnlyItsListedFields` and
+  `TestTheOpenerAsksThreeThingsAndRunsOpenGOnce`.
 - **The menu bar app runs six argv lists and signals one wait.** `help --json`,
   `auth status`, `auth login`, `auth logout`, `update` and `update --desktop`,
   from `PresenceApp/Runner.swift` alone, at `~/.local/bin/gdoc` or beside the
