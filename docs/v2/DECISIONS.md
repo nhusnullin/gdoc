@@ -5389,4 +5389,4 @@ harmless but is a process per command. A pid file the app writes: a pid is
 reused, a lock is not. Reading the record to see whether the app is alive:
 the record is written by gdoc and says nothing about the app.
 
-The plan is `docs/plans/2026-10-18-gdoc-v2-m25-the-app-opens-itself.md`.
+The plan is `docs/plans/completed/2026-10-18-gdoc-v2-m25-the-app-opens-itself.md`.

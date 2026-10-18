@@ -259,12 +259,18 @@ branch.
 **Files:**
 - Modify: whatever the pass finds under `presence/`
 
-- [ ] render every scene (`PRESENCE_SHOTS=... make app-test`) and run the
+- [x] render every scene (`PRESENCE_SHOTS=... make app-test`) and run the
       checklist of `docs/design/2026-10-17-presence-design-principles.md`
-      over the scenes Task 3 changed, as a reviewer who drew nothing (a
-      subagent that reads images); every blocking or should-fix finding is
-      fixed here and listed in the commit message
-- [ ] `make app-lint`, `make app-test`
+      over the scenes Task 3 changed, as a reviewer who drew nothing (two
+      subagents that read images); no finding was blocking. The two
+      should-fix findings on what M25 changed are closed here: the index
+      line about launch at login is three short sentences instead of one
+      long one, and the light off switch is on the "Still your call" list
+      with its measurement, because its fill is the approved mockup's and
+      changing it is Nail's call. The sweep's other should-fix findings are
+      M24's drawings or fixtures, not M25's: two went to `docs/backlog/`
+      and four rulings to the principles file's 2026-10-18 amendments
+- [x] `make app-lint`, `make app-test`
 
 ## Acceptance
 

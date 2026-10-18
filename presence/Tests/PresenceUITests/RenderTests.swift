@@ -563,10 +563,10 @@ final class RenderTests: XCTestCase {
   ///
   /// A reviewer who reads a render as the specification drawn rates a
   /// product choice as a bug, and a choice Nail has not made is not a bug.
-  /// The seven are on the page, above every screen, and each names the rule
+  /// The eight are on the page, above every screen, and each names the rule
   /// or the decision it goes against.
   func testTheIndexOpensWithWhatIsStillYourCall() throws {
-    XCTAssertEqual(Scenes.stillYourCall.count, 7, "the pass left seven choices to Nail")
+    XCTAssertEqual(Scenes.stillYourCall.count, 8, "the pass left eight choices to Nail")
 
     let page = html(["<section>a screen</section>"])
     let heading = try XCTUnwrap(page.range(of: "Still your call"), "the page does not open with it")
@@ -582,7 +582,7 @@ final class RenderTests: XCTestCase {
     // failure rather than a shorter page.
     let subjects = [
       "45 percent", "decision 32", "decision 10", "trash", "decision 39", "14 days · N",
-      "nameless",
+      "nameless", "faintest control",
     ]
     for subject in subjects {
       XCTAssertTrue(

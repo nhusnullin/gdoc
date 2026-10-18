@@ -84,9 +84,13 @@ enum Scenes {
     "The idle menu bar draws the mark at 45 percent, where principle 1 says idle is nothing "
       + "at all and the mockup's r9 draws nothing. A dim mark says gdoc is installed; a "
       + "blank bar says only that nothing is running.",
-    "Launch at login is off until you turn it on, which is product decision 32 again: "
-      + "the 2026-10-18 decision withdrew the registration M24 made on the first run, "
-      + "because a gdoc command now opens the app when it is not running.",
+    "Launch at login is off until you turn it on, which is product decision 32. The "
+      + "2026-10-18 decision withdrew the registration M24 made on the first run. A gdoc "
+      + "command now opens the app when it is not running.",
+    "The off switch in light is the faintest control the panel draws: a 12 percent black "
+      + "pill on white, with the knob's shadow for its only edge. The mockup names that "
+      + "fill. No render drew the switch off before 2026-10-18, so every light screen now "
+      + "carries a control that is nearly not there.",
     "A publish is kept out of DOCUMENTS until a run names a document, which is why r1's "
       + "DOCUMENTS is empty. Product decision 10 puts a running job in both sections and "
       + "the mockup draws that row dimmed.",
