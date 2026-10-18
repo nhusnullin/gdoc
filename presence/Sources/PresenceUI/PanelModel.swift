@@ -183,24 +183,26 @@ public struct SettingsRowModel: Sendable, Equatable, Identifiable {
   public let value: String
   public let glyph: GlyphKind
   public let tone: GlyphTone
-  /// The ring in the glyph's place, which a sign-in in flight and an update
-  /// that is still running draw.
+  /// The ring in the glyph's place. The two rings the panel draws are the
+  /// header's since 2026-10-18, the sign-in's and the update's, so no row
+  /// here draws one today.
   public let waiting: Bool
   public let quiet: String?
   public let actions: [ActionModel]
   public let isOn: Bool?
-  /// Pressing the row itself, which Quit and the Login Items row do.
+  /// Pressing the row itself, which Hub, Quit and the Login Items row do.
+  ///
+  /// No row here is ever a question. The one destructive confirm in the
+  /// panel is the sign-out, and it is asked in the header since 2026-10-18:
+  /// testTheQuestionKeepsTheAccountsGlyphAndSaysNothingElse.
   public let select: ActionKind?
-  /// The question this row has become, while it is asked.
-  public let question: QuestionModel?
 
   public var id: String { kind.rawValue }
 
   public init(
     _ kind: SettingsRowKind, value: String = "", glyph: GlyphKind = .blank,
     tone: GlyphTone = .quiet, waiting: Bool = false, quiet: String? = nil,
-    actions: [ActionModel] = [], isOn: Bool? = nil, select: ActionKind? = nil,
-    question: QuestionModel? = nil
+    actions: [ActionModel] = [], isOn: Bool? = nil, select: ActionKind? = nil
   ) {
     self.kind = kind
     self.value = value
@@ -211,7 +213,6 @@ public struct SettingsRowModel: Sendable, Equatable, Identifiable {
     self.actions = actions
     self.isOn = isOn
     self.select = select
-    self.question = question
   }
 }
 
@@ -671,17 +672,23 @@ extension PanelModel {
       showsStrip: !ui.stripSeen && !rows.isEmpty)
   }
 
-  /// A row's own menu: the pin either way round, and the hide.
+  /// A row's own menu: the pin either way round, and the hide on a row that
+  /// is not pinned.
   ///
   /// A pinned row says Unpin, because the one thing a person wants from a
-  /// pin they have already made is to take it back. There is no Unhide: a
-  /// hidden document has no row to open a menu on, and what brings it back
-  /// is gdoc doing something on it again.
+  /// pin they have already made is to take it back. It offers no Hide: a pin
+  /// is never away, whatever a hide of it says, so the press would do
+  /// nothing on the screen and then take the row away at the Unpin, which is
+  /// not what either press asked for. Unpin first, and the row offers Hide.
+  ///
+  /// There is no Unhide: a hidden document has no row to open a menu on, and
+  /// what brings it back is gdoc doing something on it again.
   private static func menu(_ row: DocumentRow) -> [MenuItemModel] {
-    [
-      row.isPinned
-        ? MenuItemModel(.unpinDoc, word: Menus.unpin, target: row.doc)
-        : MenuItemModel(.pinDoc, word: Menus.pin, target: row.doc),
+    guard !row.isPinned else {
+      return [MenuItemModel(.unpinDoc, word: Menus.unpin, target: row.doc)]
+    }
+    return [
+      MenuItemModel(.pinDoc, word: Menus.pin, target: row.doc),
       MenuItemModel(.hideDoc, word: Menus.hide, target: row.doc),
     ]
   }

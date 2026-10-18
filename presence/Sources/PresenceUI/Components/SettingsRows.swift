@@ -9,7 +9,7 @@
 //
 // The order is the order of the list in `SettingsRowKind`, which is also the
 // order of what a person can do something about: the facts first, and the
-// two rows that are not facts at all last.
+// three rows that are not facts at all last.
 //
 // Three of the rows are not statuses. Hub is the folder somebody chose, and
 // pressing it opens the system's own folder panel. Launch at login is a
@@ -67,19 +67,22 @@ public struct SettingsRow: Identifiable {
   public let value: String
   public let glyph: GlyphKind
   public let tone: GlyphTone
-  /// The small ring in the glyph's place, which only a sign-in in flight
-  /// draws: `<span class="ring wait">` in the screens file.
+  /// The small ring in the glyph's place: `<span class="ring wait">` in the
+  /// screens file. The two rings the panel draws are the header's since
+  /// 2026-10-18, the sign-in's and the update's, so no row here draws one
+  /// today.
   public let waiting: Bool
   /// A line under the row, in the row's own words. `QUIET()` in the screens
   /// file, which is the network row's explanation.
   public let quiet: String?
-  /// The icons a row carries, in the order they are drawn. Every row but
-  /// the sign-in in flight has one or none; that one has Copy and Cancel.
+  /// The icons a row carries, in the order they are drawn. One or none is
+  /// what every row has today: the Claude Desktop row's Install extension,
+  /// and nothing on the rest.
   public let actions: [IconAction]
   /// The switch, on the one row that is a setting.
   public let isOn: Bool?
   public let onToggle: () -> Void
-  /// Pressing the row itself, which only Quit does.
+  /// Pressing the row itself, which Hub, Quit and the Login Items row do.
   public let onSelect: (() -> Void)?
 
   public var id: String { kind.rawValue }
@@ -108,8 +111,8 @@ public struct SettingsRow: Identifiable {
     self.onSelect = onSelect
   }
 
-  /// The same row with more than one icon, which only the sign-in in
-  /// flight has.
+  /// The same row with a list of icons rather than one, which is the shape
+  /// the model's own list is mapped through.
   public init(
     _ kind: SettingsRowKind,
     value: String,

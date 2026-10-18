@@ -156,7 +156,7 @@ extension Session {
   /// back: nothing here unhides one.
   private func hide(_ doc: String?) {
     guard let doc else { return }
-    preferences.hide(doc, title: lastTitle(of: doc), at: clock())
+    preferences.hide(doc, at: clock())
     ui.hidden = preferences.hides
     changed()
   }

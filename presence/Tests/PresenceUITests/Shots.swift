@@ -480,9 +480,6 @@ func panelVocabulary() throws -> Set<String> {
           words.formUnion([row.kind.label, row.value])
           words.formUnion([row.quiet].compactMap { $0 })
           words.formUnion(row.actions.map(\.tip))
-          if let question = row.question {
-            words.formUnion([question.title, question.consequence, question.danger.rawValue])
-          }
         }
       }
     }

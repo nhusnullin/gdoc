@@ -25,6 +25,9 @@ final class SessionTests: XCTestCase {
   /// One document, in the Drive shape, so its row carries the four icons.
   private static let doc = "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789"
 
+  /// A second document, for the tests that need two.
+  private static let other = "1ZzYyXxWwVvUuTtSsRrQqPpOoNnMmLlKkJjIi"
+
   override func setUp() async throws {
     root = URL(fileURLWithPath: NSTemporaryDirectory())
       .appendingPathComponent("gdoc-session-\(UUID().uuidString)")
@@ -504,6 +507,69 @@ final class SessionTests: XCTestCase {
     XCTAssertEqual(try noteIcon(of: session).state, .live, "so Open md works")
   }
 
+  /// The watcher follows the folder. A second choice is a different vault,
+  /// and a watcher left on the first one would rescan the folder nobody
+  /// chose on its next file event: that scan is the newest one, so the
+  /// pairing would flip back to the notes of the hub a person moved off.
+  func testASecondHubIsTheOneTheWatcherWatches() throws {
+    let first = root.appendingPathComponent("first")
+    let second = root.appendingPathComponent("second")
+    for folder in [first, second] {
+      try FileManager.default.createDirectory(
+        at: folder.appendingPathComponent("notes"), withIntermediateDirectories: true)
+    }
+    try note(pairing: Self.doc).write(
+      to: first.appendingPathComponent("notes/first.md"), atomically: true, encoding: .utf8)
+
+    let desk = FakeDesk()
+    let session = made(desk: desk)
+    answered(session)
+
+    desk.willChoose(first)
+    session.perform(.chooseHub, nil)
+    try waitUntil("the first hub was read") { session.index.notes[Self.doc] != nil }
+    XCTAssertEqual(session.hubWatched, first.path, "the watcher is on the folder chosen")
+
+    desk.willChoose(second)
+    session.perform(.chooseHub, nil)
+    XCTAssertEqual(session.hubWatched, second.path, "and moves with the second choice")
+
+    // A note written into the new hub reaches the pairing, which is the
+    // whole of what watching that folder is for.
+    let path = second.appendingPathComponent("notes/second.md")
+    let written = note(pairing: Self.other)
+    let landed = expectation(description: "the new hub's own note was read")
+    Task { @MainActor in
+      // One write a second, which is longer than the watcher's own
+      // debounce: a write every quarter second would keep putting the one
+      // signal off, and the test would be measuring the debounce.
+      for _ in 0..<20 where session.index.notes[Self.other] == nil {
+        try? written.write(to: path, atomically: true, encoding: .utf8)
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
+      }
+      if session.index.notes[Self.other] != nil { landed.fulfill() }
+    }
+    wait(for: [landed], timeout: 30)
+    XCTAssertEqual(session.index.notes[Self.other], "notes/second.md")
+    XCTAssertNil(
+      session.index.notes[Self.doc],
+      "and the old vault's own notes are not in the index any more")
+  }
+
+  /// A note whose front matter pairs it with one document and says nothing
+  /// else.
+  private func note(pairing doc: String) -> String {
+    """
+    ---
+    gdoc:
+      schema: 1
+      document_id: \(doc)
+    ---
+
+    # Scope
+    """
+  }
+
   /// Wait for something the session does off the main thread and comes back
   /// to it with. The scan of the hub is the one of them a press starts.
   private func waitUntil(
@@ -781,6 +847,27 @@ final class SessionTests: XCTestCase {
     XCTAssertFalse(
       session.tookThePhase(read), "the sign-in it asked about is over, so the read is dropped")
     XCTAssertNil(session.phase, "and the Account row keeps no countdown")
+  }
+
+  /// A rescan the watcher on the folder nobody chose any more asks for is
+  /// dropped.
+  ///
+  /// The watcher's callback arrives on a queue of its own and hops to the
+  /// main actor, so one that fired just before the Hub row was answered
+  /// lands after the new hub was already read. Its walk would be the newest
+  /// one asked for, and the pairing would flip back to the old vault's
+  /// notes. The folder it names decides: it is not the one being watched,
+  /// so nobody wants its scan.
+  func testAScanFromTheWatcherOnTheOldHubIsDropped() throws {
+    try writeTheRecord([])
+    let session = made()
+    session.hubWatched = "/second"
+
+    session.rescanIfWatched("/first")
+    XCTAssertEqual(session.hubScans, 0, "the folder nobody chose starts no walk")
+
+    session.rescanIfWatched("/second")
+    XCTAssertEqual(session.hubScans, 1, "and the folder being watched starts one")
   }
 
   /// A hub scan that comes back after a newer one is dropped.

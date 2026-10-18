@@ -115,11 +115,18 @@ public struct DocumentRow: Sendable, Equatable {
 
 /// DOCUMENTS, and the two numbers its label carries.
 public struct DocumentsFold: Sendable, Equatable {
-  /// Every document inside the horizon: the day's, newest first, then the
-  /// fortnight's by use.
+  /// The list, in its one order: the pinned documents first, newest pin
+  /// first; then the documents acted on in the local day, newest first; then
+  /// the rest of the horizon by how many finished actions each carries.
+  ///
+  /// A pin is in the list however old it is, so a row here may be a document
+  /// whose last action is past the fortnight, or one the record says nothing
+  /// about at all, which is `.pinnedOnly`.
   public let rows: [DocumentRow]
 
-  /// How many documents the horizon holds.
+  /// How many documents the list holds, a pin past the horizon included. The
+  /// number counts the list and never the screen:
+  /// testTheDocumentsHeaderCountsTheWholeList.
   public var count: Int { rows.count }
 
   /// How many of them were acted on in the local day.
@@ -128,8 +135,8 @@ public struct DocumentsFold: Sendable, Equatable {
   /// What is behind Show more.
   public var more: Int { max(0, rows.count - Documents.defaultRows) }
 
-  /// The rows the section draws, which is the newest five until a person
-  /// opens it.
+  /// The rows the section draws, which is the first five of the list until a
+  /// person opens it.
   public func visible(expanded: Bool) -> [DocumentRow] {
     expanded ? rows : Array(rows.prefix(Documents.defaultRows))
   }

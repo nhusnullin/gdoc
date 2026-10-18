@@ -107,7 +107,7 @@ final class PreferencesTests: XCTestCase {
     XCTAssertEqual(preferences.lastAccount, "someone@example.com")
 
     preferences.pin("1AbCdEfGhIjK", title: "Q3 plan", at: long)
-    preferences.hide("1ZzYyXxWwVvU", title: "Chapter 4", at: long)
+    preferences.hide("1ZzYyXxWwVvU", at: long)
     XCTAssertEqual(preferences.pins.map(\.doc), ["1AbCdEfGhIjK"], "a pin is an answer too")
     XCTAssertEqual(preferences.hides.map(\.doc), ["1ZzYyXxWwVvU"], "and so is a hide")
   }
@@ -147,19 +147,21 @@ final class PreferencesTests: XCTestCase {
   }
 
   /// A hide names the document and the moment it was hidden, which is what
-  /// the fold reads the next action against. A document with no title in the
-  /// record is a hide with no title, and still a hide.
+  /// the fold reads the next action against, and never a title: the row a
+  /// hide takes away is drawn nowhere, and the last title in UserDefaults is
+  /// the pin's own written-down exception.
   func testAHideKeepsItsMomentAndIsNeverPruned() {
     let now = Self.at("2026-10-17T09:30:00Z")
     let longAgo = now.addingTimeInterval(-200 * 24 * 60 * 60)
     let store = Store()
     let preferences = Preferences(store: store)
 
-    preferences.hide("1AbCdEfGhIjK", title: nil, at: longAgo)
+    preferences.hide("1AbCdEfGhIjK", at: longAgo)
 
     XCTAssertEqual(preferences.hides.map(\.doc), ["1AbCdEfGhIjK"])
     XCTAssertEqual(preferences.hides.first?.at, longAgo)
-    XCTAssertNil(preferences.hides.first?.title)
+    XCTAssertNil(preferences.hides.first?.title, "a hide keeps no word of the document")
+    XCTAssertFalse(store.text.contains("title"), "and writes none into the store")
     XCTAssertEqual(
       preferences.dismissals(now: now).count, 0,
       "the read that prunes the stamps leaves the hide where it is")
@@ -189,7 +191,7 @@ final class PreferencesTests: XCTestCase {
     preferences.noteRelaunch(version: "v2.15.0", at: now)
     preferences.lastAccount = "someone@example.com"
     preferences.pin("1AbCdEfGhIjK", title: "Q3 plan", at: now)
-    preferences.hide("1ZzYyXxWwVvU", title: "Chapter 4", at: now)
+    preferences.hide("1ZzYyXxWwVvU", at: now)
 
     XCTAssertEqual(store.keys, Set(Preferences.Key.allCases.map(\.rawValue)))
 
@@ -203,7 +205,7 @@ final class PreferencesTests: XCTestCase {
     XCTAssertEqual(
       preferences.pins, [DocumentChoice(doc: "1AbCdEfGhIjK", at: now, title: "Q3 plan")])
     XCTAssertEqual(
-      preferences.hides, [DocumentChoice(doc: "1ZzYyXxWwVvU", at: now, title: "Chapter 4")])
+      preferences.hides, [DocumentChoice(doc: "1ZzYyXxWwVvU", at: now, title: nil)])
   }
 
   // MARK: a store of its own

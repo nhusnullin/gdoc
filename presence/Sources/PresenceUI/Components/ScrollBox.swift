@@ -291,9 +291,18 @@ public struct ScrollBox<Content: View>: View {
   /// One second after the last move, the thumb goes. Each move starts this
   /// again, because `.task(id:)` is cancelled and run afresh when the
   /// moment changes.
+  ///
+  /// A cancelled sleep returns and clears nothing. The cancel is the next
+  /// move arriving, and a `try?` that dropped it put the thumb away in the
+  /// same frame the content moved in: while a hand scrolled, the moment and
+  /// nil took turns and the thumb flickered.
   @MainActor private func putTheThumbAway() async {
     guard movedAt != nil else { return }
-    try? await Task.sleep(for: .seconds(Self.thumbLife))
+    do {
+      try await Task.sleep(for: .seconds(Self.thumbLife))
+    } catch {
+      return
+    }
     movedAt = nil
   }
 

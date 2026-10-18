@@ -95,6 +95,34 @@ final class FieldsTests: XCTestCase {
       rows.first(where: { $0.doc == policy })?.session, "a chat run names no session")
   }
 
+  // A document gdoc published from Claude Code remembers that session too.
+  //
+  // A publish is handed no document, so its start names none and its session
+  // sits on a line with no document on it; the id it brought into the world
+  // is `made`, on the end. The session is read per call for that reason, as
+  // a title is: a document gdoc has just made is the one a hand is most
+  // likely to go back to the session for.
+  func testAPublishedDocumentRemembersTheSessionItWasPublishedFrom() throws {
+    let at = try moment("2026-10-17T15:00:00Z")
+    let here = try amsterdam()
+    let session = "0199c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d"
+
+    let events = [
+      start(
+        at: "2026-10-17T12:00:00Z", command: "publish", run: "p1", doc: nil, via: "code",
+        title: "Q3 plan", session: session),
+      end(
+        at: "2026-10-17T12:00:40Z", command: "publish", run: "p1", doc: nil, via: "code",
+        ok: true, verified: true, title: "Q3 plan", made: chapter4),
+    ]
+
+    let rows = Documents.fold(events, now: at, calendar: here, alive: { _ in false }).rows
+    XCTAssertEqual(rows.map(\.doc), [chapter4], "the publish made the one row")
+    XCTAssertEqual(
+      rows.first?.session, session,
+      "and the document it made remembers the session it was published from")
+  }
+
   // A hold the sign-in changed under is dropped, which is a fourth ending
   // and not a fourth kind of row: the card goes, the document stops being
   // held, and TODAY carries the one line that says it closed.

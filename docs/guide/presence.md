@@ -139,7 +139,8 @@ as well.
 
 A pin holds a document in the list. Right-click a row, or hold a press on it
 for half a second, and the menu says "Pin" and "Hide from the list"; a row
-already pinned says "Unpin". Pinned documents never drop off: fourteen days
+already pinned says "Unpin" and nothing else, because a pin is never away and
+a hide of it would hide nothing. Pinned documents never drop off: fourteen days
 on, or when the app
 can no longer see the lines about them, the row is still there with the title
 it had and its icons still work, because the pin keeps the name and the id.
@@ -149,7 +150,8 @@ A small pin sits in front of the row's own glyph while it is pinned.
 still show its runs: the log is the log, and nothing rewrites it. There is no
 "Unhide". The next thing gdoc finishes on that document brings the row back,
 which is the one way back. The pin is the louder answer: a document that is
-pinned stays in the list whatever a hide of it said.
+pinned stays in the list whatever a hide of it said, which is why its menu
+offers Unpin alone. Unpin it, and the menu offers Hide again.
 
 The pins and the hides are the app's own, kept beside your other settings and
 never written into the record.
@@ -325,10 +327,10 @@ retried.
 ### Update, and Install extension
 
 Update runs `gdoc update` with no flag at all: what you would have typed, and
-nothing the app chose on your behalf. While the child is up the gdoc row draws a
-ring and still names the version that is installed, because a row that said the
-new number before the bytes were in place would be a row that lied for a few
-seconds. Install extension is `gdoc update --desktop`, which writes the Claude
+nothing the app chose on your behalf. While the child is up the header draws a
+ring beside the version and still names the version that is installed, because a
+header that said the new number before the bytes were in place would be one that
+lied for a few seconds. Install extension is `gdoc update --desktop`, which writes the Claude
 Desktop extension and hands it to Desktop. Whether Desktop then loads it is
 not something the app is told; whether the handing over happened is, and that
 is what keeps the row.

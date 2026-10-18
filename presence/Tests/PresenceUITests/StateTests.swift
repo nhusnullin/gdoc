@@ -350,6 +350,20 @@ final class StateTests: XCTestCase {
     XCTAssertEqual(asked.quiet, [], "and nothing but its own consequence is said under it")
     XCTAssertNil(asked.version, "no version and no address beside a question")
     XCTAssertNil(asked.account)
+
+    // A sign-out asked inside the banner's five seconds: the banner carries
+    // a Sign out of its own, and two of them under one question is the
+    // panel asking twice.
+    let fresh = Facts(
+      account: "second@example.com", auth: .ok, versions: Versions(app: "2.15.0"),
+      gdocPath: Scenes.gdocPath, signedInAt: try at("2026-10-17T09:59:58Z"))
+    let banner = try drawn([], at: "2026-10-17T10:00:00Z", facts: fresh).header
+    XCTAssertNotNil(banner.banner, "the banner is on the screen for its five seconds")
+    let asking = try drawn(
+      [], at: "2026-10-17T10:00:00Z", facts: fresh,
+      ui: UIState(question: .signOut, questionAt: try at("2026-10-17T10:00:00Z"))
+    ).header
+    XCTAssertNil(asking.banner, "and the question is the only thing under itself")
   }
 
   // MARK: - The pieces a test states
@@ -362,9 +376,11 @@ final class StateTests: XCTestCase {
   /// A document row's own menu, in both its states.
   ///
   /// The menu is where a pin and a hide are, so the four icons on the row
-  /// stay four. A pinned row says Unpin, because the one thing a person
-  /// wants from a pin they have already made is to take it back, and there
-  /// is no Unhide anywhere: a hidden document has no row to open a menu on.
+  /// stay four. A pinned row says Unpin and nothing else, because the one
+  /// thing a person wants from a pin they have already made is to take it
+  /// back, and a hide of a pinned document hides nothing: the press would
+  /// look dead and then take the row away at the Unpin. There is no Unhide
+  /// anywhere: a hidden document has no row to open a menu on.
   func testTheRowMenuSaysPinOrUnpinAndHide() throws {
     let events = [
       event(
@@ -385,8 +401,10 @@ final class StateTests: XCTestCase {
       ui: UIState(pinned: [DocumentChoice(doc: chapter4, at: moment, title: "Ch 4")]))
     let kept = try XCTUnwrap(pinned.documents?.rows.first)
     XCTAssertTrue(kept.isPinned, "which the row draws in its own column before the glyph")
-    XCTAssertEqual(kept.menu.map(\.word), ["Unpin", "Hide from the list"])
-    XCTAssertEqual(kept.menu.map(\.kind), [.unpinDoc, .hideDoc])
+    XCTAssertEqual(
+      kept.menu.map(\.word), ["Unpin"],
+      "and a pinned row offers no hide, because the pin would win and the press look dead")
+    XCTAssertEqual(kept.menu.map(\.kind), [.unpinDoc])
     XCTAssertEqual(kept.actions.count, 4, "and the icons are still four")
 
     let hidden = try drawn(

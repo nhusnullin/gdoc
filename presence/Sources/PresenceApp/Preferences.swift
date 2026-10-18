@@ -14,11 +14,14 @@
 // A dismissal names a run and a call, or a hold's own id, and nothing about
 // the document: a title or a document id in UserDefaults would be a word of
 // somebody's document kept outside the record, where nothing prunes it. The
-// two keys of the second morning are the written-down exception, and the
-// decision of 2026-10-18 is where it is written: a pin has to hold the id
-// and the last title, because a pinned document whose lines the tail can no
-// longer see has its name nowhere else, and a list that lost the name of
-// the thing a person pinned is a list that lost the pin.
+// two keys of the second morning are the written-down exception for the id,
+// and the decision of 2026-10-18 is where it is written: a pin and a hide
+// are the app's own answers about one document, so each has to name it. Only
+// the pin also holds the last title, because a pinned document whose lines
+// the tail can no longer see has its name nowhere else, and a list that lost
+// the name of the thing a person pinned is a list that lost the pin. A hide
+// holds the id and the moment alone: the row it takes away is drawn nowhere,
+// so taking it away needs no name.
 //
 // Sixty-two days is what prunes the two keys that are about a moment, the
 // dismissals and the relaunch stamp: the tail reads two month files, so a
@@ -181,8 +184,13 @@ public final class Preferences: @unchecked Sendable {
 
   /// Hide one document from the list. The rows in TODAY stay: a hide hides
   /// a row of DOCUMENTS and rewrites nothing.
-  public func hide(_ doc: String, title: String?, at moment: Date = Date()) {
-    note(doc, title: title, at: moment, under: .hidden)
+  ///
+  /// The id and the moment, and no title: a hide is read against that
+  /// document's own actions and nothing draws the name of a row that is not
+  /// there. The last title the pin keeps is the one title either key holds:
+  /// testAHideKeepsItsMomentAndIsNeverPruned.
+  public func hide(_ doc: String, at moment: Date = Date()) {
+    note(doc, title: nil, at: moment, under: .hidden)
   }
 
   // MARK: the relaunch

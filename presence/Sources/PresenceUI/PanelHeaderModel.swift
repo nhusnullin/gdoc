@@ -45,7 +45,9 @@ extension PanelModel {
     // changed address is something that already happened, and under "Sign
     // out?" in the same ink and at the same indent as the consequence it
     // read as a second consequence: press this and the account changes.
-    // It comes back when the question is answered.
+    // The banner of a sign-in five seconds old goes the same way, and it
+    // carries a Sign out of its own: two of them under one question is the
+    // panel asking twice. Both come back when the question is answered.
     if ui.isAsking(.signOut, now: now) {
       return HeaderModel(
         mark: facts.mark,
@@ -53,8 +55,7 @@ extension PanelModel {
         tone: account.tone,
         waiting: account.waiting,
         question: QuestionModel(
-          title: "Sign out?", consequence: stopping.sentence, danger: .signOut),
-        banner: banner)
+          title: "Sign out?", consequence: stopping.sentence, danger: .signOut))
     }
 
     return HeaderModel(
