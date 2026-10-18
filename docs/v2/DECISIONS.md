@@ -103,6 +103,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-10-17 | The panel: the presence as the screens draw it, the app runs six argv lists, a hold dies with the sign-in it was held under | holds |
 | 2026-10-18 | The app opens itself: gdoc opens the installed app when it is not running, and launch at login is the person's switch | holds |
 | 2026-10-18 | The second morning: the account in the header, the middle scrolls, DOCUMENTS by what was just made and by use, pins, a bright mark, the session a run came from | holds |
+| 2026-10-18 | The third look: nothing scrolls, DOCUMENTS is the pinned and the last five, the note is found and not configured, the update glyph has three states | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -5453,3 +5454,53 @@ a record that refuses paths, sentences and accounts; it is still one more
 thing in the file beside the token, and principle 2 notes it.
 
 The plan is `docs/plans/completed/2026-10-18-gdoc-v2-m26-the-second-morning.md`.
+
+## 2026-10-18. The third look: nothing scrolls, DOCUMENTS is the pinned and the last five, the note is found and not configured, the update glyph has three states.
+
+Nail opened v2.18.0 and sent a screenshot with three scroll thumbs on one
+panel: the middle box, DOCUMENTS inside it and TODAY inside it. His words:
+double scrolling is awful; no more than five documents and no activity log
+for today and yesterday at all; why a hub, it differs by document and the
+notes live in different folders; he did not see how to pin; the use
+statistics are not needed; the last five plus the pinned, no duplicates, no
+scroll, let the panel be as long as it comes out; check for a new version
+periodically and give the update glyph states, so he can press it to check
+and install before the timer has asked. This entry is those answers, and it
+withdraws three sentences of the same day's "second morning" entry: the
+middle scroll, the by-use order and the Hub row. Serves principles 4 and 1.
+
+**Nothing scrolls.** The panel is as tall as its content. The 600 pt cap,
+the middle box, the inner scrolls and Show more go. A panel taller than the
+screen is cut at the screen's edge, which Nail chose over any scroll; the
+height it happens at is measured and written down, and a later entry may
+cap NOW if it ever bites.
+
+**DOCUMENTS is the pinned and the last five.** Pinned documents first, in
+the order pinned, then the last five documents by their latest action, one
+row per document, hidden ones skipped, no count in the header. TODAY and
+Yesterday are gone: the log is the record, and the panel shows what gdoc is
+doing now and the documents it touched. The pin is the fifth icon of a row,
+outline and filled, because a menu nobody finds is no affordance; Hide
+stays in the menu.
+
+**The note is found, not configured.** The hub folder was one setting for a
+thing that differs by document. The app asks Spotlight for Markdown files
+whose text holds the document id, reads the `gdoc:` front-matter block of
+each candidate as it already did for a whole hub, and opens the one whose
+block names the id; a file that mentions the id in its body is a candidate
+the check rejects. Measured on Nail's machine: both notes found in 0.25 s,
+727 Markdown files indexed under the vault. The Hub row goes; `hubPath`
+stays as a `defaults write` override for a person whose notes are not
+indexed. The app's reads are now the record, its own plist, and the front
+matter of the files Spotlight names: narrower than a whole hub.
+
+**The update glyph has three states.** Quiet in the caption grey, when
+nothing newer is known: pressing it runs `gdoc update`, which asks GitHub
+every run and installs or says this is current. Available, in the accent ink
+with a dot and the newer version after the current one, when `help --json`
+listed a newer stable: pressing it runs the same update. Running, the ring.
+The app asks `help --json` on open and every six hours while it runs;
+gdoc's own stamp keeps GitHub to once in 24 hours, and the person's press is
+the way past it.
+
+The plan is `docs/plans/2026-10-18-gdoc-v2-m27-the-third-look.md`.
