@@ -5357,9 +5357,11 @@ on macOS, after the record's start line and before the work, when
 lock, gdoc starts `/usr/bin/open -g <bundle>` and does not wait for it. `-g`
 because the app has no window to bring forward and the person is in a
 terminal or a chat. The exit status is never read, so a shell with no window
-session runs the command exactly as before. `gdoc update` runs the same
-opener once after it places or replaces the bundle, so an install is a
-running app and the answer no longer tells the person to open it. The one
+session runs the command exactly as before. Every recorded command but `gdoc
+update`, which is the one command that moves the bundle: it runs the same
+opener itself, once, after it places, replaces or rolls back the bundle, so an
+install is a running app, the answer no longer tells the person to open it,
+and no run starts the build it is about to rename away. The one
 program gdoc runs is still `/usr/bin/open` at its full path, from the one
 file, through the one seam; the seam now has two callers and two argument
 lists, both pinned by the boundary tests, and no third. Off is today's bytes.

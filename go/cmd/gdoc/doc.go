@@ -785,11 +785,15 @@
 // the flag, on macOS, a command whose run is recorded opens the installed app
 // where that app is not already running: dispatch calls desktop.go's
 // openPresenceApp right after the record's start line and only where the run
-// is recorded, and `gdoc update` calls the same opener once after it placed
-// the bundle, so no step line asks a person to go and open anything.
+// is recorded. Every command but `update`, which is the one command that
+// moves the bundle: it calls the same opener itself, once, after it placed or
+// rolled the app back, because an open at the start line would have started
+// the bundle the run then renamed away. So no step line asks a person to go
+// and open anything.
 // TestACommandUnderTheFlagOpensTheAppOnceAndNothingWhenItIsRunning,
-// TestTheOpenerAsksThreeThingsAndRunsOpenGOnce and
-// TestAFirstInstallOpensTheAppAndTellsNobodyToOpenIt.
+// TestTheOpenerAsksThreeThingsAndRunsOpenGOnce,
+// TestAFirstInstallOpensTheAppAndTellsNobodyToOpenIt and
+// TestAnUpdateOpensTheAppItPlacedAndNotTheOneItReplaces.
 //
 // Whether the app is running is one lock and never a byte. The app holds
 // flock on presence/app.lock in the config directory for its whole life, and

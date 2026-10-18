@@ -321,7 +321,14 @@ func dispatch(ctx context.Context, args []string, errOut io.Writer, set settings
 	// the flag off starts nothing: desktop.go's openPresenceApp says what it
 	// asks before it starts anything, and
 	// TestACommandUnderTheFlagOpensTheAppOnceAndNothingWhenItIsRunning.
-	if rec != nil {
+	//
+	// Every command but the one that replaces the bundle. `gdoc update` opens
+	// the app once itself, after it has placed or rolled back the app, which
+	// is what the 2026-10-18 decision says; an open here would start the
+	// bundle this run is about to rename away, and the one it then placed
+	// would find the lock held by the build it replaced:
+	// TestAnUpdateOpensTheAppItPlacedAndNotTheOneItReplaces.
+	if rec != nil && c.name != updateCommand {
 		openPresenceApp()
 	}
 	// The run goes on the context, so the one command with parts can say which

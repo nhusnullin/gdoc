@@ -17,9 +17,10 @@
 // Sixty-two days is what prunes the two keys that are about a moment, the
 // dismissals and the relaunch stamp: the tail reads two month files, so a
 // key older than that is about a line this app can no longer see. The other
-// four are answers rather than moments, and an answer does not go stale: an
-// "off" dropped after two months would register somebody at login again,
-// which is the one thing the specification says never happens.
+// four are answers rather than moments, and an answer does not go stale: the
+// launch-at-login key is the person's own answer, kept because it is theirs,
+// and nothing in this app reads it to decide anything. What starts the app at
+// login is the login item macOS holds, and the switch shows what macOS says.
 //
 // The store is handed in. UserDefaults is what the app passes; a test passes
 // a dictionary of its own, so no test writes to the defaults of the machine

@@ -104,8 +104,14 @@ var runProgram = startProgram
 // file, and that sentence is the whole of what a person needs. The app is
 // started and left: a command may not grow the time an application takes to
 // come up, and nothing in this process reads that exit status, so there is
-// nothing to wait for. A started process is released rather than left as a
-// zombie, which is what Process.Release does.
+// nothing to wait for.
+//
+// A child nobody waits for is a zombie until this process ends, and
+// os.Process.Release does not change that: it drops Go's handle and never
+// asks the kernel for the exit status. One run would never notice, but a
+// `gdoc mcp` session is one process for an afternoon of tool calls, so the
+// wait is done on a goroutine of its own: the command goes on at once and the
+// child is reaped when it exits.
 func startProgram(name string, wait bool, args ...string) error {
 	if name != macOSOpen {
 		return fmt.Errorf("gdoc runs %s and no other program, and this run asked for %s", macOSOpen, name)
@@ -115,7 +121,8 @@ func startProgram(name string, wait bool, args ...string) error {
 		if err := cmd.Start(); err != nil {
 			return fmt.Errorf("%s %s did not start: %v", macOSOpen, strings.Join(args, " "), err)
 		}
-		return cmd.Process.Release()
+		go func() { _ = cmd.Wait() }()
+		return nil
 	}
 	out, err := cmd.CombinedOutput()
 	if err != nil {

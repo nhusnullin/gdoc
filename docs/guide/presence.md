@@ -303,9 +303,10 @@ launch-at-login answer, its last self-relaunch, and the last address it saw
 signed in. The two that are about a moment, the hidden cards and the relaunch,
 are dropped once they are older than sixty-two days, because the app reads two
 month files and a stamp older than that is about a line it can no longer see.
-The other four are answers and are kept until you change them: an "off" dropped
-after two months would put the app back in your login items. A seventh key is a
-decision somebody writes down, not a line somebody adds.
+The other four are answers and are kept until you change them, because your
+answer is yours. The launch-at-login one drives nothing: what starts the app at
+login is the login item macOS holds, and the switch shows what macOS says. A
+seventh key is a decision somebody writes down, not a line somebody adds.
 
 ## The note beside the document
 

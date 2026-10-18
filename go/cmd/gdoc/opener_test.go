@@ -70,25 +70,44 @@ func openerSeams(t *testing.T, osName string, bundleThere, lockHeld bool) (*open
 
 // The eight combinations of the three questions. One of them starts the app,
 // and it is the one where all three say yes.
+//
+// A ninth row for the lock gdoc cannot ask about: a lock path that is not
+// reachable, because a plain file sits where the presence directory goes. The
+// kernel answers neither free nor held there, and not knowing never resolves
+// to starting another process, which is the rule lockIsFree's comment states.
+// A row for it because the branch that holds it is one line: without this the
+// line could return true and the suite would still be green, and gdoc would
+// run `open` on a guess.
 func TestTheOpenerAsksThreeThingsAndRunsOpenGOnce(t *testing.T) {
 	for _, row := range []struct {
-		name        string
-		osName      string
-		bundleThere bool
-		lockHeld    bool
-		opens       bool
+		name           string
+		osName         string
+		bundleThere    bool
+		lockHeld       bool
+		lockUnreadable bool
+		opens          bool
 	}{
-		{"macOS, installed, not running", "darwin", true, false, true},
-		{"macOS, installed, running", "darwin", true, true, false},
-		{"macOS, no app, no lock", "darwin", false, false, false},
-		{"macOS, no app, lock held", "darwin", false, true, false},
-		{"linux, installed, not running", "linux", true, false, false},
-		{"linux, installed, running", "linux", true, true, false},
-		{"linux, no app, no lock", "linux", false, false, false},
-		{"linux, no app, lock held", "linux", false, true, false},
+		{name: "macOS, installed, not running", osName: "darwin", bundleThere: true, opens: true},
+		{name: "macOS, installed, running", osName: "darwin", bundleThere: true, lockHeld: true},
+		{name: "macOS, no app, no lock", osName: "darwin"},
+		{name: "macOS, no app, lock held", osName: "darwin", lockHeld: true},
+		{name: "linux, installed, not running", osName: "linux", bundleThere: true},
+		{name: "linux, installed, running", osName: "linux", bundleThere: true, lockHeld: true},
+		{name: "linux, no app, no lock", osName: "linux"},
+		{name: "linux, no app, lock held", osName: "linux", lockHeld: true},
+		{name: "macOS, installed, the lock cannot be opened", osName: "darwin", bundleThere: true, lockUnreadable: true},
 	} {
 		t.Run(row.name, func(t *testing.T) {
 			rec, bundle, lock := openerSeams(t, row.osName, row.bundleThere, row.lockHeld)
+			if row.lockUnreadable {
+				// A file where the directory goes, so opening the lock under
+				// it is ENOTDIR for every user, root included. A mode nobody
+				// may read would be the other way to say this, and root reads
+				// it anyway.
+				if err := os.WriteFile(filepath.Dir(lock), []byte("not a directory"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
 
 			openPresenceApp()
 
@@ -102,7 +121,7 @@ func TestTheOpenerAsksThreeThingsAndRunsOpenGOnce(t *testing.T) {
 			// And it creates nothing. The lock file is the app's to make: a
 			// gdoc that made it would be writing into the record's directory
 			// about a question it only asked.
-			if _, err := os.Stat(lock); !row.lockHeld && !os.IsNotExist(err) {
+			if _, err := os.Stat(lock); !row.lockHeld && !row.lockUnreadable && !os.IsNotExist(err) {
 				t.Errorf("%s was made by the opener: %v", lock, err)
 			}
 		})

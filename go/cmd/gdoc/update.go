@@ -32,6 +32,12 @@ import (
 // grant the run opens, so it is also the whole of what the run may reach.
 const updateRepo = "nhusnullin/gdoc"
 
+// updateCommand is this command's name, as the table spells it and as the
+// dispatcher reads it. One constant because two files name it: the table
+// below, and main.go, which leaves the opener to this command because this is
+// the command that replaces the app's bundle.
+const updateCommand = "update"
+
 // releasesURL is the one call gdoc makes on api.github.com, and it asks for
 // the biggest page GitHub gives.
 //
@@ -315,8 +321,13 @@ func appHere(on bool) (bool, []string) {
 // wrong into a warning naming both the app and the binary, so a person reads
 // which of the two went back.
 //
-// TestRollbackWithThePresenceOnSwapsBoth and
-// TestRollbackWithNoPreviousAppWarnsAndKeepsIt.
+// The app that went back is then opened, where it is not already running, for
+// the same reason an install opens the one it placed and through the same one
+// call in the run.
+//
+// TestRollbackWithThePresenceOnSwapsBoth,
+// TestRollbackWithNoPreviousAppWarnsAndKeepsIt and
+// TestAnUpdateOpensTheAppItPlacedAndNotTheOneItReplaces.
 func rollbackPresence(data updateData, warns []string) (updateData, []string) {
 	dest, err := presenceBundle()
 	if err != nil {
@@ -653,11 +664,15 @@ func installDecided(ctx context.Context, reach plain, chosen update.Release, des
 // The app that was just placed is then opened, where it is not already
 // running: an install is a running app, and nothing on the step line asks a
 // person to go and open anything. It is the same opener every other command
-// calls and it is called once, which is why the seam has two callers and no
-// third: TestTheOneProgramOpensOnlyTheExtensionAndTheApp in go/boundary.
+// calls, which is why the seam has two callers and no third:
+// TestTheOneProgramOpensOnlyTheExtensionAndTheApp in go/boundary. It is
+// called once in a run, because the dispatcher leaves this command's opener
+// to this command: a start-line open would have started the bundle this run
+// then renamed away.
 //
-// TestAPresenceFailureIsAWarningNamingBothPathsAndTheBinaryIsUpdated and
-// TestAFirstInstallOpensTheAppAndTellsNobodyToOpenIt.
+// TestAPresenceFailureIsAWarningNamingBothPathsAndTheBinaryIsUpdated,
+// TestAFirstInstallOpensTheAppAndTellsNobodyToOpenIt and
+// TestAnUpdateOpensTheAppItPlacedAndNotTheOneItReplaces.
 func withPresence(got fetched, rel update.Release, data updateData, warns []string, pr *progress) (updateData, []string) {
 	dest, err := presenceBundle()
 	if err != nil {

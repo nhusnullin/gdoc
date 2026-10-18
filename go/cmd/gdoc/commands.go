@@ -487,7 +487,7 @@ func commands() []command {
 			},
 		},
 		{
-			name:  "update",
+			name:  updateCommand,
 			group: groupAccount,
 			flags: []flag{
 				{"--check", kindNone, needOptional, "say what a run would take, and write nothing"},

@@ -141,7 +141,9 @@ after an update. Decided 2026-10-17, DECISIONS.md, the panel entry.
 **The app opens itself.** Under the setting, on macOS, a gdoc command whose
 run is recorded opens `~/Applications/GdocPresence.app` with `/usr/bin/open
 -g` when the bundle is there and the app does not hold its lock, and does not
-wait; `gdoc update` does the same once after it places the bundle. The app
+wait. Every command but `gdoc update`, which is the one that moves the bundle:
+it opens the app itself once, after it placed or rolled it back, so one run
+opens the app once and never the build it is replacing. The app
 holds `flock` on `presence/app.lock` for its life; gdoc asks the lock without
 blocking and reads no byte. Launch at login is off until the person turns the
 HEALTH switch on; no run registers it by itself. Decided 2026-10-18,
@@ -782,10 +784,10 @@ skills and Claude Desktop all run the same file, and `gdoc update` updates all
 three. The extension travels as a template in the zip, `mcpb/manifest.json`,
 with two placeholders for the path and the version, because the settings live in
 Claude Desktop's own form rather than in a file a person edits. macOS only, and
-the one program gdoc runs is `/usr/bin/open` on the extension file it has just
-written, and on nothing else: the presence app is never one of them, so its
-first launch is the person's. Added 2026-10-03, DECISIONS.md, the app
-2026-10-17.
+the one program gdoc runs is `/usr/bin/open`: on the extension file it has just
+written, and, under the `presence` setting, on the app bundle as the entry above
+says. On nothing else. Added 2026-10-03, DECISIONS.md, the app 2026-10-17, the
+opener 2026-10-18.
 
 **The skills travel as a Claude Code plugin.** This repository carries
 `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`, so it is
