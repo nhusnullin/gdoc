@@ -198,8 +198,8 @@ struct SettingsRowView: View {
   }
 
   /// `.row.hasact` pulls a row's value in to make room; a row with nothing
-  /// on its right keeps the content edge, which is the edge every time in
-  /// TODAY is on. An empty box here is not nothing: the row's own 8 pt
+  /// on its right keeps the content edge, which is the edge every value in
+  /// the panel is on. An empty box here is not nothing: the row's own 8 pt
   /// column gap goes with it, and every version, mark and keystroke this
   /// group drew sat 8 pt left of every other value in the panel.
   /// testAValueEndsWhereEveryOtherValueEnds.

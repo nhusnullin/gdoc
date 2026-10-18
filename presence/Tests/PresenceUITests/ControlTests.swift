@@ -337,8 +337,8 @@ final class ControlTests: XCTestCase {
     }
     XCTAssertEqual(
       makers.sorted(),
-      ["ActionButton.swift", "ButtonStyles.swift", "ChevronRow.swift", "SwitchView.swift"],
-      "a fifth component makes a button of its own")
+      ["ActionButton.swift", "ButtonStyles.swift", "SwitchView.swift"],
+      "a fourth component makes a button of its own")
   }
 
   /// The sheet asks the question in the shape the header asks it in.

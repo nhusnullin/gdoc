@@ -137,7 +137,7 @@ public struct StatusGlyph: View {
 /// A list with a pin in it keeps the slot on every row, so one pin does not
 /// move the titles under it. A list with no pin keeps none at all: an empty
 /// column is not nothing, and 8 pt of it on every row put DOCUMENTS 8 pt
-/// right of NOW, of TODAY and of its own section label. The panel has one
+/// right of NOW, of SETTINGS and of its own section label. The panel has one
 /// left edge, as it has one right edge.
 public enum PinColumn: Sendable, Equatable {
   /// Nothing in this list is pinned.

@@ -113,18 +113,18 @@ branch.
   `presence/Sources/PresenceCore/Days.swift` and its tests, the TODAY and
   Yesterday views and words; Modify: the scene fixtures, `RenderTests.swift`
 
-- [ ] DOCUMENTS lists the pinned documents first, newest pin first, then
+- [x] DOCUMENTS lists the pinned documents first, newest pin first, then
       the last five documents by their latest action, newest first, skipping
       any already listed as pinned and any hidden; one row per document id;
       no horizon count and no "N today" in the header, the label alone; the
       by-use ordering of M26 is withdrawn; a table test over pinned, recent,
       duplicate and hidden
-- [ ] TODAY and Yesterday are gone from the panel: the sections, their
+- [x] TODAY and Yesterday are gone from the panel: the sections, their
       folds, their words and their tests; NOW stays as it is
-- [ ] the scenes that showed TODAY and Yesterday are re-fixtured and their
+- [x] the scenes that showed TODAY and Yesterday are re-fixtured and their
       captions rewritten; e2 (midnight) becomes the scene of a pinned
       document surviving fourteen days
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 3: the pin is an icon
 

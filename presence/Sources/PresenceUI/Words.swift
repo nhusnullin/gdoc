@@ -162,14 +162,6 @@ public enum Words {
     return text.replacingCharacters(in: ...text.startIndex, with: String(first).uppercased())
   }
 
-  /// What a read-back came to. A false is a hollow check and not a failure:
-  /// the write happened and the second route did not confirm it, so the word
-  /// says that and nothing more.
-  public static func verified(_ state: Bool?) -> String? {
-    guard let state else { return nil }
-    return state ? "verified" : "not read back"
-  }
-
   /// One moment, as near or as far as it is: the clock inside the local day,
   /// Yesterday the day before, the weekday inside the week, and the date past
   /// it.

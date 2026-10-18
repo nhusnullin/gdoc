@@ -3,8 +3,8 @@
 // Five of the six fields are words the panel writes, and those are held in
 // PresenceUITests/FieldsTests. The one that moves a row from nowhere to
 // somewhere is `made`: a publish names no document until it has created
-// one, so without the field every publish that worked was a line in TODAY
-// with no document and no row in DOCUMENTS at all.
+// one, so without the field every publish that worked left no row in
+// DOCUMENTS at all.
 
 import Foundation
 import XCTest
@@ -22,7 +22,6 @@ final class FieldsTests: XCTestCase {
   // says.
   func testAPublishedRowTakesItsIdFromMade() throws {
     let at = try moment("2026-10-17T15:00:00Z")
-    let here = try amsterdam()
     let published = [
       start(at: "2026-10-17T14:29:00Z", command: "publish", run: "p1", doc: nil),
       end(
@@ -30,13 +29,10 @@ final class FieldsTests: XCTestCase {
         verified: true, title: "Chapter 4", made: chapter4),
     ]
 
-    let documents = Documents.fold(published, now: at, calendar: here, alive: { _ in false })
+    let documents = Documents.fold(published, now: at, alive: { _ in false })
     XCTAssertEqual(documents.rows.map(\.doc), [chapter4], "the created document is the row")
     XCTAssertEqual(documents.rows.first?.title, "Chapter 4")
     XCTAssertEqual(documents.rows.first?.state, .done)
-
-    let days = Days.fold(published, now: at, calendar: here, alive: { _ in false })
-    XCTAssertEqual(days.today.map(\.doc), [chapter4], "the log row names it too")
 
     let now = Now.fold(published, now: at, alive: { _ in false })
     XCTAssertEqual(
@@ -49,10 +45,8 @@ final class FieldsTests: XCTestCase {
         stop: "network"),
     ]
     XCTAssertTrue(
-      Documents.fold(rolledBack, now: at, calendar: here, alive: { _ in false }).rows.isEmpty,
+      Documents.fold(rolledBack, now: at, alive: { _ in false }).rows.isEmpty,
       "a rollback created nothing, so there is no document to put in the list")
-    let lost = Days.fold(rolledBack, now: at, calendar: here, alive: { _ in false })
-    XCTAssertEqual(lost.today.map(\.doc), [nil], "the log keeps the row and names no document")
   }
 
   // A document remembers the Claude Code session its latest `via: code` run
@@ -64,7 +58,6 @@ final class FieldsTests: XCTestCase {
   // wrote the field.
   func testARowRemembersTheSessionOfItsLatestCodeRun() throws {
     let at = try moment("2026-10-17T15:00:00Z")
-    let here = try amsterdam()
     let first = "0199c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d"
     let second = "0199dead-beef-4a8b-9c0d-1e2f3a4b5c6d"
 
@@ -87,7 +80,7 @@ final class FieldsTests: XCTestCase {
         at: "2026-10-17T11:00:00Z", command: "reply", run: "r3", doc: policy, via: "chat",
         verified: true, title: "The policy")
 
-    let rows = Documents.fold(events, now: at, calendar: here, alive: { _ in false }).rows
+    let rows = Documents.fold(events, now: at, alive: { _ in false }).rows
     XCTAssertEqual(
       rows.first(where: { $0.doc == chapter4 })?.session, second,
       "the session of the latest Claude Code run is the one the row remembers")
@@ -104,7 +97,6 @@ final class FieldsTests: XCTestCase {
   // likely to go back to the session for.
   func testAPublishedDocumentRemembersTheSessionItWasPublishedFrom() throws {
     let at = try moment("2026-10-17T15:00:00Z")
-    let here = try amsterdam()
     let session = "0199c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d"
 
     let events = [
@@ -116,7 +108,7 @@ final class FieldsTests: XCTestCase {
         ok: true, verified: true, title: "Q3 plan", made: chapter4),
     ]
 
-    let rows = Documents.fold(events, now: at, calendar: here, alive: { _ in false }).rows
+    let rows = Documents.fold(events, now: at, alive: { _ in false }).rows
     XCTAssertEqual(rows.map(\.doc), [chapter4], "the publish made the one row")
     XCTAssertEqual(
       rows.first?.session, session,
@@ -124,11 +116,10 @@ final class FieldsTests: XCTestCase {
   }
 
   // A hold the sign-in changed under is dropped, which is a fourth ending
-  // and not a fourth kind of row: the card goes, the document stops being
-  // held, and TODAY carries the one line that says it closed.
-  func testADroppedHoldLeavesNoCardAndOneRow() throws {
+  // and not a fourth kind of row: the card goes, and the document stops
+  // being held.
+  func testADroppedHoldLeavesNoCardAndNoRow() throws {
     let at = try moment("2026-10-17T17:00:00Z")
-    let here = try amsterdam()
     let events = [
       hold(at: "2026-10-17T16:20:00Z", run: "h1", doc: policy, id: "h_1"),
       holdEnd(at: "2026-10-17T16:41:00Z", kind: .dropped, run: "h1", doc: policy, id: "h_1"),
@@ -138,12 +129,9 @@ final class FieldsTests: XCTestCase {
       Now.fold(events, now: at, alive: { _ in true }).holds.isEmpty,
       "the hold is gone, so the card is gone")
     XCTAssertTrue(
-      Documents.fold(events, now: at, calendar: here, alive: { _ in true }).rows.isEmpty,
+      Documents.fold(events, now: at, alive: { _ in true }).rows.isEmpty,
       "a hold that ended is no open action, and a hold alone is no other action either")
 
-    let days = Days.fold(events, now: at, calendar: here, alive: { _ in true })
-    XCTAssertEqual(days.today.map(\.kind), [.holdClosed, .holdRaised], "newest first")
-    XCTAssertEqual(days.today.first?.ending, .dropped)
     XCTAssertEqual(
       HoldEnding.allCases, [.released, .expired, .landed, .dropped],
       "the four ways a hold stops waiting, which are the record's own four kinds")

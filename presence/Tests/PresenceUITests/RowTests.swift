@@ -66,18 +66,15 @@ final class RowTests: XCTestCase {
   // `.row{min-height:32px}`, `.row.two{min-height:44px}`,
   // `.row.compact{min-height:28px}`, and the document row is a two-line row.
   func testRowHeightsAreTheGrid() throws {
-    XCTAssertEqual(RowShape.allCases, [.plain, .two, .compact, .doc, .more])
+    XCTAssertEqual(RowShape.allCases, [.plain, .two, .compact, .doc])
     XCTAssertEqual(RowShape.plain.minHeight, 32)
     XCTAssertEqual(RowShape.two.minHeight, 44)
     XCTAssertEqual(RowShape.compact.minHeight, 28)
     XCTAssertEqual(RowShape.doc.minHeight, 44)
-    XCTAssertEqual(RowShape.more.minHeight, 28)
     XCTAssertEqual(RowShape.two.verticalPadding, 6)
     XCTAssertEqual(RowShape.plain.verticalPadding, 0)
 
-    let drawn: [RowShape: CGFloat] = [
-      .plain: 32, .two: 44, .compact: 28, .doc: 44, .more: 28,
-    ]
+    let drawn: [RowShape: CGFloat] = [.plain: 32, .two: 44, .compact: 28, .doc: 44]
     for (shape, height) in drawn {
       let row = RowView(
         shape, glyph: .check, tone: .ok, title: twenty,
@@ -103,7 +100,6 @@ final class RowTests: XCTestCase {
     XCTAssertEqual(RowShape.doc.subLines, 2)
     XCTAssertEqual(RowShape.plain.subLines, 1, "a one-line row has no second line")
     XCTAssertEqual(RowShape.compact.subLines, 1)
-    XCTAssertEqual(RowShape.more.subLines, 1)
 
     // The hold's own sub-line, as scene e3 draws it.
     let held = "Proposal held by rule Unread target · waiting in Desktop chat"
@@ -256,21 +252,27 @@ final class RowTests: XCTestCase {
       "so the artwork inside it ends on the row's own edge, where a value ends")
   }
 
-  // A chevron sits in the middle of the row its words are in.
+  // Whatever is at the trailing edge of a one-line row sits in the middle
+  // of it.
   //
-  // `.row-chevron` is one 28 pt row with the words on the left and a 12 pt
-  // chevron on the right, and a chevron a quarter of a row below the line it
-  // belongs to reads as a mark on an empty line.
-  func testTheChevronIsLevelWithItsWords() throws {
-    for scheme in [ColorScheme.dark, .light] {
-      let row = ChevronRow("Show 3 more")
-      let words = try inkBand(row, scheme: scheme, from: 0, to: 160)
-      let chevron = try inkBand(row, scheme: scheme, from: 280, to: Grid.panelWidth)
-      let middle = { (band: ClosedRange<CGFloat>) in (band.lowerBound + band.upperBound) / 2 }
-      XCTAssertEqual(
-        middle(chevron), middle(words), accuracy: 1,
-        "the chevron is \(middle(chevron) - middle(words)) pt off its words in \(scheme)")
-    }
+  // A one-line row has nothing to hang its three columns from, so they are
+  // centred: a 24 pt icon in a 28 pt row drawn a quarter of a row under its
+  // words reads as a mark on an empty line. The SETTINGS row with an icon
+  // on it is the one the panel draws today.
+  func testAOneLineRowCentresWhatIsOnIt() throws {
+    let drawn = try probeList(
+      RowView(
+        .compact, glyph: .blank, title: twenty,
+        trailing: { ActionButton(.down, tip: Tips.installExtension) }),
+      scheme: .dark)
+    let row = try XCTUnwrap(drawn.first { $0.name == "row.compact" })
+    let trailing = try XCTUnwrap(drawn.first { $0.name == "row.trailing" })
+
+    XCTAssertEqual(trailing.size.height, Grid.actionSize, "the icon's own box")
+    XCTAssertEqual(
+      trailing.origin.y + trailing.size.height / 2,
+      row.origin.y + row.size.height / 2, accuracy: 0.5,
+      "a one-line row centres what is on its right")
   }
 
   // One right edge for every value in the panel.
@@ -309,9 +311,10 @@ final class RowTests: XCTestCase {
     }
   }
 
-  // `.section-label{height:28px;text-transform:uppercase}` with its count
-  // on the right in ordinary letters.
-  func testASectionLabelIs28AndUppercaseWithTheCount() throws {
+  // `.section-label{height:28px;text-transform:uppercase}`, and the name of
+  // the section is the whole of what it says: the count on its right went
+  // with the lists it was a number about.
+  func testASectionLabelIs28AndUppercase() throws {
     XCTAssertEqual(Grid.sectionLabelHeight, 28)
     XCTAssertEqual(SectionLabel.text("Documents"), "DOCUMENTS")
     XCTAssertEqual(Typography.sectionLabel.size, 11)
@@ -324,23 +327,9 @@ final class RowTests: XCTestCase {
     XCTAssertEqual(SectionLabel.ink(in: .light), Palette.light.textSecondary)
 
     for scheme in [ColorScheme.dark, .light] {
-      let measured = try probes(
-        SectionLabel("Documents", count: "14 days · 11"),
-        scheme: scheme)
+      let measured = try probes(SectionLabel("Documents"), scheme: scheme)
       XCTAssertEqual(measured["section-label"]?.height, 28, "the label in \(scheme)")
       XCTAssertEqual(measured["section-label"]?.width, Grid.panelWidth)
-    }
-
-    // The count is ink on the screen and not a field nobody drew: the label
-    // with one carries more than the label without.
-    for scheme in [ColorScheme.dark, .light] {
-      let bare = try inkWeight(
-        SectionLabel("Documents").frame(width: Grid.panelWidth), scheme: scheme,
-        side: Grid.panelWidth)
-      let counted = try inkWeight(
-        SectionLabel("Documents", count: "14 days · 11").frame(width: Grid.panelWidth),
-        scheme: scheme, side: Grid.panelWidth)
-      XCTAssertGreaterThan(counted, bare, "the count reached the screen in \(scheme)")
     }
 
     // `.section:first-of-type{margin-top:0;padding-top:0;border-top:0}`: the
@@ -349,7 +338,7 @@ final class RowTests: XCTestCase {
     let first = try probes(
       SectionView("Now", isFirst: true) { RowView(title: twenty) }, scheme: .dark)
     let later = try probes(
-      SectionView("Today") { RowView(title: twenty) }, scheme: .dark)
+      SectionView("Documents") { RowView(title: twenty) }, scheme: .dark)
     let firstHeight = try XCTUnwrap(first["section"]?.height)
     let laterHeight = try XCTUnwrap(later["section"]?.height)
     XCTAssertEqual(laterHeight - firstHeight, Grid.unit + 4, "8 pt of air and 4 pt of padding")
@@ -476,8 +465,8 @@ final class RowTests: XCTestCase {
 
   // MARK: the renders
 
-  /// The sheet: the five shapes, a section, a header and a quiet line, in
-  /// both appearances, so the layout is looked at once.
+  /// The sheet: the four shapes, a header, a quiet line and the two labels,
+  /// in both appearances, so the layout is looked at once.
   ///
   /// Every word on it is a scene's, through `SheetPieces`: the sheet is the
   /// one page with no record behind it, and a string written by hand here
@@ -486,9 +475,6 @@ final class RowTests: XCTestCase {
     let shots = try shotsDirectory()
     let labels = try SheetPieces.sectionLabels()
     let live = try SheetPieces.live()
-    let log = try SheetPieces.logRow()
-    let documentsCount = try SheetPieces.documentsCount()
-    let yesterday = try SheetPieces.yesterday()
     let rows = try SheetPieces.documentRows()
     let compact = try XCTUnwrap(
       SheetPieces.settings().first { $0.kind == .quit }, "no scene drew the Quit row")
@@ -497,18 +483,18 @@ final class RowTests: XCTestCase {
 
     for scheme in [ColorScheme.dark, .light] {
       let palette = Palette.of(scheme)
-      // The five row shapes, and the two labels as components of their own.
+      // The four row shapes, and the two labels as components of their own.
       //
       // A label over rows is a section, and a section's header makes a claim
-      // about what is under it: NOW over a log row and a SETTINGS row, or
-      // "14 days · 12" over two rows, is this page saying something no
-      // panel says. The pieces here are pieces, in the order
-      // `RowShape` names them, and the labels stand at the foot with nothing
-      // under them: testASheetPutsNoLabelOverRowsFromAnotherScene.
+      // about what is under it: NOW over a document row and a SETTINGS row
+      // is this page saying something no panel says. The pieces here are
+      // pieces, in the order `RowShape` names them, and the labels stand at
+      // the foot with nothing under them:
+      // testASheetPutsNoLabelOverRowsFromAnotherScene.
       let sheet = VStack(alignment: .leading, spacing: 0) {
         PanelHeader(model: header)
         RowView(.two, glyph: .dot, tone: .live, title: live.title, sub: live.sub)
-        RowView(.plain, glyph: .check, tone: .ok, title: log.title, value: log.value)
+        RowView(.plain, glyph: .check, tone: .ok, title: rows[0].title)
         RowView(.compact, glyph: .blank, title: compact.kind.label, value: compact.value)
         ForEach(rows) { row in
           RowView(
@@ -522,14 +508,13 @@ final class RowTests: XCTestCase {
               }
             })
         }
-        ChevronRow(yesterday, isOpen: false)
         QuietLine(quiet)
         // The two labels, each on its own and with air around it: stacked,
         // the first reads as a header over the second.
         Spacer(minLength: 2 * Grid.unit)
         SectionLabel(labels.now)
         Spacer(minLength: 2 * Grid.unit)
-        SectionLabel(labels.documents, count: documentsCount)
+        SectionLabel(labels.documents)
       }
       .frame(width: Grid.panelWidth)
       .padding(Grid.unit)

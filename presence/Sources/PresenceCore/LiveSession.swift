@@ -138,9 +138,9 @@ public enum Live {
   /// `Fold.inOrder` dedupes and then sorts, so it answers the same on an
   /// array it has already walked: a caller that ordered once and then asked
   /// here was sorting every line in two months of record a second time for
-  /// nothing. TODAY and DOCUMENTS both fold the events themselves and then
+  /// nothing. NOW and DOCUMENTS both fold the events themselves and then
   /// ask for the watches, and both are taken again on every tick, so that
-  /// second sort was two of the fifteen walks a redraw cost.
+  /// second sort was two of the walks a redraw cost.
   public static func sessions(
     ordered: [Event], now: Date, alive: (Int32) -> Bool
   ) -> [LiveSession] {

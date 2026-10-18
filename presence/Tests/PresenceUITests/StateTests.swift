@@ -17,26 +17,33 @@ import XCTest
 final class StateTests: XCTestCase {
   private let chapter4 = SceneDocuments.chapter4
 
-  /// The whole day is in the model, and the whole day is drawn.
+  /// Every row the fold hands over is drawn, and the fold is what decides
+  /// how many there are.
   ///
-  /// TODAY was eight rows with the rest behind a Show more until
+  /// DOCUMENTS drew the first five with the rest behind a Show more until
   /// 2026-10-18, and the word was the one piece of panel state a person's
-  /// press changed. Nothing is folded now: the fold hands over the day and
-  /// the list draws it.
-  func testTheWholeDayIsInTheModel() throws {
+  /// press changed. The five are the fold's own now: seven documents
+  /// written to today are five rows in the model, newest first, and the
+  /// list draws every one of them.
+  func testTheListTheFoldHandsOverIsTheListDrawn() throws {
+    let documents = [
+      SceneDocuments.chapter4, SceneDocuments.chapter5, SceneDocuments.policy,
+      SceneDocuments.northwind, SceneDocuments.partner, SceneDocuments.concept,
+      SceneDocuments.proposal,
+    ]
     var events: [Event] = []
-    for minute in 0..<11 {
-      let at = String(format: "2026-10-17T09:%02d:00Z", minute)
-      // Each line is its own call: the shared walk keeps one row per
-      // run and call, so eleven ends of one call would be one row.
+    for (index, doc) in documents.enumerated() {
+      let at = String(format: "2026-10-17T09:%02d:00Z", index)
       events.append(
-        event(at, .end, command: "reply", doc: chapter4, call: Int64(minute + 1), ok: true))
+        event(at, .end, command: "reply", doc: doc, call: Int64(index + 1), ok: true))
     }
 
     let drawn = try drawn(events, at: "2026-10-17T10:00:00Z")
-    let today = try XCTUnwrap(drawn.today)
-    XCTAssertEqual(today.rows.count, 11, "the day's rows are all in the model")
-    XCTAssertNil(today.empty, "a day with eleven rows says nothing about being empty")
+    let list = try XCTUnwrap(drawn.documents)
+    XCTAssertEqual(
+      list.rows.map(\.doc), documents.suffix(5).reversed(),
+      "the last five by their latest action, newest first")
+    XCTAssertNil(list.empty, "a list with five rows says nothing about being empty")
   }
 
   /// `.act.is-done` for one second: the state is the document and the moment
@@ -406,9 +413,6 @@ final class StateTests: XCTestCase {
       events, at: "2026-10-17T09:10:00Z",
       ui: UIState(hidden: [DocumentChoice(doc: chapter4, at: moment, title: "Ch 4")]))
     XCTAssertEqual(hidden.documents?.rows.count, 0, "a hidden document is not a row")
-    XCTAssertNil(hidden.documents?.count, "and the label counts no rows")
-    XCTAssertEqual(
-      hidden.today?.rows.count, 1, "TODAY still carries its run, because the log is the log")
   }
 
   /// A pinned document the record has no line for any more: the row is the
@@ -429,7 +433,7 @@ final class StateTests: XCTestCase {
       "the sub-line says where the note is and nothing about an action")
     XCTAssertEqual(
       row.actions.first { $0.kind == .openDoc }?.state, .live, "and its open action works")
-    XCTAssertEqual(panel.documents?.count, "14 days · 1", "the label counts it")
+    XCTAssertEqual(panel.documents?.rows.count, 1, "and it is the whole of the list")
   }
 
   /// A write a rule held, as gdoc writes it: one line, and no call.

@@ -118,8 +118,7 @@ final class RenderTests: XCTestCase {
       let panel = try XCTUnwrap(drawn.first { $0.name == "panel" })
       let header = try XCTUnwrap(drawn.first { $0.name == "header" })
       let sections = drawn.filter { $0.name == "section" }
-      XCTAssertEqual(
-        sections.count, 4, "e3 is NOW, DOCUMENTS, TODAY and SETTINGS")
+      XCTAssertEqual(sections.count, 3, "e3 is NOW, DOCUMENTS and SETTINGS")
       XCTAssertEqual(
         header.size.height + sections.map(\.size.height).reduce(0, +) + 2 * Grid.unit,
         panel.size.height,
@@ -168,24 +167,26 @@ final class RenderTests: XCTestCase {
   /// A list with no pin in it keeps the panel's one left edge.
   ///
   /// Every document row reserved the pin's slot, pinned or not, so DOCUMENTS
-  /// stood 10 pt right of NOW, of TODAY, of SETTINGS and of its own section
-  /// label on every screen in the set, with nothing drawn in the room it
-  /// took. The slot is the list's and not the shape's: scene e1 has a pin
-  /// and keeps it on every row, and no other scene draws one at all.
+  /// stood 10 pt right of NOW, of SETTINGS and of its own section label on
+  /// every screen in the set, with nothing drawn in the room it took. The
+  /// slot is the list's and not the shape's: scenes e1 and e2 have a pin and
+  /// keep it on every row, and no other scene draws one at all.
   func testOnlyAListWithAPinKeepsThePinsSlot() throws {
-    let pinned = try XCTUnwrap(Scenes.all.first { $0.id == "e1" })
-    let rows = try XCTUnwrap(try pinned.model().documents).rows
-    XCTAssertTrue(rows[0].isPinned, "e1's first row is the pinned one")
-    let kept = try probeList(try pinned.view(), scheme: .dark)
-      .filter { $0.name == "row.status" }
-    XCTAssertFalse(kept.isEmpty, "e1 drew no document row")
-    for column in kept {
-      XCTAssertEqual(
-        column.size.width, Grid.glyphSize + Grid.pinSize,
-        "every row of a list with a pin keeps the slot")
+    for id in ["e1", "e2"] {
+      let pinned = try XCTUnwrap(Scenes.all.first { $0.id == id })
+      let rows = try XCTUnwrap(try pinned.model().documents).rows
+      XCTAssertTrue(rows[0].isPinned, "\(id)'s first row is the pinned one")
+      let kept = try probeList(try pinned.view(), scheme: .dark)
+        .filter { $0.name == "row.status" }
+      XCTAssertFalse(kept.isEmpty, "\(id) drew no document row")
+      for column in kept {
+        XCTAssertEqual(
+          column.size.width, Grid.glyphSize + Grid.pinSize,
+          "every row of a list with a pin keeps the slot")
+      }
     }
 
-    for scene in Scenes.all where scene.id != "e1" {
+    for scene in Scenes.all where scene.id != "e1" && scene.id != "e2" {
       let model = try scene.model()
       guard let documents = model.documents, !documents.rows.isEmpty else { continue }
       XCTAssertFalse(
@@ -249,47 +250,31 @@ final class RenderTests: XCTestCase {
   /// is out: testTheSignOutQuestionPinsNothing.
   func testSettingsIsPinnedWhileASignInIsInFlight() throws {
     let waiting = try XCTUnwrap(Scenes.all.first { $0.id == "e8" }).model()
+    let empty = DocumentsSectionModel(rows: [], empty: nil, showsStrip: false)
     XCTAssertEqual(
-      waiting.sections.first?.id, PanelSection.settings([]).id,
-      "the sign-in's countdown and its address live in SETTINGS")
-    XCTAssertFalse(
-      waiting.sections.contains { if case .today = $0 { return true } else { return false } },
-      "an empty TODAY under a pinned SETTINGS is a label over one grey word")
+      waiting.sections.map(\.id),
+      [PanelSection.settings([]).id, PanelSection.documents(empty).id],
+      "the group first, and then the list: nothing is running on that machine")
 
     let firstRun = try XCTUnwrap(Scenes.all.first { $0.id == "e5" }).model()
-    XCTAssertFalse(
-      firstRun.sections.contains { if case .today = $0 { return true } else { return false } },
-      "nothing has happened on a machine with no token, so TODAY says nothing")
+    XCTAssertEqual(
+      firstRun.sections.first?.id, PanelSection.settings([]).id,
+      "nothing works without a sign-in, so the group is above everything there too")
   }
 
   /// The one screen the second morning took off the pinned list: a token
   /// that works, and Sign out asking its question in the header. Nothing
   /// about the group is what that screen is for, so it stays at the foot
-  /// and the day's own rows keep the space above it.
+  /// and the documents keep the space above it.
   func testTheSignOutQuestionPinsNothing() throws {
     let asking = try XCTUnwrap(Scenes.all.first { $0.id == "e10" }).model()
     XCTAssertNotNil(asking.header.question, "e10 is the screen the question is out on")
     XCTAssertEqual(
       asking.sections.last?.id, PanelSection.settings([]).id,
       "the question is in the header, so SETTINGS is where it always is")
-    XCTAssertTrue(
-      asking.sections.contains { if case .today = $0 { return true } else { return false } },
-      "and TODAY is not dropped for a question that pins nothing")
-  }
-
-  /// One document is a document.
-  func testACountAgreesWithItsNoun() throws {
-    XCTAssertEqual(Sentences.count(1, "document"), "1 document")
-    XCTAssertEqual(Sentences.count(0, "document"), "0 documents")
-    XCTAssertEqual(Sentences.count(12, "action"), "12 actions")
-
-    let midnight = try XCTUnwrap(Scenes.all.first { $0.id == "e2" }).model()
-    let summaries = midnight.sections.compactMap { section -> String? in
-      if case .yesterday(let model) = section { return model.summary }
-      return nil
-    }
-    XCTAssertEqual(summaries.count, 1, "e2 is the screen Yesterday folds on")
-    XCTAssertFalse(summaries[0].contains("1 documents"), summaries[0])
+    XCTAssertEqual(
+      asking.sections.first?.id, PanelSection.now([]).id,
+      "and NOW keeps the top for a question that pins nothing")
   }
 
   /// The rows of SETTINGS never move, whichever screen they are on.
@@ -331,7 +316,7 @@ final class RenderTests: XCTestCase {
       "the block's shadow fell on the plate, so the stack was not composited")
   }
 
-  /// Scene e1's list: six names that are still six names once the middle is
+  /// Scene e1's list: six rows that are still six names once the middle is
   /// cut out of them.
   ///
   /// A row draws the head with an ellipsis after it and the tail whole, so
@@ -339,40 +324,47 @@ final class RenderTests: XCTestCase {
   /// and the list reads as the same document six times. The fixture's six
   /// differ at the head and at the tail, and this counts the strings the
   /// rows draw rather than the titles they came from.
-  func testTheSixWorkingNotesOfE1DrawSixDifferentRows() throws {
+  func testTheSixRowsOfE1DrawSixDifferentStrings() throws {
     let scene = try XCTUnwrap(Scenes.all.first { $0.id == "e1" })
     let rows = try XCTUnwrap(scene.model().documents).rows
-    let notes = rows.filter { $0.title.contains("note") }
-    XCTAssertEqual(notes.count, 6, "e1 is six working notes under the day's own documents")
+    XCTAssertEqual(rows.count, 6, "e1 is the pinned note and the five gdoc touched last")
+    XCTAssertEqual(
+      Set(try scene.events().compactMap(Fold.subject)).count, 12,
+      "and its caption says how many the record holds")
 
-    let drawn = notes.map { drawnTitle($0.title) }
+    let drawn = rows.map { drawnTitle($0.title) }
     XCTAssertEqual(
       Set(drawn).count, 6,
       "the rows draw \(Set(drawn).count) different strings: \(drawn)")
   }
 
-  /// Scene r7's one row: the hold the person approved in the chat and the
-  /// reply it approved are one thing that happened.
-  func testTheApprovedHoldOfR7IsOneRow() throws {
-    let scene = try XCTUnwrap(Scenes.all.first { $0.id == "r7" })
-    let rows = try XCTUnwrap(scene.model().today).rows
-    let approved = rows.filter { $0.sub?.contains("approved by you in chat") == true }
-    XCTAssertEqual(approved.count, 1, "one row and not a Hold closed beside it")
-    XCTAssertEqual(approved.first?.title, "Reply · Altery Group Channel Management Policy")
-    XCTAssertEqual(approved.first?.value, "16:41")
-    XCTAssertEqual(approved.first?.sub, "approved by you in chat · verified")
-    XCTAssertFalse(
-      rows.contains { $0.title.hasPrefix("Hold closed") }, "the write carries the ending")
-  }
-
-  /// Scene e2's DOCUMENTS header: four rows from three days, so the header
-  /// is the stretch and the whole count. The old rule drew "1 today" over
-  /// those four rows, which counted one thing and listed another.
-  func testTheHeaderOfE2IsTheStretchAndTheWholeCount() throws {
+  /// Scene e2: the pin is what holds a document past the fourteen days.
+  ///
+  /// The wallet note was last written to twenty days before that morning,
+  /// so the horizon has let it go; the pin keeps its row, with the title
+  /// and the moment of that last action and no state a pin invented. The
+  /// four under it are the fortnight's own, newest first.
+  func testThePinOfE2OutlivesTheFortnight() throws {
     let scene = try XCTUnwrap(Scenes.all.first { $0.id == "e2" })
     let documents = try XCTUnwrap(scene.model().documents)
-    XCTAssertEqual(documents.rows.count, 4)
-    XCTAssertEqual(documents.count, "14 days · 4")
+    XCTAssertEqual(documents.rows.count, 5, "the pin and the four inside the fortnight")
+
+    let pinned = try XCTUnwrap(documents.rows.first)
+    XCTAssertEqual(pinned.doc, SceneDocuments.wallet)
+    XCTAssertTrue(pinned.isPinned)
+    XCTAssertEqual(pinned.title, "Wallet note: the partner shortlist")
+    XCTAssertEqual(
+      pinned.sub, "proposed 28 Sep · not in the hub",
+      "the last action it had, in the words every other row says one in")
+
+    // The same scene with nothing pinned: the document is gone, and the
+    // four that are left are the ones the fortnight carries.
+    let bare = PanelModel.build(
+      events: try scene.events(), facts: scene.facts, now: try scene.now(),
+      calendar: scene.calendar, alive: { _ in false })
+    XCTAssertEqual(
+      bare.documents?.rows.map(\.doc), documents.rows.dropFirst().map(\.doc),
+      "without the pin the list is the fortnight alone")
   }
 
   /// The green check of scene r3 is on the screen the caption names.
@@ -450,10 +442,10 @@ final class RenderTests: XCTestCase {
     XCTAssertFalse(scene.caption.contains("paused"), "the caption says what the row says")
   }
 
-  /// The same watch in the three sections that name it.
+  /// The same watch in both sections that name it.
   ///
   /// A reader of one screen compares them, so a watch the sign-in stopped is
-  /// stopped in DOCUMENTS and in TODAY as well, and no Stop icon is drawn
+  /// stopped in DOCUMENTS as well as in NOW, and no Stop icon is drawn
   /// anywhere on the screen: the model saying there is nothing to stop and
   /// the view drawing a live icon anyway is the one bug a probe catches and
   /// a field test does not.
@@ -469,11 +461,12 @@ final class RenderTests: XCTestCase {
       "DOCUMENTS said live while NOW said stopped")
     XCTAssertEqual(watched.tone, .dim, "and drew the live dot for a watch that is over")
 
-    let today = try XCTUnwrap(model.today, "e9 drew no TODAY")
-    let stops = today.rows.filter { $0.title.hasPrefix("Live stopped") }
     XCTAssertEqual(
-      stops.map(\.value), ["15:29", "14:40"],
-      "the watch the sign-in stopped is a row of the day like any other")
+      model.now.compactMap { item -> String? in
+        if case .live(_, let row, _, _) = item { return row.title } else { return nil }
+      },
+      ["Live stopped · Ch 5. Commercial Model: review draft v0.1"],
+      "and NOW says the same word over the same document")
 
     for scheme in [ColorScheme.dark, .light] {
       let drawn = try probes(try scene.view(), scheme: scheme)
@@ -483,9 +476,9 @@ final class RenderTests: XCTestCase {
   }
 
   /// A watch's counts, in the words the rest of the panel uses for those
-  /// writes. TODAY says Reply and DOCUMENTS says replied, so "answered" was
-  /// a third word for one thing, and the specification's own sentence names
-  /// the two it allows: "since, replied and proposed counts".
+  /// writes. DOCUMENTS says replied, so "answered" would be a second word
+  /// for one thing, and the specification's own sentence names the two it
+  /// allows: "since, replied and proposed counts".
   func testAWatchCountsItsWritesInTheWordsForThem() throws {
     let scene = try XCTUnwrap(Scenes.all.first { $0.id == "r4" })
     guard case .live(_, let row, _, _)? = try scene.model().now.last else {
@@ -493,35 +486,7 @@ final class RenderTests: XCTestCase {
     }
     XCTAssertEqual(row.sub, "since 13:10 · quiet 38 min · replied 1")
     XCTAssertFalse(row.stopped, "r4's watch is polling")
-
-    // And the same words where the watch is over, on the row that says so.
-    let stopped = try XCTUnwrap(Scenes.all.first { $0.id == "r9" })
-    let today = try XCTUnwrap(try stopped.model().today, "r9 drew no TODAY")
-    let last = try XCTUnwrap(
-      today.rows.first { $0.title.hasPrefix("Live stopped") }, "r9 drew no stopped watch")
-    XCTAssertEqual(last.sub, "5 h 30 min · replied 1")
-  }
-
-  /// A hold that stopped waiting is a moment and not a state.
-  ///
-  /// The row that raised it is written in the present tense, and scene r7
-  /// draws it under the write the person approved 21 minutes later: two rows
-  /// about one hold, one of them saying it is still waiting.
-  func testAHoldThatClosedStopsSayingItIsWaiting() throws {
-    let waiting = try XCTUnwrap(Scenes.all.first { $0.id == "r6" })
-    let open = try XCTUnwrap(
-      try waiting.model().today?.rows.first { $0.title.hasPrefix("Hold") },
-      "r6 drew no hold row")
-    XCTAssertEqual(open.sub, "Reply held by rule Dictated · waiting in Desktop chat")
-
-    let approved = try XCTUnwrap(Scenes.all.first { $0.id == "r7" })
-    let rows = try XCTUnwrap(try approved.model().today, "r7 drew no TODAY").rows
-    let closed = try XCTUnwrap(
-      rows.first { $0.title.hasPrefix("Hold") }, "r7 drew no hold row")
-    XCTAssertEqual(closed.sub, "Reply held by rule Dictated")
-    XCTAssertEqual(
-      rows.first?.sub, "approved by you in chat · verified",
-      "the row above it is the one that says how it ended")
+    XCTAssertEqual(Words.verb("reply")?.past, "replied", "the word the list says it in")
   }
 
   /// One title as a row draws it: the head cut to what the column shows,

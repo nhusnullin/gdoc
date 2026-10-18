@@ -27,24 +27,19 @@ final class IconTests: XCTestCase {
   func testTheIconSheetRenders() throws {
     XCTAssertEqual(
       Icon.allCases,
-      [
-        .gdocs, .md, .branch, .link, .done, .stop, .down, .signin, .signout, .x, .xmark,
-        .chevron, .pin,
-      ],
-      "the thirteen the panel draws, and no spare from the IC object")
+      [.gdocs, .md, .branch, .link, .done, .stop, .down, .signin, .signout, .x, .xmark, .pin],
+      "the twelve the panel draws, and no spare from the IC object")
 
     // `.act svg{width:16px;height:16px;stroke-width:1.25;stroke-linecap:round;
-    // stroke-linejoin:round}`, and `.row-chevron svg`, which is the one at 12.
+    // stroke-linejoin:round}`. Every icon left is one of those: the 12 pt
+    // one was the chevron of a Show more row.
     XCTAssertEqual(IconShape.stroke, 1.25)
     XCTAssertEqual(IconShape.style.lineWidth, 1.25)
     XCTAssertEqual(IconShape.style.lineCap, .round)
     XCTAssertEqual(IconShape.style.lineJoin, .round)
-    for icon in Icon.allCases where icon != .chevron {
+    for icon in Icon.allCases {
       XCTAssertEqual(icon.side, 16, "\(icon) is a 16 px icon")
     }
-    XCTAssertEqual(
-      Icon.chevron.side, 12,
-      "`.row-chevron svg` is 12 px on a 12 viewBox, which the screens file wins on")
 
     for icon in Icon.allCases {
       let path = IconShape(icon).path(in: CGRect(x: 0, y: 0, width: icon.side, height: icon.side))

@@ -169,7 +169,7 @@ enum Scenes {
     (
       "rows",
       "The header with the version, the update icon, the account and Sign out; then the "
-        + "five row shapes, the chevron, the quiet line, and the two labels as pieces."
+        + "four row shapes, the quiet line, and the two labels as pieces."
     ),
     (
       "cards",
@@ -263,9 +263,9 @@ enum Scenes {
       caption:
         "Three writes landed and were verified: the restyle of 10:12 from the terminal, "
         + "the comment of 11:38 from Claude Code and the reply of 11:40 from the "
-        + "terminal, which is why DOCUMENTS says three. The stuck card stays until the "
-        + "publish is run again, and Copy link on the first row is half a second into "
-        + "its green check.",
+        + "terminal, which is the three documents DOCUMENTS lists. The stuck card stays "
+        + "until the publish is run again, and Copy link on the first row is half a "
+        + "second into its green check.",
       fixture: "r3", moment: "2026-10-17T11:40:30Z", alive: [],
       facts: machine(),
       ui: UIState(copied: SceneDocuments.chapter5, copiedAt: copiedOnR3), appearance: nil),
@@ -300,7 +300,9 @@ enum Scenes {
       facts: machine(), ui: UIState(), appearance: nil),
     Scene(
       id: "r7", title: "The hold was approved in chat",
-      caption: "The card is gone, the reply is a row in TODAY, and the watch carries on.",
+      caption:
+        "The card is gone, the reply the person approved is what the policy's row now "
+        + "says, and the watch carries on.",
       fixture: "r7", moment: "2026-10-17T16:41:30Z", alive: [7200],
       facts: machine(), ui: UIState(), appearance: nil),
     Scene(
@@ -318,22 +320,23 @@ enum Scenes {
     Scene(
       id: "r9", title: "You stopped the watch",
       caption:
-        "Nothing is running, so NOW is not drawn at all. The watch says you stopped it, "
-        + "because the wait's end said so, and the publish of 14:31 is a document because "
-        + "its end named the one it created. The day's log is drawn in full and "
-        + "yesterday is one row.",
+        "Nothing is running, so NOW is not drawn at all. The panel is the header, the "
+        + "documents of the last fortnight and SETTINGS, which is every screen with "
+        + "nothing going on. The publish of 14:31 is one of those documents because its "
+        + "end named the one it created.",
       fixture: "r9", moment: "2026-10-17T18:59:00Z", alive: [],
       facts: machine(latestStable: "v2.15.0"), ui: UIState(), appearance: nil),
     Scene(
-      id: "e1", title: "More than five documents, one of them pinned",
+      id: "e1", title: "Twelve documents, the pinned one and the last five",
       caption:
-        "Twelve documents, every one of them drawn: nothing scrolls and the panel is as "
-        + "long as its list comes out. The first row is the wallet note, pinned two "
-        + "days ago: a pin puts a document first however old its last action is, the "
-        + "pin is the tack before its state glyph, and every row of a list with a pin "
-        + "in it keeps that slot, so the titles under it break where they would "
-        + "anyway. Pin, Unpin and Hide from the list are the row's own menu, which no "
-        + "still can show.",
+        "The record holds twelve documents and the panel draws six: the pin, and then "
+        + "the five gdoc touched last. Nothing scrolls and nothing opens, so the list "
+        + "is the whole of what DOCUMENTS has to say. The first row is the wallet note, "
+        + "pinned two days ago and worked on eight days ago: without the pin it would "
+        + "be one of the five the list leaves out. The pin is the tack before its "
+        + "state glyph, and every row of a list with a pin in it keeps that slot, so "
+        + "the titles under it break where they would anyway. Pin, Unpin and Hide from "
+        + "the list are the row's own menu, which no still can show.",
       fixture: "e1", moment: "2026-10-17T18:10:00Z", alive: [],
       facts: machine(),
       ui: UIState(
@@ -344,15 +347,24 @@ enum Scenes {
         ]),
       appearance: nil),
     Scene(
-      id: "e2", title: "Midnight: yesterday folds into one row",
+      id: "e2", title: "The next morning: a pin outlives the fortnight",
       caption:
-        "The local day decides. Yesterday is one chevron row with its two counts, and "
-        + "nothing older is in the log at all. DOCUMENTS keeps its own fourteen days, "
-        + "which is why two rows there are older than yesterday. This is the next "
-        + "morning, and the one screen whose Launch at login is on: the person turned "
-        + "the switch on the evening before, which is the only way it is ever on.",
+        "The first row is a note nobody has touched for twenty days. A document leaves "
+        + "the list fourteen days after its last action, and a pin is what holds one "
+        + "there: the row keeps the title and the moment of that last action, and says "
+        + "nothing a pin invented. The four under it are the fortnight's own, newest "
+        + "first, across three days. This is also the one screen whose Launch at login "
+        + "is on: the person turned the switch on the evening before, which is the only "
+        + "way it is ever on.",
       fixture: "e2", moment: "2026-10-18T09:12:00Z", alive: [],
-      facts: machine(loginItem: .on), ui: UIState(), appearance: nil),
+      facts: machine(loginItem: .on),
+      ui: UIState(
+        pinned: [
+          DocumentChoice(
+            doc: SceneDocuments.wallet, at: Date(timeIntervalSince1970: 1_792_152_000),
+            title: "Wallet note: the partner shortlist")
+        ]),
+      appearance: nil),
     Scene(
       id: "e3", title: "Everything at once: the order of NOW",
       caption:
@@ -415,7 +427,7 @@ enum Scenes {
       caption:
         "The confirm names what will stop, in place of the header's own line, and waits "
         + "for the answer. A changed address is the app's own memory and never a line of "
-        + "the log.",
+        + "the record.",
       fixture: "e10", moment: "2026-10-17T18:00:00Z", alive: [7200, 7210],
       facts: machine(previousAccount: "nail@gmail.example"),
       ui: UIState(

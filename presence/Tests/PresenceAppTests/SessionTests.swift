@@ -300,9 +300,9 @@ final class SessionTests: XCTestCase {
 
     asked.count = 0
     _ = Drawn(
-      session.events, now: Date(), dismissed: session.ui.dismissed, calendar: Calendar.current,
+      session.events, now: Date(), dismissed: session.ui.dismissed,
       alive: { _ in asked.bump() })
-    XCTAssertEqual(redraw, asked.count, "one redraw is the four folds and nothing over them")
+    XCTAssertEqual(redraw, asked.count, "one redraw is the three folds and nothing over them")
   }
 
   // MARK: what a press reaches
@@ -373,13 +373,12 @@ final class SessionTests: XCTestCase {
     let ended = try Event.decode(
       line(kind: "end", command: "comments", call: 1, doc: Self.doc, extra: "\"ok\":true"))
     let events = [started, ended]
-    let calendar = Calendar(identifier: .gregorian)
 
     let between = Drawn(
-      events, now: ended.at.addingTimeInterval(10), dismissed: [], calendar: calendar,
+      events, now: ended.at.addingTimeInterval(10), dismissed: [],
       alive: { _ in false })
     let quiet = Drawn(
-      events, now: ended.at.addingTimeInterval(Live.gap + 1), dismissed: [], calendar: calendar,
+      events, now: ended.at.addingTimeInterval(Live.gap + 1), dismissed: [],
       alive: { _ in false })
 
     XCTAssertTrue(between.sessions.allSatisfy(\.isOpen), "a wait between two polls is a watch")
@@ -392,17 +391,14 @@ final class SessionTests: XCTestCase {
   /// `Words.duration` counts in whole minutes. A screen with neither on it
   /// is drawn again only when the record or the facts move.
   func testAQuietMinuteRedrawsAHoldAndAWatchAndNothingElse() throws {
-    let calendar = Calendar(identifier: .gregorian)
     let watching = try Event.decode(
       line(kind: "start", command: "comments", call: 1, doc: Self.doc, wait: true))
     let held = try Event.decode(
       line(
         kind: "held", command: "reply", call: nil, doc: Self.doc,
         extra: "\"hold\":\"h_ab12\",\"rule\":\"echo\",\"until\":\"\(stamp(inAnHour: true))\""))
-    // Pinned to the middle of a UTC day, because the two folds below are
-    // ten minutes apart and this calendar carries the machine's own zone: a
-    // moment the real clock handed over would move from TODAY to Yesterday
-    // between them for the ten minutes before every local midnight.
+    // Pinned to the middle of a UTC day, so the moments below are literals
+    // like every other moment in this file.
     let over = try Event.decode(
       line(
         kind: "end", command: "reply", call: 4, doc: Self.doc, extra: "\"ok\":true",
@@ -410,9 +406,9 @@ final class SessionTests: XCTestCase {
 
     for (what, events) in [("a watch", [watching]), ("a hold", [held])] {
       let now = Drawn(
-        events, now: watching.at, dismissed: [], calendar: calendar, alive: { _ in true })
+        events, now: watching.at, dismissed: [], alive: { _ in true })
       let later = Drawn(
-        events, now: watching.at.addingTimeInterval(60), dismissed: [], calendar: calendar,
+        events, now: watching.at.addingTimeInterval(60), dismissed: [],
         alive: { _ in true })
       XCTAssertNotEqual(later, now, "\(what) counts the minutes, so the screen is owed one")
     }
@@ -426,10 +422,10 @@ final class SessionTests: XCTestCase {
         extra: "\"hold\":\"h_cd34\",\"rule\":\"echo\",\"until\":\"2026-10-17T11:00:00Z\"",
         at: "2026-10-17T10:00:30Z"))
     let atTheWallMinute = Drawn(
-      [raised], now: raised.at.addingTimeInterval(30), dismissed: [], calendar: calendar,
+      [raised], now: raised.at.addingTimeInterval(30), dismissed: [],
       alive: { _ in true })
     let atItsOwnMinute = Drawn(
-      [raised], now: raised.at.addingTimeInterval(60), dismissed: [], calendar: calendar,
+      [raised], now: raised.at.addingTimeInterval(60), dismissed: [],
       alive: { _ in true })
     XCTAssertEqual(atTheWallMinute.counting, [0], "nothing is a minute old yet")
     XCTAssertEqual(atItsOwnMinute.counting, [1], "and a minute after it was raised, one is")
@@ -438,9 +434,9 @@ final class SessionTests: XCTestCase {
 
     // Nothing on this screen counts a stretch, so nothing moved.
     let still = Drawn(
-      [over], now: over.at, dismissed: [], calendar: calendar, alive: { _ in false })
+      [over], now: over.at, dismissed: [], alive: { _ in false })
     let stillLater = Drawn(
-      [over], now: over.at.addingTimeInterval(600), dismissed: [], calendar: calendar,
+      [over], now: over.at.addingTimeInterval(600), dismissed: [],
       alive: { _ in false })
     XCTAssertEqual(stillLater, still, "a finished day redraws on nothing")
     XCTAssertNil(still.counting)
@@ -777,23 +773,6 @@ final class SessionTests: XCTestCase {
     XCTAssertEqual(register.registrations, 1, "the press registered nothing again")
     XCTAssertEqual(register.unregistrations, 0, "and unregistered nothing")
     XCTAssertEqual(register.settingsOpened, 1, "it opened the pane that allows it")
-  }
-
-  /// The one fold a person can open stays open, because what is open lives
-  /// outside every view.
-  ///
-  /// Yesterday is that fold. DOCUMENTS and TODAY had a Show more of their
-  /// own until 2026-10-18, when the scrolling and the folds under it went
-  /// and the panel became as tall as its content.
-  func testTheFoldAPersonOpenedStaysOpen() throws {
-    try writeTheRecord([])
-    let session = made()
-    answered(session)
-
-    session.toggle(.yesterday)
-    XCTAssertTrue(session.ui.isOpen(.yesterday))
-    session.toggle(.yesterday)
-    XCTAssertFalse(session.ui.isOpen(.yesterday))
   }
 
   /// A redraw is decided by the folds the screen is drawn from, so a line

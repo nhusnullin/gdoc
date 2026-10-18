@@ -1,10 +1,10 @@
 // What the person did to the panel, as plain values.
 //
-// The panel has no state of its own inside a view. An expanded section, a
-// dismissed card, a question waiting for its second click and a tooltip held
-// open are all here, outside every view, for two reasons: a refold must not
-// close a section somebody opened, and a still of any of those states must
-// be renderable from a literal.
+// The panel has no state of its own inside a view. A dismissed card, a
+// question waiting for its second click and a tooltip held open are all
+// here, outside every view, for two reasons: a refold must not lose what a
+// person did, and a still of any of those states must be renderable from a
+// literal.
 //
 // Five of these outlive the process, in the app's own store, which is
 // PresenceApp/Preferences and the one room that writes anything down: the
@@ -14,13 +14,6 @@
 
 import Foundation
 import PresenceCore
-
-/// The three lists a person can open.
-public enum PanelList: String, Sendable, Equatable, CaseIterable {
-  case documents
-  case today
-  case yesterday
-}
 
 /// The one question on the screen, where there is one. Both wait for their
 /// answer, or for the panel to close; the clock never takes one away.
@@ -33,11 +26,9 @@ public enum PanelQuestion: Sendable, Equatable {
 
 /// Everything the panel remembers between two redraws.
 public struct UIState: Sendable, Equatable {
-  /// The hold ids and the `run|call` keys a person hid. The row in TODAY
-  /// stays; only the card goes.
+  /// The hold ids and the `run|call` keys a person hid. Only the card
+  /// goes; nothing is written either way.
   public var dismissed: Set<String>
-  /// The sections that are open.
-  public var expanded: Set<PanelList>
   /// The documents whose Stop has been signalled and whose end has not
   /// arrived, so the row draws a ring instead of a second Stop.
   public var pendingStop: Set<String>
@@ -73,7 +64,6 @@ public struct UIState: Sendable, Equatable {
 
   public init(
     dismissed: Set<String> = [],
-    expanded: Set<PanelList> = [],
     pendingStop: Set<String> = [],
     copied: String? = nil,
     copiedAt: Date? = nil,
@@ -86,7 +76,6 @@ public struct UIState: Sendable, Equatable {
     hidden: [DocumentChoice] = []
   ) {
     self.dismissed = dismissed
-    self.expanded = expanded
     self.pendingStop = pendingStop
     self.copied = copied
     self.copiedAt = copiedAt
@@ -99,9 +88,6 @@ public struct UIState: Sendable, Equatable {
     self.hidden = hidden
   }
 
-  /// Whether a list is open.
-  public func isOpen(_ list: PanelList) -> Bool { expanded.contains(list) }
-
   /// The same state with the icon strip gone.
   ///
   /// The four labels under the first document row are there to be read once.
@@ -112,17 +98,6 @@ public struct UIState: Sendable, Equatable {
     guard !stripSeen else { return self }
     var next = self
     next.stripSeen = true
-    return next
-  }
-
-  /// The same state with one list the other way round.
-  public func toggling(_ list: PanelList) -> UIState {
-    var next = self
-    if next.expanded.contains(list) {
-      next.expanded.remove(list)
-    } else {
-      next.expanded.insert(list)
-    }
     return next
   }
 

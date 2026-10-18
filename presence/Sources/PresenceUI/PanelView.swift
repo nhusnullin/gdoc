@@ -94,10 +94,7 @@ public struct PanelView: View {
 
   /// One section, with the hairline rule its place in the list decides.
   private func section(_ placed: PlacedSection) -> some View {
-    SectionView(
-      placed.section.label, count: count(of: placed.section),
-      isFirst: isFirst(placed.index)
-    ) {
+    SectionView(placed.section.label, isFirst: isFirst(placed.index)) {
       body(of: placed.section)
     }
   }
@@ -109,11 +106,6 @@ public struct PanelView: View {
     index == 0 && model.notice == nil && model.empty == nil
   }
 
-  private func count(of section: PanelSection) -> String? {
-    if case .documents(let documents) = section { return documents.count }
-    return nil
-  }
-
   @ViewBuilder
   private func body(of section: PanelSection) -> some View {
     switch section {
@@ -121,10 +113,6 @@ public struct PanelView: View {
       NowList(items: items, forced: model.forcedTooltip, actions: actions)
     case .documents(let documents):
       DocumentsList(model: documents, forced: model.forcedTooltip, actions: actions)
-    case .today(let log):
-      LogList(model: log, actions: actions)
-    case .yesterday(let yesterday):
-      YesterdayList(model: yesterday, actions: actions)
     case .settings(let rows):
       SettingsList(rows: rows, forced: model.forcedTooltip, actions: actions)
     }
@@ -263,45 +251,6 @@ private struct RowMenu: ViewModifier {
       Button(item.word) {
         held = false
         actions.perform(item.kind, item.target)
-      }
-    }
-  }
-}
-
-/// TODAY: the log, newest first, every row of it.
-struct LogList: View {
-  let model: LogSectionModel
-  let actions: PanelActions
-
-  var body: some View {
-    if let empty = model.empty {
-      QuietLine(empty)
-    } else {
-      VStack(alignment: .leading, spacing: 0) {
-        ForEach(model.rows) { row in
-          RowView(
-            row.sub == nil ? .plain : .two, glyph: row.glyph, tone: row.tone,
-            title: row.title, value: row.value, sub: row.sub)
-        }
-      }
-    }
-  }
-}
-
-/// Yesterday: one chevron row that opens in place.
-struct YesterdayList: View {
-  let model: YesterdayModel
-  let actions: PanelActions
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 0) {
-      ChevronRow(model.summary, isOpen: model.isOpen) { actions.toggle(.yesterday) }
-      if model.isOpen {
-        ForEach(model.rows) { row in
-          RowView(
-            row.sub == nil ? .plain : .two, glyph: row.glyph, tone: row.tone,
-            title: row.title, value: row.value, sub: row.sub)
-        }
       }
     }
   }

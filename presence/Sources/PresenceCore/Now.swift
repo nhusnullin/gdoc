@@ -18,8 +18,8 @@
 //     read-back did not confirm it, which is a hollow check and not a
 //     failure.
 //   - A start with no end whose pid is gone is stuck when it is a write
-//     started inside fourteen days, and otherwise an outcome TODAY reports
-//     as unknown. That is the bound the backlog item asked for: without it a
+//     started inside fourteen days, and otherwise an outcome nobody wrote
+//     down. That is the bound the backlog item asked for: without it a
 //     run killed with Ctrl-C sits in NOW for as long as the record keeps it.
 //
 // The clock, the kernel's answer about a pid and the person's dismissals come
@@ -112,8 +112,8 @@ public struct NowRun: Sendable, Equatable {
   }
 }
 
-/// A start whose process is gone and which NOW does not keep: TODAY reports
-/// it as an outcome nobody wrote down.
+/// A start whose process is gone and which NOW does not keep: the document
+/// it was about says the outcome is one nobody wrote down.
 public struct UnknownOutcome: Sendable, Equatable {
   public let run: String
   public let call: Int64
@@ -186,7 +186,7 @@ public enum Now {
   ]
 
   /// Fourteen days: how far back a start with no end may be and still be a
-  /// card rather than a line in TODAY.
+  /// card rather than a row of its document alone.
   public static let horizon: TimeInterval = 14 * 24 * 60 * 60
 
   /// The events into NOW.
@@ -267,10 +267,10 @@ public enum Now {
     let answered = failures.filter { cleared($0, by: everyStart) || dismissed.contains($0.key) }
     let open = failures.filter { !cleared($0, by: everyStart) && !dismissed.contains($0.key) }
 
-    // A stuck card that cleared or was dismissed leaves no card, and the row
-    // TODAY draws stays: a dismissal hides a card and rewrites nothing. Only
-    // the ones whose end never came are a row, because the others have one
-    // already.
+    // A stuck card that cleared or was dismissed leaves no card, and
+    // nothing in the record moves: a dismissal hides a card and rewrites
+    // nothing. Only the ones whose end never came are an outcome nobody
+    // wrote down, because the others have an end that said how it went.
     for write in answered where write.cause == .stopped {
       if let start = starts["\(write.run)|\(write.call)"] {
         unknown.append(outcome(start, titles: titles, calls: calls))
@@ -373,7 +373,7 @@ public enum Now {
   /// line's own where it named neither.
   ///
   /// It is the fold's own function and not a copy of it, because the card
-  /// here and the row in TODAY name one write, and a publish is the write
+  /// here and the row in DOCUMENTS name one write, and a publish is the write
   /// that makes the rule: handed no document, it has only the name its own
   /// lines carried, which is a step after the render or the end of a publish
   /// that worked.

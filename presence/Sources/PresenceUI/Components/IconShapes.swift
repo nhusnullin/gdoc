@@ -47,8 +47,6 @@ public enum Icon: String, Sendable, CaseIterable {
   case x
   /// Dismiss, bare: the stuck card's last icon.
   case xmark
-  /// The chevron of a Show more row.
-  case chevron
   /// The pin a document row carries while it is pinned, drawn at
   /// `Grid.pinSize` in the slot before the status glyph that a list with a
   /// pin in it keeps on every row.
@@ -56,9 +54,10 @@ public enum Icon: String, Sendable, CaseIterable {
 
   /// The CSS width of this icon, which is also its viewBox.
   ///
-  /// `.act svg` is 16; `.row-chevron svg` is the one at 12, on a 12 viewBox
-  /// of its own.
-  public var side: CGFloat { self == .chevron ? 12 : 16 }
+  /// `.act svg` is 16, and every icon the panel draws is one of those since
+  /// 2026-10-18: the 12 pt one was `.row-chevron svg`, and the row that
+  /// opened a longer list went with the lists that had one.
+  public var side: CGFloat { 16 }
 
   /// The icons a trailing edge draws as something to press. The pin is not
   /// one of them: it is a mark in a row's leading column, and Pin is a word
@@ -128,8 +127,6 @@ public enum Icon: String, Sendable, CaseIterable {
       ]
     case .xmark:
       return [.path("M4.5 4.5l7 7M11.5 4.5l-7 7")]
-    case .chevron:
-      return [.path("M3 4.5 6 7.5l3-3")]
     case .pin:
       // A tack seen from the side: a flat head and the needle under it. Two
       // shapes are all that survive at 8 pt, where a thumbtack's three
@@ -171,8 +168,7 @@ enum IconPart {
 
 /// One icon as a shape, in the box it is given.
 public struct IconShape: Shape {
-  /// `.act svg`'s and `.row-chevron svg`'s stroke-width, the same in both
-  /// appearances.
+  /// `.act svg`'s stroke-width, the same in both appearances.
   public static let stroke: CGFloat = 1.25
 
   /// `stroke-linecap:round;stroke-linejoin:round`.
@@ -201,8 +197,9 @@ public struct IconShape: Shape {
 
 /// One icon stroked in the colour the caller names, at its own size.
 ///
-/// The ink is handed in rather than taken from the palette, because `.act`
-/// and `.row-chevron` draw in different greys in the light appearance.
+/// The ink is handed in rather than taken from the palette, because an
+/// action's own grey is not every grey a 16 pt mark is drawn in: the pin in
+/// a row's leading column is the quietest of them.
 public struct IconView: View {
   public let icon: Icon
   public let ink: Swatch

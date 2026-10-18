@@ -72,13 +72,6 @@ extension Session {
     }
   }
 
-  /// One section opened or closed. A refold never closes it: what is open is
-  /// the person's and lives out here.
-  public func toggle(_ list: PanelList) {
-    ui = ui.toggling(list)
-    changed()
-  }
-
   // MARK: the four icons on a row
 
   /// The four labels under the first document row go after the first click
@@ -151,8 +144,8 @@ extension Session {
     changed()
   }
 
-  /// Hide one document from DOCUMENTS. Its rows in TODAY stay, because the
-  /// log is the log, and the next action gdoc finishes on it brings the row
+  /// Hide one document from DOCUMENTS. The record keeps every line of it,
+  /// and the next action gdoc finishes on that document brings the row
   /// back: nothing here unhides one.
   private func hide(_ doc: String?) {
     guard let doc else { return }

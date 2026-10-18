@@ -113,8 +113,7 @@ public final class Preferences: @unchecked Sendable {
     return Set(kept(now: now).keys)
   }
 
-  /// Hide one card. The row in TODAY stays: a dismissal hides a card and
-  /// rewrites nothing.
+  /// Hide one card. A dismissal hides a card and rewrites nothing.
   public func dismiss(_ key: String, at moment: Date = Date()) {
     lock.lock()
     defer { lock.unlock() }
@@ -182,8 +181,8 @@ public final class Preferences: @unchecked Sendable {
     forget(doc, under: .pinned)
   }
 
-  /// Hide one document from the list. The rows in TODAY stay: a hide hides
-  /// a row of DOCUMENTS and rewrites nothing.
+  /// Hide one document from the list. A hide hides a row of DOCUMENTS and
+  /// rewrites nothing.
   ///
   /// The id and the moment, and no title: a hide is read against that
   /// document's own actions and nothing draws the name of a row that is not

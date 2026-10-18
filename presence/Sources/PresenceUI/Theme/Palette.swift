@@ -81,8 +81,8 @@ public struct Palette: Sendable, Equatable {
   public let textTertiary: Swatch
 
   // `.act`'s own colour, which is --t3 in the dark block and a grey of its
-  // own in the light one, so an action icon is not the same grey as a
-  // chevron there.
+  // own in the light one, so an action icon is not the same grey as the
+  // words beside it there.
   public let actionIcon: Swatch
 
   // The hairlines, --hair and --hair-strong, each one device pixel wide.

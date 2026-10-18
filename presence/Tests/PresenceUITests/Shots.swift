@@ -114,8 +114,8 @@ func probes<V: View>(_ view: V, scheme: ColorScheme, width: CGFloat = Grid.panel
 }
 
 /// The same measurements in the order they were drawn, so a test can tell
-/// two reports of one name apart: a box inside a box is two `scrollbox`
-/// probes, and which of them carries a thumb is the thing under test.
+/// two reports of one name apart: two rows of one list are two `row.doc`
+/// probes, and which of them is which is the thing under test.
 @MainActor
 func probeList<V: View>(_ view: V, scheme: ColorScheme, width: CGFloat = Grid.panelWidth) throws
   -> [MetricProbe]
@@ -322,12 +322,6 @@ enum SheetPieces {
     return Array(rows.prefix(2))
   }
 
-  /// Scene r3's first log row: a write that landed and was read back.
-  static func logRow() throws -> LogRowModel {
-    let today = try XCTUnwrap(try scene("r3").model().today, "r3 drew no TODAY")
-    return try XCTUnwrap(today.rows.first, "r3's TODAY is empty")
-  }
-
   /// Scene r8's header: the mark, the version with a release to take, and
   /// the account that works. It is the one scene whose header carries every
   /// piece the line can hold at once.
@@ -335,22 +329,6 @@ enum SheetPieces {
     let header = try scene("r8").model().header
     XCTAssertNotNil(header.update, "r8 is the screen with a release to take")
     return header
-  }
-
-  /// Scene e1's DOCUMENTS header count.
-  static func documentsCount() throws -> String {
-    let model = try XCTUnwrap(try scene("e1").model().documents, "e1 drew no documents")
-    return try XCTUnwrap(model.count, "e1's DOCUMENTS has no count")
-  }
-
-  /// Scene e2's Yesterday: the words on the one chevron row the panel has
-  /// left. The Show more rows went with the scrolling on 2026-10-18, so the
-  /// fold of the day before is where the chevron is drawn now.
-  static func yesterday() throws -> String {
-    for section in try scene("e2").model().sections {
-      if case .yesterday(let model) = section { return model.summary }
-    }
-    throw XCTSkip("scene e2 folded no yesterday")
   }
 
   /// The two labels the rows sheet draws, out of the model that names
@@ -407,7 +385,6 @@ enum SheetPieces {
     let stuck = try self.stuck()
     let live = try self.live()
     let job = try self.job()
-    let documents = try documentsCount()
 
     let labels = try sectionLabels()
     let header = try self.header()
@@ -418,7 +395,6 @@ enum SheetPieces {
       stuck.card.title, stuck.card.reason,
       live.title, live.sub,
       job.title,
-      documents, try yesterday(),
       try quiet(),
       SignedInBanner.words, Scenes.signInURL,
     ]
@@ -437,8 +413,6 @@ enum SheetPieces {
     words += try documentRows().flatMap { row -> [String] in
       [row.title, row.sub] + row.actions.map(\.tip)
     }
-    let log = try logRow()
-    words += [log.title, log.value] + [log.sub].compactMap { $0 }
     words += ButtonWord.allCases.map(\.rawValue)
     words += StripLabel.allCases.map(\.rawValue)
     return words.filter { !$0.isEmpty }
@@ -465,17 +439,11 @@ func panelVocabulary() throws -> Set<String> {
       switch section {
       case .now: break
       case .documents(let documents):
-        words.formUnion([documents.count, documents.empty].compactMap { $0 })
+        words.formUnion([documents.empty].compactMap { $0 })
         for row in documents.rows {
           words.formUnion([row.title, row.sub])
           words.formUnion(row.actions.flatMap(actionWords))
         }
-      case .today(let log):
-        words.formUnion([log.empty].compactMap { $0 })
-        for row in log.rows { words.formUnion(logWords(row)) }
-      case .yesterday(let yesterday):
-        words.insert(yesterday.summary)
-        for row in yesterday.rows { words.formUnion(logWords(row)) }
       case .settings(let rows):
         for row in rows {
           words.formUnion([row.kind.label, row.value])
@@ -532,11 +500,6 @@ private func nowWords(_ item: NowItem) -> [String] {
   case .live(_, let row, let stop, _):
     return [row.title, row.sub] + (stop.map { [$0.tip] } ?? [])
   }
-}
-
-/// One log row's own strings.
-private func logWords(_ row: LogRowModel) -> [String] {
-  [row.title, row.value] + [row.sub].compactMap { $0 }
 }
 
 /// Every Swift file the panel is drawn by, so a test can state what the

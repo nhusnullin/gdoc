@@ -5,8 +5,8 @@
 // test can state, and a render adds only whether the pixels came out.
 //
 // It is built from three things and nothing else: the events, the facts
-// about the machine, and what the person did to the panel. The four folds
-// are taken here so the shell hands over a list of events and never four
+// about the machine, and what the person did to the panel. The three folds
+// are taken here so the shell hands over a list of events and never three
 // lists that could disagree with each other.
 //
 // Two words are this file's own, and both are the reading the app is allowed
@@ -104,19 +104,14 @@ public struct ActionModel: Sendable, Equatable, Identifiable {
 
 /// What the panel does when something is pressed.
 ///
-/// One function and one toggle, so a view that gains a button gains no
-/// knowledge of what the button reaches. The shell fills these in; every
-/// test and every still leaves them alone.
+/// One function, so a view that gains a button gains no knowledge of what
+/// the button reaches. The shell fills it in; every test and every still
+/// leaves it alone.
 public struct PanelActions {
   public var perform: (ActionKind, String?) -> Void
-  public var toggle: (PanelList) -> Void
 
-  public init(
-    perform: @escaping (ActionKind, String?) -> Void = { _, _ in },
-    toggle: @escaping (PanelList) -> Void = { _ in }
-  ) {
+  public init(perform: @escaping (ActionKind, String?) -> Void = { _, _ in }) {
     self.perform = perform
-    self.toggle = toggle
   }
 }
 
@@ -155,18 +150,6 @@ public struct DocumentRowModel: Sendable, Equatable, Identifiable {
   public let menu: [MenuItemModel]
 
   public var id: String { doc }
-}
-
-/// One row of TODAY or of Yesterday.
-public struct LogRowModel: Sendable, Equatable, Identifiable {
-  public let key: String
-  public let glyph: GlyphKind
-  public let tone: GlyphTone
-  public let title: String
-  public let value: String
-  public let sub: String?
-
-  public var id: String { key }
 }
 
 /// A question asked in place of a row: the words, what follows from them,
@@ -216,27 +199,13 @@ public struct SettingsRowModel: Sendable, Equatable, Identifiable {
   }
 }
 
-/// DOCUMENTS: its count and its rows, every one of which is drawn.
+/// DOCUMENTS: its rows, every one of which is drawn.
 public struct DocumentsSectionModel: Sendable, Equatable {
-  public let count: String?
   public let rows: [DocumentRowModel]
   /// The one line a panel with no documents says instead.
   public let empty: String?
   /// Whether the four labels are drawn under the first row.
   public let showsStrip: Bool
-}
-
-/// TODAY, or Yesterday opened.
-public struct LogSectionModel: Sendable, Equatable {
-  public let rows: [LogRowModel]
-  public let empty: String?
-}
-
-/// Yesterday: one chevron row that opens in place.
-public struct YesterdayModel: Sendable, Equatable {
-  public let summary: String
-  public let isOpen: Bool
-  public let rows: [LogRowModel]
 }
 
 /// The address said once at its full size, for five seconds after a sign-in.
@@ -329,8 +298,6 @@ public struct HeaderModel: Sendable, Equatable {
 public enum PanelSection: Sendable, Equatable, Identifiable {
   case now([NowItem])
   case documents(DocumentsSectionModel)
-  case today(LogSectionModel)
-  case yesterday(YesterdayModel)
   case settings([SettingsRowModel])
 
   /// The label over the section, as the screens file writes it.
@@ -338,8 +305,6 @@ public enum PanelSection: Sendable, Equatable, Identifiable {
     switch self {
     case .now: return "Now"
     case .documents: return "Documents"
-    case .today: return "Today"
-    case .yesterday: return "Yesterday"
     case .settings: return "Settings"
     }
   }
@@ -388,13 +353,6 @@ public struct PanelModel: Sendable, Equatable {
     return nil
   }
 
-  public var today: LogSectionModel? {
-    for section in sections {
-      if case .today(let model) = section { return model }
-    }
-    return nil
-  }
-
   /// Every sentence the panel writes under a title, which the render tests
   /// hold to the stuck card's eighty characters.
   public var reasons: [String] {
@@ -419,37 +377,30 @@ extension PanelModel {
     let nowFold = Now.fold(events, now: now, dismissed: ui.dismissed, alive: alive)
     let sessions = Live.sessions(events, now: now, alive: alive)
     let docs = Documents.fold(
-      events, now: now, calendar: calendar, pinned: ui.pinned, hidden: ui.hidden, alive: alive)
-    // The cards NOW is keeping are not rows TODAY writes as well: the
-    // horizon and the dismissals are the NOW fold's, so it is folded first
-    // and its keys are handed over.
-    let days = Days.fold(
-      events, now: now, calendar: calendar, carded: Set(nowFold.stuck.map(\.key)), alive: alive)
+      events, now: now, pinned: ui.pinned, hidden: ui.hidden, alive: alive)
 
     return build(
-      now: nowFold, sessions: sessions, days: days, documents: docs, facts: facts, ui: ui,
+      now: nowFold, sessions: sessions, documents: docs, facts: facts, ui: ui,
       at: now, calendar: calendar)
   }
 
   /// The same panel out of folds the caller already took.
   ///
-  /// Each of those four is a walk and a sort of every line the app holds, and
-  /// the app takes all four on every tick to decide whether anything moved.
-  /// Reading them again here made one redraw nine of those walks where four
-  /// would do, on the main thread, at one second apiece while the ring or
-  /// the sign-in countdown is moving. The folds and the words also share one
-  /// reading of the clock this way, so the glyph and the panel beside it
-  /// cannot describe two different moments.
+  /// Each of those three is a walk and a sort of every line the app holds,
+  /// and the app takes all three on every tick to decide whether anything
+  /// moved. Reading them again here made one redraw seven of those walks
+  /// where three would do, on the main thread, at one second apiece while
+  /// the ring or the sign-in countdown is moving. The folds and the words
+  /// also share one reading of the clock this way, so the glyph and the
+  /// panel beside it cannot describe two different moments.
   public static func build(
-    now nowFold: NowFold, sessions: [LiveSession], days: DaysFold, documents docs: DocumentsFold,
+    now nowFold: NowFold, sessions: [LiveSession], documents docs: DocumentsFold,
     facts: Facts, ui: UIState = UIState(), at now: Date, calendar: Calendar
   ) -> PanelModel {
     let words = Phrases(facts: facts, now: now, calendar: calendar)
     let items = nowItems(nowFold, sessions: sessions, facts: facts, ui: ui, words: words)
     let documents = documentsSection(
       docs, facts: facts, ui: ui, words: words, busy: !items.isEmpty)
-    let today = todaySection(days, ui: ui, words: words)
-    let yesterday = yesterdaySection(days, ui: ui, words: words)
     let settings = settingsRows(facts: facts)
     let header = self.header(
       facts: facts, ui: ui, now: now, stopping: stopping(nowFold, sessions: sessions))
@@ -468,15 +419,9 @@ extension PanelModel {
     if pinned { sections.append(.settings(settings)) }
     if !items.isEmpty { sections.append(.now(items)) }
     sections.append(.documents(documents))
-    // An empty TODAY under a pinned SETTINGS is a label over one grey word,
-    // between the person and the row they opened the panel for. NOW is
-    // already dropped when it is empty, and this is the same rule.
-    if !(pinned && today.rows.isEmpty) { sections.append(.today(today)) }
-    if let yesterday { sections.append(.yesterday(yesterday)) }
     if !pinned { sections.append(.settings(settings)) }
 
-    let bare =
-      items.isEmpty && documents.rows.isEmpty && today.rows.isEmpty && yesterday == nil
+    let bare = items.isEmpty && documents.rows.isEmpty
 
     return PanelModel(
       header: header,
@@ -537,8 +482,8 @@ extension PanelModel {
   /// The watches NOW draws: the open ones, and the ones a sign-in that
   /// stopped working ended, while it is still not working.
   ///
-  /// A watch Google refused the token on is over, and DOCUMENTS and TODAY
-  /// say so, but it is the one ending nobody asked for: signing in does not
+  /// A watch Google refused the token on is over, and DOCUMENTS says so,
+  /// but it is the one ending nobody asked for: signing in does not
   /// start it again, and NOW is where the panel keeps what is waiting on the
   /// person. Once the token works the row leaves, because then the day's log
   /// is the whole of it: testE9SaysTheWatchIsStoppedInEverySectionAndDrawsNoStop.
@@ -656,7 +601,6 @@ extension PanelModel {
         menu: menu(row))
     }
     return DocumentsSectionModel(
-      count: count(fold),
       rows: rows,
       // The hint is the first run's: it tells a person who has never
       // published how to start. With a write already running it tells
@@ -687,21 +631,6 @@ extension PanelModel {
     ]
   }
 
-  /// One rule, and one number in it: `3 today` where every row in the list
-  /// is from today, and `14 days · 12` where one of them is older.
-  ///
-  /// The number is the list's. A pinned row is one of them, however old it
-  /// is, and a hidden document is not one at all: both are rows of the list
-  /// or not, and the number counts the list. `1 today` over four rows from
-  /// three days, which is what the old rule drew on scene e2, is a count of
-  /// one thing over a list of another:
-  /// testTheDocumentsHeaderCountsTheWholeList.
-  private static func count(_ fold: DocumentsFold) -> String? {
-    guard !fold.rows.isEmpty else { return nil }
-    if fold.today == fold.rows.count { return "\(fold.today) today" }
-    return "14 days · \(fold.rows.count)"
-  }
-
   private static func glyph(for state: DocumentState) -> (kind: GlyphKind, tone: GlyphTone) {
     switch state {
     case .hold: return (.pause, .hold)
@@ -716,28 +645,6 @@ extension PanelModel {
     // for a row that is here because somebody pinned it.
     case .pinnedOnly: return (.blank, .quiet)
     }
-  }
-
-  // MARK: TODAY and Yesterday
-
-  private static func todaySection(_ fold: DaysFold, ui: UIState, words: Phrases)
-    -> LogSectionModel
-  {
-    LogSectionModel(
-      rows: fold.today.enumerated().map { words.logRow($1, index: $0) },
-      empty: fold.today.isEmpty ? Sentences.nothingYet : nil)
-  }
-
-  private static func yesterdaySection(_ fold: DaysFold, ui: UIState, words: Phrases)
-    -> YesterdayModel?
-  {
-    guard !fold.yesterday.isEmpty else { return nil }
-    let summary = fold.yesterdaySummary
-    return YesterdayModel(
-      summary: "\(Sentences.count(summary.actions, "action")) · "
-        + Sentences.count(summary.documents, "document"),
-      isOpen: ui.isOpen(.yesterday),
-      rows: fold.yesterday.enumerated().map { words.logRow($1, index: $0 + 1_000) })
   }
 
   // MARK: the one line about the app itself

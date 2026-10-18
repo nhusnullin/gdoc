@@ -181,7 +181,7 @@ public final class Session {
       dismissed: preferences.dismissals(now: clock()), stripSeen: preferences.stripSeen,
       pinned: preferences.pins, hidden: preferences.hides)
     self.facts = Facts.launching(appVersion: places.version)
-    self.drawn = Drawn([], now: clock(), dismissed: [], calendar: calendar, alive: alive)
+    self.drawn = Drawn([], now: clock(), dismissed: [], alive: alive)
   }
 
   // MARK: starting and stopping
@@ -189,8 +189,8 @@ public final class Session {
   /// Start reading. The tail's first pass runs inside start, and what it
   /// found reaches this object through the same route every later pass does,
   /// so the batches arrive in the order the file holds them. There is no
-  /// second, synchronous read here: it would take the newer batch first and
-  /// an end seen before its start puts one run in NOW and in TODAY at once.
+  /// second, synchronous read here: it would take the newer batch first,
+  /// and an end seen before its start is a run NOW keeps as still going.
   public func start(onChange: @escaping () -> Void) {
     self.onChange = onChange
     readTheHub()
@@ -258,8 +258,8 @@ public final class Session {
   /// one fold of the record at one reading of the clock.
   ///
   /// The shell asks for this and not for the three separately. Each of the
-  /// four folds walks and sorts every line the app holds, and the three
-  /// properties below used to take nine of those walks between them, on the
+  /// three folds walks and sorts every line the app holds, and the three
+  /// properties below used to take seven of those walks between them, on the
   /// main actor, once a second while a child of the app's own is up: the ring
   /// and the sign-in countdown are drawn by the clock that was paying for
   /// them. They also read the clock three times, so the glyph could say a
@@ -268,14 +268,14 @@ public final class Session {
     let moment = clock()
     let folds = Drawn(
       events, now: moment, dismissed: ui.dismissed, pinned: ui.pinned, hidden: ui.hidden,
-      calendar: calendar, alive: alive)
+      alive: alive)
     return Screen(
       bar: BarImage.state(
         now: folds.now, sessions: folds.sessions, facts: facts,
         checkShowing: check.isShowing(now: moment)),
       progress: BarImage.ringProgress(now: folds.now),
       model: PanelModel.build(
-        now: folds.now, sessions: folds.sessions, days: folds.days, documents: folds.documents,
+        now: folds.now, sessions: folds.sessions, documents: folds.documents,
         facts: facts, ui: ui, at: moment, calendar: calendar))
   }
 
@@ -342,7 +342,7 @@ public final class Session {
     ui.pendingStop = stopper.pendingDocs(in: events)
     drawn = Drawn(
       events, now: clock(), dismissed: ui.dismissed, pinned: ui.pinned, hidden: ui.hidden,
-      calendar: calendar, alive: alive)
+      alive: alive)
     return drawn != before || ui.pendingStop != pending
   }
 
