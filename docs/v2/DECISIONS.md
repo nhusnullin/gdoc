@@ -101,6 +101,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-10-17 | The logo lives in Drive, not in the tree | holds |
 | 2026-10-17 | The presence: gdoc appends one fact line per run to a file it never reads, and a separate menu bar app reads it | holds |
 | 2026-10-17 | The panel: the presence as the screens draw it, the app runs six argv lists, a hold dies with the sign-in it was held under | holds |
+| 2026-10-18 | The app opens itself: gdoc opens the installed app when it is not running, and launch at login is the person's switch | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -5334,3 +5335,58 @@ never stuck. The screens' "Release without writing" yields to the no-channel
 rule. The screens' per-step counts and folder names yield to the allowlist.
 Idle keeps the dim mark so the panel stays reachable, until Nail says
 otherwise.
+
+## 2026-10-18. The app opens itself: gdoc opens the installed app when it is not running, and launch at login is the person's switch.
+
+Nail ran a publish from Claude Code the morning after v2.15.0 and the panel
+was not there. The app had never been opened: the M24 rule registered it to
+start at login on its first run, and the M23 rule said gdoc never launches
+it, so between the two the first run was his and nobody had told him in the
+moment. His expectation, in his words: if it is not open, the gdoc command
+opens it; he can open it by hand; it starts at login when he has decided so
+in a setting. This entry is those three. It reverses one sentence of the M23
+entry ("gdoc never launches it") and one of the M24 entry ("launch at login
+is on by default"). Serves principle 4: a person who turned the presence on
+sees what gdoc is doing without remembering to open anything. Strains
+principle 1 by one more thing the binary does on the machine, named below in
+full.
+
+**gdoc runs `open` for the app it installed.** Under the `presence` setting,
+on macOS, after the record's start line and before the work, when
+`~/Applications/GdocPresence.app` is there and the app does not hold its
+lock, gdoc starts `/usr/bin/open -g <bundle>` and does not wait for it. `-g`
+because the app has no window to bring forward and the person is in a
+terminal or a chat. The exit status is never read, so a shell with no window
+session runs the command exactly as before. `gdoc update` runs the same
+opener once after it places or replaces the bundle, so an install is a
+running app and the answer no longer tells the person to open it. The one
+program gdoc runs is still `/usr/bin/open` at its full path, from the one
+file, through the one seam; the seam now has two callers and two argument
+lists, both pinned by the boundary tests, and no third. Off is today's bytes.
+
+**Whether the app is running is one lock, and no byte is read.** The app, as
+its first act, holds `flock(LOCK_EX)` on `presence/app.lock` in the config
+directory for its whole life; the kernel releases it when the process dies,
+however it dies. gdoc asks `LOCK_EX | LOCK_NB` on that file and lets go at
+once; a file that is not there means an app that never ran. gdoc never
+creates the lock file and reads nothing from it; the record stays the one
+file gdoc appends to and never reads, and nothing gdoc decides depends on a
+line in it. A second instance of the app that does not get the lock quits
+without drawing a status item.
+
+**Launch at login is off until the person turns it on.** Product decision 32
+stands again: it is a setting. No run registers the login item by itself;
+the HEALTH switch registers and unregisters, records the choice, and shows
+what macOS says. The M24 sentence that registered on the first run is
+withdrawn, because the open above does what that registration was for
+without touching the person's login items.
+
+**What was offered and refused.** Opening the app from the skills: the
+skills are five files and the chat in Claude Desktop runs none of them, so
+the binary is the one place every route goes through. Opening it on every
+command without asking whether it runs: `open` on a running agent app is
+harmless but is a process per command. A pid file the app writes: a pid is
+reused, a lock is not. Reading the record to see whether the app is alive:
+the record is written by gdoc and says nothing about the app.
+
+The plan is `docs/plans/2026-10-18-gdoc-v2-m25-the-app-opens-itself.md`.

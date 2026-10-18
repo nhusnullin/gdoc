@@ -124,8 +124,8 @@ line is a fixed projection, never the envelope: no document word but a title,
 no quote, no hold text, no error sentence, no path, no account. The binary
 exports no reader and nothing it decides depends on the file. A separate
 application, `GdocPresence.app`, travels in the darwin zips and is installed
-by `gdoc update` under the same setting; gdoc never launches it. Off is
-today's bytes. Decided 2026-10-17, DECISIONS.md.
+by `gdoc update` under the same setting. Off is today's bytes. Decided
+2026-10-17, DECISIONS.md; the launch rule is the 2026-10-18 entry below.
 
 **The panel, the same day.** The app draws the screens Nail chose and runs
 four fixed argv lists for the binary, `help --json`, `auth status`, `auth
@@ -135,9 +135,17 @@ gains `made`, `step`, `stop` with `line`, `via: code`, `interrupted` and the
 `dropped` hold ending, still no path, sentence, count or account. A hold
 remembers a hash of the refresh token it was held under and is dropped when
 the sign-in changes, so no account ever posts another's held write. `gdoc
-auth logout` removes the token and nothing else. The app registers itself to
-start at login on its first run and relaunches itself after an update; gdoc
-launches nothing. Decided 2026-10-17, DECISIONS.md, the panel entry.
+auth logout` removes the token and nothing else. The app relaunches itself
+after an update. Decided 2026-10-17, DECISIONS.md, the panel entry.
+
+**The app opens itself.** Under the setting, on macOS, a gdoc command whose
+run is recorded opens `~/Applications/GdocPresence.app` with `/usr/bin/open
+-g` when the bundle is there and the app does not hold its lock, and does not
+wait; `gdoc update` does the same once after it places the bundle. The app
+holds `flock` on `presence/app.lock` for its life; gdoc asks the lock without
+blocking and reads no byte. Launch at login is off until the person turns the
+HEALTH switch on; no run registers it by itself. Decided 2026-10-18,
+DECISIONS.md.
 `auth login` is a real desktop flow: a loopback redirect with PKCE, hand-rolled.
 
 **Two scopes:** Drive, and `https://www.googleapis.com/auth/documents`, the Docs
