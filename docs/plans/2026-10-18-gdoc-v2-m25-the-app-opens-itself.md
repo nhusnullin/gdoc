@@ -200,20 +200,20 @@ branch.
 - Modify: `docs/guide/presence.md`, `go/cmd/gdoc/doc.go`,
   `go/internal/presence/doc.go`, `CLAUDE.md`
 
-- [ ] `docs/guide/presence.md`: the install walk-through loses its "open it
+- [x] `docs/guide/presence.md`: the install walk-through loses its "open it
       once" step and says what happens instead: the next gdoc command under
       the flag opens the app, `open ~/Applications/GdocPresence.app` still
       works by hand, and Launch at login is the switch in HEALTH, off until
       you turn it on; the "What it is not" section keeps every sentence that
       is still true and loses "gdoc never launches it"
-- [ ] `CLAUDE.md`: the external-program invariant names two argument lists
+- [x] `CLAUDE.md`: the external-program invariant names two argument lists
       for the one program and the two callers of the seam, and the presence
       invariant adds the lock in one sentence (gdoc holds no lock and reads
       no byte; it asks once whether the app holds its own); the test names
       are the ones Task 2 chose; the file stays under 300 lines
-- [ ] `go/cmd/gdoc/doc.go` and `go/internal/presence/doc.go` name the rule
+- [x] `go/cmd/gdoc/doc.go` and `go/internal/presence/doc.go` name the rule
       and its tests
-- [ ] `make test` (the CLAUDE.md tests), `make app-lint`
+- [x] `make test` (the CLAUDE.md tests), `make app-lint`
 
 ### Task 5: measured on the machine
 

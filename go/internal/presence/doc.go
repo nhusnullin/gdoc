@@ -169,6 +169,18 @@
 // unsupported, because the atomicity of an append under PIPE_BUF is the local
 // filesystem's promise and nobody else's.
 //
+// One other file lives in that directory and is none of this package's
+// business: presence/app.lock, which the menu bar app holds flock on for its
+// whole life so that cmd/gdoc can ask whether it is running before opening
+// it. Nothing here opens it, writes it or removes it: the retention sweep
+// takes only names that are exactly a month's, which
+// TestOnlyTheCurrentAndPreviousMonthSurviveAndOnlyExactNamesAreRemoved holds,
+// and the lock is asked for by cmd/gdoc's openPresenceApp, which creates
+// nothing and reads no byte:
+// cmd/gdoc's TestTheOpenerAsksThreeThingsAndRunsOpenGOnce and go/boundary's
+// TestTheLockNameIsOneWordInTwoLanguages over the name Go and Swift share.
+// Decided 2026-10-18, DECISIONS.md, "The app opens itself".
+//
 // # A failure changes nothing
 //
 // A write that fails changes no byte of the envelope and no exit code. One

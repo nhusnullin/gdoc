@@ -9,8 +9,10 @@ It is two halves. gdoc writes one line for each thing it starts and finishes.
 A small application called gdoc presence reads those lines, shows one glyph,
 and opens one panel under it. The app opens no connection of its own: the only
 thing in it that reaches the network is gdoc, which the panel runs the way you
-would run it at a terminal. gdoc behaves the same whether the app is open,
-closed or never installed.
+would run it at a terminal. What gdoc answers is the same whether the app is
+open, closed or never installed. The one thing gdoc does about the app is open
+it: with the flag on, a command that is recorded opens the app it installed
+where that app is not already running.
 
 This is experimental. It is off until you turn it on, and turning it on is one
 line in a file you own, so your colleagues keep the gdoc they had.
@@ -229,11 +231,16 @@ forgeable.
 
 ### Launch at login
 
-The first run ever registers the app with macOS as a login item and writes down
-that it did. From then on the choice is yours: the switch in Health records it,
-and an off is never turned back on, not by a later launch, not by a relaunch
-after an update, and not by the app noticing macOS dropped the item. A
-registration nobody asked for twice is a notice in somebody's menu bar twice.
+It is off until you turn it on. No run of the app registers anything by
+itself: not the first run ever, not a relaunch after an update, and not a
+launch that notices macOS dropped the item. The switch in Health is the one
+route, and it is yours both ways: on registers, off unregisters, and an off is
+never turned back on. A registration nobody asked for is a notice in somebody's
+menu bar nobody asked for.
+
+The switch shows what macOS says, read each time the panel opens. Remove the
+item in System Settings and the switch reads off here, with nothing putting it
+back.
 
 Where macOS wants you to allow it, the row says "macOS is waiting for you to
 allow it in Login Items" and offers to open that settings pane. It is not
@@ -338,11 +345,13 @@ before you write it into a file that gdoc reads.
 
 3. `gdoc update` again. With the flag on, this is the run that installs the app
    at `~/Applications/GdocPresence.app`, out of the same release zip the binary
-   came from. It tells you the path and asks you to open it once.
-4. `open ~/Applications/GdocPresence.app`. The first launch is yours. gdoc never
-   starts the app, which is why it says the line instead. That first run also
-   registers the app as a login item, so it is the only launch you have to
-   remember.
+   came from, and opens it. The glyph is in the menu bar when that run ends.
+
+There is no fourth step. Every later gdoc command under the flag opens the app
+again where it is installed and not running, so a quit app comes back with the
+next thing you ask gdoc to do. `open ~/Applications/GdocPresence.app` still
+works by hand, whenever you want it open and have nothing to ask gdoc. Launch
+at login is the switch in Health, off until you turn it on.
 
 For one run only, without writing anything down, pass the argument instead:
 
@@ -405,6 +414,14 @@ write, an error sentence, a file path, your account, anything about the token,
 and nothing that judges anything. The title is the one document word, cut at
 200 characters, and it is there so the panel can name a row without running a
 second gdoc to read the document again.
+
+One more file sits in that folder and holds no record: `presence/app.lock`.
+The app takes a lock on it as its first act and holds it until it exits,
+however it exits, and that lock is the whole of how gdoc knows whether the app
+is running. gdoc asks the kernel about it once, without waiting, and lets go
+at once. It reads no byte of that file and never creates it: no file there is
+an app that never ran. A second copy of the app that cannot get the lock quits
+without drawing a glyph, so you are never looking at two.
 
 gdoc never reads the file back. Nothing it decides depends on a line in it: not
 a hold, not a reply, not where a review had got to. That is the whole safety of
