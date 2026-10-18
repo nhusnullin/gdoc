@@ -63,14 +63,15 @@ enum SceneDocuments {
   /// It is the one a person pinned, which is why it is drawn first.
   static let wallet = "1Ex06GgHhIiJjKkLlMmNnOoPpQqRrSsTt"
 
-  /// The hub index: a document, and the note paired with it. Northwind and
-  /// Partner bank are in no note, which is what greys their md icon.
+  /// A document and the note the finder answered for it, as the absolute
+  /// path the opener is handed. Northwind and Partner bank are in no note,
+  /// which is what greys their md icon.
   static let pairing: [String: String] = [
-    chapter4: "falcon/chapters/04.md",
-    chapter5: "falcon/chapters/05.md",
-    policy: "05-rules/group-channel.md",
-    concept: "falcon/b2b2c-concept.md",
-    proposal: "falcon/proposal-mea-v1.md",
+    chapter4: "/Users/nail/hub/falcon/chapters/04.md",
+    chapter5: "/Users/nail/hub/falcon/chapters/05.md",
+    policy: "/Users/nail/notes/05-rules/group-channel.md",
+    concept: "/Users/nail/hub/falcon/b2b2c-concept.md",
+    proposal: "/Users/nail/hub/falcon/proposal-mea-v1.md",
   ]
 }
 
@@ -186,9 +187,8 @@ enum Scenes {
   ]
 
   static let account = "nail@example.com"
-  static let hub = "/Users/nail/hub"
-  /// The home the Hub row writes its tilde against, so every render says
-  /// `~/hub` whoever's machine drew it.
+  /// The home a note's path is written with a tilde against, so every
+  /// render says `~/hub/...` whoever's machine drew it.
   static let home = "/Users/nail"
   static let gdocPath = "/Users/nail/.local/bin/gdoc"
   static let signInURL =
@@ -217,7 +217,7 @@ enum Scenes {
     loginItem: LoginItemState = .off,
     signIn: SignInPhase? = nil,
     signedInAt: Date? = nil,
-    hub: String? = Scenes.hub
+    pairing: [String: String] = SceneDocuments.pairing
   ) -> Facts {
     Facts(
       account: account,
@@ -227,13 +227,12 @@ enum Scenes {
         app: "2.14.0", gdoc: gdocFound ? "v2.14.0" : nil, latestStable: latestStable),
       mark: "⁘",
       gdocPath: gdocFound ? gdocPath : nil,
-      hub: hub,
       home: home,
       extensionState: extensionState,
       network: network,
       loginItem: loginItem,
       signIn: signIn,
-      pairing: SceneDocuments.pairing,
+      pairing: pairing,
       signedInAt: signedInAt)
   }
 
@@ -377,16 +376,16 @@ enum Scenes {
       id: "e5", title: "The first run: no token at all",
       caption:
         "Nothing works without a sign-in, so the header says so and the one sentence "
-        + "names the icon to press. Nothing else on this machine is set up either: the "
-        + "Hub row offers to choose a folder, and this is the one screen that offer is "
-        + "drawn on. No document has run here yet, so the grey note icon a missing hub "
-        + "makes is on no screen at all. SETTINGS "
+        + "names the icon to press. Nothing else on this machine is set up either: no "
+        + "extension has been written, so Claude Desktop carries the one thing to do "
+        + "about it. No document has run here yet, so the grey note icon is on no "
+        + "screen at all. SETTINGS "
         + "is still pinned above everything, because on this machine it is the whole of "
         + "what the panel is for.",
       fixture: nil, moment: "2026-10-17T10:00:00Z", alive: [],
       facts: machine(
         auth: .signedOut, account: nil, gdocFound: true, extensionState: .notInstalled,
-        hub: nil),
+        pairing: [:]),
       ui: UIState(), appearance: nil),
     Scene(
       id: "e6", title: "Icons with nothing to open, and the first hint",

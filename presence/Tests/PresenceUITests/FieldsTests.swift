@@ -209,7 +209,7 @@ final class FieldsTests: XCTestCase {
       ], at: "2026-10-17T14:00:00Z")
     XCTAssertEqual(failed.reasons, ["The terminal that ran it has the reason."])
     XCTAssertEqual(
-      failed.documents?.rows.first?.sub, "stopped 12:01 · falcon/chapters/05.md",
+      failed.documents?.rows.first?.sub, "stopped 12:01 · ~/hub/falcon/chapters/05.md",
       "the document's row is what carries the moment")
   }
 

@@ -169,7 +169,6 @@ public actor HealthPoller {
       mark: reading.help?.mark ?? facts.mark,
       gdocPath: location.path,
       gdocPathTried: location.tried,
-      hub: facts.hub,
       home: facts.home,
       extensionState: facts.extensionState,
       network: facts.network,

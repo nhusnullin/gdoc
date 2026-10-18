@@ -349,7 +349,7 @@ final class RenderTests: XCTestCase {
     XCTAssertTrue(pinned.isPinned)
     XCTAssertEqual(pinned.title, "Wallet note: the partner shortlist")
     XCTAssertEqual(
-      pinned.sub, "proposed 28 Sep · not in the hub",
+      pinned.sub, "proposed 28 Sep · no note",
       "the last action it had, in the words every other row says one in")
 
     // The same scene with nothing pinned: the document is gone, and the
@@ -452,7 +452,7 @@ final class RenderTests: XCTestCase {
     let watched = try XCTUnwrap(
       documents.rows.first { $0.doc == SceneDocuments.chapter5 }, "the watched document is gone")
     XCTAssertEqual(
-      watched.sub, "live stopped 15:29 · falcon/chapters/05.md",
+      watched.sub, "live stopped 15:29 · ~/hub/falcon/chapters/05.md",
       "DOCUMENTS said live while NOW said stopped")
     XCTAssertEqual(watched.tone, .dim, "and drew the live dot for a watch that is over")
 

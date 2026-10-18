@@ -41,7 +41,9 @@ final class HubIndexTests: XCTestCase {
       "an id in the body and under another front-matter key is not a pairing")
     XCTAssertNil(index.notes[Self.inATextFile], "a .txt is not a note")
     XCTAssertEqual(index.notes.count, 4, "four ids over three notes, and nothing else")
-    XCTAssertEqual(index.vault, "hub", "the vault is the hub folder's own name")
+    XCTAssertTrue(
+      index.notePath(for: Self.supplier)?.hasSuffix("/hub/notes/supplier-register.md") ?? false,
+      "and the same note as the absolute path the opener is handed")
 
     // And the reading itself, over the text, so the rule is stated once.
     XCTAssertEqual(
@@ -106,33 +108,49 @@ final class HubIndexTests: XCTestCase {
     XCTAssertEqual(latest.read().notes[Self.supplier], "notes/new-note.md")
   }
 
-  func testOpenMdStaysInsideTheChosenVaultAndNeedsARegularMdFile() throws {
+  /// Open md is built from an absolute path and needs a regular `.md` at
+  /// the end of it.
+  ///
+  /// It is the `path` form of Obsidian's scheme since the third look. A note
+  /// Spotlight found is in whatever folder the person keeps it in, and there
+  /// is no vault name to write: Obsidian resolves the path against the
+  /// vaults it has open. The proving is what is left of the old inside-the-
+  /// hub check, and it is now about the file and not about a folder.
+  func testOpenMdNeedsAnAbsolutePathToARegularMdFile() throws {
     let hub = try temporaryHub()
     try note(in: hub, at: "notes/supplier register.md", id: Self.supplier)
     try FileManager.default.createDirectory(
       at: URL(fileURLWithPath: hub).appendingPathComponent("notes/folder.md"),
       withIntermediateDirectories: true)
+    let inside = { (relative: String) in
+      URL(fileURLWithPath: hub).appendingPathComponent(relative).path
+    }
 
     XCTAssertEqual(
-      try HubIndex.noteURL(hub: hub, relative: "notes/supplier register.md").get().absoluteString,
-      "obsidian://open?vault=hub&file=notes%2Fsupplier%20register.md",
-      "the vault and the relative path, percent-encoded, and no line parameter")
+      try HubIndex.noteURL(absolute: inside("notes/supplier register.md")).get().absoluteString,
+      "obsidian://open?path=" + encoded(inside("notes/supplier register.md")),
+      "the absolute path, percent-encoded, and no line parameter")
 
+    XCTAssertEqual(HubIndex.noteURL(absolute: inside("notes/gone.md")).fault, .movedOrDeleted)
     XCTAssertEqual(
-      HubIndex.noteURL(hub: hub, relative: "notes/gone.md").fault, .movedOrDeleted)
-    XCTAssertEqual(
-      HubIndex.noteURL(hub: hub, relative: "notes/folder.md").fault, .movedOrDeleted,
+      HubIndex.noteURL(absolute: inside("notes/folder.md")).fault, .movedOrDeleted,
       "a directory named .md is not a note")
     XCTAssertEqual(
-      HubIndex.noteURL(hub: hub, relative: "../outside.md").fault, .outsideTheHub)
+      HubIndex.noteURL(absolute: "notes/supplier register.md").fault, .notMarkdown,
+      "a relative path is not a path at all here")
     XCTAssertEqual(
-      HubIndex.noteURL(hub: hub, relative: "notes/../../outside.md").fault, .outsideTheHub,
-      "a relative path that climbs out is out")
+      HubIndex.noteURL(absolute: inside("notes/supplier register.txt")).fault, .notMarkdown)
     XCTAssertEqual(
-      HubIndex.noteURL(hub: hub, relative: "/etc/passwd").fault, .outsideTheHub,
-      "an absolute path is not a path inside the hub")
-    XCTAssertEqual(
-      HubIndex.noteURL(hub: hub, relative: "notes/supplier register.txt").fault, .notMarkdown)
+      HubIndex.noteURL(absolute: "/etc/passwd").fault, .notMarkdown,
+      "a file that is not Markdown is refused wherever it is")
+  }
+
+  /// The one escaping rule, written here rather than read off the source:
+  /// everything but the unreserved set is percent-encoded, the separators
+  /// included.
+  private func encoded(_ path: String) -> String {
+    let unreserved = CharacterSet(charactersIn: "-._~").union(.alphanumerics)
+    return path.addingPercentEncoding(withAllowedCharacters: unreserved) ?? ""
   }
 
   /// A dot folder is somebody's machinery and is skipped whole. A dot file

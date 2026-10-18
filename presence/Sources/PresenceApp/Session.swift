@@ -58,6 +58,7 @@ public final class Session {
   let loginItem: LoginItem
   let relauncher: Relauncher?
   let tail: LogTail
+  let finder: NoteFinder
   let watcher: BundleWatcher?
   let alive: (Int32) -> Bool
   let clock: () -> Date
@@ -81,6 +82,17 @@ public final class Session {
   /// testAHeldReopenCostsNothingAndTheNextAskOpensTheNewInstance.
   var reopenHeld = false
   var index = HubIndex.empty
+  /// What the finder answered about each document the panel has drawn, kept
+  /// here so a redraw reads a value rather than waiting on a query. The
+  /// finder throws its own copy away on a Spotlight notice and says so, and
+  /// this is where that is heard.
+  var notes: [String: Result<String, NoteFault>] = [:]
+  /// Which lookup is out for each document, and how many have been asked
+  /// for it. A notice that arrives while one is out bumps the number, so
+  /// the answer that lands after it is dropped rather than written down
+  /// over the fresher one: testANoticeDropsTheLookupItInterrupted.
+  var looking: Set<String> = []
+  var noteAsks: [String: Int] = [:]
   var hubWatcher: HubWatcher?
   /// The hub the watcher above was made for. A watcher watches the folder it
   /// was built with and no other, so a second choice has to replace it:
@@ -141,6 +153,10 @@ public final class Session {
     desk: Desk = SystemDesk(),
     loginService: LoginService = SystemLoginService(),
     pad: Launchpad = SystemLaunchpad(),
+    noteSearch: NoteSearch = SpotlightSearch(),
+    noteRead: @escaping @Sendable (String) -> String = {
+      HubIndex.head(of: URL(fileURLWithPath: $0))
+    },
     environment: [String: String] = ProcessInfo.processInfo.environment,
     alive: @escaping (Int32) -> Bool = Liveness.isAlive,
     clock: @escaping () -> Date = Date.init,
@@ -172,6 +188,12 @@ public final class Session {
           ? nil : Relauncher(bundle: bundle, identifier: places.identifier, pad: pad)
       }
     self.tail = LogTail(directory: places.records)
+    // The finder is handed a way to say an answer went stale, which hops to
+    // this actor: a note written a minute ago is a Spotlight notice, and
+    // without it the first "no note" would stand for the life of the app.
+    let forgotten = NoteForgotten()
+    self.finder = NoteFinder(
+      search: noteSearch, read: noteRead, forgot: { [forgotten] id in forgotten.tell(id) })
     self.watcher = places.bundle.map { BundleWatcher(bundle: $0, running: places.version) }
     self.alive = alive
     self.clock = clock
@@ -182,6 +204,9 @@ public final class Session {
       pinned: preferences.pins, hidden: preferences.hides)
     self.facts = Facts.launching(appVersion: places.version)
     self.drawn = Drawn([], now: clock(), dismissed: [], alive: alive)
+    forgotten.answer { [weak self] id in
+      Task { @MainActor [weak self] in self?.noteWentStale(id) }
+    }
   }
 
   // MARK: starting and stopping
@@ -237,6 +262,7 @@ public final class Session {
       ui.noteFault.removeAll()
       changed()
     }
+    lookUpTheNotes()
     Task { [weak self] in await self?.ask(.panelOpened) }
   }
 
@@ -343,6 +369,9 @@ public final class Session {
     drawn = Drawn(
       events, now: clock(), dismissed: ui.dismissed, pinned: ui.pinned, hidden: ui.hidden,
       alive: alive)
+    // A row that was not in the list a moment ago has no answer about its
+    // note yet, and the icon is grey until the finder has one.
+    lookUpTheNotes()
     return drawn != before || ui.pendingStop != pending
   }
 
@@ -375,13 +404,12 @@ public final class Session {
   private func machine() -> Facts {
     Facts(
       versions: Versions(app: version),
-      hub: preferences.hub,
       home: places.home,
       extensionState: extensionState(),
       network: Reachability.latest(in: events).map(NetworkFact.init(reachable:)),
       loginItem: loginItem.state,
       signIn: phase,
-      pairing: index.notes,
+      pairing: pairings(),
       signedInAt: signedInAt,
       bundle: bundle,
       newerRecord: newerGdoc,
@@ -523,9 +551,13 @@ public final class Session {
 
   // MARK: the hub
 
-  /// The pairing, read once at start and again on every burst of changes in
-  /// the hub. The scan walks a vault, so it runs off the main thread and the
-  /// index it built arrives back on it.
+  /// The override, read once at start and again on every burst of changes
+  /// in the folder it names. The scan walks a vault, so it runs off the main
+  /// thread and the index it built arrives back on it.
+  ///
+  /// It is the `hubPath` a person may set with `defaults write` and nothing
+  /// the panel offers, since the third look. Most machines have none, and on
+  /// those this does nothing at all and the finder answers everything.
   func readTheHub() {
     guard let hub = preferences.hub, !hub.isEmpty else {
       index = HubIndex.empty
@@ -581,6 +613,83 @@ public final class Session {
         Task { await self.recompose() }
       }
     }
+  }
+
+  // MARK: the note the finder answered
+
+  /// Every document the panel is drawing, asked of the finder once.
+  ///
+  /// The override's own notes are not asked about: `hubPath` is read first
+  /// and a query for a document it already pairs is a query for an answer
+  /// nobody reads: testTheOverrideIsAskedBeforeSpotlight.
+  func lookUpTheNotes() {
+    let wanted = drawn.documents.rows.map(\.doc).filter {
+      index.notes[$0] == nil && notes[$0] == nil && !looking.contains($0)
+    }
+    guard !wanted.isEmpty else { return }
+    looking.formUnion(wanted)
+    let asks = wanted.map { doc -> (String, Int) in
+      let at = (noteAsks[doc] ?? 0) + 1
+      noteAsks[doc] = at
+      return (doc, at)
+    }
+    Task { [weak self] in
+      guard let self else { return }
+      for (doc, at) in asks {
+        let answer = await self.finder.note(for: doc)
+        await MainActor.run { [weak self] in self?.tookTheNote(doc, at, answer) }
+      }
+      await self.recompose()
+    }
+  }
+
+  /// One answer, written down where it is still the newest asked for. The
+  /// lookup is over for that document either way: "no note" is an answer,
+  /// and asking again on every redraw would be a query a second for a
+  /// document nobody has written a note for.
+  func tookTheNote(_ doc: String, _ at: Int, _ answer: Result<String, NoteFault>) {
+    guard noteAsks[doc] == at else { return }
+    looking.remove(doc)
+    notes[doc] = answer
+  }
+
+  /// A Spotlight notice about one document: the answer goes and the next
+  /// draw asks again. It is how a note written a minute ago lights the icon
+  /// without the person reopening the app:
+  /// testTheMdIconIsGreyOnlyWhenNoNoteNamesTheDocument.
+  ///
+  /// A lookup already out for that document is abandoned here, by the same
+  /// number the scans of the hub are kept in order by: it is asking about
+  /// the files as they were, and its answer landing after this one would
+  /// put the stale answer back with nothing left to take it away again.
+  func noteWentStale(_ doc: String) {
+    noteAsks[doc] = (noteAsks[doc] ?? 0) + 1
+    looking.remove(doc)
+    notes.removeValue(forKey: doc)
+    lookUpTheNotes()
+    Task { [weak self] in await self?.recompose() }
+  }
+
+  /// Where the note of each drawn document is, as an absolute path: the
+  /// `hubPath` override's own notes first, and what the finder answered
+  /// second.
+  func pairings() -> [String: String] {
+    var map: [String: String] = [:]
+    for (doc, answer) in notes {
+      guard case .success(let path) = answer else { continue }
+      map[doc] = path
+    }
+    for doc in index.notes.keys {
+      guard let path = index.notePath(for: doc) else { continue }
+      map[doc] = path
+    }
+    return map
+  }
+
+  /// The note this document's Open md would open, or why there is none.
+  func notePath(of doc: String) -> Result<String, NoteFault> {
+    if let path = index.notePath(for: doc) { return .success(path) }
+    return notes[doc] ?? .failure(.notPaired)
   }
 
   /// The pairing a scan came back with, kept only where that scan is still

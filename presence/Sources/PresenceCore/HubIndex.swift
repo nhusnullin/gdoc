@@ -1,11 +1,13 @@
-// The hub, as one map from a document id to the note paired with it.
+// The `gdoc:` block of a note's front matter, and the one note URL built
+// from it.
 //
 // Open md needs no field in the record: what pairs a note with a document is
-// the `gdoc:` block the binary writes into that note's front matter, and the
-// hub is the folder the person named in SETTINGS. So the app reads that one
-// block of every note, and nothing else in the file ever reaches it. This is
-// the one read M23's "opens only the event files and its plist" is widened
-// by, and it is widened by exactly this much.
+// the `gdoc:` block the binary writes into that note's front matter. Since
+// the third look the note is found rather than configured, so the candidates
+// come from Spotlight and the hub below is only the override a person may
+// set with `defaults write`. Either way this file reads that one block of a
+// file and nothing else in it, which is the one read M23's "opens only the
+// event files and its plist" is widened by.
 //
 // The reading stops at the closing fence. A note's body may hold a `gdoc:`
 // block in a fenced example, and a front matter may hold a `document_id`
@@ -22,17 +24,20 @@ import Foundation
 
 /// Why a note cannot be opened. The panel has one sentence per case; none of
 /// them is a judgement about the note.
+///
+/// `noHub` and `outsideTheHub` went with the Hub row on 2026-10-18: there is
+/// no folder to choose and no folder to climb out of, and `twoNotes` is the
+/// one case the finding brought with it.
 public enum NoteFault: String, Error, Sendable, Equatable {
-  /// No hub is chosen yet, so there is nowhere to look.
-  case noHub
-  /// No note in the hub names this document.
+  /// No note names this document.
   case notPaired
-  /// The index named a note that is not a regular file there any more. A
-  /// symlink is not the note either: what is at the end of it is somewhere
-  /// the person did not choose.
+  /// Two notes name it, which is somebody's own mistake and not a note the
+  /// app may pick between.
+  case twoNotes
+  /// The note is not a regular file at that path any more. A symlink is not
+  /// the note either: what is at the end of it is somewhere else.
   case movedOrDeleted
-  /// The path climbs out of the hub, or is absolute.
-  case outsideTheHub
+  /// The path is not an absolute path to a `.md`.
   case notMarkdown
 }
 
@@ -50,11 +55,15 @@ public struct HubIndex: Sendable, Equatable {
     self.notes = notes
   }
 
-  /// The vault Obsidian knows, which is the hub folder's own name.
-  public var vault: String { URL(fileURLWithPath: hub).lastPathComponent }
-
   /// The note paired with a document, as a path inside the hub.
   public func note(for id: String) -> String? { notes[id] }
+
+  /// That note as an absolute path, which is what the opener is handed.
+  /// Nothing where no note of this hub names the document.
+  public func notePath(for id: String) -> String? {
+    guard !hub.isEmpty, let relative = notes[id] else { return nil }
+    return URL(fileURLWithPath: hub).appendingPathComponent(relative).standardized.path
+  }
 
   // MARK: the scan
 
@@ -167,25 +176,26 @@ public struct HubIndex: Sendable, Equatable {
 
   /// The note's URL in Obsidian, or why there is none.
   ///
-  /// The path is proven before the URL is built: inside the hub the person
-  /// chose, a `.md`, and a regular file that is there now. No line parameter
-  /// is promised, because nothing in the record says which line.
+  /// The path is proven before the URL is built: an absolute path, a `.md`,
+  /// and a regular file that is there now. No line parameter is promised,
+  /// because nothing in the record says which line.
+  ///
+  /// It is the `path` form and not the `vault` and `file` pair, because a
+  /// note Spotlight found is in whatever folder the person keeps it in and
+  /// there is no vault name to write. Obsidian resolves the absolute path
+  /// against the vaults it has open.
   public static func noteURL(
-    hub: String, relative: String, fileManager: FileManager = .default
+    absolute path: String, fileManager: FileManager = .default
   ) -> Result<URL, NoteFault> {
-    let root = URL(fileURLWithPath: hub).resolvingSymlinksInPath().path
-    guard !relative.isEmpty, !relative.hasPrefix("/") else { return .failure(.outsideTheHub) }
-
-    let candidate = URL(fileURLWithPath: root).appendingPathComponent(relative).standardized.path
-    guard candidate.hasPrefix(root + "/") else { return .failure(.outsideTheHub) }
-    guard URL(fileURLWithPath: candidate).pathExtension.lowercased() == "md" else {
+    guard path.hasPrefix("/") else { return .failure(.notMarkdown) }
+    let standardized = URL(fileURLWithPath: path).standardized.path
+    guard URL(fileURLWithPath: standardized).pathExtension.lowercased() == "md" else {
       return .failure(.notMarkdown)
     }
-    let kind = try? fileManager.attributesOfItem(atPath: candidate)[.type] as? FileAttributeType
+    let kind = try? fileManager.attributesOfItem(atPath: standardized)[.type] as? FileAttributeType
     guard kind == .typeRegular else { return .failure(.movedOrDeleted) }
 
-    let vault = URL(fileURLWithPath: root).lastPathComponent
-    let text = "obsidian://open?vault=\(encoded(vault))&file=\(encoded(relative))"
+    let text = "obsidian://open?path=\(encoded(standardized))"
     guard let url = URL(string: text) else { return .failure(.movedOrDeleted) }
     return .success(url)
   }
@@ -194,7 +204,11 @@ public struct HubIndex: Sendable, Equatable {
 
   /// The first bytes of a file, as text. A note that is not UTF-8 is a note
   /// with no front matter this app can read.
-  private static func head(of url: URL) -> String {
+  ///
+  /// Public because the finder reads a candidate Spotlight named the same
+  /// way the scan reads a note of the hub: this much of the file and no
+  /// more, so one rule covers both routes.
+  public static func head(of url: URL) -> String {
     guard let handle = try? FileHandle(forReadingFrom: url) else { return "" }
     defer { try? handle.close() }
     guard let bytes = try? handle.read(upToCount: frontMatterBytes) else { return "" }

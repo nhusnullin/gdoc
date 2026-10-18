@@ -152,7 +152,7 @@ branch.
   `PanelHealth.swift` (the SETTINGS rows), `Preferences.swift`,
   `presence/Sources/PresenceUI/Words.swift`, tests beside each
 
-- [ ] `NoteFinder` asks Spotlight (`NSMetadataQuery`, scope the home folder,
+- [x] `NoteFinder` asks Spotlight (`NSMetadataQuery`, scope the home folder,
       predicate: text content contains the document id, Markdown files) for
       candidate paths, then reads only the `gdoc:` front-matter block of each
       candidate, as `HubIndex` already does, and answers the one whose block
@@ -161,19 +161,19 @@ branch.
       off the main actor with a two-second ceiling and the answer is cached
       per document id until a Spotlight change notice names one of the
       candidates; a test through an injected finder over the four cases
-- [ ] `hubPath` stays as an override: when set, the hub's index is asked
+- [x] `hubPath` stays as an override: when set, the hub's index is asked
       first and Spotlight second; the Hub row leaves SETTINGS and the
       `noHub` fault goes, because there is no hub to choose; the guide says
       the override is a `defaults write` for a person whose notes are not
       indexed
-- [ ] the md icon is grey only when no note names the document, and its
+- [x] the md icon is grey only when no note names the document, and its
       tooltip says that; the Open md action opens the note the finder
       answered
-- [ ] `docs/v2/MEASURED.md` records the query's timings on this machine
+- [x] `docs/v2/MEASURED.md` records the query's timings on this machine
       with the method, and what Spotlight answers for a file that mentions
       the id in its body (the document map): a candidate the front-matter
       check rejects
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 5: the update glyph has three states and a clock
 

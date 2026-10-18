@@ -41,9 +41,6 @@ public enum ActionKind: String, Sendable, Equatable, CaseIterable {
   case installExtension
   case openLoginItems
   case toggleLoginItem
-  /// The Hub row: the system's folder panel, and the folder it comes back
-  /// with written down.
-  case chooseHub
   case quit
   /// The safe half of every confirm, which does nothing but put the
   /// question away.
@@ -172,7 +169,7 @@ public struct SettingsRowModel: Sendable, Equatable, Identifiable {
   public let quiet: String?
   public let actions: [ActionModel]
   public let isOn: Bool?
-  /// Pressing the row itself, which Hub, Quit and the Login Items row do.
+  /// Pressing the row itself, which Quit and the Login Items row do.
   ///
   /// No row here is ever a question. The one destructive confirm in the
   /// panel is the sign-out, and it is asked in the header since 2026-10-18:
@@ -705,21 +702,17 @@ extension PanelModel {
   /// went nowhere would leave the icon live and say nothing:
   /// testAFailedOpenGreysTheIconWithItsReason.
   ///
-  /// With no hub chosen the words name the row in SETTINGS instead. Without
-  /// a hub nothing is paired with anything, so every icon on the screen is
-  /// grey, and "No note is paired with this document" sends the person
-  /// looking for a note: testTheHubRowIsTheFolderOrTheWayToChooseOne.
+  /// It is grey for one reason since the third look: no note names this
+  /// document. There is no hub to choose, so there is no second sentence
+  /// and nothing to send the person to SETTINGS for:
+  /// testTheMdIconIsGreyOnlyWhenNoNoteNamesTheDocument.
   private static func openNote(
     _ doc: String, facts: Facts, ui: UIState, forced: String? = nil
   ) -> ActionModel {
-    let paired = facts.note(for: doc) != nil
-    let noHub = facts.hub?.isEmpty ?? true
     let state: ActionState =
       if let fault = ui.noteFault[doc] {
         .off(fault.tip)
-      } else if noHub {
-        .off(Tips.noHub)
-      } else if paired {
+      } else if facts.note(for: doc) != nil {
         .live
       } else {
         .off(Tips.noNote)

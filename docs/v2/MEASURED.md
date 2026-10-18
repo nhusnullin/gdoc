@@ -1296,3 +1296,59 @@ AppKit's geometry and the screen's frame, not a screenshot.
 Recheck on a screen of another size, or if the placement in `Panel.swift`
 changes which edge it pins. A later decision may cap NOW, which the 2026-10-18
 entry leaves open; that would be the one number to measure again.
+
+## What Spotlight answers for a document id
+
+Measured 2026-10-18 on Nail's machine, M27 Task 4. The hub folder was one
+setting for a thing that differs by document, so the note is found now: the
+app asks Spotlight for the Markdown files whose text holds the id and reads
+the `gdoc:` front-matter block of each. This is the query it runs, what it
+takes, and what comes back that is not the note.
+
+How it was taken. Three `mdfind -onlyin ~` runs of each form under
+`/usr/bin/time -p`, over the real vault at
+`~/src/altery/Altery-Platform-Hub`, for the id
+`1gH4y7uvT4QgpZBCHHlHz9g5L9R0R7dzONs9cJOTcY0c`, which one note's front matter
+names. Then a throwaway `swiftc` program ran the chosen form through
+`NSMetadataQuery` with `operationQueue` set and no run loop, to prove the app
+can ask the same question off the main actor. Both the program and the files
+below were deleted after the reading.
+
+| Query form | Seconds | Answered |
+|---|---|---|
+| `<id>`, mdfind's own parser | 0.10–0.14 | the three files |
+| `kMDItemTextContent == "*<id>*"` | 1.51–1.53 | the three files |
+| `kMDItemTextContent == "*<id>*" && kMDItemFSName == "*.md"` | 1.62–1.67 | the three files |
+| `kMDItemTextContent = "<id>"cdw` | 0.10–0.11 | the three files |
+| `kMDItemTextContent = "<id>"cdw && kMDItemFSName = "*.md"c` | 0.24–0.26 | the three files |
+| the last form through `NSMetadataQuery`, no run loop | 0.23 | the three files |
+
+**The word form is six times the substring form's speed over the same index.**
+`cdw` matches the id as a word, which the index can answer from; `*<id>*` is a
+substring scan. The app runs the last form, which is the one with the Markdown
+clause, and `SpotlightSearch.queryString` writes it:
+testTheQueryIsTheWordFormOverMarkdown.
+
+**Three files, and the front-matter check keeps one.** Two of the three were
+written for this measurement in `~/m27-spotlight-measure`: `document-map.md`,
+which names the id in a sentence the way Nail's own document maps do, and
+`decoy-key.md`, whose front matter holds `document_id` under a key that is not
+`gdoc:`. Spotlight returns both, because it answers on a file's text. The
+reading `HubIndex.documentIDs(inFrontMatterOf:)` already did for a whole hub
+throws both away and keeps
+`11-m2-crypto-project-eagle/2026-09-15-eagle-roles-and-responsibilities.md`:
+testAFileThatMerelyMentionsTheIdIsNotTheNote.
+
+**Not every Markdown file under the vault is indexed.** `mdfind -onlyin <vault>
+'kMDItemFSName == "*.md"'` answered 727 files where `find` counts 1764. Some of
+the difference is dot folders, which `find` walks and Spotlight does not, and
+the rest was not chased. It is the reason the `hubPath` override stays: a
+person whose notes Spotlight has not indexed still has a folder to name.
+
+The ceiling is two seconds, `NoteFinder.ceiling`, which is eight times the
+measured query. Nothing waits on it but one greyed icon, and a draw that hit it
+asks again on the next one.
+
+Recheck after a Spotlight reindex, or on a vault an order of magnitude bigger
+than 727 files. The timings are one machine's and the shape of the answer is
+what matters: a handful of candidates, one of which the front matter proves.

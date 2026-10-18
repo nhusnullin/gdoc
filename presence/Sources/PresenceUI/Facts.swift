@@ -11,7 +11,7 @@
 // is the whole reason the type exists.
 //
 // A fact is never a judgement either. `auth` is the word `gdoc auth status`
-// printed, `network` is what a command answered, `pairing` is what the hub's
+// printed, `network` is what a command answered, `pairing` is what the
 // front matter said. The panel's reading of them is in PanelModel.
 
 import Foundation
@@ -181,21 +181,20 @@ public struct Facts: Sendable, Equatable {
   public let gdocPath: String?
   /// Where it was looked for, which is what the not-found row says.
   public let gdocPathTried: String
-  /// The hub folder the person chose, or nothing while none is chosen.
-  public let hub: String?
-  /// This machine's home directory, which is the one thing the Hub row needs
-  /// to write a path with a tilde. It is handed over like every other fact
-  /// here, so a render of a scene says the same thing on every machine, and
-  /// it is empty where nobody asked.
-  public let home: String
   public let extensionState: ExtensionState
   /// What the last command said about reaching Google, or nothing.
   public let network: NetworkFact?
   public let loginItem: LoginItemState
   /// A sign-in in flight.
   public let signIn: SignInPhase?
-  /// The hub index: a document id to the note paired with it, as a path
-  /// relative to the hub.
+  /// This machine's home directory, which is the one thing a note's path
+  /// needs to be written with a tilde. It is handed over like every other
+  /// fact here, so a render of a scene says the same thing on every
+  /// machine, and it is empty where nobody asked.
+  public let home: String
+  /// A document id to the note paired with it, as an absolute path. Since
+  /// the third look it is what the finder answered, with the `hubPath`
+  /// override's own notes first.
   public let pairing: [String: String]
   /// When this account signed in, which the banner's five seconds run from.
   public let signedInAt: Date?
@@ -223,7 +222,6 @@ public struct Facts: Sendable, Equatable {
     mark: String = "⁘",
     gdocPath: String? = nil,
     gdocPathTried: String = "~/.local/bin/gdoc",
-    hub: String? = nil,
     home: String = "",
     extensionState: ExtensionState = .unknown,
     network: NetworkFact? = nil,
@@ -243,7 +241,6 @@ public struct Facts: Sendable, Equatable {
     self.mark = mark
     self.gdocPath = gdocPath
     self.gdocPathTried = gdocPathTried
-    self.hub = hub
     self.home = home
     self.extensionState = extensionState
     self.network = network
@@ -275,7 +272,7 @@ public struct Facts: Sendable, Equatable {
   /// testTheBarIsNotStuckBeforeTheFirstAnswer.
   public var gdocFound: Bool { gdocPath != nil }
 
-  /// The note paired with a document, as a path inside the hub.
+  /// The note paired with a document, as an absolute path.
   public func note(for doc: String?) -> String? {
     guard let doc else { return nil }
     return pairing[doc]

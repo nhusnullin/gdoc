@@ -46,8 +46,8 @@ in a word.
 
 Click the glyph and the panel opens under it. It is 320 points wide and never
 taller than 600. Press Escape or click elsewhere and it closes. Nothing in it
-is a window, there is no dock icon, and the settings in it are your hub, the
-switch for launching at login and Quit.
+is a window, there is no dock icon, and the settings in it are the switch for
+launching at login and Quit.
 
 The edges are pinned and the middle scrolls. From the top: the header, Now,
 the middle, Settings. The header, Now and Settings stay where they are
@@ -132,7 +132,7 @@ ones gdoc did most in those days first, so a document touched once last week
 sinks under one worked on every day. The count itself is never printed. A
 read alone makes no row: reading is not something that happened to the
 document. Each row says what the last action
-was, when, and where the note paired with it is, or "not in the hub". The
+was, when, and where the note paired with it is, or "no note". The
 label is "3 today" where every row in the list is from today, and
 "14 days · 12" where one of them is older, counting the rows behind Show more
 as well.
@@ -166,12 +166,12 @@ Four icons sit on the right of every document row, always visible:
 | Link | Copies the document's link, and turns into a green check for a second |
 
 An icon with nothing to do is greyed, and resting the pointer on it says why:
-"No Google Doc yet", "No link yet", "Choose the hub in SETTINGS", "No note is
-paired with this document",
+"No Google Doc yet", "No link yet", "No note is paired with this document",
+"Two notes name this document",
 "Note moved or deleted", "Install the Desktop extension in Settings". The first
 two are one case: a row whose id is not one Drive could have written has no
 document to open and no link to copy. "Note moved or deleted"
-is the one a click produces: Obsidian refused the note the index still names.
+is the one a click produces: Obsidian refused the note the finder named.
 A greyed icon cannot be clicked, so that one lasts as long as the panel is up,
 and the next time you open the panel it is live again. The first time Documents
 has a row, four labels appear under it once, naming the icons, and they go the
@@ -213,13 +213,13 @@ version are in the header now, each with its one action beside it, and the
 Thread mark row is gone: the mark is drawn in that header, at the panel's top
 left, so the row said the same thing twice.
 
-What is left is Network, Claude Desktop, Hub, Launch at login and Quit. The
-first two are drawn only where a fact carries them, so on a good machine the
-group is the hub, the switch and Quit. Quit is always there, and it is ⌘Q.
+What is left is Network, Claude Desktop, Launch at login and Quit. The first
+two are drawn only where a fact carries them, so on a good machine the group
+is the switch and Quit. Quit is always there, and it is ⌘Q.
 
-Hub is the folder your notes are in, and it is the one row that opens a window
-of the system's: pressing it asks you for a folder, folders only. What it is
-for is the next section.
+There is no Hub row since the third look. The note beside a document is found
+rather than configured, which is the next section, so there is no folder to
+choose and this app opens no window of the system's at all.
 
 Network is the record's own word and never a connection the app opened: gdoc
 writes `network` on a run that could not reach Google, and the row says so
@@ -376,7 +376,7 @@ What the app never does, and no button in it offers:
 - It never starts gdoc on a schedule of its own.
 
 What it remembers between launches is eight things, in its own preferences:
-the cards you hid, the hub folder, whether the four icon labels have been
+the cards you hid, the `hubPath` override, whether the four icon labels have been
 read, your launch-at-login answer, its last self-relaunch, the last address
 it saw signed in, the documents you pinned and the documents you hid. The two
 that are about a moment, the hidden cards and the relaunch,
@@ -390,29 +390,43 @@ ninth key is a decision somebody writes down, not a line somebody adds.
 ## The note beside the document
 
 Open md needs no field in the record. What pairs a note with a document is the
-`gdoc:` block gdoc writes into that note's front matter, so the app reads that
-one block of every note in your hub, builds a map from document id to note path,
-and rebuilds it when files there change. Nothing else in a note ever reaches the
-app: the reading stops at the closing fence, a `gdoc:` block inside a fenced
-example pairs nothing, and every id is held to the Drive shape.
+`gdoc:` block gdoc writes into that note's front matter.
 
-The hub is a folder you name, in the Hub row of Settings. The row says the
-folder you chose, with your home directory written as `~`, or "Choose…" when
-there is none; pressing it opens the system's folder panel, and the notes under
-the folder you pick are read at once. Nothing is written down if you cancel. You
-can still set it from a terminal instead, which takes effect when the app is
-opened again:
+The app asks Spotlight for the Markdown files under your home folder whose text
+holds the document id. That is usually two or three files: the note itself, and
+anything that mentions the id in a sentence, like a document map. It then reads
+the `gdoc:` block of each of them and opens the one whose block names the id. A
+file that only mentions the id is thrown away. Nothing else in a note ever
+reaches the app: the reading stops at the closing fence, a `gdoc:` block inside
+a fenced example pairs nothing, and every id is held to the Drive shape.
+
+The answer is kept until Spotlight says one of those files changed, so a note
+you wrote a minute ago lights the icon without you reopening anything. A query
+takes about a quarter of a second here, and the app gives it two before it
+gives up for that draw.
+
+Three things the icon can say. "No note is paired with this document" is no
+file whose front matter names it. "Two notes name this document" is two, which
+the app will not pick between. "Note moved or deleted" is a click that found
+nothing there.
+
+There was a Hub row until the third look, and one folder was the wrong shape
+for this: notes about one document and another live in different folders, and
+the row could only ever name one. If your notes are somewhere Spotlight does
+not index, you can still name a folder from a terminal, and the app reads the
+notes under it before it asks Spotlight about anything:
 
 ```
 defaults write com.altery.gdoc.presence hubPath -string ~/path/to/hub
 ```
 
-With no hub set, the md icon is greyed on every row and says "Choose the hub in
-SETTINGS", which is the row that fixes it. With one set, a note is opened
-through `obsidian://` with the vault and the relative path, after the app has
-proved the file is a regular `.md` file inside the folder you named. A
-symlink is not the note either: what is at the end of it is somewhere you did
-not choose. No line number is promised, because gdoc does not record one.
+It takes effect when the app is opened again. There is no row that sets it and
+most machines have none.
+
+A note is opened through `obsidian://open?path=`, after the app has proved the
+file is a regular `.md` at that absolute path. A symlink is not the note: what
+is at the end of it is somewhere else. No line number is promised, because gdoc
+does not record one.
 
 ## Turning it on
 

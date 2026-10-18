@@ -114,7 +114,6 @@ public actor UpdateAction {
       mark: facts.mark,
       gdocPath: facts.gdocPath,
       gdocPathTried: facts.gdocPathTried,
-      hub: facts.hub,
       home: facts.home,
       extensionState: facts.extensionState,
       network: facts.network,

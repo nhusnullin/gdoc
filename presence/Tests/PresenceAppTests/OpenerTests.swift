@@ -46,8 +46,7 @@ final class OpenerTests: XCTestCase {
     let opener = Opener(desk: desk)
     opener.openDocument(Self.id)
     opener.copyLink(Self.id)
-    _ = opener.openNote(
-      document: Self.id, hub: hub, pairing: [Self.id: "notes/supplier-register.md"])
+    _ = opener.openNote(at: hub + "/notes/supplier-register.md")
     opener.continueWithClaude()
 
     let everything =
@@ -60,20 +59,12 @@ final class OpenerTests: XCTestCase {
   }
 
   func testAnUnpairedDocumentGreysTheIconWithItsTooltip() throws {
-    let hub = try temporaryHub()
     let desk = NoteDesk()
     let opener = Opener(desk: desk)
 
-    let unpaired = opener.openNote(document: Self.id, hub: hub, pairing: [:])
+    let unpaired = opener.openNote(at: nil)
     XCTAssertEqual(unpaired.fault, .notPaired)
     XCTAssertEqual(NoteFault.notPaired.tip, "No note is paired with this document")
-
-    let noHub = opener.openNote(
-      document: Self.id, hub: nil, pairing: [Self.id: "notes/supplier-register.md"])
-    XCTAssertEqual(noHub.fault, .noHub, "no hub is chosen, so there is no pairing either")
-    XCTAssertEqual(
-      NoteFault.noHub.tip, "Choose the hub in SETTINGS",
-      "and the words name the row that fixes it, not a note nobody can find")
 
     XCTAssertTrue(desk.opened.isEmpty, "a greyed icon opens nothing")
 
@@ -86,11 +77,10 @@ final class OpenerTests: XCTestCase {
       "pid":4201,"run":"0d1a2b3c4d5e6f70","call":1,"event":"end","command":"propose",\
       "via":"terminal","doc":"\(Self.id)","title":"\(Self.title)","ok":true,"ms":10}
       """)
-    // The hub is chosen and this document is in no note of it, which is the
-    // one state that sentence is about: a panel with no hub at all names the
-    // row in SETTINGS instead.
+    // No note names this document, which is the one reason the icon is
+    // grey since the third look.
     let panel = PanelModel.build(
-      events: [written], facts: Facts(versions: Versions(app: "1.0"), hub: hub), now: moment,
+      events: [written], facts: Facts(versions: Versions(app: "1.0")), now: moment,
       calendar: Calendar(identifier: .gregorian), alive: { _ in false })
     let icons = panel.sections.compactMap { section -> [ActionModel]? in
       guard case .documents(let documents) = section else { return nil }
@@ -105,27 +95,26 @@ final class OpenerTests: XCTestCase {
     let hub = try temporaryHub()
     let desk = NoteDesk()
     let opener = Opener(desk: desk)
-    let pairing = [Self.id: "notes/supplier-register.md"]
+    let path = hub + "/notes/supplier-register.md"
 
-    // The index named it, and it is not there any more.
-    let gone = opener.openNote(document: Self.id, hub: hub, pairing: pairing)
+    // The finder named it, and it is not there any more.
+    let gone = opener.openNote(at: path)
     XCTAssertEqual(gone.fault, .movedOrDeleted)
     XCTAssertEqual(NoteFault.movedOrDeleted.tip, "Note moved or deleted")
     XCTAssertTrue(desk.opened.isEmpty)
 
     try note(in: hub, at: "notes/supplier-register.md")
-    let opened = opener.openNote(document: Self.id, hub: hub, pairing: pairing)
-    XCTAssertEqual(
-      try opened.get().absoluteString,
-      "obsidian://open?vault=hub&file=notes%2Fsupplier-register.md")
+    let opened = opener.openNote(at: path)
+    XCTAssertTrue(
+      try opened.get().absoluteString.hasPrefix("obsidian://open?path=%2F"),
+      "the absolute path, percent-encoded to the unreserved set")
     XCTAssertEqual(desk.opened.count, 1)
 
-    // A pairing that points out of the hub is refused before anything opens,
-    // and reads as the same sentence.
-    let outside = opener.openNote(
-      document: Self.id, hub: hub, pairing: [Self.id: "../../somewhere-else.md"])
-    XCTAssertEqual(outside.fault, .outsideTheHub)
-    XCTAssertEqual(NoteFault.outsideTheHub.tip, "Note moved or deleted")
+    // A path that is not an absolute Markdown path is refused before
+    // anything opens, and reads as the same sentence.
+    let relative = opener.openNote(at: "../../somewhere-else.md")
+    XCTAssertEqual(relative.fault, .notMarkdown)
+    XCTAssertEqual(NoteFault.notMarkdown.tip, "Note moved or deleted")
     XCTAssertEqual(desk.opened.count, 1, "nothing more was opened")
   }
 
@@ -142,11 +131,11 @@ final class OpenerTests: XCTestCase {
       "via":"terminal","doc":"\(Self.id)","title":"\(Self.title)","ok":true,"ms":10}
       """)
     let facts = Facts(
-      versions: Versions(app: "1.0"), hub: "/somewhere",
-      pairing: [Self.id: "notes/supplier-register.md"])
+      versions: Versions(app: "1.0"),
+      pairing: [Self.id: "/somewhere/notes/supplier-register.md"])
 
     let paired = try noteIcon(in: written, facts: facts, ui: UIState())
-    XCTAssertEqual(paired.state, .live, "the index names a note, so the icon is live")
+    XCTAssertEqual(paired.state, .live, "a note names the document, so the icon is live")
 
     let failed = try noteIcon(
       in: written, facts: facts, ui: UIState(noteFault: [Self.id: .movedOrDeleted]))
@@ -222,7 +211,6 @@ final class NoteDesk: Desk, @unchecked Sendable {
   private var openedURLs: [URL] = []
   private var copiedText: [String] = []
   private var activatedApps: [String] = []
-  private var choices = 0
 
   var opened: [URL] { read { openedURLs } }
   var copied: [String] { read { copiedText } }
@@ -247,17 +235,6 @@ final class NoteDesk: Desk, @unchecked Sendable {
     copiedText.append(text)
     lock.unlock()
   }
-
-  /// The folder panel, which opens no window here: a desk in a test is
-  /// asked and answers nothing, the way a person who cancelled would.
-  func chooseFolder(startingAt directory: String?) -> URL? {
-    lock.lock()
-    choices += 1
-    lock.unlock()
-    return nil
-  }
-
-  var chosen: Int { read { choices } }
 
   private func read<T>(_ body: () -> T) -> T {
     lock.lock()

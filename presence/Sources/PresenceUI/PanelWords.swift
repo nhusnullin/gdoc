@@ -19,12 +19,11 @@ public enum Tips {
   public static let noDoc = "No Google Doc yet"
   public static let openNote = "Open the note in Obsidian"
   public static let noNote = "No note is paired with this document"
-  /// No hub is chosen, so nothing in it is paired with anything. The words
-  /// name the row that fixes it: a person told there is no note goes looking
-  /// for the note, which is where Nail went on the second morning.
-  public static let noHub = "Choose the hub in SETTINGS"
-  /// The index named a note that is not there any more. It is a fact about
-  /// the hub and never a complaint about the person who moved it.
+  /// Two notes name this document, which the app may not pick between. It
+  /// is somebody's own mistake and the words say only what was found.
+  public static let twoNotes = "Two notes name this document"
+  /// The note is not a file at that path any more. It is a fact and never a
+  /// complaint about the person who moved it.
   public static let noteMoved = "Note moved or deleted"
   public static let openChat = "Continue with Claude"
   public static let noExtension = "Install the Desktop extension in Settings"
@@ -56,14 +55,14 @@ public enum Menus {
 }
 
 extension NoteFault {
-  /// The words the greyed icon carries. A hub nobody chose has its own
-  /// sentence since the second morning: without a hub nothing is paired with
-  /// anything, and the row in SETTINGS is the one thing to do about it.
+  /// The words the greyed icon carries. Each is a fact about what was found
+  /// and none of them is a judgement about the note or about the person who
+  /// moved it.
   public var tip: String {
     switch self {
-    case .noHub: Tips.noHub
     case .notPaired: Tips.noNote
-    case .movedOrDeleted, .outsideTheHub, .notMarkdown: Tips.noteMoved
+    case .twoNotes: Tips.twoNotes
+    case .movedOrDeleted, .notMarkdown: Tips.noteMoved
     }
   }
 }
@@ -80,23 +79,22 @@ public enum Sentences {
   /// this is a fact and not a fault.
   public static let accountNotRead = "signed in, account not read"
   public static let loginItemApproval = "macOS is waiting for you to allow it in Login Items"
-  /// The Hub row with no folder chosen. It is the word on the row itself,
-  /// because the row is what opens the folder panel.
-  public static let chooseHub = "Choose…"
   /// What joins the parts of one line: the middle dot with a space either
   /// side. The stuck card breaks its title on it, so the two halves of
   /// "Export stopped · Chapter 4" are the card's two lines.
   public static let separator = " · "
+  /// A document row with no note behind it. It named the hub until the
+  /// third look, and there is no hub to name.
+  public static let noNoteYet = "no note"
 
-  /// A folder as the Hub row writes it: the path with the home directory as
-  /// a tilde, or the word that offers to choose one where there is none.
+  /// A path as a row writes it: with the home directory as a tilde, or
+  /// whole where it is somewhere else.
   ///
   /// The home is handed in rather than read here, which is the rule for
   /// every file in this target, and it is why a render of a scene says the
-  /// same thing on every machine. A folder outside that home is written in
-  /// full: a tilde there would name a folder that is not the one chosen.
-  public static func folder(_ path: String?, home: String) -> String {
-    guard let path, !path.isEmpty else { return chooseHub }
+  /// same thing on every machine. A path outside that home is written in
+  /// full: a tilde there would name a file that is not the one found.
+  public static func shortPath(_ path: String, home: String) -> String {
     guard !home.isEmpty, path == home || path.hasPrefix(home + "/") else { return path }
     return "~" + path.dropFirst(home.count)
   }
@@ -314,8 +312,8 @@ struct Phrases {
   /// is. The state of an open action is one word, because the record has
   /// none and a person reading the list wants the state and not the verb.
   func documentSub(_ row: DocumentRow) -> String {
-    let note = facts.note(for: row.doc) ?? "not in the hub"
-    return sentence([state(row), note])
+    let note = facts.note(for: row.doc).map { Sentences.shortPath($0, home: facts.home) }
+    return sentence([state(row), note ?? Sentences.noNoteYet])
   }
 
   /// What the row says about the last thing that happened, or nothing at
