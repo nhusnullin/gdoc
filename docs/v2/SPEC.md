@@ -159,7 +159,6 @@ mark at rest is full ink. Under `via: code` the start line carries
 `session`, Claude Code's own session id, and Open chat opens
 `claude://code/continue?session=<id>` where that is measured to work.
 Decided 2026-10-18, DECISIONS.md.
-`auth login` is a real desktop flow: a loopback redirect with PKCE, hand-rolled.
 
 **The third look, the same evening.** Nothing in the panel scrolls: it is as
 tall as its content. DOCUMENTS is the pinned documents and then the last
@@ -169,6 +168,8 @@ through Spotlight and the `gdoc:` block, with `hubPath` as an override and
 no Hub row. The update glyph is always in the header, quiet, available or
 running, and the app asks `help --json` on open and every six hours.
 Decided 2026-10-18, DECISIONS.md, the third look.
+
+`auth login` is a real desktop flow: a loopback redirect with PKCE, hand-rolled.
 
 **Two scopes:** Drive, and `https://www.googleapis.com/auth/documents`, the Docs
 read/write scope, because v2 writes suggestions through the Docs API. Read-only
