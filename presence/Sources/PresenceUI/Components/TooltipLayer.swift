@@ -65,8 +65,8 @@ public enum Tooltip {
   /// Where an action's bubble ends: the row's own trailing edge, which is
   /// the column every value, every time and every icon in the panel ends
   /// on. The panel's bare 8 pt put it 12 pt right of the icon it belongs
-  /// to and over the scroll thumb, which is the one thing a bubble about a
-  /// row may not cover: testAnActionTooltipSitsUnderItsIconAndEndsOnTheIconColumn.
+  /// to, past the edge the rest of the panel ends on:
+  /// testAnActionTooltipSitsUnderItsIconAndEndsOnTheIconColumn.
   public static let actionMargin: CGFloat = Grid.unit + Grid.rowInset
   /// How long the pointer rests first.
   public static let delay: TimeInterval = Timing.tooltipDelay

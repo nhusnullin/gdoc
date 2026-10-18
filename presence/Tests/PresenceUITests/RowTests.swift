@@ -487,7 +487,8 @@ final class RowTests: XCTestCase {
     let labels = try SheetPieces.sectionLabels()
     let live = try SheetPieces.live()
     let log = try SheetPieces.logRow()
-    let documents = try SheetPieces.documents()
+    let documentsCount = try SheetPieces.documentsCount()
+    let yesterday = try SheetPieces.yesterday()
     let rows = try SheetPieces.documentRows()
     let compact = try XCTUnwrap(
       SheetPieces.settings().first { $0.kind == .quit }, "no scene drew the Quit row")
@@ -500,8 +501,8 @@ final class RowTests: XCTestCase {
       //
       // A label over rows is a section, and a section's header makes a claim
       // about what is under it: NOW over a log row and a SETTINGS row, or
-      // "14 days · 12" over two rows and a Show more, is this page saying
-      // something no panel says. The pieces here are pieces, in the order
+      // "14 days · 12" over two rows, is this page saying something no
+      // panel says. The pieces here are pieces, in the order
       // `RowShape` names them, and the labels stand at the foot with nothing
       // under them: testASheetPutsNoLabelOverRowsFromAnotherScene.
       let sheet = VStack(alignment: .leading, spacing: 0) {
@@ -521,14 +522,14 @@ final class RowTests: XCTestCase {
               }
             })
         }
-        ChevronRow(documents.more, isOpen: false)
+        ChevronRow(yesterday, isOpen: false)
         QuietLine(quiet)
         // The two labels, each on its own and with air around it: stacked,
         // the first reads as a header over the second.
         Spacer(minLength: 2 * Grid.unit)
         SectionLabel(labels.now)
         Spacer(minLength: 2 * Grid.unit)
-        SectionLabel(labels.documents, count: documents.count)
+        SectionLabel(labels.documents, count: documentsCount)
       }
       .frame(width: Grid.panelWidth)
       .padding(Grid.unit)

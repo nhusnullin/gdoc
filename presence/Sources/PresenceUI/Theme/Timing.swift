@@ -6,14 +6,10 @@
 
 import Foundation
 
-/// The seven delays the panel is built on.
+/// The six delays the panel is built on.
 public enum Timing {
   /// How long a pointer rests before the app draws a tooltip.
   public static let tooltipDelay: TimeInterval = 0.5
-  /// How long the scroll thumb stays after the content stopped moving. A
-  /// thumb that sat there for good said there was more below on every
-  /// screen that had any, which is most of them.
-  public static let thumbLife: TimeInterval = 1
   /// How long a copied icon stays green before it goes back.
   public static let doneFlash: TimeInterval = 1
   /// The green check in the menu bar after a verified write that arrived

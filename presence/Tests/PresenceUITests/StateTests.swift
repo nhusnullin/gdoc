@@ -4,8 +4,8 @@
 // nothing about: a list opened, a link copied, a card dismissed. Each is a
 // value outside every view, so each is a test that states the value and reads
 // the model back. The three here are the ones a drawn panel would be wrong
-// about without them: a Show more that opens nothing, a green check that
-// never goes back, and the same request made twice at once.
+// about without them: a green check that never goes back, a card nobody
+// dismissed, and the same request made twice at once.
 
 import Foundation
 import PresenceCore
@@ -17,11 +17,13 @@ import XCTest
 final class StateTests: XCTestCase {
   private let chapter4 = SceneDocuments.chapter4
 
-  /// `MORE('Show 3 more')` over TODAY: the row is drawn from the day's own
-  /// count, so the list has to read the state the chevron writes. Without it
-  /// the word is there, the press is wired, and the panel comes back the
-  /// same.
-  func testTodaysShowMoreOpensTheList() throws {
+  /// The whole day is in the model, and the whole day is drawn.
+  ///
+  /// TODAY was eight rows with the rest behind a Show more until
+  /// 2026-10-18, and the word was the one piece of panel state a person's
+  /// press changed. Nothing is folded now: the fold hands over the day and
+  /// the list draws it.
+  func testTheWholeDayIsInTheModel() throws {
     var events: [Event] = []
     for minute in 0..<11 {
       let at = String(format: "2026-10-17T09:%02d:00Z", minute)
@@ -31,17 +33,10 @@ final class StateTests: XCTestCase {
         event(at, .end, command: "reply", doc: chapter4, call: Int64(minute + 1), ok: true))
     }
 
-    let closed = try drawn(events, at: "2026-10-17T10:00:00Z")
-    let today = try XCTUnwrap(closed.today)
+    let drawn = try drawn(events, at: "2026-10-17T10:00:00Z")
+    let today = try XCTUnwrap(drawn.today)
     XCTAssertEqual(today.rows.count, 11, "the day's rows are all in the model")
-    XCTAssertEqual(today.collapsed, 8)
-    XCTAssertFalse(today.isOpen, "the list starts closed")
-
-    let opened = try drawn(
-      events, at: "2026-10-17T10:00:00Z", ui: UIState(expanded: [.today]))
-    XCTAssertTrue(
-      try XCTUnwrap(opened.today).isOpen,
-      "the chevron the shell wires to .today is the state this list reads")
+    XCTAssertNil(today.empty, "a day with eleven rows says nothing about being empty")
   }
 
   /// `.act.is-done` for one second: the state is the document and the moment

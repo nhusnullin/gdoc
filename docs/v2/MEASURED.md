@@ -1024,17 +1024,17 @@ measurement through a preference key still holds; nothing inside it reaches the
 canvas. One row is as empty as forty, so this is not clipping or a scroll
 offset: the renderer does not draw the scroller's content at all.
 
-So the scroll box carries a drawn mode. `ScrollBox` reads
-`\.isRendering` from the environment, and with it on it clips a plain stack
-with `.fixedSize` instead of scrolling. The scenes and every render test turn
-it on with one `rendering()` at the top of the tree; the app never does, so
-what a person sees is a real scroller. `ScrollTests`
-`testTheBoxCapsItsHeightAndScrollsInsideWithTheThumbAndTheFade` asserts the
-ScrollView's ink is zero, so the day the renderer learns to draw one, that test
-says so and the drawn mode can go.
+So the scroll box carried a drawn mode: with `\.isRendering` on it clipped a
+plain stack instead of scrolling, and the scenes turned that on with one
+`rendering()` at the top of the tree.
 
-Recheck on a macOS or Xcode upgrade, by that one assertion: it fails when the
-answer changes.
+The box itself went on 2026-10-18 with the third look, and with it the
+assertion that watched this answer. Nothing in the panel is a `ScrollView`
+any more, so the measurement is a record of what `ImageRenderer` does and no
+longer something the panel rests on. `rendering()` stays, for the one frame a
+render is: the ring reads it so a scene does not come out at whatever angle
+the animation was at. The day a scroller is wanted again, this section is
+what says to measure it first.
 
 ## What LaunchServices says about a `claude://` handler
 
@@ -1246,3 +1246,53 @@ makes it switch there is not the URL alone. So Open chat keeps the
 activation it has, the `session` field still goes into the record under
 `via: code`, and the day a form is found that switches, the opener has the
 id. Recheck on a Claude Desktop update by the same three lines.
+
+## Where the screen cuts a panel as tall as its content
+
+Measured 2026-10-18 on Nail's machine, M27 Task 1. Nothing in the panel
+scrolls since that evening and it has no cap, so a busy day draws a panel
+taller than the screen. The decision says that cut is the price Nail chose
+over any scroll, and this is the height it happens at.
+
+How it was taken. A throwaway `XCTestCase` in `presence/Tests/PresenceUITests`
+built scene e3's panel with the hold card of scene r6 repeated 1, 4, 8 and 12
+times in NOW, read each panel's height back through the `panel` metric probe
+and off `NSHostingView.fittingSize`, and asked `NSScreen.main` for its frames.
+It then placed a borderless `NSPanel` holding the twelve-card panel by the
+arithmetic `presence/Sources/Presence/Panel.swift` uses, with the status
+item's button taken as the top right of the screen. The file was deleted after
+the reading.
+
+| What was measured | Height |
+|---|---|
+| this screen, `NSScreen.main.frame` | 1728 x 1117 |
+| the same screen's `visibleFrame`, which is what the panel is placed in | 1675 x 1084 |
+| e3 with one hold card | 1092 pt |
+| e3 with four | 1512 pt |
+| e3 with eight | 2072 pt |
+| e3 with twelve | 2632 pt |
+| the tallest scene as the scenes stand, e3 | 1552 pt |
+| the next two, e1 and r9 | 1184 pt and 1124 pt |
+| the shortest, e8 | 372 pt |
+
+The twelve-card panel asked for 320 x 2632 and the window kept all of it:
+`setContentSize` is not clamped for a borderless panel. The placement is what
+decides which end is lost. It hangs the panel under the button and then
+raises the origin to `visibleFrame.minY + 8`, so the foot sits 8 pt above the
+screen's bottom edge, 1076 pt of the panel are on the screen and **1556 pt
+are above the screen's top edge**, where the window server shows nothing.
+
+**A panel taller than the screen loses its head, not its foot.** SETTINGS and
+Quit stay on the screen because the bottom is pinned; the header, the account
+and NOW go off the top. A panel of 1084 pt or less is whole, which every scene
+in the set is except e3 at 1552, and a day with one hold card in it is already
+past that on this screen.
+
+The window server's own bounds for that window could not be read from the test
+process: `CGWindowListCopyWindowInfo` reported 0 x 0 and no on-screen flag,
+because a `swift test` process composites no window. So the cut above is
+AppKit's geometry and the screen's frame, not a screenshot.
+
+Recheck on a screen of another size, or if the placement in `Panel.swift`
+changes which edge it pins. A later decision may cap NOW, which the 2026-10-18
+entry leaves open; that would be the one number to measure again.

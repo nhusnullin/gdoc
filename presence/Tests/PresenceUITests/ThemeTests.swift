@@ -50,11 +50,10 @@ final class ThemeTests: XCTestCase {
     XCTAssertEqual(dark.stuckTint, Swatch(0xE5_48_4D, alpha: 0.07))
     XCTAssertEqual(dark.stuckTintEdge, Swatch(0xE5_48_4D, alpha: 0.22))
 
-    // .ring, .switch, .scrollbox, .btn-primary, .btn.confirm, .btn-danger
+    // .ring, .switch, .btn-primary, .btn.confirm, .btn-danger
     XCTAssertEqual(dark.ringTrack, Swatch(0xFF_FF_FF, alpha: 0.10))
     XCTAssertEqual(dark.switchTrack, Swatch(0xFF_FF_FF, alpha: 0.24))
     XCTAssertEqual(dark.switchKnob, Swatch(0xFF_FF_FF))
-    XCTAssertEqual(dark.scrollThumb, Swatch(0xFF_FF_FF, alpha: 0.22))
     XCTAssertEqual(dark.primaryFill, Swatch(0xFF_FF_FF, alpha: 0.92))
     XCTAssertEqual(dark.primaryInk, Swatch(0x11_11_11))
     XCTAssertEqual(dark.confirmFill, Swatch(0xE5_48_4D, alpha: 0.10))
@@ -115,7 +114,6 @@ final class ThemeTests: XCTestCase {
     XCTAssertEqual(light.ringTrack, Swatch(0x00_00_00, alpha8: 0x1F))
     XCTAssertEqual(light.switchTrack, Swatch(0x00_00_00, alpha: 0.12))
     XCTAssertEqual(light.switchKnob, Swatch(0xFF_FF_FF))
-    XCTAssertEqual(light.scrollThumb, Swatch(0x00_00_00, alpha: 0.22))
     XCTAssertEqual(light.primaryFill, Swatch(0x11_11_13))
     XCTAssertEqual(light.primaryInk, Swatch(0xFF_FF_FF))
     XCTAssertEqual(
@@ -170,7 +168,6 @@ final class ThemeTests: XCTestCase {
     XCTAssertEqual(Grid.panelWidth, 320)
     XCTAssertEqual(Grid.unit, 8)
     XCTAssertEqual(Grid.panelRadius, 12)
-    XCTAssertEqual(Grid.panelMaxHeight, 600)
     XCTAssertEqual(Grid.headerHeight, 36)
     XCTAssertEqual(Grid.sectionLabelHeight, 28)
     XCTAssertEqual(Grid.rowHeight, 32)
@@ -194,8 +191,6 @@ final class ThemeTests: XCTestCase {
     XCTAssertEqual(Grid.ringLarge, 28)
     XCTAssertEqual(Grid.hairline, 0.5)
     XCTAssertEqual(Grid.quietInset, 44)
-    XCTAssertEqual(Grid.scrollBoxHeight, 236)
-    XCTAssertEqual(Grid.fadeHeight, 28)
     XCTAssertEqual(Grid.badgeSize, 10)
   }
 

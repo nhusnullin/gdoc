@@ -779,18 +779,21 @@ final class SessionTests: XCTestCase {
     XCTAssertEqual(register.settingsOpened, 1, "it opened the pane that allows it")
   }
 
-  /// A section a person opened stays open, because what is open lives outside
-  /// every view.
-  func testASectionAPersonOpenedStaysOpen() throws {
+  /// The one fold a person can open stays open, because what is open lives
+  /// outside every view.
+  ///
+  /// Yesterday is that fold. DOCUMENTS and TODAY had a Show more of their
+  /// own until 2026-10-18, when the scrolling and the folds under it went
+  /// and the panel became as tall as its content.
+  func testTheFoldAPersonOpenedStaysOpen() throws {
     try writeTheRecord([])
     let session = made()
     answered(session)
 
-    session.toggle(.documents)
-    XCTAssertTrue(session.ui.isOpen(.documents))
-    XCTAssertEqual(session.model.documents?.isOpen, true)
-    session.toggle(.documents)
-    XCTAssertFalse(session.ui.isOpen(.documents))
+    session.toggle(.yesterday)
+    XCTAssertTrue(session.ui.isOpen(.yesterday))
+    session.toggle(.yesterday)
+    XCTAssertFalse(session.ui.isOpen(.yesterday))
   }
 
   /// A redraw is decided by the folds the screen is drawn from, so a line

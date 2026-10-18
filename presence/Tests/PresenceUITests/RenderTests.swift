@@ -29,7 +29,6 @@ final class RenderTests: XCTestCase {
 
     for scene in Scenes.all {
       let view = try scene.view()
-      let whole = try scene.view(.whole)
       let bar = try scene.bar()
       for scheme in [ColorScheme.dark, .light] {
         let suffix = scheme == .dark ? "dark" : "light"
@@ -38,14 +37,6 @@ final class RenderTests: XCTestCase {
         try data.write(to: shots.appendingPathComponent(name))
         XCTAssertGreaterThan(
           data.count, 2_000, "\(name) is too small to be a panel")
-
-        // The same panel with nothing hidden. The reviewer reads this one,
-        // because the rows past the cap are rows too.
-        let wholeName = "\(scene.id)-whole-\(suffix).png"
-        let wholeData = try png(whole, scheme: scheme)
-        try wholeData.write(to: shots.appendingPathComponent(wholeName))
-        XCTAssertGreaterThan(
-          wholeData.count, 2_000, "\(wholeName) is too small to be a panel")
 
         // The menu bar the panel hangs from, in the same appearance. It is
         // one picture of the template image macOS tints, so a reviewer sees
@@ -99,115 +90,78 @@ final class RenderTests: XCTestCase {
     }
   }
 
-  /// The reviewer's copy hides nothing: on the screens the cap cuts, the
-  /// whole render is taller, and SETTINGS's last row is in it.
-  func testTheWholeRenderCarriesWhatTheCapCuts() throws {
-    for id in ["e1", "e3", "e9"] {
-      let scene = try XCTUnwrap(Scenes.all.first { $0.id == id })
-      let capped = try probes(try scene.view(), scheme: .dark)
-      let whole = try probes(try scene.view(.whole), scheme: .dark)
-      let cappedHeight = try XCTUnwrap(capped["panel"]).height
-      let wholeHeight = try XCTUnwrap(whole["panel"]).height
+  /// Nothing scrolls, and the panel is its parts added up.
+  ///
+  /// The cap, the middle box, the inner scrolls and Show more went on
+  /// 2026-10-18: the panel is as tall as its content, whatever that comes
+  /// to. Two things are read here. The sources carry no scroll view at all,
+  /// which is the one claim a render cannot make: a box nobody put in a
+  /// tree draws nothing in any state, and the words that built the old box
+  /// are gone with it. And scene e3, the screen with every part on it, is
+  /// the header plus its sections plus the panel's own padding, with
+  /// nothing taken off anywhere and nothing spare.
+  func testNothingScrollsAndThePanelIsItsPartsAddedUp() throws {
+    for file in try uiSourceFiles() {
+      let source = try String(contentsOf: file, encoding: .utf8)
+      let name = file.lastPathComponent
+      for gone in ["ScrollView", "ScrollBox", "ShowMore", "panelMaxHeight"] {
+        XCTAssertFalse(source.contains(gone), "\(name) still names \(gone)")
+      }
+    }
 
-      XCTAssertEqual(cappedHeight, Grid.panelMaxHeight, "\(id) is not at the cap")
+    let scene = try XCTUnwrap(Scenes.all.first { $0.id == "e3" })
+    for scheme in [ColorScheme.dark, .light] {
+      let drawn = try probeList(try scene.view(), scheme: scheme)
+      XCTAssertNil(
+        drawn.first { $0.name.hasPrefix("scrollbox") }, "e3 drew a box in \(scheme)")
+
+      let panel = try XCTUnwrap(drawn.first { $0.name == "panel" })
+      let header = try XCTUnwrap(drawn.first { $0.name == "header" })
+      let sections = drawn.filter { $0.name == "section" }
+      XCTAssertEqual(
+        sections.count, 4, "e3 is NOW, DOCUMENTS, TODAY and SETTINGS")
+      XCTAssertEqual(
+        header.size.height + sections.map(\.size.height).reduce(0, +) + 2 * Grid.unit,
+        panel.size.height,
+        "e3's \(sections.count) sections under a \(header.size.height) pt header are not "
+          + "the \(panel.size.height) pt panel")
       XCTAssertGreaterThan(
-        wholeHeight, cappedHeight,
-        "\(id) is cut at the cap, so the reviewer's copy has to be taller")
-      XCTAssertNotNil(
-        whole["settings.quit"], "\(id)'s whole render drew no SETTINGS at all")
+        panel.size.height, 600,
+        "e3 is taller than the 600 pt the panel was capped at until 2026-10-18, which is "
+          + "the price Nail chose over a scroll")
+      XCTAssertNotNil(drawn.first { $0.name == "settings.quit" }, "Quit is drawn in \(scheme)")
     }
   }
 
-  /// The four parts add up to the cap. `.frame(maxHeight:)` with a clip
-  /// under it reads 600 whatever was laid out inside, so a part one gap too
-  /// tall is 600 on the probe and a bottom edge, corner and fade cut off
-  /// the screen.
+  /// The question is asked on the header's own line, and the panel grows
+  /// for it.
   ///
-  /// Scene e3 is the one with all four: a header, a NOW of six items, the
-  /// middle, and SETTINGS at the foot. They are drawn in that order, which
-  /// is what the origins say, and the middle is what is left of the 600 pt
-  /// once the other three have taken theirs.
-  func testTheFourPartsAddUpToTheCapOnE3() throws {
-    let scene = try XCTUnwrap(Scenes.all.first { $0.id == "e3" })
-    let drawn = try probeList(try scene.view(), scheme: .dark)
-    let header = try XCTUnwrap(drawn.first { $0.name == "header" })
-    let now = try XCTUnwrap(drawn.first { $0.name == "panel.now" }, "e3 drew no NOW")
-    let middle = try XCTUnwrap(drawn.first { $0.name == "panel.middle" })
-    let settings = try XCTUnwrap(drawn.first { $0.name == "panel.settings" })
-
-    XCTAssertEqual(header.size.height, Grid.headerHeight + Grid.headerGap)
-    XCTAssertEqual(now.size.height, PanelView.nowHeight, "NOW is at its own cap on e3")
-    XCTAssertEqual(middle.size.height, 148)
-    XCTAssertEqual(settings.size.height, 124, "three rows and the Hub row's own")
-    XCTAssertEqual(
-      header.size.height + now.size.height + middle.size.height + settings.size.height
-        + 2 * Grid.unit,
-      Grid.panelMaxHeight,
-      "e3's four parts are \(now.size.height) + \(middle.size.height) + \(settings.size.height) "
-        + "under a \(header.size.height) pt header")
-
-    XCTAssertLessThan(header.origin.y, now.origin.y, "the header is above NOW")
-    XCTAssertLessThan(now.origin.y, middle.origin.y, "NOW is above the middle")
-    XCTAssertLessThan(middle.origin.y, settings.origin.y, "SETTINGS is under the middle")
-
-    // A screen with nothing running has three parts, and the middle takes
-    // what NOW is not using.
-    let quiet = try XCTUnwrap(Scenes.all.first { $0.id == "e1" })
-    let three = try probeList(try quiet.view(), scheme: .dark)
-    XCTAssertNil(three.first { $0.name == "panel.now" }, "nothing is running on e1")
-    let header1 = try XCTUnwrap(three.first { $0.name == "header" }).size.height
-    let middle1 = try XCTUnwrap(three.first { $0.name == "panel.middle" }).size.height
-    let settings1 = try XCTUnwrap(three.first { $0.name == "panel.settings" }).size.height
-    XCTAssertEqual(header1 + middle1 + settings1 + 2 * Grid.unit, Grid.panelMaxHeight)
-  }
-
-  /// The question is asked on the header's own line, and the middle gives
-  /// way for it.
-  ///
-  /// A row states a minimum and not a height, so the header stretched into
-  /// whatever a capped panel had spare: scene e10's header was 131 pt with
-  /// "Sign out?" drawn in the middle of a hole, and DOCUMENTS and TODAY had
-  /// 18 pt between them. The header takes its own height, as SETTINGS does,
-  /// and the one part that gives way is the middle.
+  /// A row states a minimum and not a height, so a header inside a capped
+  /// panel stretched into whatever was spare: scene e10's header was 131 pt
+  /// with "Sign out?" drawn in the middle of a hole, and DOCUMENTS and
+  /// TODAY had 18 pt between them. The header takes its own height, every
+  /// section takes its own, and the panel is the sum: a question adds the
+  /// line it is asked on and moves nothing else.
   func testTheQuestionLeavesTheHeaderAtThirtySix() throws {
     let scene = try XCTUnwrap(Scenes.all.first { $0.id == "e10" })
     for scheme in [ColorScheme.dark, .light] {
-      let capped = try probeList(try scene.view(), scheme: scheme)
-      let whole = try probeList(try scene.view(.whole), scheme: scheme)
+      let drawn = try probeList(try scene.view(), scheme: scheme)
 
-      let line = try XCTUnwrap(capped.first { $0.name == "header.line" })
+      let line = try XCTUnwrap(drawn.first { $0.name == "header.line" })
       XCTAssertEqual(line.size.height, Grid.headerHeight, "the question is one 36 pt line")
 
-      let header = try XCTUnwrap(capped.first { $0.name == "header" })
-      let open = try XCTUnwrap(whole.first { $0.name == "header" })
+      let header = try XCTUnwrap(drawn.first { $0.name == "header" })
+      let sections = drawn.filter { $0.name == "section" }
+      let panel = try XCTUnwrap(drawn.first { $0.name == "panel" })
       XCTAssertEqual(
-        header.size.height, open.size.height,
-        "the capped panel draws the same header as the open one")
+        header.size.height + sections.map(\.size.height).reduce(0, +) + 2 * Grid.unit,
+        panel.size.height,
+        "e10's header and its \(sections.count) sections are not the panel")
 
-      let now = try XCTUnwrap(capped.first { $0.name == "panel.now" }, "e10 draws NOW")
-      let middle = try XCTUnwrap(capped.first { $0.name == "panel.middle" })
-      let settings = try XCTUnwrap(capped.first { $0.name == "panel.settings" })
-      let panel = try XCTUnwrap(capped.first { $0.name == "panel" })
-      XCTAssertGreaterThan(
-        middle.size.height, Grid.sectionLabelHeight + Grid.twoLineRowHeight,
-        "the middle keeps the room the header is not using")
-      XCTAssertEqual(
-        header.size.height + now.size.height + middle.size.height + settings.size.height
-          + 2 * Grid.unit,
-        Grid.panelMaxHeight,
-        "and the four parts are the panel, with nothing spare anywhere in it")
-      XCTAssertEqual(panel.size.height, Grid.panelMaxHeight)
-
-      // The middle is the one part the cap took anything from.
-      for name in ["header", "panel.now", "panel.settings"] {
-        XCTAssertEqual(
-          try XCTUnwrap(capped.first { $0.name == name }).size.height,
-          try XCTUnwrap(whole.first { $0.name == name }).size.height,
-          "\(name) is the same height capped as open")
-      }
-      XCTAssertLessThan(
-        middle.size.height, try XCTUnwrap(whole.first { $0.name == "panel.middle" }).size.height,
-        "and the middle is what gave way")
+      let now = try XCTUnwrap(drawn.first { $0.name == "panel.now" }, "e10 draws NOW")
+      let settings = try XCTUnwrap(drawn.first { $0.name == "panel.settings" })
+      XCTAssertLessThan(header.origin.y, now.origin.y, "the header is above NOW")
+      XCTAssertLessThan(now.origin.y, settings.origin.y, "SETTINGS is under it")
     }
   }
 
@@ -222,7 +176,7 @@ final class RenderTests: XCTestCase {
     let pinned = try XCTUnwrap(Scenes.all.first { $0.id == "e1" })
     let rows = try XCTUnwrap(try pinned.model().documents).rows
     XCTAssertTrue(rows[0].isPinned, "e1's first row is the pinned one")
-    let kept = try probeList(try pinned.view(.whole), scheme: .dark)
+    let kept = try probeList(try pinned.view(), scheme: .dark)
       .filter { $0.name == "row.status" }
     XCTAssertFalse(kept.isEmpty, "e1 drew no document row")
     for column in kept {
@@ -236,27 +190,12 @@ final class RenderTests: XCTestCase {
       guard let documents = model.documents, !documents.rows.isEmpty else { continue }
       XCTAssertFalse(
         documents.rows.contains(where: \.isPinned), "\(scene.id) pins nothing")
-      let columns = try probeList(try scene.view(.whole), scheme: .dark)
+      let columns = try probeList(try scene.view(), scheme: .dark)
         .filter { $0.name == "row.status" }
       for column in columns {
         XCTAssertEqual(
           column.size.width, Grid.glyphSize,
           "\(scene.id) has no pin, so its rows start where every other row does")
-      }
-    }
-  }
-
-  /// The two busiest screens. The cap is the panel's own frame: a section a
-  /// person opens scrolls inside itself and never grows the window.
-  func testThePanelNeverPassesSixHundred() throws {
-    for id in ["e1", "e3"] {
-      let scene = try XCTUnwrap(Scenes.all.first { $0.id == id })
-      for scheme in [ColorScheme.dark, .light] {
-        let sizes = try probes(try scene.view(), scheme: scheme)
-        let panel = try XCTUnwrap(sizes["panel"])
-        XCTAssertLessThanOrEqual(
-          panel.height, Grid.panelMaxHeight,
-          "\(id) drew \(panel.height) pt in \(scheme), past the 600 the panel is capped at")
       }
     }
   }
@@ -537,7 +476,7 @@ final class RenderTests: XCTestCase {
       "the watch the sign-in stopped is a row of the day like any other")
 
     for scheme in [ColorScheme.dark, .light] {
-      let drawn = try probes(try scene.view(.whole), scheme: scheme)
+      let drawn = try probes(try scene.view(), scheme: scheme)
       XCTAssertNil(drawn["live.stop"], "e9 draws a Stop icon in \(scheme)")
       XCTAssertNil(drawn["live.ring"], "and nothing is pending")
     }
@@ -794,8 +733,6 @@ final class RenderTests: XCTestCase {
         <div class="pair">
           <figure><img src="\(scene.id)-dark.png" width="320"><figcaption>dark</figcaption></figure>
           <figure><img src="\(scene.id)-light.png" width="320"><figcaption>light</figcaption></figure>
-          <figure><img src="\(scene.id)-whole-dark.png" width="320"><figcaption>dark, nothing hidden</figcaption></figure>
-          <figure><img src="\(scene.id)-whole-light.png" width="320"><figcaption>light, nothing hidden</figcaption></figure>
         </div>
         <p class="about">drawn at \(scene.moment) · the scene is about the \(appearance) one</p>
       </section>
@@ -844,14 +781,12 @@ final class RenderTests: XCTestCase {
       <p>\(escaped(Scenes.settingsRowRule))</p>
       <p>\(escaped(Scenes.markRule))</p>
     </section>
-    <p>Drawn from the records under Tests/PresenceUITests/Scenes at 2x. The
-    first pair of each row is the panel as the person opens it, capped at
-    600 pt with the rest under a scroll. The second pair is the same panel
-    with nothing hidden, which is the one to review: a PNG cannot be
-    scrolled. A capped still draws the scroll thumb whatever happened,
-    because on the screen the thumb comes with the scrolling and goes a
-    second after it, and a still of a panel nobody has touched would be a
-    still of the one thing nobody can check.</p>
+    <p>Drawn from the records under Tests/PresenceUITests/Scenes at 2x. One
+    image per scene and appearance, which is the whole panel: nothing in it
+    scrolls and nothing is capped since 2026-10-18, so the panel the person
+    opens and the panel the reviewer reads are the same drawing. A panel
+    taller than the screen is cut at the screen's edge, which is the price
+    of that decision and is in docs/v2/MEASURED.md.</p>
     <p>One record per scene, and each of them its own day: the nine r
     screens are one Saturday told nine times and agree with each other, and
     every e screen is a record of its own, written for the one thing it

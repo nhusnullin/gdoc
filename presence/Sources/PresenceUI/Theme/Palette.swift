@@ -105,12 +105,11 @@ public struct Palette: Sendable, Equatable {
   public let stuckTint: Swatch
   public let stuckTintEdge: Swatch
 
-  // The controls: the ring's track, the switch, the scroll thumb, the one
-  // filled button, the confirm pair's fill and the danger edge.
+  // The controls: the ring's track, the switch, the one filled button, the
+  // confirm pair's fill and the danger edge.
   public let ringTrack: Swatch
   public let switchTrack: Swatch
   public let switchKnob: Swatch
-  public let scrollThumb: Swatch
   public let primaryFill: Swatch
   public let primaryInk: Swatch
   public let confirmFill: Swatch
@@ -154,7 +153,6 @@ public struct Palette: Sendable, Equatable {
     ringTrack: Swatch(0xFF_FF_FF, alpha: 0.10),
     switchTrack: Swatch(0xFF_FF_FF, alpha: 0.24),
     switchKnob: Swatch(0xFF_FF_FF),
-    scrollThumb: Swatch(0xFF_FF_FF, alpha: 0.22),
     primaryFill: Swatch(0xFF_FF_FF, alpha: 0.92),
     primaryInk: Swatch(0x11_11_11),
     confirmFill: Swatch(0xE5_48_4D, alpha: 0.10),
@@ -196,7 +194,6 @@ public struct Palette: Sendable, Equatable {
     ringTrack: Swatch(0x00_00_00, alpha8: 0x1F),
     switchTrack: Swatch(0x00_00_00, alpha: 0.12),
     switchKnob: Swatch(0xFF_FF_FF),
-    scrollThumb: Swatch(0x00_00_00, alpha: 0.22),
     primaryFill: Swatch(0x11_11_13),
     primaryInk: Swatch(0xFF_FF_FF),
     // The stylesheet leaves .btn.confirm's fill alone in the light block, so

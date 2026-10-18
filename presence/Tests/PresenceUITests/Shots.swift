@@ -337,13 +337,20 @@ enum SheetPieces {
     return header
   }
 
-  /// Scene e1's DOCUMENTS: its header count, and the chevron's own words
-  /// for what is under it.
-  static func documents() throws -> (count: String, more: String) {
+  /// Scene e1's DOCUMENTS header count.
+  static func documentsCount() throws -> String {
     let model = try XCTUnwrap(try scene("e1").model().documents, "e1 drew no documents")
-    let count = try XCTUnwrap(model.count, "e1's DOCUMENTS has no count")
-    let shown = ShowMore(total: model.rows.count, collapsed: model.collapsed, isOpen: false)
-    return (count, try XCTUnwrap(shown.title, "e1 hides nothing, so there is no word"))
+    return try XCTUnwrap(model.count, "e1's DOCUMENTS has no count")
+  }
+
+  /// Scene e2's Yesterday: the words on the one chevron row the panel has
+  /// left. The Show more rows went with the scrolling on 2026-10-18, so the
+  /// fold of the day before is where the chevron is drawn now.
+  static func yesterday() throws -> String {
+    for section in try scene("e2").model().sections {
+      if case .yesterday(let model) = section { return model.summary }
+    }
+    throw XCTSkip("scene e2 folded no yesterday")
   }
 
   /// The two labels the rows sheet draws, out of the model that names
@@ -400,7 +407,7 @@ enum SheetPieces {
     let stuck = try self.stuck()
     let live = try self.live()
     let job = try self.job()
-    let documents = try self.documents()
+    let documents = try documentsCount()
 
     let labels = try sectionLabels()
     let header = try self.header()
@@ -411,7 +418,7 @@ enum SheetPieces {
       stuck.card.title, stuck.card.reason,
       live.title, live.sub,
       job.title,
-      documents.count, documents.more,
+      documents, try yesterday(),
       try quiet(),
       SignedInBanner.words, Scenes.signInURL,
     ]
@@ -459,18 +466,12 @@ func panelVocabulary() throws -> Set<String> {
       case .now: break
       case .documents(let documents):
         words.formUnion([documents.count, documents.empty].compactMap { $0 })
-        words.formUnion(
-          ShowMore(total: documents.rows.count, collapsed: documents.collapsed, isOpen: false)
-            .title.map { [$0] } ?? [])
         for row in documents.rows {
           words.formUnion([row.title, row.sub])
           words.formUnion(row.actions.flatMap(actionWords))
         }
       case .today(let log):
         words.formUnion([log.empty].compactMap { $0 })
-        words.formUnion(
-          ShowMore(total: log.rows.count, collapsed: log.collapsed, isOpen: false)
-            .title.map { [$0] } ?? [])
         for row in log.rows { words.formUnion(logWords(row)) }
       case .yesterday(let yesterday):
         words.insert(yesterday.summary)
@@ -536,4 +537,21 @@ private func nowWords(_ item: NowItem) -> [String] {
 /// One log row's own strings.
 private func logWords(_ row: LogRowModel) -> [String] {
   [row.title, row.value] + [row.sub].compactMap { $0 }
+}
+
+/// Every Swift file the panel is drawn by, so a test can state what the
+/// drawing does not contain. The one claim read this way is that nothing
+/// scrolls: a view nobody put in a tree is the one thing a render cannot
+/// show, and a source with no `ScrollView` in it draws none in any state.
+func uiSourceFiles() throws -> [URL] {
+  let root = presencePackageRoot().appendingPathComponent("Sources/PresenceUI")
+  let found = try XCTUnwrap(
+    FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil),
+    "Sources/PresenceUI is not a directory")
+  var files: [URL] = []
+  for case let next as URL in found where next.pathExtension == "swift" {
+    files.append(next)
+  }
+  XCTAssertGreaterThan(files.count, 20, "the panel is more files than that")
+  return files
 }

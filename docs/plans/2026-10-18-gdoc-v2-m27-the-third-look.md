@@ -91,18 +91,18 @@ branch.
   `ScrollTests.swift` (removed or reduced to the one assertion that nothing
   scrolls), `Shots.swift`, `Scenes.swift`
 
-- [ ] the panel is as tall as its content: no cap, no `ScrollBox`, no inner
+- [x] the panel is as tall as its content: no cap, no `ScrollBox`, no inner
       scroll in NOW or any list, no Show more; `Grid.panelMaxHeight` goes; a
       test renders scene e3 and asserts the panel's height equals the sum of
       its parts and that no view in the tree is a scroll view
-- [ ] the render index draws one image per scene and appearance, since the
+- [x] the render index draws one image per scene and appearance, since the
       capped pair no longer differs from the whole; the caption at the top
       of the index says so
-- [ ] `docs/v2/MEASURED.md` gains the note that a panel taller than the
+- [x] `docs/v2/MEASURED.md` gains the note that a panel taller than the
       screen is cut at the screen's edge by the window server, measured once
       on this machine with a fixture of twelve hold cards, with the height
       the cut happened at; the decision names this as the price Nail chose
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 2: DOCUMENTS is the pinned and the last five
 

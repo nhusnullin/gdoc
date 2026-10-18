@@ -452,9 +452,8 @@ final class FieldsTests: XCTestCase {
 
   // One rule for the DOCUMENTS header, and one number in it: the day's own
   // count where every row in the list is from today, and "14 days" with the
-  // whole list's count where one row is older. The count is the list's and
-  // never the screen's, because a row behind "Show more" is a document too.
-  // Scene e2 is the mixed one, and it reads "14 days · 4".
+  // whole list's count where one row is older. Scene e2 is the mixed one,
+  // and it reads "14 days · 4".
   func testTheDocumentsHeaderCountsTheWholeList() throws {
     var runs = 0
     func wrote(_ at: String, _ doc: String) -> Event {
@@ -498,7 +497,7 @@ final class FieldsTests: XCTestCase {
     XCTAssertEqual(long.documents?.rows.count, 6)
     XCTAssertEqual(
       long.documents?.count, "6 today",
-      "the sixth row is behind Show more and is counted all the same")
+      "six rows, and the header counts all of them")
   }
 
   // MARK: the record, as values

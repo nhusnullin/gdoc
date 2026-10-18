@@ -12,14 +12,11 @@ public enum Grid {
   public static let panelWidth: CGFloat = 320
   public static let unit: CGFloat = 8
   public static let panelRadius: CGFloat = 12
-  /// The cap the expanded sections scroll inside, rather than growing past.
-  public static let panelMaxHeight: CGFloat = 600
 
   /// The heights: the header, a section label, and a row in its three forms.
   public static let headerHeight: CGFloat = 36
-  /// The gap the header leaves under itself, which the body has to take off
-  /// the cap as well: a body that only subtracts the header is laid out this
-  /// much past the frame, and the clip takes it off the bottom edge.
+  /// The gap the header leaves under itself, which is part of what the
+  /// header's own probe reports.
   public static let headerGap: CGFloat = 4
   public static let sectionLabelHeight: CGFloat = 28
   public static let rowHeight: CGFloat = 32
@@ -63,10 +60,6 @@ public enum Grid {
 
   /// The left inset of a line under a row, past the glyph column.
   public static let quietInset: CGFloat = 44
-
-  /// The scroll box: its own cap, and the fade at its foot.
-  public static let scrollBoxHeight: CGFloat = 236
-  public static let fadeHeight: CGFloat = 28
 
   /// The badge beside the mark in the menu bar.
   public static let badgeSize: CGFloat = 10

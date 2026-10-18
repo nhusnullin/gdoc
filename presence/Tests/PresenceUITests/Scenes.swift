@@ -101,7 +101,7 @@ enum Scenes {
       + "Principle 5 allows facts and not promises, and the countdown is the one number in "
       + "the panel about something that has not happened.",
     "The DOCUMENTS header is \"N today\" where every row is from today and \"14 days · N\" "
-      + "otherwise, counting the rows behind Show more. The mockup wrote three forms of it "
+      + "otherwise, counting every row of the list. The mockup wrote three forms of it "
       + "on different screens. Since the second morning it counts a pinned row as well, "
       + "however old that document is, and counts a hidden one not at all: the number is "
       + "the list, and a pin and a hide are what the list is.",
@@ -320,27 +320,23 @@ enum Scenes {
       caption:
         "Nothing is running, so NOW is not drawn at all. The watch says you stopped it, "
         + "because the wait's end said so, and the publish of 14:31 is a document because "
-        + "its end named the one it created. The day's log is behind Show more and "
+        + "its end named the one it created. The day's log is drawn in full and "
         + "yesterday is one row.",
       fixture: "r9", moment: "2026-10-17T18:59:00Z", alive: [],
       facts: machine(latestStable: "v2.15.0"), ui: UIState(), appearance: nil),
     Scene(
       id: "e1", title: "More than five documents, one of them pinned",
       caption:
-        "DOCUMENTS opened: the list scrolls inside its own box with the thumb and the "
-        + "fade, and the panel stays under 600 pt. The middle of the panel scrolls as "
-        + "well on this screen, and its own indicator is hidden while the inner box "
-        + "carries one: two thumbs over one list is the panel saying which of them a "
-        + "drag would move, which it cannot. The first row is the wallet note, pinned "
-        + "two days ago: a pin puts a document first however old its last action is, "
-        + "the pin is the tack before its state glyph, and every row of a list with a "
-        + "pin in it keeps that slot, so the titles under it break where they would "
+        "Twelve documents, every one of them drawn: nothing scrolls and the panel is as "
+        + "long as its list comes out. The first row is the wallet note, pinned two "
+        + "days ago: a pin puts a document first however old its last action is, the "
+        + "pin is the tack before its state glyph, and every row of a list with a pin "
+        + "in it keeps that slot, so the titles under it break where they would "
         + "anyway. Pin, Unpin and Hide from the list are the row's own menu, which no "
         + "still can show.",
       fixture: "e1", moment: "2026-10-17T18:10:00Z", alive: [],
       facts: machine(),
       ui: UIState(
-        expanded: [.documents],
         pinned: [
           DocumentChoice(
             doc: SceneDocuments.wallet, at: Date(timeIntervalSince1970: 1_792_141_200),
@@ -489,14 +485,14 @@ extension Scene {
       checkShowing: check.isShowing(now: at))
   }
 
-  /// This scene as a view, in the mode the renderer needs.
+  /// This scene as a view, drawn for an image.
   ///
-  /// `.clipped` is the panel the person opens, capped at 600 pt with the
-  /// rest under a scroll. `.whole` is the same panel with nothing hidden,
-  /// which is what the reviewer's pass reads: a PNG cannot be scrolled, so
-  /// a screen whose SETTINGS is past the cap is a screen nobody checked.
+  /// One view and not two. Until 2026-10-18 a scene was rendered twice, once
+  /// capped at 600 pt as the person opened it and once whole for the
+  /// reviewer, because a PNG cannot be scrolled. Nothing is capped now, so
+  /// the two images are one image.
   @MainActor
-  func view(_ mode: RenderMode = .clipped) throws -> some View {
-    PanelView(model: try model()).rendering(mode)
+  func view() throws -> some View {
+    PanelView(model: try model()).rendering()
   }
 }

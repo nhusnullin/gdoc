@@ -216,12 +216,10 @@ public struct SettingsRowModel: Sendable, Equatable, Identifiable {
   }
 }
 
-/// DOCUMENTS: its count, its rows, and how much of them is on the screen.
+/// DOCUMENTS: its count and its rows, every one of which is drawn.
 public struct DocumentsSectionModel: Sendable, Equatable {
   public let count: String?
   public let rows: [DocumentRowModel]
-  public let collapsed: Int
-  public let isOpen: Bool
   /// The one line a panel with no documents says instead.
   public let empty: String?
   /// Whether the four labels are drawn under the first row.
@@ -231,8 +229,6 @@ public struct DocumentsSectionModel: Sendable, Equatable {
 /// TODAY, or Yesterday opened.
 public struct LogSectionModel: Sendable, Equatable {
   public let rows: [LogRowModel]
-  public let collapsed: Int
-  public let isOpen: Bool
   public let empty: String?
 }
 
@@ -662,8 +658,6 @@ extension PanelModel {
     return DocumentsSectionModel(
       count: count(fold),
       rows: rows,
-      collapsed: Documents.defaultRows,
-      isOpen: ui.isOpen(.documents),
       // The hint is the first run's: it tells a person who has never
       // published how to start. With a write already running it tells
       // them to do the thing they are doing, so the line is the quiet one
@@ -696,12 +690,11 @@ extension PanelModel {
   /// One rule, and one number in it: `3 today` where every row in the list
   /// is from today, and `14 days · 12` where one of them is older.
   ///
-  /// The number is the list's and never the screen's, because a row behind
-  /// "Show more" is a document the person has. A pinned row is one of them,
-  /// however old it is, and a hidden document is not one at all: both are
-  /// rows of the list or not, and the number counts the list. `1 today` over four rows
-  /// from three days, which is what the old rule drew on scene e2, is a
-  /// count of one thing over a list of another:
+  /// The number is the list's. A pinned row is one of them, however old it
+  /// is, and a hidden document is not one at all: both are rows of the list
+  /// or not, and the number counts the list. `1 today` over four rows from
+  /// three days, which is what the old rule drew on scene e2, is a count of
+  /// one thing over a list of another:
   /// testTheDocumentsHeaderCountsTheWholeList.
   private static func count(_ fold: DocumentsFold) -> String? {
     guard !fold.rows.isEmpty else { return nil }
@@ -732,8 +725,6 @@ extension PanelModel {
   {
     LogSectionModel(
       rows: fold.today.enumerated().map { words.logRow($1, index: $0) },
-      collapsed: Days.defaultRows,
-      isOpen: ui.isOpen(.today),
       empty: fold.today.isEmpty ? Sentences.nothingYet : nil)
   }
 
