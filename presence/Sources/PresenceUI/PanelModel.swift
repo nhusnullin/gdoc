@@ -45,6 +45,30 @@ public enum ActionKind: String, Sendable, Equatable, CaseIterable {
   /// The safe half of every confirm, which does nothing but put the
   /// question away.
   case keep
+  /// The three a document row's own menu has: a pin, taking it back, and a
+  /// hide. None of them is an icon, because the four icons on a row stay
+  /// four.
+  case pinDoc
+  case unpinDoc
+  case hideDoc
+}
+
+/// One word of a row's own menu, and what pressing it means.
+///
+/// A menu item is not an action button: it has a word and no icon, and no
+/// state, because a menu that is open draws only what can be pressed.
+public struct MenuItemModel: Sendable, Equatable, Identifiable {
+  public let kind: ActionKind
+  public let word: String
+  public let target: String
+
+  public init(_ kind: ActionKind, word: String, target: String) {
+    self.kind = kind
+    self.word = word
+    self.target = target
+  }
+
+  public var id: String { "\(target)|\(kind.rawValue)" }
 }
 
 /// One pressable thing, as a value: which icon, the words a pointer gets,
@@ -120,7 +144,12 @@ public struct DocumentRowModel: Sendable, Equatable, Identifiable {
   /// The document is in the trash. The v1 record never says so, so this is
   /// false until M24b.
   public let gone: Bool
+  /// Whether the person pinned it, which the row draws in its own column
+  /// before the state glyph.
+  public let isPinned: Bool
   public let actions: [ActionModel]
+  /// The row's own menu: Pin or Unpin, and Hide from the list.
+  public let menu: [MenuItemModel]
 
   public var id: String { doc }
 }
@@ -389,7 +418,8 @@ extension PanelModel {
   ) -> PanelModel {
     let nowFold = Now.fold(events, now: now, dismissed: ui.dismissed, alive: alive)
     let sessions = Live.sessions(events, now: now, alive: alive)
-    let docs = Documents.fold(events, now: now, calendar: calendar, alive: alive)
+    let docs = Documents.fold(
+      events, now: now, calendar: calendar, pinned: ui.pinned, hidden: ui.hidden, alive: alive)
     // The cards NOW is keeping are not rows TODAY writes as well: the
     // horizon and the dismissals are the NOW fold's, so it is folded first
     // and its keys are handed over.
@@ -616,12 +646,14 @@ extension PanelModel {
         glyph: glyph(for: row.state).kind,
         tone: glyph(for: row.state).tone,
         gone: false,
+        isPinned: row.isPinned,
         actions: [
           openDoc(row.doc, forced: ui.forcedTooltip),
           openNote(row.doc, facts: facts, ui: ui, forced: ui.forcedTooltip),
           openChat(row.doc, facts: facts, forced: ui.forcedTooltip),
           copyLink(row.doc, ui: ui, now: words.now),
-        ])
+        ],
+        menu: menu(row))
     }
     return DocumentsSectionModel(
       count: count(fold),
@@ -636,11 +668,28 @@ extension PanelModel {
       showsStrip: !ui.stripSeen && !rows.isEmpty)
   }
 
+  /// A row's own menu: the pin either way round, and the hide.
+  ///
+  /// A pinned row says Unpin, because the one thing a person wants from a
+  /// pin they have already made is to take it back. There is no Unhide: a
+  /// hidden document has no row to open a menu on, and what brings it back
+  /// is gdoc doing something on it again.
+  private static func menu(_ row: DocumentRow) -> [MenuItemModel] {
+    [
+      row.isPinned
+        ? MenuItemModel(.unpinDoc, word: Menus.unpin, target: row.doc)
+        : MenuItemModel(.pinDoc, word: Menus.pin, target: row.doc),
+      MenuItemModel(.hideDoc, word: Menus.hide, target: row.doc),
+    ]
+  }
+
   /// One rule, and one number in it: `3 today` where every row in the list
   /// is from today, and `14 days · 12` where one of them is older.
   ///
   /// The number is the list's and never the screen's, because a row behind
-  /// "Show more" is a document the person has. `1 today` over four rows
+  /// "Show more" is a document the person has. A pinned row is one of them,
+  /// however old it is, and a hidden document is not one at all: both are
+  /// rows of the list or not, and the number counts the list. `1 today` over four rows
   /// from three days, which is what the old rule drew on scene e2, is a
   /// count of one thing over a list of another:
   /// testTheDocumentsHeaderCountsTheWholeList.
@@ -659,6 +708,10 @@ extension PanelModel {
     case .done: return (.check, .ok)
     case .failed: return (.exclamation, .bad)
     case .unknown: return (.empty, .quiet)
+    // Nothing at all, and the column still there: the record says nothing
+    // about this document, and a glyph would be the panel inventing a state
+    // for a row that is here because somebody pinned it.
+    case .pinnedOnly: return (.blank, .quiet)
     }
   }
 

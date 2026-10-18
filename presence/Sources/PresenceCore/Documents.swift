@@ -1,9 +1,10 @@
 // DOCUMENTS: the same record as TODAY, grouped by the document it touched.
 //
 // One row per document, and the document leaves the list fourteen days after
-// its last action. The order is two lists: every document acted on in the
-// local day, newest first, and then the rest of the fortnight by how many
-// finished actions each one carries in it, most first, ties newest first.
+// its last action. The order is three lists: the documents a person pinned,
+// newest pin first; then every document acted on in the local day, newest
+// first; and then the rest of the fortnight by how many finished actions
+// each one carries in it, most first, ties newest first.
 // What gdoc just made is what a person reaches for, and under the day the
 // fortnight's own documents are the ones it was mostly about; a document
 // touched once a week ago sinks instead of sitting above one worked on every
@@ -25,6 +26,15 @@
 //     rows are in never changes with it.
 //   - Five rows by default, with the rest behind Show more, and the label
 //     counts the horizon and the local day.
+//
+// A pin and a hide are the person's own answers about one document, and they
+// come in as arguments like everything else here: they are the app's
+// preferences and never a line in the record. A pin holds the document in
+// the list past the horizon, and holds its title and its id, so a document
+// whose lines the tail can no longer see still has a row and an open action.
+// A hide takes the document out until gdoc finishes something on it again,
+// which is the one way back; TODAY still carries its runs, because the log
+// is the log. A document that is both is kept: the pin is the louder answer.
 //
 // The clock, the calendar and the kernel's answer about a pid come in as
 // arguments, so every row is reachable from a fixture and nothing here reads
@@ -50,6 +60,29 @@ public enum DocumentState: String, Sendable, Equatable, CaseIterable {
   case failed
   /// Its last action started and nobody wrote down how it went.
   case unknown
+  /// The record says nothing about it at all: the row is here because it is
+  /// pinned, and all the panel has is the pin's own title and id. Only a
+  /// pinned document is ever in this state.
+  case pinnedOnly
+}
+
+/// What a person decided about one document: its id, the moment they decided
+/// it, and the title the list was drawing then.
+///
+/// The title is kept for one reason: a pinned document whose lines are past
+/// the horizon, or past the two month files the tail reads, has no title
+/// anywhere else. It is the app's own preference and never a line in the
+/// record.
+public struct DocumentChoice: Sendable, Equatable {
+  public let doc: String
+  public let at: Date
+  public let title: String?
+
+  public init(doc: String, at: Date, title: String?) {
+    self.doc = doc
+    self.at = at
+    self.title = title
+  }
 }
 
 /// One document's row.
@@ -64,6 +97,9 @@ public struct DocumentRow: Sendable, Equatable {
   public let state: DocumentState
   /// Whether that action is in the local day the fold was made in.
   public let isToday: Bool
+  /// Whether the person pinned this document, which is why it is first and
+  /// why it is still here.
+  public let isPinned: Bool
 }
 
 /// DOCUMENTS, and the two numbers its label carries.
@@ -104,7 +140,8 @@ public enum Documents {
   ///     the day is the thing under test and the machine's zone is not it.
   ///   - alive: the kernel's answer for one pid.
   public static func fold(
-    _ events: [Event], now: Date, calendar: Calendar, alive: (Int32) -> Bool
+    _ events: [Event], now: Date, calendar: Calendar, pinned: [DocumentChoice] = [],
+    hidden: [DocumentChoice] = [], alive: (Int32) -> Bool
   ) -> DocumentsFold {
     let ordered = Fold.inOrder(events)
     let titles = Fold.latestTitles(ordered)
@@ -114,17 +151,46 @@ public enum Documents {
       actions[action.doc, default: []].append(action)
     }
 
+    let pins = Dictionary(pinned.map { ($0.doc, $0.at) }, uniquingKeysWith: { $1 })
+    for doc in away(hidden, pins: pins, actions: actions) {
+      actions.removeValue(forKey: doc)
+    }
+
     let since = now.addingTimeInterval(-horizon)
     let finished = actions.mapValues { found in
       found.filter { $0.isFinished && $0.at >= since }.count
     }
-    let rows =
+    var rows =
       actions
-      .compactMap { doc, found in row(doc, found, titles: titles, now: now, calendar: calendar) }
-      .filter { $0.at >= since }
-      .sorted { before($0, $1, finished: finished) }
+      .compactMap { doc, found in
+        row(doc, found, titles: titles, now: now, calendar: calendar, pinned: pins[doc] != nil)
+      }
+      .filter { $0.at >= since || pins[$0.doc] != nil }
+    for pin in pinned where actions[pin.doc] == nil {
+      rows.append(
+        DocumentRow(
+          doc: pin.doc, title: pin.title, command: "", at: pin.at, state: .pinnedOnly,
+          isToday: false, isPinned: true))
+    }
 
-    return DocumentsFold(rows: rows)
+    return DocumentsFold(rows: rows.sorted { before($0, $1, finished: finished, pins: pins) })
+  }
+
+  /// The documents a hide takes out of the list.
+  ///
+  /// A hide holds until gdoc finishes something on that document again,
+  /// which is the one way back: nothing in the panel unhides one, because
+  /// the row a person took away is a row they took away. A pinned document
+  /// is never away, whatever a hide of it says.
+  private static func away(
+    _ hidden: [DocumentChoice], pins: [String: Date], actions: [String: [Action]]
+  ) -> Set<String> {
+    var found: Set<String> = []
+    for hide in hidden where pins[hide.doc] == nil {
+      let since = actions[hide.doc] ?? []
+      if !since.contains(where: { $0.isFinished && $0.at > hide.at }) { found.insert(hide.doc) }
+    }
+    return found
   }
 
   /// One thing that happened to one document, which is a candidate for being
@@ -145,16 +211,22 @@ public enum Documents {
 
   /// Which of two rows is the higher one.
   ///
-  /// The local day is above the fortnight, and inside the day the last action
-  /// is the only order, because the thing that just happened is the thing a
-  /// hand goes to. Under the day the count of finished actions in the
+  /// A pin is above everything, and two pins are in the order they were
+  /// made, newest first: a person who pins a second document is working on
+  /// it. The local day is above the fortnight, and inside the day the last
+  /// action is the only order, because the thing that just happened is the
+  /// thing a hand goes to. Under the day the count of finished actions in the
   /// fortnight is the order, most first, and two documents used the same
   /// number of times are newest first. A document's id breaks a tie nothing
   /// else broke, so one record folds one way:
   /// testTheOrderIsTodayNewestFirstThenTheFortnightByUse.
   private static func before(
-    _ left: DocumentRow, _ right: DocumentRow, finished: [String: Int]
+    _ left: DocumentRow, _ right: DocumentRow, finished: [String: Int], pins: [String: Date]
   ) -> Bool {
+    if left.isPinned != right.isPinned { return left.isPinned }
+    if left.isPinned, let mine = pins[left.doc], let theirs = pins[right.doc], mine != theirs {
+      return mine > theirs
+    }
     if left.isToday != right.isToday { return left.isToday }
     if !left.isToday {
       let mine = finished[left.doc] ?? 0
@@ -168,7 +240,8 @@ public enum Documents {
   /// A document's row: the open action where there is one, and the latest
   /// finished one otherwise, at the moment of the latest action either way.
   private static func row(
-    _ doc: String, _ actions: [Action], titles: [String: String], now: Date, calendar: Calendar
+    _ doc: String, _ actions: [Action], titles: [String: String], now: Date, calendar: Calendar,
+    pinned: Bool
   ) -> DocumentRow? {
     guard let last = actions.max(by: { $0.at < $1.at }) else { return nil }
     let open = actions.filter(\.isOpen).min { rank($0.state) < rank($1.state) }
@@ -176,7 +249,7 @@ public enum Documents {
 
     return DocumentRow(
       doc: doc, title: titles[doc], command: shown.command, at: last.at, state: shown.state,
-      isToday: calendar.isDate(last.at, inSameDayAs: now))
+      isToday: calendar.isDate(last.at, inSameDayAs: now), isPinned: pinned)
   }
 
   /// Which open action wins: a hold waits for a person, so it is first; a

@@ -23,4 +23,8 @@ public enum Timing {
   public static let signInCountdown: TimeInterval = 180
   /// At most one self-relaunch per on-disk version in ten minutes.
   public static let relaunchGuard: TimeInterval = 600
+  /// How long a press on a document row is held before its menu opens. It
+  /// is the tooltip's half second: the two are the same gesture to a hand,
+  /// a pointer that stopped moving on one row.
+  public static let menuHold: TimeInterval = 0.5
 }

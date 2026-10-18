@@ -1,10 +1,11 @@
 // What a press in the panel means.
 //
-// One function over the fifteen kinds, and nothing else in the app turns a
+// One function over the eighteen kinds, and nothing else in the app turns a
 // press into anything. Each case is one line of the specification's decision
 // table: the two icons that open something, the one that copies, the one that
 // dismisses a card, the one signal, sign in and sign out, the update and the
-// extension, the switch, and quit.
+// extension, the switch, quit, and the three words of a document row's own
+// menu.
 //
 // Nothing here judges. A dismissal hides a card and rewrites no row, a stop
 // is refused by the process check and not by this file, and a sign-out stops
@@ -60,6 +61,12 @@ extension Session {
       quit()
     case .keep:
       putTheQuestionAway()
+    case .pinDoc:
+      pin(target)
+    case .unpinDoc:
+      unpin(target)
+    case .hideDoc:
+      hide(target)
     }
   }
 
@@ -117,6 +124,45 @@ extension Session {
     guard let url = phase?.url else { return }
     desk.copy(url)
     changed()
+  }
+
+  // MARK: the two words of a row's menu
+
+  /// Pin one document, with the title the list is drawing for it.
+  ///
+  /// The title is kept because the pin outlives the lines: fourteen days on,
+  /// or two month files on, the record says nothing about that document and
+  /// the pin is all the row has. It is the one thing of somebody's document
+  /// this app writes down, and the decision of 2026-10-18 is where that is
+  /// written.
+  private func pin(_ doc: String?) {
+    guard let doc else { return }
+    preferences.pin(doc, title: lastTitle(of: doc), at: clock())
+    ui.pinned = preferences.pins
+    changed()
+  }
+
+  private func unpin(_ doc: String?) {
+    guard let doc else { return }
+    preferences.unpin(doc)
+    ui.pinned = preferences.pins
+    changed()
+  }
+
+  /// Hide one document from DOCUMENTS. Its rows in TODAY stay, because the
+  /// log is the log, and the next action gdoc finishes on it brings the row
+  /// back: nothing here unhides one.
+  private func hide(_ doc: String?) {
+    guard let doc else { return }
+    preferences.hide(doc, title: lastTitle(of: doc), at: clock())
+    ui.hidden = preferences.hides
+    changed()
+  }
+
+  /// The title the list is drawing for one document, which is the latest one
+  /// the record carries. Nothing where the row is the id itself.
+  private func lastTitle(of doc: String) -> String? {
+    drawn.documents.rows.first { $0.doc == doc }?.title
   }
 
   // MARK: the cards

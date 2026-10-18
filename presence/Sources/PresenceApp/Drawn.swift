@@ -24,6 +24,10 @@ import PresenceCore
 import PresenceUI
 
 /// The record and the clock, folded the four ways the screen reads them.
+///
+/// The pins and the hides are in here as well, because DOCUMENTS is folded
+/// with them: a pin a person just made moves the fold, and a redraw that
+/// compared two folds taken without them would decide nothing moved.
 struct Drawn: Equatable {
   let now: NowFold
   let sessions: [LiveSession]
@@ -34,7 +38,8 @@ struct Drawn: Equatable {
   let counting: [Int]?
 
   init(
-    _ events: [Event], now moment: Date, dismissed: Set<String>, calendar: Calendar,
+    _ events: [Event], now moment: Date, dismissed: Set<String>,
+    pinned: [DocumentChoice] = [], hidden: [DocumentChoice] = [], calendar: Calendar,
     alive: (Int32) -> Bool
   ) {
     let fold = Now.fold(events, now: moment, dismissed: dismissed, alive: alive)
@@ -43,7 +48,8 @@ struct Drawn: Equatable {
     self.sessions = watches
     self.days = Days.fold(
       events, now: moment, calendar: calendar, carded: Set(fold.stuck.map(\.key)), alive: alive)
-    self.documents = Documents.fold(events, now: moment, calendar: calendar, alive: alive)
+    self.documents = Documents.fold(
+      events, now: moment, calendar: calendar, pinned: pinned, hidden: hidden, alive: alive)
     self.counting = Drawn.counting(
       moment,
       from: fold.holds.filter { !$0.ranOut }.map(\.held)

@@ -6,10 +6,11 @@
 // close a section somebody opened, and a still of any of those states must
 // be renderable from a literal.
 //
-// Three of these outlive the process, in the app's own store, which is
+// Five of these outlive the process, in the app's own store, which is
 // PresenceApp/Preferences and the one room that writes anything down: the
-// dismissals, whether the icon strip has been seen, and the hub. The rest
-// die with the panel, which is what they are for.
+// dismissals, whether the icon strip has been seen, the hub, and the pinned
+// and hidden documents. The rest die with the panel, which is what they are
+// for.
 
 import Foundation
 import PresenceCore
@@ -61,6 +62,14 @@ public struct UIState: Sendable, Equatable {
   /// so the click that would clear it cannot be made: it dies with the panel
   /// instead, and the next open of the panel is a live icon again.
   public var noteFault: [String: NoteFault]
+  /// The documents a person pinned, and the ones they hid. Both are the
+  /// app's own preferences, each one a document's id with the moment and the
+  /// title the list was drawing, and neither is ever a line in the record.
+  /// The fold reads them: a pin is first in DOCUMENTS and never falls out of
+  /// it, and a hide leaves the list until gdoc finishes something on that
+  /// document again.
+  public var pinned: [DocumentChoice]
+  public var hidden: [DocumentChoice]
 
   public init(
     dismissed: Set<String> = [],
@@ -72,7 +81,9 @@ public struct UIState: Sendable, Equatable {
     questionAt: Date? = nil,
     forcedTooltip: String? = nil,
     stripSeen: Bool = true,
-    noteFault: [String: NoteFault] = [:]
+    noteFault: [String: NoteFault] = [:],
+    pinned: [DocumentChoice] = [],
+    hidden: [DocumentChoice] = []
   ) {
     self.dismissed = dismissed
     self.expanded = expanded
@@ -84,6 +95,8 @@ public struct UIState: Sendable, Equatable {
     self.forcedTooltip = forcedTooltip
     self.stripSeen = stripSeen
     self.noteFault = noteFault
+    self.pinned = pinned
+    self.hidden = hidden
   }
 
   /// Whether a list is open.

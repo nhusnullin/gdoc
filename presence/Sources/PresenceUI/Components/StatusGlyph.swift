@@ -132,6 +132,48 @@ public struct StatusGlyph: View {
   }
 }
 
+/// A document row's status column: the pin's slot, and then the state glyph.
+///
+/// Every document row keeps the slot, pinned or not, so one pin in a list
+/// does not move the five titles under it. The pin is drawn in the quietest
+/// ink the panel has: it is a fact about the row and not a state of the
+/// document, and the one coloured thing in a row is the glyph beside it.
+///
+/// RowTests states the slot's width and reads the column back off the
+/// drawing.
+public struct DocumentGlyph: View {
+  public let kind: GlyphKind
+  public let tone: GlyphTone
+  public let pinned: Bool
+
+  @Environment(\.colorScheme) private var scheme
+
+  public init(_ kind: GlyphKind, tone: GlyphTone = .quiet, pinned: Bool = false) {
+    self.kind = kind
+    self.tone = tone
+    self.pinned = pinned
+  }
+
+  public var body: some View {
+    let palette = Palette.of(scheme)
+    return HStack(spacing: 0) {
+      Group {
+        if pinned {
+          IconShape(.pin)
+            .stroke(palette.textTertiary.color, style: IconShape.style)
+        } else {
+          Color.clear
+        }
+      }
+      .frame(width: Grid.pinSize, height: Grid.pinSize)
+      .metricProbe("row.pin")
+      StatusGlyph(kind, tone: tone)
+    }
+    .metricProbe("row.status")
+    .accessibilityHidden(true)
+  }
+}
+
 /// The shapes, in the stylesheet's own units.
 ///
 /// A CSS absolute child sits inside the border, so every number below is in

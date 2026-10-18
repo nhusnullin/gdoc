@@ -31,6 +31,10 @@ public enum Grid {
 
   /// The glyph, an action button and the radius they share.
   public static let glyphSize: CGFloat = 16
+  /// The pin, and the slot a document row keeps for it in front of the
+  /// glyph. Every document row keeps it, pinned or not, so the titles in
+  /// the list break at the same place whatever is pinned.
+  public static let pinSize: CGFloat = 10
   public static let actionSize: CGFloat = 24
   public static let controlRadius: CGFloat = 6
 

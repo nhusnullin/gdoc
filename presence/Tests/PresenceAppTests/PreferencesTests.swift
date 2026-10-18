@@ -4,8 +4,13 @@
 // write, or a hold's own id, and nothing about the document: a title or a
 // document id in UserDefaults would be a word of somebody's document kept
 // outside the record. A dismissal older than sixty-two days is gone, because
-// the record it was about is gone. And the store writes six keys, which is
+// the record it was about is gone. And the store writes eight keys, which is
 // the whole of what this app remembers between two launches.
+//
+// The two keys of the second morning are the one written-down exception to
+// the first rule: a pin and a hide name a document, and a pin keeps its last
+// title, because a pinned document whose lines are past the horizon has its
+// name nowhere else. The decision of 2026-10-18 is where that is written.
 //
 // The store is handed in, so no test here touches the defaults of the
 // machine it runs on.
@@ -100,14 +105,78 @@ final class PreferencesTests: XCTestCase {
     XCTAssertTrue(preferences.stripSeen, "labels read once are read")
     XCTAssertEqual(preferences.loginItemChoice, .off, "an off is never turned back on")
     XCTAssertEqual(preferences.lastAccount, "someone@example.com")
+
+    preferences.pin("1AbCdEfGhIjK", title: "Q3 plan", at: long)
+    preferences.hide("1ZzYyXxWwVvU", title: "Chapter 4", at: long)
+    XCTAssertEqual(preferences.pins.map(\.doc), ["1AbCdEfGhIjK"], "a pin is an answer too")
+    XCTAssertEqual(preferences.hides.map(\.doc), ["1ZzYyXxWwVvU"], "and so is a hide")
   }
 
-  // MARK: the six keys
+  // MARK: the pins and the hides
 
-  func testOnlyTheSixKeysPersist() {
+  /// A pin is a document's id, the moment, and the title the list was
+  /// drawing. The list comes back newest pin first, which is the order
+  /// DOCUMENTS draws them in, and taking a pin back leaves nothing behind.
+  func testPinsComeBackNewestFirstAndUnpinLeavesNothing() {
+    let store = Store()
+    let preferences = Preferences(store: store)
+    let morning = Self.at("2026-10-17T09:00:00Z")
+
+    preferences.pin("1AbCdEfGhIjK", title: "Q3 plan", at: morning)
+    preferences.pin("1ZzYyXxWwVvU", title: "Chapter 4", at: morning.addingTimeInterval(60))
+
+    XCTAssertEqual(preferences.pins.map(\.doc), ["1ZzYyXxWwVvU", "1AbCdEfGhIjK"])
+    XCTAssertEqual(preferences.pins.map(\.title), ["Chapter 4", "Q3 plan"])
+    XCTAssertEqual(preferences.pins.first?.at, morning.addingTimeInterval(60))
+
+    // Pinning one that is pinned moves it to the front: the moment is the
+    // one the person just made.
+    preferences.pin("1AbCdEfGhIjK", title: "Q3 plan, again", at: morning.addingTimeInterval(120))
+    XCTAssertEqual(preferences.pins.map(\.doc), ["1AbCdEfGhIjK", "1ZzYyXxWwVvU"])
+    XCTAssertEqual(preferences.pins.first?.title, "Q3 plan, again")
+
+    preferences.unpin("1AbCdEfGhIjK")
+    XCTAssertEqual(preferences.pins.map(\.doc), ["1ZzYyXxWwVvU"])
+    XCTAssertFalse(store.text.contains("1AbCdEfGhIjK"), "the pin that went leaves the store")
+
+    preferences.unpin("1ZzYyXxWwVvU")
+    XCTAssertTrue(preferences.pins.isEmpty)
+    XCTAssertFalse(
+      store.keys.contains(Preferences.Key.pinned.rawValue),
+      "the last pin takes the key with it")
+  }
+
+  /// A hide names the document and the moment it was hidden, which is what
+  /// the fold reads the next action against. A document with no title in the
+  /// record is a hide with no title, and still a hide.
+  func testAHideKeepsItsMomentAndIsNeverPruned() {
+    let now = Self.at("2026-10-17T09:30:00Z")
+    let longAgo = now.addingTimeInterval(-200 * 24 * 60 * 60)
+    let store = Store()
+    let preferences = Preferences(store: store)
+
+    preferences.hide("1AbCdEfGhIjK", title: nil, at: longAgo)
+
+    XCTAssertEqual(preferences.hides.map(\.doc), ["1AbCdEfGhIjK"])
+    XCTAssertEqual(preferences.hides.first?.at, longAgo)
+    XCTAssertNil(preferences.hides.first?.title)
+    XCTAssertEqual(
+      preferences.dismissals(now: now).count, 0,
+      "the read that prunes the stamps leaves the hide where it is")
+    XCTAssertEqual(
+      preferences.hides.count, 1,
+      "two hundred days on, a document somebody took away is still away")
+  }
+
+  // MARK: the eight keys
+
+  func testOnlyTheEightKeysPersist() {
     XCTAssertEqual(
       Preferences.Key.allCases.map(\.rawValue),
-      ["dismissed", "hubPath", "stripSeen", "loginItem.choice", "relaunch", "lastAccount"])
+      [
+        "dismissed", "hubPath", "stripSeen", "loginItem.choice", "relaunch", "lastAccount",
+        "pinned", "hidden",
+      ])
 
     let now = Self.at("2026-10-17T09:30:00Z")
     let store = Store()
@@ -119,6 +188,8 @@ final class PreferencesTests: XCTestCase {
     preferences.loginItemChoice = .off
     preferences.noteRelaunch(version: "v2.15.0", at: now)
     preferences.lastAccount = "someone@example.com"
+    preferences.pin("1AbCdEfGhIjK", title: "Q3 plan", at: now)
+    preferences.hide("1ZzYyXxWwVvU", title: "Chapter 4", at: now)
 
     XCTAssertEqual(store.keys, Set(Preferences.Key.allCases.map(\.rawValue)))
 
@@ -129,6 +200,10 @@ final class PreferencesTests: XCTestCase {
     XCTAssertEqual(preferences.loginItemChoice, .off)
     XCTAssertEqual(preferences.lastRelaunch(now: now), RelaunchStamp(version: "v2.15.0", at: now))
     XCTAssertEqual(preferences.lastAccount, "someone@example.com")
+    XCTAssertEqual(
+      preferences.pins, [DocumentChoice(doc: "1AbCdEfGhIjK", at: now, title: "Q3 plan")])
+    XCTAssertEqual(
+      preferences.hides, [DocumentChoice(doc: "1ZzYyXxWwVvU", at: now, title: "Chapter 4")])
   }
 
   // MARK: a store of its own

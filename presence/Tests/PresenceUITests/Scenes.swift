@@ -102,7 +102,9 @@ enum Scenes {
       + "the panel about something that has not happened.",
     "The DOCUMENTS header is \"N today\" where every row is from today and \"14 days · N\" "
       + "otherwise, counting the rows behind Show more. The mockup wrote three forms of it "
-      + "on different screens.",
+      + "on different screens. Since the second morning it counts a pinned row as well, "
+      + "however old that document is, and counts a hidden one not at all: the number is "
+      + "the list, and a pin and a hide are what the list is.",
     "The publish that stopped in the render is nameless, in r2's card and in every row "
       + "after it, where the mockup draws \"Publish stopped · Chapter 4\". gdoc writes no "
       + "title on a start and none on the end of a publish that created nothing, so the "

@@ -27,6 +27,11 @@
 // are taller than the whole panel. Past that it scrolls inside itself
 // rather than pushing Quit off the bottom.
 //
+// A document row carries one more thing since that morning: its own menu,
+// with Pin or Unpin and Hide from the list, on a secondary click and on a
+// press held half a second. It is a menu and not a fifth icon because the
+// four icons on a row are four, and because a pin is a thing done once.
+//
 // RenderTests draws every scene of the screens file through this view, in
 // both appearances, and reads its sizes back through the metric probes.
 
@@ -279,8 +284,8 @@ struct DocumentsList: View {
       ) { row in
         VStack(alignment: .leading, spacing: 0) {
           RowView(
-            .doc, glyph: row.glyph, tone: row.tone, title: row.title, sub: row.sub,
-            gone: row.gone,
+            .doc, title: row.title, sub: row.sub, gone: row.gone,
+            leading: { DocumentGlyph(row.glyph, tone: row.tone, pinned: row.isPinned) },
             trailing: {
               HStack(spacing: Grid.actionGap) {
                 ForEach(row.actions) { action in
@@ -290,11 +295,57 @@ struct DocumentsList: View {
                     action: { actions.perform(action.kind, action.target) })
                 }
               }
-            })
+            }
+          )
+          .rowMenu(row.menu, actions: actions)
           if model.showsStrip, row.id == model.rows.first?.id {
             IconStrip()
           }
         }
+      }
+    }
+  }
+}
+
+extension View {
+  /// A document row's own menu, on a secondary click and on a press held
+  /// half a second.
+  ///
+  /// Two ways in, because the menu is the one place a pin and a hide are and
+  /// a menu bar's panel is reached by both hands: a right-click is what the
+  /// platform does, and a held press is what a trackpad under one finger
+  /// does. The held press draws the same two words in a popover, because
+  /// nothing in SwiftUI opens a context menu from code.
+  ///
+  /// It decides nothing: the words and the kinds are the model's, and the
+  /// press leaves through `PanelActions` like every other press.
+  func rowMenu(_ items: [MenuItemModel], actions: PanelActions) -> some View {
+    modifier(RowMenu(items: items, actions: actions))
+  }
+}
+
+/// The menu of one row, in its two ways in.
+private struct RowMenu: ViewModifier {
+  let items: [MenuItemModel]
+  let actions: PanelActions
+
+  @State private var held = false
+
+  func body(content: Content) -> some View {
+    content
+      .contextMenu { words }
+      .onLongPressGesture(minimumDuration: Timing.menuHold) { held = true }
+      .popover(isPresented: $held, arrowEdge: .bottom) {
+        VStack(alignment: .leading, spacing: 0) { words }
+          .padding(Grid.unit / 2)
+      }
+  }
+
+  @ViewBuilder private var words: some View {
+    ForEach(items) { item in
+      Button(item.word) {
+        held = false
+        actions.perform(item.kind, item.target)
       }
     }
   }

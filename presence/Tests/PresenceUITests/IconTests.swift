@@ -1,13 +1,17 @@
 // The action icons, against the SVG they were ported from.
 //
-// The twelve icons are the `IC` object of
+// Twelve of the thirteen are the `IC` object of
 // docs/design/2026-10-17-presence-screens-v3.html, drawn as Path rather than
 // as SF Symbols, because four of them sit side by side in one row and a
 // system symbol would be whatever the platform ships this year. The numbers
 // below are the `.act` and `.act svg` rules, read by hand and written as
 // literals.
 //
-// The sheet of all twelve goes out as a PNG under PRESENCE_SHOTS, so the
+// The thirteenth is the pin, which that file has no shape for: the pins are
+// the second morning's decision (docs/v2/DECISIONS.md, 2026-10-18) and the
+// shape is written here in the same grammar.
+//
+// The sheet of all thirteen goes out as a PNG under PRESENCE_SHOTS, so the
 // shapes are looked at once rather than trusted from a pixel count.
 
 import AppKit
@@ -25,9 +29,9 @@ final class IconTests: XCTestCase {
       Icon.allCases,
       [
         .gdocs, .md, .branch, .link, .done, .stop, .down, .signin, .signout, .x, .xmark,
-        .chevron,
+        .chevron, .pin,
       ],
-      "the twelve the panel draws, and no spare from the IC object")
+      "the thirteen the panel draws, and no spare from the IC object")
 
     // `.act svg{width:16px;height:16px;stroke-width:1.25;stroke-linecap:round;
     // stroke-linejoin:round}`, and `.row-chevron svg`, which is the one at 12.
@@ -155,7 +159,7 @@ final class IconTests: XCTestCase {
 
   // MARK: the renders
 
-  /// The sheet: the twelve in a row, live, off and done, in both
+  /// The sheet: the thirteen in a row, live, off and done, in both
   /// appearances, so the shapes are looked at once.
   private func writeSheet() throws {
     let shots = try shotsDirectory()

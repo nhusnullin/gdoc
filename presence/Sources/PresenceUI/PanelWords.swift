@@ -39,6 +39,16 @@ public enum Tips {
   public static let installExtension = "Install extension"
 }
 
+/// The words of a document row's own menu, which is where a pin and a hide
+/// are, so the four icons on the row stay four.
+public enum Menus {
+  public static let pin = "Pin"
+  public static let unpin = "Unpin"
+  /// The one way out of the list. The way back is gdoc doing something on
+  /// the document again, which the guide says and no menu word can.
+  public static let hide = "Hide from the list"
+}
+
 extension NoteFault {
   /// The words the greyed icon carries. The panel has no sentence of its own
   /// for a hub nobody chose: without a hub there is no pairing, and the
@@ -293,7 +303,10 @@ struct Phrases {
     return sentence([state(row), note])
   }
 
-  private func state(_ row: DocumentRow) -> String {
+  /// What the row says about the last thing that happened, or nothing at
+  /// all for a row that is only in the list because it is pinned: the pin is
+  /// not an action, and a sentence about one would be invented.
+  private func state(_ row: DocumentRow) -> String? {
     switch row.state {
     case .hold: return "hold"
     case .running: return (Words.running(row.command) ?? "running").lowercased()
@@ -303,6 +316,7 @@ struct Phrases {
       return "\(Words.verb(row.command)?.past ?? row.command) \(clockInSentence(row.at))"
     case .failed: return "stopped \(clockInSentence(row.at))"
     case .unknown: return "outcome unknown · \(clockInSentence(row.at))"
+    case .pinnedOnly: return nil
     }
   }
 

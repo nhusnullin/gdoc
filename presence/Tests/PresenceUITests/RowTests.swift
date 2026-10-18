@@ -178,6 +178,47 @@ final class RowTests: XCTestCase {
     XCTAssertNil(busyMeasured["row.trailing"], "a busy row draws no action column")
   }
 
+  /// The document row keeps 10 pt in front of its glyph for the pin, pinned
+  /// or not, so one pin in a list does not move the titles under it.
+  ///
+  /// The column is 26 pt and what is in it sits at its trailing edge, so a
+  /// glyph in a document row stands where a glyph stands in every other
+  /// row. Every other shape's column is the 16 pt it always was.
+  func testTheDocRowKeepsTenPointsForThePin() throws {
+    XCTAssertEqual(Grid.pinSize, 10)
+    XCTAssertEqual(RowShape.doc.leadingColumn, 26)
+    for shape in RowShape.allCases where shape != .doc {
+      XCTAssertEqual(shape.leadingColumn, 16, "\(shape) keeps the glyph's own column")
+    }
+
+    let drawn = try SheetPieces.documentRows()[0]
+    let pinned = RowView(
+      .doc, title: drawn.title, sub: drawn.sub,
+      leading: { DocumentGlyph(drawn.glyph, tone: drawn.tone, pinned: true) },
+      trailing: { ActionButton(.gdocs, tip: Tips.openDoc) })
+    let measured = try probes(pinned, scheme: .dark)
+    XCTAssertEqual(measured["row.pin"]?.width, 10, "the pin's own slot")
+    XCTAssertEqual(measured["row.pin"]?.height, 10)
+
+    let plain = RowView(
+      .doc, title: drawn.title, sub: drawn.sub,
+      leading: { DocumentGlyph(drawn.glyph, tone: drawn.tone) },
+      trailing: { ActionButton(.gdocs, tip: Tips.openDoc) })
+    let empty = try probes(plain, scheme: .dark)
+    XCTAssertEqual(
+      empty["row.pin"]?.width, 10, "a row with no pin keeps the slot, so the titles line up")
+    XCTAssertEqual(empty["row.status"]?.width, 26, "the column is the slot and the glyph")
+    XCTAssertEqual(
+      measured["row.status"]?.width, empty["row.status"]?.width,
+      "and a pin changes no width at all")
+
+    // The pin draws ink, and the empty slot draws none.
+    XCTAssertGreaterThan(
+      try inkedPixels(DocumentGlyph(.check, tone: .ok, pinned: true), scheme: .dark, side: 26),
+      try inkedPixels(DocumentGlyph(.check, tone: .ok), scheme: .dark, side: 26),
+      "a pinned row draws something a plain one does not")
+  }
+
   // A chevron sits in the middle of the row its words are in.
   //
   // `.row-chevron` is one 28 pt row with the words on the left and a 12 pt

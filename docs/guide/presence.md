@@ -99,6 +99,23 @@ label is "3 today" where every row in the list is from today, and
 "14 days · 12" where one of them is older, counting the rows behind Show more
 as well.
 
+A pin holds a document in the list. Right-click a row, or hold a press on it
+for half a second, and the menu says "Pin" and "Hide from the list"; a row
+already pinned says "Unpin". Pinned documents are first in the list, the
+newest pin first, and they never drop off: fourteen days on, or when the app
+can no longer see the lines about them, the row is still there with the title
+it had and its icons still work, because the pin keeps the name and the id.
+A small pin sits in front of the row's own glyph while it is pinned.
+
+"Hide from the list" takes a document out of Documents. Today and Yesterday
+still show its runs: the log is the log, and nothing rewrites it. There is no
+"Unhide". The next thing gdoc finishes on that document brings the row back,
+which is the one way back. The pin is the louder answer: a document that is
+pinned stays in the list whatever a hide of it said.
+
+The pins and the hides are the app's own, kept beside your other settings and
+never written into the record.
+
 Four icons sit on the right of every document row, always visible:
 
 | Icon | Does |

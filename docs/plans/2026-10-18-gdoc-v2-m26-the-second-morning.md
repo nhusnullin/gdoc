@@ -197,28 +197,28 @@ branch.
   `presence/Sources/PresenceUI/PanelModel.swift`, `IconStrip.swift`,
   `IconShapes.swift`, `SessionActions.swift`, tests beside each
 
-- [ ] two more preferences keys, `pinned` and `hidden`: lists of document
+- [x] two more preferences keys, `pinned` and `hidden`: lists of document
       ids, each with the moment and the last title; never pruned by age; the
       source scan's count becomes eight and its sentence says why
-- [ ] the four icons stay four. A DOCUMENTS row has a menu, on a secondary
+- [x] the four icons stay four. A DOCUMENTS row has a menu, on a secondary
       click and on a press held half a second: "Pin" or "Unpin", and "Hide
       from the list". A pinned row shows a small pin glyph in its status
       column before the state glyph; a test over the menu's words in both
       states and the glyph
-- [ ] a hidden document leaves DOCUMENTS and its actions stop counting for
+- [x] a hidden document leaves DOCUMENTS and its actions stop counting for
       the order; TODAY and Yesterday still show its runs, because the log is
       the log; the next finished action gdoc does on that document brings it
       back into the list, which is the one way back, and the guide says so;
       a test over hide, the count, and the return
-- [ ] pinned documents are listed first in DOCUMENTS, in the order they were
+- [x] pinned documents are listed first in DOCUMENTS, in the order they were
       pinned, newest pin first, and never fall out of the list when their
       fourteen days pass; a pinned document that the record has no line for
       any more still draws its last known title and its open action from the
       pin's own stored title and id, which the pin keeps for that reason; a
       test over a fixture whose pinned document is sixty days old
-- [ ] the header count counts them: "14 days · N" counts pinned rows too and
+- [x] the header count counts them: "14 days · N" counts pinned rows too and
       hidden rows not, and the index caption says so
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 7: the hub is chosen in the panel
 

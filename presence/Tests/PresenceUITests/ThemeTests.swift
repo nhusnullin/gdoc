@@ -178,6 +178,7 @@ final class ThemeTests: XCTestCase {
     XCTAssertEqual(Grid.compactRowHeight, 28)
     XCTAssertEqual(Grid.actionColumn, 108)
     XCTAssertEqual(Grid.glyphSize, 16)
+    XCTAssertEqual(Grid.pinSize, 10)
     XCTAssertEqual(Grid.actionSize, 24)
     XCTAssertEqual(Grid.controlRadius, 6)
   }
@@ -270,5 +271,6 @@ final class ThemeTests: XCTestCase {
     XCTAssertEqual(Timing.checkFlash, 5)
     XCTAssertEqual(Timing.signInCountdown, 180)
     XCTAssertEqual(Timing.relaunchGuard, 600)
+    XCTAssertEqual(Timing.menuHold, 0.5)
   }
 }

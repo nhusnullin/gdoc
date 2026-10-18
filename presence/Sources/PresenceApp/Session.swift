@@ -174,7 +174,8 @@ public final class Session {
     self.quit = quit
 
     self.ui = UIState(
-      dismissed: preferences.dismissals(now: clock()), stripSeen: preferences.stripSeen)
+      dismissed: preferences.dismissals(now: clock()), stripSeen: preferences.stripSeen,
+      pinned: preferences.pins, hidden: preferences.hides)
     self.facts = Facts.launching(appVersion: places.version)
     self.drawn = Drawn([], now: clock(), dismissed: [], calendar: calendar, alive: alive)
   }
@@ -263,7 +264,8 @@ public final class Session {
   public var screen: Screen {
     let moment = clock()
     let folds = Drawn(
-      events, now: moment, dismissed: ui.dismissed, calendar: calendar, alive: alive)
+      events, now: moment, dismissed: ui.dismissed, pinned: ui.pinned, hidden: ui.hidden,
+      calendar: calendar, alive: alive)
     return Screen(
       bar: BarImage.state(
         now: folds.now, sessions: folds.sessions, facts: facts,
@@ -336,7 +338,8 @@ public final class Session {
     let pending = ui.pendingStop
     ui.pendingStop = stopper.pendingDocs(in: events)
     drawn = Drawn(
-      events, now: clock(), dismissed: ui.dismissed, calendar: calendar, alive: alive)
+      events, now: clock(), dismissed: ui.dismissed, pinned: ui.pinned, hidden: ui.hidden,
+      calendar: calendar, alive: alive)
     return drawn != before || ui.pendingStop != pending
   }
 

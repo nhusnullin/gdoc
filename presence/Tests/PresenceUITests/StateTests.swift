@@ -280,6 +280,66 @@ final class StateTests: XCTestCase {
       panel.header.question, "the header is the question while it is asked")
   }
 
+  /// A document row's own menu, in both its states.
+  ///
+  /// The menu is where a pin and a hide are, so the four icons on the row
+  /// stay four. A pinned row says Unpin, because the one thing a person
+  /// wants from a pin they have already made is to take it back, and there
+  /// is no Unhide anywhere: a hidden document has no row to open a menu on.
+  func testTheRowMenuSaysPinOrUnpinAndHide() throws {
+    let events = [
+      event(
+        "2026-10-17T09:00:00Z", .end, command: "reply", doc: chapter4, title: "Ch 4", ok: true)
+    ]
+
+    let plain = try drawn(events, at: "2026-10-17T09:10:00Z")
+    let row = try XCTUnwrap(plain.documents?.rows.first)
+    XCTAssertFalse(row.isPinned, "nothing is pinned until somebody pins it")
+    XCTAssertEqual(row.menu.map(\.word), ["Pin", "Hide from the list"])
+    XCTAssertEqual(row.menu.map(\.kind), [.pinDoc, .hideDoc])
+    XCTAssertEqual(row.menu.map(\.target), [chapter4, chapter4])
+    XCTAssertEqual(row.actions.count, 4, "the four icons are four")
+
+    let moment = try at("2026-10-17T09:05:00Z")
+    let pinned = try drawn(
+      events, at: "2026-10-17T09:10:00Z",
+      ui: UIState(pinned: [DocumentChoice(doc: chapter4, at: moment, title: "Ch 4")]))
+    let kept = try XCTUnwrap(pinned.documents?.rows.first)
+    XCTAssertTrue(kept.isPinned, "which the row draws in its own column before the glyph")
+    XCTAssertEqual(kept.menu.map(\.word), ["Unpin", "Hide from the list"])
+    XCTAssertEqual(kept.menu.map(\.kind), [.unpinDoc, .hideDoc])
+    XCTAssertEqual(kept.actions.count, 4, "and the icons are still four")
+
+    let hidden = try drawn(
+      events, at: "2026-10-17T09:10:00Z",
+      ui: UIState(hidden: [DocumentChoice(doc: chapter4, at: moment, title: "Ch 4")]))
+    XCTAssertEqual(hidden.documents?.rows.count, 0, "a hidden document is not a row")
+    XCTAssertNil(hidden.documents?.count, "and the label counts no rows")
+    XCTAssertEqual(
+      hidden.today?.rows.count, 1, "TODAY still carries its run, because the log is the log")
+  }
+
+  /// A pinned document the record has no line for any more: the row is the
+  /// pin's own, and it says nothing about an action, because there is none
+  /// to say.
+  func testAPinnedDocumentWithNoLinesDrawsThePinsOwnRow() throws {
+    let pin = DocumentChoice(
+      doc: chapter4, at: try at("2026-08-01T09:00:00Z"), title: "Chapter 4. Pricing")
+    let panel = try drawn([], at: "2026-10-17T09:10:00Z", ui: UIState(pinned: [pin]))
+
+    let row = try XCTUnwrap(panel.documents?.rows.first, "the pin is the row")
+    XCTAssertEqual(row.title, "Chapter 4. Pricing", "the title the pin kept")
+    XCTAssertTrue(row.isPinned)
+    XCTAssertEqual(
+      row.glyph, .blank, "no state is invented for a document the record is silent about")
+    XCTAssertEqual(
+      row.sub, "falcon/chapters/04.md",
+      "the sub-line says where the note is and nothing about an action")
+    XCTAssertEqual(
+      row.actions.first { $0.kind == .openDoc }?.state, .live, "and its open action works")
+    XCTAssertEqual(panel.documents?.count, "14 days · 1", "the label counts it")
+  }
+
   /// A write a rule held, as gdoc writes it: one line, and no call.
   private func held(_ at: String, hold: String, until: String) -> Event {
     let formatter = ISO8601DateFormatter()

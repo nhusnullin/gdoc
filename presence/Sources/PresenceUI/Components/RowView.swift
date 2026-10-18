@@ -50,6 +50,18 @@ public enum RowShape: String, Sendable, CaseIterable {
     }
   }
 
+  /// `grid-template-columns`' first column: 16 pt for the glyph everywhere,
+  /// and the document row's own 26, which keeps 10 pt in front of the glyph
+  /// for the pin. Every document row keeps that slot, pinned or not, so one
+  /// pin in a list does not move the titles under it.
+  ///
+  /// What is handed in sits at the trailing edge of the column, so a glyph
+  /// alone in a document row stands where it does in every other row:
+  /// testTheDocRowKeepsTenPointsForThePin.
+  public var leadingColumn: CGFloat {
+    self == .doc ? Grid.glyphSize + Grid.pinSize : Grid.glyphSize
+  }
+
   /// `grid-template-columns`' third column, where the document row is the
   /// one shape that fixes it: four icons in 108 pt, so every document row
   /// in a list breaks its title at the same place.
@@ -144,11 +156,14 @@ public struct RowView<Leading: View, Trailing: View>: View {
   public var body: some View {
     let palette = Palette.of(scheme)
     return HStack(alignment: shape.crossAlignment, spacing: Grid.columnGap) {
-      // The glyph column, 16 pt wide and as tall as the title's own line, so
-      // a glyph beside a two-line row sits against the title and not
-      // between the two lines.
+      // The glyph column, as tall as the title's own line, so a glyph beside
+      // a two-line row sits against the title and not between the two
+      // lines. It is 16 pt wide everywhere but a document row, which keeps
+      // the pin's 10 pt in front of it.
       leading
-        .frame(width: Grid.glyphSize, height: Typography.rowTitle.lineHeight)
+        .frame(
+          width: shape.leadingColumn, height: Typography.rowTitle.lineHeight,
+          alignment: .trailing)
 
       VStack(alignment: .leading, spacing: 0) {
         HStack(alignment: .firstTextBaseline, spacing: Grid.columnGap) {
