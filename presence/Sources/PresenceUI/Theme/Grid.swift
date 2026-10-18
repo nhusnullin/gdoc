@@ -23,17 +23,12 @@ public enum Grid {
   public static let twoLineRowHeight: CGFloat = 44
   public static let compactRowHeight: CGFloat = 28
 
-  /// The document row's third column, wide enough for the four icons.
-  public static let actionColumn: CGFloat = 108
+  /// The document row's third column, wide enough for the five icons: the
+  /// four that open or copy something and the pin at the end of them.
+  public static let actionColumn: CGFloat = 136
 
   /// The glyph, an action button and the radius they share.
   public static let glyphSize: CGFloat = 16
-  /// The pin, and the slot a document row keeps for it in front of the
-  /// glyph where that list has a pin in it. Every row of such a list keeps
-  /// it, pinned or not, so the titles break at the same place whatever is
-  /// pinned; a list with no pin keeps no slot, so DOCUMENTS stands on the
-  /// panel's one left edge with every other row.
-  public static let pinSize: CGFloat = Grid.unit
   public static let actionSize: CGFloat = 24
   public static let controlRadius: CGFloat = 6
   /// `.acts{margin-right:-4px}`: an action's artwork is 16 pt centred in a

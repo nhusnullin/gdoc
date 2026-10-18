@@ -24,15 +24,16 @@ final class RowTests: XCTestCase {
   private let eighty =
     "Second-quarter liquidity and settlement reviews for the Amsterdam trading office"
 
-  // The title column is 140 pt in a document row, which is the narrowest the
+  // The title column is 112 pt in a document row, which is the narrowest the
   // panel has, and the head never falls under eight characters in it: a
   // title whose last word is wide enough to squeeze it drops the tail and
-  // goes in whole instead.
+  // goes in whole instead. It was 140 pt until the pin became the row's
+  // fifth icon and took 28 pt of the row for it.
   func testNoHeadUnderEightCharactersAtPanelWidth() {
     XCTAssertEqual(
-      MiddleTitle.narrowestColumn, 140,
+      MiddleTitle.narrowestColumn, 112,
       "320 less the panel's 8 twice, the row's 12 twice, the 16 pt glyph, two 8 pt gaps "
-        + "and the 108 pt action column")
+        + "and the 136 pt action column")
 
     // The ellipsis is part of what the column carries. Scene r9's second
     // document is the title that proved it: a tail the counted rule admits,
@@ -137,16 +138,16 @@ final class RowTests: XCTestCase {
     XCTAssertEqual(height, 56)
   }
 
-  // `.row.docrow{grid-template-columns:16px minmax(0,1fr) 108px}`: four
-  // icons in 108 pt, so every document row in a list breaks its title at the
-  // same place.
-  func testTheDocRowActionColumnIs108() throws {
-    XCTAssertEqual(Grid.actionColumn, 108)
-    XCTAssertEqual(RowShape.doc.trailingColumn, 108)
+  // `.row.docrow{grid-template-columns:16px minmax(0,1fr) 136px}`: five
+  // icons in 136 pt since the pin joined them, so every document row in a
+  // list breaks its title at the same place.
+  func testTheDocRowActionColumnIs136() throws {
+    XCTAssertEqual(Grid.actionColumn, 136)
+    XCTAssertEqual(RowShape.doc.trailingColumn, 136)
     XCTAssertNil(RowShape.plain.trailingColumn, "every other row is as wide as it asks for")
 
-    // Four 24 pt icons and three 4 pt gaps are 108 pt, which is the number.
-    XCTAssertEqual(4 * Grid.actionSize + 3 * Grid.actionGap, 108)
+    // Five 24 pt icons and four 4 pt gaps are 136 pt, which is the number.
+    XCTAssertEqual(5 * Grid.actionSize + 4 * Grid.actionGap, 136)
 
     // The row is scene e6's own, so the words under the measurement are
     // words the panel draws: a count beside a verb is one of the things
@@ -160,10 +161,11 @@ final class RowTests: XCTestCase {
           ActionButton(.md, tip: Tips.openNote)
           ActionButton(.branch, tip: Tips.openChat)
           ActionButton(.link, tip: Tips.copyLink)
+          ActionButton(.pin, tip: Tips.pin)
         }
       })
     let measured = try probes(row, scheme: .dark)
-    XCTAssertEqual(measured["row.trailing"]?.width, 108)
+    XCTAssertEqual(measured["row.trailing"]?.width, 136)
 
     // `.row.is-busy .acts{display:none}`: a busy row carries no action at
     // all, so the column goes with them.
@@ -174,52 +176,38 @@ final class RowTests: XCTestCase {
     XCTAssertNil(busyMeasured["row.trailing"], "a busy row draws no action column")
   }
 
-  /// A document row keeps the panel's one left edge until its list has a
-  /// pin, and then every row of that list keeps the pin's 8 pt.
+  /// Every row in the panel, a document row included, starts on the panel's
+  /// one left edge.
   ///
-  /// The slot belongs to the list and not to the shape. A fixed 26 pt column
-  /// drew it on every row of every list, so DOCUMENTS stood 10 pt right of
-  /// its own section label and of every other row in the panel, with
-  /// nothing in the room it took.
-  func testTheDocRowKeepsThePanelsLeftEdge() throws {
-    XCTAssertEqual(Grid.pinSize, 8)
-    XCTAssertNil(RowShape.doc.leadingColumn, "the document row is as wide as its own glyph")
-    for shape in RowShape.allCases where shape != .doc {
+  /// A document row kept 8 pt in front of its glyph for the pin until the
+  /// third look, and the rows under a pinned one kept it empty, so DOCUMENTS
+  /// stood right of its own section label and of every other row in the
+  /// panel. The pin is the row's fifth icon now, at the trailing edge where
+  /// the other four are, and the leading column is the glyph's own 16 pt in
+  /// every shape there is.
+  func testEveryRowShapeKeepsTheGlyphsOwnLeadingColumn() throws {
+    for shape in RowShape.allCases {
       XCTAssertEqual(shape.leadingColumn, 16, "\(shape) keeps the glyph's own column")
     }
 
     let drawn = try SheetPieces.documentRows()[0]
-    func row(_ pin: PinColumn) -> some View {
-      RowView(
-        .doc, title: drawn.title, sub: drawn.sub,
-        leading: { DocumentGlyph(drawn.glyph, tone: drawn.tone, pin: pin) },
-        trailing: { ActionButton(.gdocs, tip: Tips.openDoc) })
-    }
-
-    let measured = try probes(row(.pinned), scheme: .dark)
-    XCTAssertEqual(measured["row.pin"]?.width, 8, "the pin's own slot")
-    XCTAssertEqual(measured["row.pin"]?.height, 8)
-    XCTAssertEqual(measured["row.status"]?.width, 24, "the slot and the glyph")
-
-    let slot = try probes(row(.slot), scheme: .dark)
+    let row = RowView(
+      .doc, glyph: drawn.glyph, tone: drawn.tone, title: drawn.title, sub: drawn.sub,
+      trailing: { ActionButton(.gdocs, tip: Tips.openDoc) })
+    let measured = try probes(row, scheme: .dark)
     XCTAssertEqual(
-      slot["row.pin"]?.width, 8, "a row under a pinned one keeps the slot, so the titles line up")
-    XCTAssertEqual(
-      slot["row.status"]?.width, measured["row.status"]?.width,
-      "and a pin changes no width at all")
+      measured["row.leading"]?.width, Grid.glyphSize,
+      "the document row's glyph column is every other row's")
 
-    let alone = try probes(row(.none), scheme: .dark)
-    XCTAssertNil(alone["row.pin"], "a list with no pin draws no slot at all")
+    let left = try XCTUnwrap(
+      try probeList(row, scheme: .dark).first { $0.name == "row.leading" })
+    let plain = try XCTUnwrap(
+      try probeList(
+        RowView(.plain, glyph: drawn.glyph, tone: drawn.tone, title: drawn.title),
+        scheme: .dark
+      ).first { $0.name == "row.leading" })
     XCTAssertEqual(
-      alone["row.status"]?.width, Grid.glyphSize,
-      "so the row's glyph column is every other row's")
-
-    // The pin draws ink, and the empty slot draws none.
-    XCTAssertGreaterThan(
-      try inkedPixels(
-        DocumentGlyph(.check, tone: .ok, pin: .pinned), scheme: .dark, side: 24),
-      try inkedPixels(DocumentGlyph(.check, tone: .ok, pin: .slot), scheme: .dark, side: 24),
-      "a pinned row draws something a plain one does not")
+      left.origin.x, plain.origin.x, "and it starts where every other row starts")
   }
 
   /// `.acts{margin-right:-4px}`: the icons and not their boxes meet the
@@ -232,14 +220,14 @@ final class RowTests: XCTestCase {
   func testAnActionStripMeetsTheColumnEveryValueEndsOn() throws {
     let drawn = try SheetPieces.documentRows()[0]
     let row = RowView(
-      .doc, title: drawn.title, sub: drawn.sub,
-      leading: { DocumentGlyph(drawn.glyph, tone: drawn.tone) },
+      .doc, glyph: drawn.glyph, tone: drawn.tone, title: drawn.title, sub: drawn.sub,
       trailing: {
         HStack(spacing: Grid.actionGap) {
           ActionButton(.gdocs, tip: Tips.openDoc)
           ActionButton(.md, tip: Tips.openNote)
           ActionButton(.branch, tip: Tips.openChat)
           ActionButton(.link, tip: Tips.copyLink)
+          ActionButton(.pin, tip: Tips.pin)
         }
       })
     let strip = try XCTUnwrap(

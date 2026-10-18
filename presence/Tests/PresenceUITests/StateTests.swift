@@ -375,15 +375,14 @@ final class StateTests: XCTestCase {
       panel.header.question, "the header is the question while it is asked")
   }
 
-  /// A document row's own menu, in both its states.
+  /// A document row's five icons, in their order, and the pin's two states.
   ///
-  /// The menu is where a pin and a hide are, so the four icons on the row
-  /// stay four. A pinned row says Unpin and nothing else, because the one
-  /// thing a person wants from a pin they have already made is to take it
-  /// back, and a hide of a pinned document hides nothing: the press would
-  /// look dead and then take the row away at the Unpin. There is no Unhide
-  /// anywhere: a hidden document has no row to open a menu on.
-  func testTheRowMenuSaysPinOrUnpinAndHide() throws {
+  /// The pin is the fifth since the third look (docs/v2/DECISIONS.md,
+  /// 2026-10-18): it was a word in a menu Nail never found, and a menu
+  /// nobody finds is no affordance. The outline tack pins and says Pin, the
+  /// filled one takes it back and says Unpin, so the row says which it is
+  /// without a word.
+  func testADocumentRowsFifthIconIsThePinInItsTwoStates() throws {
     let events = [
       event(
         "2026-10-17T09:00:00Z", .end, command: "reply", doc: chapter4, title: "Ch 4", ok: true)
@@ -392,22 +391,57 @@ final class StateTests: XCTestCase {
     let plain = try drawn(events, at: "2026-10-17T09:10:00Z")
     let row = try XCTUnwrap(plain.documents?.rows.first)
     XCTAssertFalse(row.isPinned, "nothing is pinned until somebody pins it")
-    XCTAssertEqual(row.menu.map(\.word), ["Pin", "Hide from the list"])
-    XCTAssertEqual(row.menu.map(\.kind), [.pinDoc, .hideDoc])
-    XCTAssertEqual(row.menu.map(\.target), [chapter4, chapter4])
-    XCTAssertEqual(row.actions.count, 4, "the four icons are four")
+    XCTAssertEqual(
+      row.actions.map(\.icon), [.gdocs, .md, .branch, .link, .pin],
+      "the four it had, and the pin at the end")
+    XCTAssertEqual(
+      row.actions.map(\.kind), [.openDoc, .openNote, .openChat, .copyLink, .pinDoc])
+    let pin = try XCTUnwrap(row.actions.last)
+    XCTAssertEqual(pin.tip, "Pin")
+    XCTAssertEqual(pin.state, .live, "a pin is a press on every row there is")
+    XCTAssertEqual(pin.target, chapter4)
 
     let moment = try at("2026-10-17T09:05:00Z")
     let pinned = try drawn(
       events, at: "2026-10-17T09:10:00Z",
       ui: UIState(pinned: [DocumentChoice(doc: chapter4, at: moment, title: "Ch 4")]))
     let kept = try XCTUnwrap(pinned.documents?.rows.first)
-    XCTAssertTrue(kept.isPinned, "which the row draws in its own column before the glyph")
+    XCTAssertTrue(kept.isPinned)
     XCTAssertEqual(
-      kept.menu.map(\.word), ["Unpin"],
-      "and a pinned row offers no hide, because the pin would win and the press look dead")
-    XCTAssertEqual(kept.menu.map(\.kind), [.unpinDoc])
-    XCTAssertEqual(kept.actions.count, 4, "and the icons are still four")
+      kept.actions.map(\.icon), [.gdocs, .md, .branch, .link, .pinOn],
+      "the filled tack is the one thing that changes")
+    XCTAssertEqual(
+      kept.actions.map(\.kind), [.openDoc, .openNote, .openChat, .copyLink, .unpinDoc])
+    let unpin = try XCTUnwrap(kept.actions.last)
+    XCTAssertEqual(unpin.tip, "Unpin")
+    XCTAssertEqual(unpin.target, chapter4)
+  }
+
+  /// A document row's own menu is one word, and a pinned row has no menu.
+  ///
+  /// Hide is the one thing left in it: the pin is the row's fifth icon since
+  /// the third look. A pinned row offers nothing, because the pin is the
+  /// louder answer and a hide of a pinned document hides nothing: the press
+  /// would look dead and then take the row away at the unpin. There is no
+  /// Unhide anywhere, because a hidden document has no row to open a menu on.
+  func testTheRowMenuIsHideAndAPinnedRowHasNone() throws {
+    let events = [
+      event(
+        "2026-10-17T09:00:00Z", .end, command: "reply", doc: chapter4, title: "Ch 4", ok: true)
+    ]
+
+    let plain = try drawn(events, at: "2026-10-17T09:10:00Z")
+    let row = try XCTUnwrap(plain.documents?.rows.first)
+    XCTAssertEqual(row.menu.map(\.word), ["Hide from the list"])
+    XCTAssertEqual(row.menu.map(\.kind), [.hideDoc])
+    XCTAssertEqual(row.menu.map(\.target), [chapter4])
+
+    let moment = try at("2026-10-17T09:05:00Z")
+    let pinned = try drawn(
+      events, at: "2026-10-17T09:10:00Z",
+      ui: UIState(pinned: [DocumentChoice(doc: chapter4, at: moment, title: "Ch 4")]))
+    let kept = try XCTUnwrap(pinned.documents?.rows.first)
+    XCTAssertTrue(kept.menu.isEmpty, "a pinned row has nothing to offer, so it opens no menu")
 
     let hidden = try drawn(
       events, at: "2026-10-17T09:10:00Z",

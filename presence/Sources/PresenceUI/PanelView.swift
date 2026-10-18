@@ -18,10 +18,10 @@
 // edge, which he chose over any scroll. So the sections are a plain stack
 // in the order the model put them in, each at its own height.
 //
-// A document row carries one more thing since that morning: its own menu,
-// with Pin or Unpin and Hide from the list, on a secondary click and on a
-// press held half a second. It is a menu and not a fifth icon because the
-// four icons on a row are four, and because a pin is a thing done once.
+// A document row carries its own menu, with Hide from the list, on a
+// secondary click and on a press held half a second. Pin was in it until the
+// third look and is the row's fifth icon now, because Nail had pins and
+// never found the menu. A pinned row offers nothing, so it opens no menu.
 //
 // RenderTests draws every scene of the screens file through this view, in
 // both appearances, and reads its sizes back through the metric probes.
@@ -169,14 +169,6 @@ struct DocumentsList: View {
   let forced: String?
   let actions: PanelActions
 
-  /// What the rows keep in front of their glyph. A list with a pin in it
-  /// keeps the slot on every row, so one pin does not move the titles under
-  /// it; a list with no pin keeps none, so DOCUMENTS stands on the panel's
-  /// one left edge.
-  private var pinColumn: PinColumn {
-    model.rows.contains(where: \.isPinned) ? .slot : .none
-  }
-
   var body: some View {
     if let empty = model.empty {
       QuietLine(empty)
@@ -185,11 +177,8 @@ struct DocumentsList: View {
         ForEach(model.rows) { row in
           VStack(alignment: .leading, spacing: 0) {
             RowView(
-              .doc, title: row.title, sub: row.sub, gone: row.gone,
-              leading: {
-                DocumentGlyph(
-                  row.glyph, tone: row.tone, pin: row.isPinned ? .pinned : pinColumn)
-              },
+              .doc, glyph: row.glyph, tone: row.tone, title: row.title, sub: row.sub,
+              gone: row.gone,
               trailing: {
                 HStack(spacing: Grid.actionGap) {
                   ForEach(row.actions) { action in
@@ -237,13 +226,20 @@ private struct RowMenu: ViewModifier {
   @State private var held = false
 
   func body(content: Content) -> some View {
-    content
-      .contextMenu { words }
-      .onLongPressGesture(minimumDuration: Timing.menuHold) { held = true }
-      .popover(isPresented: $held, arrowEdge: .bottom) {
-        VStack(alignment: .leading, spacing: 0) { words }
-          .padding(Grid.unit / 2)
-      }
+    // A row with nothing to offer opens nothing. A pinned row is that row,
+    // and an empty menu under the pointer is a panel that answered a press
+    // with a grey rectangle: testTheRowMenuIsHideAndAPinnedRowHasNone.
+    if items.isEmpty {
+      content
+    } else {
+      content
+        .contextMenu { words }
+        .onLongPressGesture(minimumDuration: Timing.menuHold) { held = true }
+        .popover(isPresented: $held, arrowEdge: .bottom) {
+          VStack(alignment: .leading, spacing: 0) { words }
+            .padding(Grid.unit / 2)
+        }
+    }
   }
 
   @ViewBuilder private var words: some View {

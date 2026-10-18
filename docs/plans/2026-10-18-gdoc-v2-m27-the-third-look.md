@@ -133,14 +133,14 @@ branch.
   `IconShapes.swift`, `PanelModel.swift`, `Words.swift`,
   `presence/Sources/PresenceApp/SessionActions.swift`, tests beside each
 
-- [ ] a DOCUMENTS row's strip has five icons: the four it has and a pin at
+- [x] a DOCUMENTS row's strip has five icons: the four it has and a pin at
       the end, outline when the document is not pinned and filled when it
       is; pressing it pins or unpins; the tooltip says "Pin" or "Unpin"; the
       small pin glyph in the status column goes, because the icon says it; a
       test over the five icons, their order and the two states
-- [ ] the row's menu keeps Hide and loses Pin, which the icon now owns; a
+- [x] the row's menu keeps Hide and loses Pin, which the icon now owns; a
       test over the menu's one word
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 4: the note is found, not configured
 

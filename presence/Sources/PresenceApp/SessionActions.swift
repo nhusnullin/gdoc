@@ -2,10 +2,10 @@
 //
 // One function over the twenty kinds, and nothing else in the app turns a
 // press into anything. Each case is one line of the specification's decision
-// table: the two icons that open something, the one that copies, the one that
-// dismisses a card, the one signal, sign in and sign out, the update and the
-// extension, the hub, the switch, quit, and the three words of a document
-// row's own menu.
+// table: the two icons that open something, the one that copies, the pin
+// either way round, the one that dismisses a card, the one signal, sign in
+// and sign out, the update and the extension, the hub, the switch, quit, and
+// the one word of a document row's own menu.
 //
 // Nothing here judges. A dismissal hides a card and rewrites no row, a stop
 // is refused by the process check and not by this file, and a sign-out stops
@@ -72,9 +72,9 @@ extension Session {
     }
   }
 
-  // MARK: the four icons on a row
+  // MARK: the five icons on a row
 
-  /// The four labels under the first document row go after the first click
+  /// The five labels under the first document row go after the first click
   /// on any icon and never come back.
   private func sawTheStrip() {
     guard !ui.stripSeen else {
@@ -121,7 +121,7 @@ extension Session {
     changed()
   }
 
-  // MARK: the two words of a row's menu
+  // MARK: the pin, and the one word of a row's menu
 
   /// Pin one document, with the title the list is drawing for it.
   ///
@@ -130,18 +130,22 @@ extension Session {
   /// the pin is all the row has. It is the one thing of somebody's document
   /// this app writes down, and the decision of 2026-10-18 is where that is
   /// written.
+  ///
+  /// It retires the labels like the other four icons on the row, because it
+  /// is one of them since the third look and the fifth label is its own:
+  /// testThePinIconPinsTheDocumentAndRetiresTheStrip.
   private func pin(_ doc: String?) {
     guard let doc else { return }
     preferences.pin(doc, title: lastTitle(of: doc), at: clock())
     ui.pinned = preferences.pins
-    changed()
+    sawTheStrip()
   }
 
   private func unpin(_ doc: String?) {
     guard let doc else { return }
     preferences.unpin(doc)
     ui.pinned = preferences.pins
-    changed()
+    sawTheStrip()
   }
 
   /// Hide one document from DOCUMENTS. The record keeps every line of it,

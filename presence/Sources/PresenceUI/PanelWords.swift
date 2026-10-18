@@ -34,6 +34,10 @@ public enum Tips {
   /// there is no document to open.
   public static let noLink = "No link yet"
   public static let copied = "Copied"
+  /// The fifth icon of a document row, in its two states. They are the words
+  /// the menu carried until the third look, on the icon that replaced it.
+  public static let pin = "Pin"
+  public static let unpin = "Unpin"
   public static let dismiss = ButtonWord.dismiss.rawValue
   public static let cannotStop = "This watch is not one gdoc presence can stop"
   public static let signIn = "Sign in with Google"
@@ -43,11 +47,9 @@ public enum Tips {
   public static let installExtension = "Install extension"
 }
 
-/// The words of a document row's own menu, which is where a pin and a hide
-/// are, so the four icons on the row stay four.
+/// The word of a document row's own menu, which is one word since the third
+/// look: the pin is the row's fifth icon and Hide is what is left.
 public enum Menus {
-  public static let pin = "Pin"
-  public static let unpin = "Unpin"
   /// The one way out of the list. The way back is gdoc doing something on
   /// the document again, which the guide says and no menu word can.
   public static let hide = "Hide from the list"

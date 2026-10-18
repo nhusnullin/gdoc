@@ -61,7 +61,7 @@ final class ControlTests: XCTestCase {
     XCTAssertFalse(under.above)
 
     // `.acts [data-tip]::after{right:0}`: an action's tooltip ends on the
-    // panel's own right inset, which is how four icons in 108 pt keep their
+    // panel's own right inset, which is how five icons in 136 pt keep their
     // words inside the panel whichever of them the pointer is on.
     let action = CGRect(x: 280, y: 100, width: 24, height: 24)
     let trailing = Tooltip.place(anchor: action, size: bubble, in: panel, align: .trailing)
@@ -98,7 +98,7 @@ final class ControlTests: XCTestCase {
       try png(TooltipBubble("Open in Google Docs"), scheme: .light))
   }
 
-  // The third of four icons in a document row. Its words are drawn under
+  // The third of five icons in a document row. Its words are drawn under
   // the icon the pointer is on and end where the icons themselves end, so
   // the bubble of the third icon is the bubble of the fourth one place up: a
   // plate that hung off each icon's own edge stepped left across the row
@@ -108,7 +108,7 @@ final class ControlTests: XCTestCase {
   // put the bubble 12 pt right of the icon it belonged to and over the
   // scroll thumb, which is the one thing a bubble about a row may not cover.
   func testAnActionTooltipSitsUnderItsIconAndEndsOnTheIconColumn() throws {
-    // The document row's icons: 108 pt of column against the panel's right
+    // The document row's icons: 136 pt of column against the panel's right
     // inset, four 24 pt icons with 4 pt between them.
     let panel = CGSize(width: Grid.panelWidth, height: 420)
     let columnEnd = Grid.panelWidth - Grid.unit - Grid.rowInset

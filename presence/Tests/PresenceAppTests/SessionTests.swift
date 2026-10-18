@@ -22,7 +22,7 @@ final class SessionTests: XCTestCase {
   private var root: URL!
   private var session: Session?
 
-  /// One document, in the Drive shape, so its row carries the four icons.
+  /// One document, in the Drive shape, so its row carries the five icons.
   private static let doc = "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789"
 
   /// A second document, for the tests that need two.
@@ -307,7 +307,8 @@ final class SessionTests: XCTestCase {
 
   // MARK: what a press reaches
 
-  /// The four icons on a row, each through the one room that does it, and the
+  /// The four that open, copy or dismiss, each through the one room that does
+  /// it, and the
   /// strip of labels that goes after the first of them.
   func testEachIconLeavesThroughTheOneRoomThatDoesIt() throws {
     try writeTheRecord([line(kind: "start", command: "reply", call: 1, doc: Self.doc)])
@@ -877,6 +878,30 @@ final class SessionTests: XCTestCase {
 
     XCTAssertFalse(
       session.tookTheScan(2, new), "a walk that found what is already there redraws nothing")
+  }
+
+  /// The fifth icon on a row pins the document and takes the pin back, and
+  /// it retires the labels like the other four.
+  ///
+  /// Pin was a word in the row's menu until the third look, and Nail never
+  /// found the menu. The strip of labels now has five words, so the press
+  /// that reads the fifth one is the press that takes them away.
+  func testThePinIconPinsTheDocumentAndRetiresTheStrip() throws {
+    try writeTheRecord([line(kind: "start", command: "reply", call: 1, doc: Self.doc)])
+    let store = Store()
+    let session = made(preferences: Preferences(store: store))
+    answered(session)
+    XCTAssertFalse(session.ui.stripSeen, "the labels have not been read yet")
+
+    session.perform(.pinDoc, Self.doc)
+    XCTAssertEqual(session.ui.pinned.map(\.doc), [Self.doc], "the pin is written down")
+    XCTAssertTrue(session.ui.stripSeen, "and the fifth icon is an icon, so the labels go")
+    XCTAssertTrue(
+      store.object(forKey: Preferences.Key.stripSeen.rawValue) as? Bool ?? false,
+      "once and for every later launch")
+
+    session.perform(.unpinDoc, Self.doc)
+    XCTAssertTrue(session.ui.pinned.isEmpty, "and the filled tack takes it back")
   }
 
   // MARK: a session over this test's own machine

@@ -471,11 +471,12 @@ final class CardTests: XCTestCase {
   }
 
   // `.strip` is shown once, under the first document row, and says what the
-  // four icons above it are. It is the whole of the onboarding: one person
+  // five icons above it are. It is the whole of the onboarding: one person
   // does not need a tour, he needs to not guess once.
-  func testTheStripLabelsAreDocNoteChatLink() throws {
-    XCTAssertEqual(StripLabel.allCases.map(\.rawValue), ["Doc", "Note", "Chat", "Link"])
-    XCTAssertEqual(StripLabel.allCases.count, 4, "one label per icon of the document row")
+  func testTheStripLabelsAreDocNoteChatLinkPin() throws {
+    XCTAssertEqual(
+      StripLabel.allCases.map(\.rawValue), ["Doc", "Note", "Chat", "Link", "Pin"])
+    XCTAssertEqual(StripLabel.allCases.count, 5, "one label per icon of the document row")
     XCTAssertEqual(IconStrip.cell, 24, "`.strip span{width:24px}`")
     XCTAssertEqual(IconStrip.gap, Grid.actionGap)
     XCTAssertEqual(IconStrip.leadingInset, Grid.quietInset, "`padding-left:44px`")

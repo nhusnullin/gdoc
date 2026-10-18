@@ -2,7 +2,7 @@
 //
 // `.act` in docs/design/2026-10-17-presence-screens-v3.html is a 24 px box
 // with a 16 px icon inside it and no label, because the actions of a row sit
-// four across in 108 px and words would not fit. The tooltip is the whole of
+// five across in 136 px and words would not fit. The tooltip is the whole of
 // the label, so every button carries one.
 //
 // The three states are the stylesheet's: the plain `.act`, `.act.off` at
@@ -133,7 +133,7 @@ public struct ActionButton: View {
     .buttonStyle(.plain)
     .onHover { hovering = $0 }
     // `.acts [data-tip]::after{right:0}`: an action's words hang off its own
-    // right edge, so the last of four icons keeps them inside the panel.
+    // right edge, so the last of five icons keeps them inside the panel.
     // The caller may say otherwise, and the header's update icon does.
     .tooltip(
       Self.tooltip(tip, state: state), align: align,

@@ -48,9 +48,8 @@ public enum ActionKind: String, Sendable, Equatable, CaseIterable {
   /// The safe half of every confirm, which does nothing but put the
   /// question away.
   case keep
-  /// The three a document row's own menu has: a pin, taking it back, and a
-  /// hide. None of them is an icon, because the four icons on a row stay
-  /// four.
+  /// A pin, taking it back, and a hide. The first two are the row's fifth
+  /// icon since the third look; the hide is the one word of its menu.
   case pinDoc
   case unpinDoc
   case hideDoc
@@ -142,11 +141,11 @@ public struct DocumentRowModel: Sendable, Equatable, Identifiable {
   /// The document is in the trash. The v1 record never says so, so this is
   /// false until M24b.
   public let gone: Bool
-  /// Whether the person pinned it, which the row draws in its own column
-  /// before the state glyph.
+  /// Whether the person pinned it, which the row draws as the state of its
+  /// fifth icon: the tack is filled on a pinned row and hollow on the rest.
   public let isPinned: Bool
   public let actions: [ActionModel]
-  /// The row's own menu: Pin or Unpin, and Hide from the list.
+  /// The row's own menu: Hide from the list, and nothing on a pinned row.
   public let menu: [MenuItemModel]
 
   public var id: String { doc }
@@ -597,6 +596,7 @@ extension PanelModel {
           openNote(row.doc, facts: facts, ui: ui, forced: ui.forcedTooltip),
           openChat(row.doc, facts: facts, forced: ui.forcedTooltip),
           copyLink(row.doc, ui: ui, now: words.now),
+          pin(row),
         ],
         menu: menu(row))
     }
@@ -610,25 +610,38 @@ extension PanelModel {
       showsStrip: !ui.stripSeen && !rows.isEmpty)
   }
 
-  /// A row's own menu: the pin either way round, and the hide on a row that
-  /// is not pinned.
+  /// A row's own menu: the hide, on a row that is not pinned.
   ///
-  /// A pinned row says Unpin, because the one thing a person wants from a
-  /// pin they have already made is to take it back. It offers no Hide: a pin
-  /// is never away, whatever a hide of it says, so the press would do
-  /// nothing on the screen and then take the row away at the Unpin, which is
-  /// not what either press asked for. Unpin first, and the row offers Hide.
+  /// Pin left it at the third look. It was the one way to pin a document and
+  /// Nail never found it, so it is the row's fifth icon now, and Hide is
+  /// what the menu is for.
+  ///
+  /// A pinned row offers nothing, so it opens no menu. A pin is the louder
+  /// answer and is never away, whatever a hide of it says, so the press
+  /// would do nothing on the screen and then take the row away at the unpin,
+  /// which is not what either press asked for. Unpin first, and the row
+  /// offers Hide.
   ///
   /// There is no Unhide: a hidden document has no row to open a menu on, and
   /// what brings it back is gdoc doing something on it again.
   private static func menu(_ row: DocumentRow) -> [MenuItemModel] {
-    guard !row.isPinned else {
-      return [MenuItemModel(.unpinDoc, word: Menus.unpin, target: row.doc)]
-    }
-    return [
-      MenuItemModel(.pinDoc, word: Menus.pin, target: row.doc),
-      MenuItemModel(.hideDoc, word: Menus.hide, target: row.doc),
-    ]
+    guard !row.isPinned else { return [] }
+    return [MenuItemModel(.hideDoc, word: Menus.hide, target: row.doc)]
+  }
+
+  /// The pin, in the state the row is in: the outline tack that pins, or the
+  /// filled one that takes the pin back.
+  ///
+  /// It is live on every row there is. A pin is the person's own answer
+  /// about a document and nothing about the document can refuse it: a row
+  /// whose id Drive could not have written still pins, because the row is
+  /// there and the pin is what keeps it there.
+  private static func pin(_ row: DocumentRow) -> ActionModel {
+    ActionModel(
+      row.isPinned ? .unpinDoc : .pinDoc,
+      icon: row.isPinned ? .pinOn : .pin,
+      tip: row.isPinned ? Tips.unpin : Tips.pin,
+      target: row.doc)
   }
 
   private static func glyph(for state: DocumentState) -> (kind: GlyphKind, tone: GlyphTone) {
@@ -662,7 +675,7 @@ extension PanelModel {
     return facts.newerRecord ? "gdoc is newer than this app" : nil
   }
 
-  // MARK: the four document icons
+  // MARK: the five document icons
 
   /// Open in Google Docs, greyed where the id is not one Drive could have
   /// written.

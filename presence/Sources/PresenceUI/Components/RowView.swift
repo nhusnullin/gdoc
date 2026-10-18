@@ -29,7 +29,7 @@ public enum RowShape: String, Sendable, CaseIterable {
   case two
   /// `.row.compact`: one line, 28 pt, for a list of short facts.
   case compact
-  /// `.row.docrow`: a title, a sub-line of two, and 108 pt of actions.
+  /// `.row.docrow`: a title, a sub-line of two, and 136 pt of actions.
   case doc
 
   /// `min-height`.
@@ -50,21 +50,19 @@ public enum RowShape: String, Sendable, CaseIterable {
     }
   }
 
-  /// `grid-template-columns`' first column: 16 pt for the glyph in every
-  /// shape but the document row, which has no number of its own.
+  /// `grid-template-columns`' first column: 16 pt for the glyph, in every
+  /// shape there is.
   ///
-  /// A document row is handed its own leading view, and that view is the
-  /// glyph alone where nothing in the list is pinned and the glyph behind an
-  /// 8 pt slot where something is, so the column is as wide as what it is
-  /// handed. A fixed 26 pt here drew that slot on every row of every list,
-  /// pinned or not, which put DOCUMENTS 10 pt right of its own label and of
-  /// every other row in the panel: testTheDocRowKeepsThePanelsLeftEdge.
-  public var leadingColumn: CGFloat? {
-    self == .doc ? nil : Grid.glyphSize
-  }
+  /// The document row kept 8 pt in front of its glyph for a pin until the
+  /// third look, and every row of a list with a pin in it kept the slot
+  /// whether it was pinned or not, which put DOCUMENTS right of its own
+  /// label and of every other row in the panel. The pin is the row's fifth
+  /// icon now, at the trailing edge with the other four, so the panel has
+  /// one left edge again: testEveryRowShapeKeepsTheGlyphsOwnLeadingColumn.
+  public var leadingColumn: CGFloat { Grid.glyphSize }
 
   /// `grid-template-columns`' third column, where the document row is the
-  /// one shape that fixes it: four icons in 108 pt, so every document row
+  /// one shape that fixes it: five icons in 136 pt, so every document row
   /// in a list breaks its title at the same place.
   public var trailingColumn: CGFloat? {
     self == .doc ? Grid.actionColumn : nil
@@ -151,13 +149,14 @@ public struct RowView<Leading: View, Trailing: View>: View {
     return HStack(alignment: shape.crossAlignment, spacing: Grid.columnGap) {
       // The glyph column, as tall as the title's own line, so a glyph beside
       // a two-line row sits against the title and not between the two
-      // lines. It is 16 pt wide everywhere but a document row, which is as
-      // wide as the glyph it was handed: 16 pt, or 24 where that list has a
-      // pin in it.
+      // lines. It is the glyph's own 16 pt in every shape, which is the
+      // panel's one left edge.
       leading
         .frame(
           width: shape.leadingColumn, height: Typography.rowTitle.lineHeight,
-          alignment: .trailing)
+          alignment: .trailing
+        )
+        .metricProbe("row.leading")
 
       VStack(alignment: .leading, spacing: 0) {
         HStack(alignment: .firstTextBaseline, spacing: Grid.columnGap) {

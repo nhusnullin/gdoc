@@ -164,39 +164,34 @@ final class RenderTests: XCTestCase {
     }
   }
 
-  /// A list with no pin in it keeps the panel's one left edge.
+  /// Every row of every scene starts on the panel's one left edge, and the
+  /// pin is drawn at the trailing edge with the other icons.
   ///
-  /// Every document row reserved the pin's slot, pinned or not, so DOCUMENTS
-  /// stood 10 pt right of NOW, of SETTINGS and of its own section label on
-  /// every screen in the set, with nothing drawn in the room it took. The
-  /// slot is the list's and not the shape's: scenes e1 and e2 have a pin and
-  /// keep it on every row, and no other scene draws one at all.
-  func testOnlyAListWithAPinKeepsThePinsSlot() throws {
+  /// A document row kept 8 pt in front of its glyph for the pin until the
+  /// third look, so DOCUMENTS stood right of NOW, of SETTINGS and of its own
+  /// section label on every screen in the set. The pin is the row's fifth
+  /// icon now: the leading column is the glyph's own 16 pt in every row the
+  /// panel draws, and the pinned scenes say so too.
+  func testEveryRowInEverySceneStartsOnTheOneLeftEdge() throws {
+    for scene in Scenes.all {
+      let columns = try probeList(try scene.view(), scheme: .dark)
+        .filter { $0.name == "row.leading" }
+      for column in columns {
+        XCTAssertEqual(
+          column.size.width, Grid.glyphSize,
+          "\(scene.id) draws a row that does not start where the others do")
+      }
+    }
+
     for id in ["e1", "e2"] {
       let pinned = try XCTUnwrap(Scenes.all.first { $0.id == id })
       let rows = try XCTUnwrap(try pinned.model().documents).rows
       XCTAssertTrue(rows[0].isPinned, "\(id)'s first row is the pinned one")
-      let kept = try probeList(try pinned.view(), scheme: .dark)
-        .filter { $0.name == "row.status" }
-      XCTAssertFalse(kept.isEmpty, "\(id) drew no document row")
-      for column in kept {
+      XCTAssertEqual(
+        rows[0].actions.last?.icon, .pinOn, "\(id) draws the filled tack on it")
+      for row in rows.dropFirst() {
         XCTAssertEqual(
-          column.size.width, Grid.glyphSize + Grid.pinSize,
-          "every row of a list with a pin keeps the slot")
-      }
-    }
-
-    for scene in Scenes.all where scene.id != "e1" && scene.id != "e2" {
-      let model = try scene.model()
-      guard let documents = model.documents, !documents.rows.isEmpty else { continue }
-      XCTAssertFalse(
-        documents.rows.contains(where: \.isPinned), "\(scene.id) pins nothing")
-      let columns = try probeList(try scene.view(), scheme: .dark)
-        .filter { $0.name == "row.status" }
-      for column in columns {
-        XCTAssertEqual(
-          column.size.width, Grid.glyphSize,
-          "\(scene.id) has no pin, so its rows start where every other row does")
+          row.actions.last?.icon, .pin, "and the outline tack on every row under it")
       }
     }
   }

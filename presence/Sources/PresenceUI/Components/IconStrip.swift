@@ -1,19 +1,20 @@
-// The four labels under the first document row, once.
+// The five labels under the first document row, once.
 //
-// `.strip` in docs/design/2026-10-17-presence-screens-v3.html is four words
-// in 10 pt, each 24 pt wide, sitting under the four icons of the document
-// row above. It is the whole of this app's onboarding: one person does not
-// need a tour, he needs to not guess once. It goes after the first click on
-// any icon and never comes back, which the app remembers (Task 17).
+// `.strip` in docs/design/2026-10-17-presence-screens-v3.html is words in
+// 10 pt, each 24 pt wide, sitting under the icons of the document row above.
+// It is the whole of this app's onboarding: one person does not need a tour,
+// he needs to not guess once. It goes after the first click on any icon and
+// never comes back, which the app remembers.
 //
-// The labels are an enum, because four words under four icons is a thing
-// that stays four.
+// The labels are an enum, because one word under each icon is a thing that
+// stays as long as the icons do. It was four words until the third look
+// added the pin (docs/v2/DECISIONS.md, 2026-10-18).
 //
 // CardTests states the words and the cell width.
 
 import SwiftUI
 
-/// The four words, in the order the icons stand in.
+/// The five words, in the order the icons stand in.
 public enum StripLabel: String, Sendable, CaseIterable {
   /// Open in Google Docs.
   case doc = "Doc"
@@ -23,6 +24,8 @@ public enum StripLabel: String, Sendable, CaseIterable {
   case chat = "Chat"
   /// Copy link.
   case link = "Link"
+  /// Pin the document, or take the pin back.
+  case pin = "Pin"
 }
 
 /// The strip.

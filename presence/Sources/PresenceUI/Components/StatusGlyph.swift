@@ -132,69 +132,6 @@ public struct StatusGlyph: View {
   }
 }
 
-/// What a document row keeps in front of its state glyph.
-///
-/// A list with a pin in it keeps the slot on every row, so one pin does not
-/// move the titles under it. A list with no pin keeps none at all: an empty
-/// column is not nothing, and 8 pt of it on every row put DOCUMENTS 8 pt
-/// right of NOW, of SETTINGS and of its own section label. The panel has one
-/// left edge, as it has one right edge.
-public enum PinColumn: Sendable, Equatable {
-  /// Nothing in this list is pinned.
-  case none
-  /// Something in this list is pinned and this row is not.
-  case slot
-  /// This row is pinned.
-  case pinned
-
-  /// Whether the row draws the slot at all.
-  var keepsSlot: Bool { self != .none }
-}
-
-/// A document row's status column: the pin's slot where the list has a pin,
-/// and then the state glyph.
-///
-/// The pin is drawn in the quietest ink the panel has: it is a fact about
-/// the row and not a state of the document, and the one coloured thing in a
-/// row is the glyph beside it.
-///
-/// RowTests states the slot's width, the column with and without a pin in
-/// the list, and reads both back off the drawing.
-public struct DocumentGlyph: View {
-  public let kind: GlyphKind
-  public let tone: GlyphTone
-  public let pin: PinColumn
-
-  @Environment(\.colorScheme) private var scheme
-
-  public init(_ kind: GlyphKind, tone: GlyphTone = .quiet, pin: PinColumn = .none) {
-    self.kind = kind
-    self.tone = tone
-    self.pin = pin
-  }
-
-  public var body: some View {
-    let palette = Palette.of(scheme)
-    return HStack(spacing: 0) {
-      if pin.keepsSlot {
-        Group {
-          if pin == .pinned {
-            IconShape(.pin)
-              .stroke(palette.textTertiary.color, style: IconShape.style)
-          } else {
-            Color.clear
-          }
-        }
-        .frame(width: Grid.pinSize, height: Grid.pinSize)
-        .metricProbe("row.pin")
-      }
-      StatusGlyph(kind, tone: tone)
-    }
-    .metricProbe("row.status")
-    .accessibilityHidden(true)
-  }
-}
-
 /// The shapes, in the stylesheet's own units.
 ///
 /// A CSS absolute child sits inside the border, so every number below is in

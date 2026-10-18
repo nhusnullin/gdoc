@@ -1,13 +1,13 @@
 // The action icons: the screens file's SVG, drawn as Path.
 //
-// Twelve of the thirteen shapes are the `IC` object of
+// Eleven of the thirteen shapes are the `IC` object of
 // docs/design/2026-10-17-presence-screens-v3.html, kept as the `d` strings
-// that file holds and turned into a Path here. The pin is the one the file
-// has no shape for: the pins are the second morning's decision
-// (docs/v2/DECISIONS.md, 2026-10-18), and it is written here in the same
-// grammar so it can be read beside the others. They are not SF Symbols:
-// four of them stand side by side in a document row, their weights have to
-// match, and a system symbol is whatever the platform ships this year.
+// that file holds and turned into a Path here. The last two are the pin,
+// which the file has no shape for: it is a pair, the outline and the filled,
+// and both are written here in the same grammar so they can be read beside
+// the others. They are not SF Symbols: five of them stand side by side in a
+// document row, their weights have to match, and a system symbol is whatever
+// the platform ships this year.
 //
 // Keeping the `d` string means a shape can be compared with the line it came
 // from by eye. The cost is the small parser below, which understands the
@@ -47,10 +47,12 @@ public enum Icon: String, Sendable, CaseIterable {
   case x
   /// Dismiss, bare: the stuck card's last icon.
   case xmark
-  /// The pin a document row carries while it is pinned, drawn at
-  /// `Grid.pinSize` in the slot before the status glyph that a list with a
-  /// pin in it keeps on every row.
+  /// Pin this document: the fifth icon of a document row, with its head
+  /// hollow because the document is not pinned.
   case pin
+  /// Unpin it: the same tack with its head filled, which is the whole of
+  /// what the row says about being pinned.
+  case pinOn
 
   /// The CSS width of this icon, which is also its viewBox.
   ///
@@ -59,12 +61,18 @@ public enum Icon: String, Sendable, CaseIterable {
   /// opened a longer list went with the lists that had one.
   public var side: CGFloat { 16 }
 
-  /// The icons a trailing edge draws as something to press. The pin is not
-  /// one of them: it is a mark in a row's leading column, and Pin is a word
-  /// in the row's menu, so a pin in an action strip says the panel has a pin
-  /// to press and a dimmed pin says it has a dead one:
-  /// testThePinIsNoAction.
-  public static var actions: [Icon] { allCases.filter { $0 != .pin } }
+  /// The elements this icon fills rather than strokes, which is the pinned
+  /// tack's head and nothing else in the set.
+  ///
+  /// A pair of shapes, one outlined and one filled, is how a row says pinned
+  /// without a word and without moving anything. Filling is the pin's own
+  /// because an action icon is a 1.25 pt line everywhere else, and a line is
+  /// the one weight the five icons of a row share:
+  /// testThePinIsOutlinedAndFilledAndNeitherIsACircle.
+  var solidParts: [IconPart] {
+    guard self == .pinOn else { return [] }
+    return [.roundedRect(x: 4, y: 3, width: 8, height: 3, radius: 1.5)]
+  }
 
   /// The SVG elements of this icon, in the order the file writes them.
   var parts: [IconPart] {
@@ -127,19 +135,19 @@ public enum Icon: String, Sendable, CaseIterable {
       ]
     case .xmark:
       return [.path("M4.5 4.5l7 7M11.5 4.5l-7 7")]
-    case .pin:
+    case .pin, .pinOn:
       // A tack seen from the side: a flat head and the needle under it. Two
-      // shapes are all that survive at 8 pt, where a thumbtack's three
-      // pieces close into a blot.
+      // shapes are all that survive at this size, where a thumbtack's three
+      // pieces close into a blot, and the head is a bar rather than a ring
+      // because a ring on a stem reads as a magnifying glass.
       //
-      // The head was a circle until 2026-10-18, and the column this glyph
-      // sits in is a column of circles: the hollow ring is a status glyph of
-      // its own, so a ring on a stem beside one read as a magnifying glass
-      // standing next to a state. A bar is the one silhouette in that
-      // column that is not round: testThePinIsNotACircleOnAStem.
+      // Both states draw this, and the pinned one fills the head as well.
+      // The outline is kept under the fill so the two tacks have the one
+      // silhouette: a press darkens the head and moves nothing else on the
+      // row: testThePinIsOutlinedAndFilledAndNeitherIsACircle.
       return [
-        .path("M4.5 4H11.5"),
-        .path("M8 4V12.5"),
+        .roundedRect(x: 4, y: 3, width: 8, height: 3, radius: 1.5),
+        .path("M8 6V13"),
       ]
     }
   }
@@ -166,7 +174,8 @@ enum IconPart {
   }
 }
 
-/// One icon as a shape, in the box it is given.
+/// One icon as a shape, in the box it is given: its stroked half, or its
+/// filled one where it has any.
 public struct IconShape: Shape {
   /// `.act svg`'s stroke-width, the same in both appearances.
   public static let stroke: CGFloat = 1.25
@@ -175,14 +184,22 @@ public struct IconShape: Shape {
   public static let style = StrokeStyle(lineWidth: stroke, lineCap: .round, lineJoin: .round)
 
   public let icon: Icon
+  /// Whether this is the icon's filled half. Only the pinned tack has one,
+  /// and it is empty for every other icon, which draws nothing.
+  let solid: Bool
 
   public init(_ icon: Icon) {
+    self.init(icon, solid: false)
+  }
+
+  init(_ icon: Icon, solid: Bool) {
     self.icon = icon
+    self.solid = solid
   }
 
   public func path(in rect: CGRect) -> Path {
     var whole = Path()
-    for part in icon.parts {
+    for part in solid ? icon.solidParts : icon.parts {
       whole.addPath(part.path)
     }
     let scale = min(rect.width, rect.height) / icon.side
@@ -195,11 +212,11 @@ public struct IconShape: Shape {
   }
 }
 
-/// One icon stroked in the colour the caller names, at its own size.
+/// One icon drawn in the colour the caller names, at its own size.
 ///
 /// The ink is handed in rather than taken from the palette, because an
-/// action's own grey is not every grey a 16 pt mark is drawn in: the pin in
-/// a row's leading column is the quietest of them.
+/// action's own grey is not every grey a 16 pt mark is drawn in: the
+/// header's update glyph has two of its own.
 public struct IconView: View {
   public let icon: Icon
   public let ink: Swatch
@@ -210,10 +227,14 @@ public struct IconView: View {
   }
 
   public var body: some View {
-    IconShape(icon)
-      .stroke(ink.color, style: IconShape.style)
-      .frame(width: icon.side, height: icon.side)
-      .accessibilityHidden(true)
+    ZStack {
+      IconShape(icon).stroke(ink.color, style: IconShape.style)
+      if !icon.solidParts.isEmpty {
+        IconShape(icon, solid: true).fill(ink.color)
+      }
+    }
+    .frame(width: icon.side, height: icon.side)
+    .accessibilityHidden(true)
   }
 }
 
