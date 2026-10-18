@@ -84,6 +84,11 @@ enum Scenes {
   /// goes against, and where it can be seen. They are product choices and
   /// not findings: a reviewer who rates one of them blocking is rating
   /// Nail's call, which is why they are on the page rather than in a task.
+  ///
+  /// A line leaves the list on the day Nail settles it. The third look took
+  /// off the one about the DOCUMENTS header count, which asked which form
+  /// of "N today" and "14 days · N" was right: the answer of 2026-10-18 is
+  /// the label on its own, so no render draws a count and no choice is left.
   static let stillYourCall: [String] = [
     "Launch at login is off until you turn it on, which is product decision 32. The "
       + "2026-10-18 decision withdrew the registration M24 made on the first run. A gdoc "
@@ -101,11 +106,6 @@ enum Scenes {
     "The header counts the sign-in's three minutes down, as product decision 39 asks. "
       + "Principle 5 allows facts and not promises, and the countdown is the one number in "
       + "the panel about something that has not happened.",
-    "The DOCUMENTS header is \"N today\" where every row is from today and \"14 days · N\" "
-      + "otherwise, counting every row of the list. The mockup wrote three forms of it "
-      + "on different screens. Since the second morning it counts a pinned row as well, "
-      + "however old that document is, and counts a hidden one not at all: the number is "
-      + "the list, and a pin and a hide are what the list is.",
     "SETTINGS is pinned above DOCUMENTS on the two screens the group is the whole of the "
       + "panel on, no token and a sign-in in flight, which is e5 and e8. It is the one "
       + "place Quit is not the last row in the panel, and the plan of the second morning "

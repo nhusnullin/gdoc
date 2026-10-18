@@ -5503,4 +5503,4 @@ The app asks `help --json` on open and every six hours while it runs;
 gdoc's own stamp keeps GitHub to once in 24 hours, and the person's press is
 the way past it.
 
-The plan is `docs/plans/2026-10-18-gdoc-v2-m27-the-third-look.md`.
+The plan is `docs/plans/completed/2026-10-18-gdoc-v2-m27-the-third-look.md`.

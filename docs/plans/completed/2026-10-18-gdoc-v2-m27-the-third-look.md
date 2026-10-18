@@ -257,10 +257,12 @@ mark, the name, or a cut address.
 - Modify: this plan, `docs/v2/DECISIONS.md` only if a task found the
   decision wrong
 
-- [ ] the render index's "Still your call" list drops what this plan
-      decided
-- [ ] move this plan to `docs/plans/completed/`
-- [ ] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
+- [x] the render index's "Still your call" list drops what this plan
+      decided: the DOCUMENTS header count, which Nail settled by asking for
+      the label alone, leaves the list and eight choices stay
+      (`RenderTests.testTheIndexOpensWithWhatIsStillYourCall`)
+- [x] move this plan to `docs/plans/completed/`
+- [x] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
       `make app-lint`, `make app-test`, `make app`
 
 ## Acceptance

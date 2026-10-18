@@ -592,13 +592,15 @@ final class RenderTests: XCTestCase {
   ///
   /// A reviewer who reads a render as the specification drawn rates a
   /// product choice as a bug, and a choice Nail has not made is not a bug.
-  /// The nine are on the page, above every screen, and each names the rule
+  /// The eight are on the page, above every screen, and each names the rule
   /// or the decision it goes against. The second morning's own pass added
   /// two: where SETTINGS sits on the first-run screen, which the plan says
   /// two things about, and the light tooltip's plate. It also closed one,
-  /// the dim mark, which is a decision now and is said as `markRule`.
+  /// the dim mark, which is a decision now and is said as `markRule`. The
+  /// third look closed the DOCUMENTS header count, which Nail settled on
+  /// 2026-10-18 by asking for the label alone.
   func testTheIndexOpensWithWhatIsStillYourCall() throws {
-    XCTAssertEqual(Scenes.stillYourCall.count, 9, "the pass left nine choices to Nail")
+    XCTAssertEqual(Scenes.stillYourCall.count, 8, "the pass left eight choices to Nail")
 
     let page = html(["<section>a screen</section>"])
     let heading = try XCTUnwrap(page.range(of: "Still your call"), "the page does not open with it")
@@ -614,7 +616,7 @@ final class RenderTests: XCTestCase {
     // failure rather than a shorter page.
     let subjects = [
       "decision 32", "decision 10", "trash",
-      "decision 39", "14 days · N", "nameless", "faintest control",
+      "decision 39", "nameless", "faintest control",
       "pinned above DOCUMENTS", "tooltip's plate in light",
     ]
     for subject in subjects {
@@ -627,6 +629,14 @@ final class RenderTests: XCTestCase {
     XCTAssertFalse(
       Scenes.stillYourCall.contains { $0.contains("as bright as the mark at work") },
       "the dim mark is a decision now and not a choice left open")
+
+    // Neither is the DOCUMENTS header count, which the third look took off
+    // the label: no render draws it, so no choice is left about its form.
+    for settled in ["14 days", "N today"] {
+      XCTAssertFalse(
+        Scenes.stillYourCall.contains { $0.contains(settled) },
+        "the DOCUMENTS header count is settled and not a choice left open: \(settled)")
+    }
   }
 
   /// The bright idle mark is said once, as a decision and not a choice.
