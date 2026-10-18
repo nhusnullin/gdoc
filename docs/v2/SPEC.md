@@ -161,6 +161,15 @@ mark at rest is full ink. Under `via: code` the start line carries
 Decided 2026-10-18, DECISIONS.md.
 `auth login` is a real desktop flow: a loopback redirect with PKCE, hand-rolled.
 
+**The third look, the same evening.** Nothing in the panel scrolls: it is as
+tall as its content. DOCUMENTS is the pinned documents and then the last
+five, one row each, hidden ones skipped; the pin is the row's fifth icon and
+Hide is in its menu; TODAY and Yesterday are gone. Open md finds the note
+through Spotlight and the `gdoc:` block, with `hubPath` as an override and
+no Hub row. The update glyph is always in the header, quiet, available or
+running, and the app asks `help --json` on open and every six hours.
+Decided 2026-10-18, DECISIONS.md, the third look.
+
 **Two scopes:** Drive, and `https://www.googleapis.com/auth/documents`, the Docs
 read/write scope, because v2 writes suggestions through the Docs API. Read-only
 would be enough to read a document and not enough to suggest a change to one,
