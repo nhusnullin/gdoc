@@ -67,9 +67,10 @@ public enum DocumentState: String, Sendable, Equatable, CaseIterable {
   case failed
   /// Its last action started and nobody wrote down how it went.
   case unknown
-  /// The record says nothing about it at all: the row is here because it is
-  /// pinned, and all the panel has is the pin's own title and id. Only a
-  /// pinned document is ever in this state.
+  /// The record holds no action on it at all: the row is here because it is
+  /// pinned, and its id is the pin's own. Its name is whatever the record
+  /// last called it, and the pin's remembered title where the record has
+  /// none. Only a pinned document is ever in this state.
   case pinnedOnly
 }
 
@@ -171,6 +172,10 @@ public enum Documents {
     }
 
     let pins = Dictionary(pinned.map { ($0.doc, $0.at) }, uniquingKeysWith: { $1 })
+    // The title a pin kept, which fills a gap the record has and never
+    // speaks over it: testAPinsTitleFillsAGapAndNeverSpeaksOverTheRecord.
+    let pinTitles = Dictionary(
+      pinned.compactMap { pin in pin.title.map { (pin.doc, $0) } }, uniquingKeysWith: { $1 })
     for doc in away(hidden, pins: pins, actions: actions) {
       actions.removeValue(forKey: doc)
     }
@@ -183,14 +188,15 @@ public enum Documents {
       actions
       .compactMap { doc, found in
         row(
-          doc, found, titles: titles, session: sessions[doc], now: now, calendar: calendar,
-          pinned: pins[doc] != nil)
+          doc, found, titles: titles, pinTitle: pinTitles[doc], session: sessions[doc], now: now,
+          calendar: calendar, pinned: pins[doc] != nil)
       }
       .filter { $0.at >= since || pins[$0.doc] != nil }
     for pin in pinned where actions[pin.doc] == nil {
       rows.append(
         DocumentRow(
-          doc: pin.doc, title: pin.title, command: "", at: pin.at, state: .pinnedOnly,
+          doc: pin.doc, title: titles[pin.doc] ?? pin.title, command: "", at: pin.at,
+          state: .pinnedOnly,
           isToday: false, isPinned: true, session: sessions[pin.doc]))
     }
 
@@ -260,16 +266,21 @@ public enum Documents {
 
   /// A document's row: the open action where there is one, and the latest
   /// finished one otherwise, at the moment of the latest action either way.
+  /// The pin's own title is the fallback and never the answer: a start
+  /// carries no title, so a pinned document that is only running has one
+  /// nowhere else, and a row that lost the name of the thing a person pinned
+  /// draws a Drive id at them.
   private static func row(
-    _ doc: String, _ actions: [Action], titles: [String: String], session: String?, now: Date,
-    calendar: Calendar, pinned: Bool
+    _ doc: String, _ actions: [Action], titles: [String: String], pinTitle: String?,
+    session: String?, now: Date, calendar: Calendar, pinned: Bool
   ) -> DocumentRow? {
     guard let last = actions.max(by: { $0.at < $1.at }) else { return nil }
     let open = actions.filter(\.isOpen).min { rank($0.state) < rank($1.state) }
     let shown = open ?? last
 
     return DocumentRow(
-      doc: doc, title: titles[doc], command: shown.command, at: last.at, state: shown.state,
+      doc: doc, title: titles[doc] ?? pinTitle, command: shown.command, at: last.at,
+      state: shown.state,
       isToday: calendar.isDate(last.at, inSameDayAs: now), isPinned: pinned, session: session)
   }
 

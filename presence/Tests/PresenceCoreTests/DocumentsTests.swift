@@ -303,6 +303,45 @@ final class DocumentsTests: XCTestCase {
     XCTAssertFalse(fold.rows[0].isToday)
   }
 
+  /// The pin's title fills a gap in the record and never speaks over it.
+  ///
+  /// The title a pin keeps is there for one reason, which this file's own
+  /// comment states: a document the record cannot name still has its name on
+  /// its row. So the record wins wherever it has a title, and the pin's title
+  /// is the fallback, on every pinned row and not only on the stateless one.
+  ///
+  /// Two gaps, one each way. A pinned document whose only lines since are
+  /// reads has no action, so its row is `.pinnedOnly`, and the read's own
+  /// title is newer than the one the pin kept. A pinned document with a start
+  /// and no end has an action and no title at all, because `presence.Begin`
+  /// writes none, and without the fallback that row draws a Drive id at a
+  /// person.
+  func testAPinsTitleFillsAGapAndNeverSpeaksOverTheRecord() throws {
+    let read = pair(
+      at: "2026-10-17T12:00:00Z", command: "read", run: "dddd", doc: docD,
+      title: "The regions proposal, final")
+    let renamed = DocumentChoice(
+      doc: docD, at: try moment("2026-10-16T09:00:00Z"), title: "The regions proposal")
+
+    let newer = try folded(read, pinned: [renamed])
+    XCTAssertEqual(newer.rows.map(\.doc), [docD], "a read is no action, so the pin is the row")
+    XCTAssertEqual(newer.rows[0].state, .pinnedOnly)
+    XCTAssertEqual(
+      newer.rows[0].title, "The regions proposal, final",
+      "the record named it after the pin was made, and the record is what it is called")
+
+    let running = [start(at: "2026-10-17T15:00:00Z", command: "publish", run: "eeee", doc: docE)]
+    let named = DocumentChoice(
+      doc: docE, at: try moment("2026-10-17T09:00:00Z"), title: "Chapter 4. Pricing")
+
+    let open = try folded(running, pinned: [named], alive: { _ in true })
+    XCTAssertEqual(open.rows.map(\.doc), [docE])
+    XCTAssertEqual(open.rows[0].state, .running, "a start whose process is there is running")
+    XCTAssertEqual(
+      open.rows[0].title, "Chapter 4. Pricing",
+      "a start carries no title, so the pin's own title is the row's")
+  }
+
   /// A hidden document leaves the list, and the next finished action on it
   /// is the one way back.
   func testAHiddenDocumentLeavesTheListUntilTheNextActionOnIt() throws {
