@@ -235,9 +235,9 @@ mark, the name, or a cut address.
 **Files:**
 - Modify: this plan
 
-- [ ] an acceptance table at the foot of this plan: each of Nail's
+- [x] an acceptance table at the foot of this plan: each of Nail's
       sentences with the test that holds its answer
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 8: the reviewer's pass
 
@@ -262,3 +262,23 @@ mark, the name, or a cut address.
 - [ ] move this plan to `docs/plans/completed/`
 - [ ] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
       `make app-lint`, `make app-test`, `make app`
+
+## Acceptance
+
+Nail's words of 2026-10-18, in the order he sent them, with the test that
+holds each answer. A row's test is the one that fails if its answer is taken
+away. A sentence that carried two claims is two rows.
+
+| Nail's sentence | The answer | The test that holds it |
+|---|---|---|
+| double scrolling is awful | no source under `PresenceUI` names a scroll view, a box, a Show more or the old cap, and e3 draws no box in either appearance | `RenderTests.testNothingScrollsAndThePanelIsItsPartsAddedUp` |
+| show no more than five documents | DOCUMENTS lists five recent rows and no sixth | `DocumentsTests.testDocumentsGroupByIdAndTheListIsTheLastFive` |
+| no activity log for today and yesterday at all | TODAY and Yesterday are gone with `Days.swift`: `PanelSection` has three cases, and e3, the screen with every part on it, draws three sections | `RenderTests.testNothingScrollsAndThePanelIsItsPartsAddedUp` |
+| why show the hub, it differs by document and the notes live in different folders | Spotlight names the candidates and the `gdoc:` block picks the note, so no SETTINGS row chooses a folder; `hubPath` stays as a `defaults write` override | `NoteFinderTests.testOneNoteNamingTheDocumentIsTheAnswer`, `NoteFinderTests.testAFileThatMerelyMentionsTheIdIsNotTheNote`, `NoteFinderTests.testTwoNotesNamingOneDocumentIsAFaultOfItsOwn`, `SessionTests.testTheOverrideIsAskedBeforeSpotlight`, `StateTests.testTheMdIconIsGreyOnlyWhenNoNoteNamesTheDocument` |
+| he did not see how to pin a document | the pin is the row's fifth icon, outline when it is not pinned and filled when it is, and pressing it pins or unpins; the menu keeps Hide alone | `StateTests.testADocumentRowsFifthIconIsThePinInItsTwoStates`, `CardTests.testTheStripLabelsAreDocNoteChatLinkPin`, `IconTests.testThePinIsOutlinedAndFilledAndNeitherIsACircle`, `SessionTests.testThePinIconPinsTheDocumentAndRetiresTheStrip`, `StateTests.testTheRowMenuIsHideAndAPinnedRowHasNone` |
+| the use statistics are not needed | the order is the latest action, neither the day nor the count of finished actions; the by-use ordering of M26 is withdrawn | `DocumentsTests.testTheOrderIsTheLastActionAndNeitherTheDayNorTheCount` |
+| show the last five plus the pinned ones, no duplicates | the pinned first, newest pin first, then the last five, skipping any pinned row and any hidden one; one row per document id | `DocumentsTests.testTheListIsThePinnedThenTheLastFiveWithNoDuplicates`, `RenderTests.testThePinOfE2OutlivesTheFortnight`, `StateTests.testAPinnedDocumentWithNoLinesDrawsThePinsOwnRow` |
+| no scroll at all, let the panel be as long as it comes out | the cap is gone: e3 comes out taller than the 600 pt the panel was held to, and the window server cuts a panel taller than the screen at its edge | `RenderTests.testNothingScrollsAndThePanelIsItsPartsAddedUp`, with the cut measured in `docs/v2/MEASURED.md` |
+| check for a new version periodically | `help --json` on open and once every six hours after it, while gdoc's own stamp keeps GitHub to once in 24 hours | `HealthPollerTests.testHelpIsAskedOnOpenAndEverySixHours` |
+| show it beside the current one | not on the line, which is measured to have no room for a second version: the published one is the quiet line directly under the installed one, "v2.15.0 is published". Task 5's note says this and what Nail's word would cost to put it back | `StateTests.testTheUpdateGlyphIsAlwaysThereInItsThreeStates`, `RowTests.testTheHeaderIs36WithTheMarkTheNameTheVersionAndTheAccount` |
+| give the update glyph more than one state so he can press it to check and install even before the timer has asked | quiet, available and running; the press runs `gdoc update` in every state, so a check is one click away before any timer has asked, and "already current" shows the check for one second | `StateTests.testTheUpdateGlyphIsAlwaysThereInItsThreeStates`, `SessionTests.testAnUpdateThatInstalledNothingShowsTheCheckForASecond` |
