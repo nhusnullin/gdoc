@@ -261,11 +261,12 @@ branch.
       neither keeps the activation; the URL is built by one function with a
       test over the three cases, and the opener's allowlist of schemes gains
       this one path and no other
-- [ ] the measurement: Nail opens one such link while watching the window,
-      and the result goes to `docs/v2/MEASURED.md` with the date; if the Code
-      tab does not take a session id, the link is not shipped and this task's
-      commit says so, leaving the activation as it is and the field in the
-      record for the day it does
+- [ ] the measurement is done and is in `docs/v2/MEASURED.md` ("What
+      `claude://code/continue` does from outside the app", 2026-10-18): none
+      of the three forms switched the window, so the link is not shipped;
+      the opener keeps the activation, the URL-building function and its
+      test stay (the day a form switches, the opener has the id), and this
+      task's commit says so
 - [ ] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
       `make app-lint`, `make app-test`
 
