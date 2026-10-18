@@ -41,6 +41,9 @@ public enum ActionKind: String, Sendable, Equatable, CaseIterable {
   case installExtension
   case openLoginItems
   case toggleLoginItem
+  /// The Hub row: the system's folder panel, and the folder it comes back
+  /// with written down.
+  case chooseHub
   case quit
   /// The safe half of every confirm, which does nothing but put the
   /// question away.
@@ -783,12 +786,24 @@ extension PanelModel {
   /// the only route to "Note moved or deleted", and without it a click that
   /// went nowhere would leave the icon live and say nothing:
   /// testAFailedOpenGreysTheIconWithItsReason.
+  ///
+  /// With no hub chosen the words name the row in SETTINGS instead. Without
+  /// a hub nothing is paired with anything, so every icon on the screen is
+  /// grey, and "No note is paired with this document" sends the person
+  /// looking for a note: testTheHubRowIsTheFolderOrTheWayToChooseOne.
   private static func openNote(
     _ doc: String, facts: Facts, ui: UIState, forced: String? = nil
   ) -> ActionModel {
     let paired = facts.note(for: doc) != nil
+    let noHub = facts.hub?.isEmpty ?? true
     let state: ActionState =
-      if let fault = ui.noteFault[doc] { .off(fault.tip) } else if paired { .live } else {
+      if let fault = ui.noteFault[doc] {
+        .off(fault.tip)
+      } else if noHub {
+        .off(Tips.noHub)
+      } else if paired {
+        .live
+      } else {
         .off(Tips.noNote)
       }
     return ActionModel(

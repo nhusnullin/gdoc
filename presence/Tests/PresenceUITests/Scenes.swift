@@ -117,7 +117,9 @@ enum Scenes {
   /// reviewer comparing two screens reads a missing row as a bug.
   static let settingsRowRule =
     "The group is SETTINGS, not HEALTH: what is left in it is two facts about the machine "
-    + "and the two settings the panel has. It ends in Quit on every screen, and the rows "
+    + "and the three settings the panel has, the Hub row among them: it says the folder the "
+    + "notes are in, or offers to choose one, and pressing it opens the system's folder "
+    + "panel. It ends in Quit on every screen, and the rows "
     + "above it keep their places. Network and Claude Desktop are drawn only where a fact "
     + "carries them: the record's own network stop, and no extension beside the binary. "
     + "The account, the version and the thread mark are not rows at all since the second "
@@ -145,6 +147,9 @@ enum Scenes {
 
   static let account = "nail@example.com"
   static let hub = "/Users/nail/hub"
+  /// The home the Hub row writes its tilde against, so every render says
+  /// `~/hub` whoever's machine drew it.
+  static let home = "/Users/nail"
   static let gdocPath = "/Users/nail/.local/bin/gdoc"
   static let signInURL =
     "https://accounts.google.com/o/oauth2/auth?client_id=…&redirect_uri=http://127.0.0.1:0"
@@ -171,7 +176,8 @@ enum Scenes {
     network: NetworkFact? = nil,
     loginItem: LoginItemState = .off,
     signIn: SignInPhase? = nil,
-    signedInAt: Date? = nil
+    signedInAt: Date? = nil,
+    hub: String? = Scenes.hub
   ) -> Facts {
     Facts(
       account: account,
@@ -182,6 +188,7 @@ enum Scenes {
       mark: "⁘",
       gdocPath: gdocFound ? gdocPath : nil,
       hub: hub,
+      home: home,
       extensionState: extensionState,
       network: network,
       loginItem: loginItem,

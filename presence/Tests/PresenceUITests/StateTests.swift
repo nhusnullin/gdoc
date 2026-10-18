@@ -141,6 +141,54 @@ final class StateTests: XCTestCase {
     XCTAssertNil(ahead.header.update, "and there is no button to press")
   }
 
+  /// The Hub row, which is the one row in the panel that opens a window of
+  /// the system's: the folder the person chose, written with a tilde where
+  /// it is inside their home, or the word that offers to choose one.
+  ///
+  /// The md icon says the same thing from the other side. Without a hub
+  /// there is no pairing, and a greyed icon that said "No note is paired
+  /// with this document" sent the person looking for a note, which is where
+  /// Nail went on the second morning: the tooltip names the row that fixes
+  /// it instead.
+  func testTheHubRowIsTheFolderOrTheWayToChooseOne() throws {
+    let chosen = try drawn([], at: "2026-10-17T10:00:00Z")
+    let row = try XCTUnwrap(chosen.settings.first { $0.kind == .hub }, "SETTINGS has no Hub row")
+    XCTAssertEqual(row.kind.label, "Hub")
+    XCTAssertEqual(row.value, "~/hub", "the folder, with the home directory as a tilde")
+    XCTAssertEqual(row.select, .chooseHub, "and pressing the row is what opens the panel")
+    XCTAssertNil(row.isOn, "it is not a switch")
+    XCTAssertTrue(row.actions.isEmpty, "and it carries no icon")
+
+    let none = try drawn(
+      [], at: "2026-10-17T10:00:00Z", facts: Scenes.machine(hub: nil))
+    let offer = try XCTUnwrap(none.settings.first { $0.kind == .hub })
+    XCTAssertEqual(offer.value, "Choose…")
+    XCTAssertEqual(offer.select, .chooseHub, "the same press either way")
+
+    // A hub outside the home directory is written in full, because a tilde
+    // there would name a folder that is not the one chosen.
+    XCTAssertEqual(
+      Sentences.folder("/Volumes/work/hub", home: "/Users/nail"), "/Volumes/work/hub")
+    XCTAssertEqual(Sentences.folder("/Users/nail", home: "/Users/nail"), "~")
+    XCTAssertEqual(
+      Sentences.folder("/Users/nail/hub", home: ""), "/Users/nail/hub",
+      "and no home to compare against is no tilde either")
+
+    // The other side of the same fact: the md icon with no hub names the row.
+    let paired = event(
+      "2026-10-17T09:00:00Z", .end, command: "reply", doc: chapter4, ok: true)
+    let greyed = try drawn([paired], at: "2026-10-17T10:00:00Z", facts: Scenes.machine(hub: nil))
+    let icon = try XCTUnwrap(
+      greyed.documents?.rows.first?.actions.first { $0.kind == .openNote })
+    XCTAssertEqual(icon.state, .off("Choose the hub in SETTINGS"))
+    XCTAssertEqual(NoteFault.noHub.tip, "Choose the hub in SETTINGS", "and a click says it too")
+
+    let live = try drawn([paired], at: "2026-10-17T10:00:00Z")
+    XCTAssertEqual(
+      live.documents?.rows.first?.actions.first { $0.kind == .openNote }?.state, .live,
+      "with a hub and a note the icon works")
+  }
+
   /// While an update child of the app's own is up, neither row offers a
   /// button. Both argv lists are `gdoc update` and `update --desktop`
   /// installs the release it writes the extension of, so a second press is a

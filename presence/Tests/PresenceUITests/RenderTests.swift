@@ -137,8 +137,8 @@ final class RenderTests: XCTestCase {
 
     XCTAssertEqual(header.size.height, Grid.headerHeight + Grid.headerGap)
     XCTAssertEqual(now.size.height, PanelView.nowHeight, "NOW is at its own cap on e3")
-    XCTAssertEqual(middle.size.height, 176)
-    XCTAssertEqual(settings.size.height, 96)
+    XCTAssertEqual(middle.size.height, 148)
+    XCTAssertEqual(settings.size.height, 124, "three rows and the Hub row's own")
     XCTAssertEqual(
       header.size.height + now.size.height + middle.size.height + settings.size.height
         + 2 * Grid.unit,

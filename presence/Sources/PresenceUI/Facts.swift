@@ -183,6 +183,11 @@ public struct Facts: Sendable, Equatable {
   public let gdocPathTried: String
   /// The hub folder the person chose, or nothing while none is chosen.
   public let hub: String?
+  /// This machine's home directory, which is the one thing the Hub row needs
+  /// to write a path with a tilde. It is handed over like every other fact
+  /// here, so a render of a scene says the same thing on every machine, and
+  /// it is empty where nobody asked.
+  public let home: String
   public let extensionState: ExtensionState
   /// What the last command said about reaching Google, or nothing.
   public let network: NetworkFact?
@@ -219,6 +224,7 @@ public struct Facts: Sendable, Equatable {
     gdocPath: String? = nil,
     gdocPathTried: String = "~/.local/bin/gdoc",
     hub: String? = nil,
+    home: String = "",
     extensionState: ExtensionState = .unknown,
     network: NetworkFact? = nil,
     loginItem: LoginItemState = .off,
@@ -238,6 +244,7 @@ public struct Facts: Sendable, Equatable {
     self.gdocPath = gdocPath
     self.gdocPathTried = gdocPathTried
     self.hub = hub
+    self.home = home
     self.extensionState = extensionState
     self.network = network
     self.loginItem = loginItem

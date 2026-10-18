@@ -1,11 +1,11 @@
 // What a press in the panel means.
 //
-// One function over the eighteen kinds, and nothing else in the app turns a
+// One function over the twenty kinds, and nothing else in the app turns a
 // press into anything. Each case is one line of the specification's decision
 // table: the two icons that open something, the one that copies, the one that
 // dismisses a card, the one signal, sign in and sign out, the update and the
-// extension, the switch, quit, and the three words of a document row's own
-// menu.
+// extension, the hub, the switch, quit, and the three words of a document
+// row's own menu.
 //
 // Nothing here judges. A dismissal hides a card and rewrites no row, a stop
 // is refused by the process check and not by this file, and a sign-out stops
@@ -53,6 +53,8 @@ extension Session {
       install()
     case .installExtension:
       installTheExtension()
+    case .chooseHub:
+      chooseTheHub()
     case .openLoginItems:
       loginItem.openSettings()
     case .toggleLoginItem:
@@ -299,6 +301,28 @@ extension Session {
       await self.recompose()
       self.changed()
     }
+  }
+
+  // MARK: the hub
+
+  /// Choose the folder the notes are in, through the system's own panel.
+  ///
+  /// The path is the one thing of the person's file system this app writes
+  /// down, and it is written only where they chose one: a cancel leaves the
+  /// last answer where it was, and an empty path would be the app choosing
+  /// nothing for them. The notes under it are read at once rather than at
+  /// the next file event, because a folder chosen and no icon lit is a row
+  /// that looks like it did nothing:
+  /// testChoosingTheHubWritesItDownAndReadsTheNotesAtOnce.
+  private func chooseTheHub() {
+    guard let chosen = desk.chooseFolder(startingAt: preferences.hub) else {
+      changed()
+      return
+    }
+    preferences.hub = chosen.path
+    readTheHub()
+    Task { [weak self] in await self?.recompose() }
+    changed()
   }
 
   // MARK: the switch

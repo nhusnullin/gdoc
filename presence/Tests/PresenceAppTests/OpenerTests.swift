@@ -71,7 +71,9 @@ final class OpenerTests: XCTestCase {
     let noHub = opener.openNote(
       document: Self.id, hub: nil, pairing: [Self.id: "notes/supplier-register.md"])
     XCTAssertEqual(noHub.fault, .noHub, "no hub is chosen, so there is no pairing either")
-    XCTAssertEqual(NoteFault.noHub.tip, NoteFault.notPaired.tip, "one sentence for both")
+    XCTAssertEqual(
+      NoteFault.noHub.tip, "Choose the hub in SETTINGS",
+      "and the words name the row that fixes it, not a note nobody can find")
 
     XCTAssertTrue(desk.opened.isEmpty, "a greyed icon opens nothing")
 
@@ -84,8 +86,11 @@ final class OpenerTests: XCTestCase {
       "pid":4201,"run":"0d1a2b3c4d5e6f70","call":1,"event":"end","command":"propose",\
       "via":"terminal","doc":"\(Self.id)","title":"\(Self.title)","ok":true,"ms":10}
       """)
+    // The hub is chosen and this document is in no note of it, which is the
+    // one state that sentence is about: a panel with no hub at all names the
+    // row in SETTINGS instead.
     let panel = PanelModel.build(
-      events: [written], facts: Facts(versions: Versions(app: "1.0")), now: moment,
+      events: [written], facts: Facts(versions: Versions(app: "1.0"), hub: hub), now: moment,
       calendar: Calendar(identifier: .gregorian), alive: { _ in false })
     let icons = panel.sections.compactMap { section -> [ActionModel]? in
       guard case .documents(let documents) = section else { return nil }
@@ -217,6 +222,7 @@ final class NoteDesk: Desk, @unchecked Sendable {
   private var openedURLs: [URL] = []
   private var copiedText: [String] = []
   private var activatedApps: [String] = []
+  private var choices = 0
 
   var opened: [URL] { read { openedURLs } }
   var copied: [String] { read { copiedText } }
@@ -241,6 +247,17 @@ final class NoteDesk: Desk, @unchecked Sendable {
     copiedText.append(text)
     lock.unlock()
   }
+
+  /// The folder panel, which opens no window here: a desk in a test is
+  /// asked and answers nothing, the way a person who cancelled would.
+  func chooseFolder(startingAt directory: String?) -> URL? {
+    lock.lock()
+    choices += 1
+    lock.unlock()
+    return nil
+  }
+
+  var chosen: Int { read { choices } }
 
   private func read<T>(_ body: () -> T) -> T {
     lock.lock()

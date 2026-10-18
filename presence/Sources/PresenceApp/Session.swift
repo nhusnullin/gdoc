@@ -365,13 +365,15 @@ public final class Session {
   }
 
   /// What the app knows about the machine before the polls have spoken: its
-  /// own version, the bundle under it, the hub, the switch, the extension,
+  /// own version, the bundle under it, the hub and the home it is written
+  /// against, the switch, the extension,
   /// what the record last said about reaching Google, and the waits it may
   /// not signal.
   private func machine() -> Facts {
     Facts(
       versions: Versions(app: version),
       hub: preferences.hub,
+      home: places.home,
       extensionState: extensionState(),
       network: Reachability.latest(in: events).map(NetworkFact.init(reachable:)),
       loginItem: loginItem.state,

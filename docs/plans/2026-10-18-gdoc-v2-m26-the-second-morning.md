@@ -227,16 +227,16 @@ branch.
   rows), `presence/Sources/PresenceApp/SessionActions.swift`,
   `Preferences.swift`, `docs/guide/presence.md`, tests beside each
 
-- [ ] a Hub row in SETTINGS: the chosen folder as `~/…`, or "Choose…" when
+- [x] a Hub row in SETTINGS: the chosen folder as `~/…`, or "Choose…" when
       none; pressing it opens the system folder panel (`NSOpenPanel`, folders
       only, the app's own window and no program), and the choice goes into
       the `hubPath` key the guide already names; a test over the row's two
       states and the stored path through an injected chooser
-- [ ] the md icon's tooltip with no hub names the row ("Choose the hub in
+- [x] the md icon's tooltip with no hub names the row ("Choose the hub in
       SETTINGS"), so a grey icon says why
-- [ ] the guide's `defaults write` paragraph becomes the row, and keeps the
+- [x] the guide's `defaults write` paragraph becomes the row, and keeps the
       command as the way from a terminal
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 8: the session a run came from
 

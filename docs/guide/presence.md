@@ -160,9 +160,13 @@ version are in the header now, each with its one action beside it, and the
 Thread mark row is gone: the mark is drawn in that header, at the panel's top
 left, so the row said the same thing twice.
 
-What is left is Network, Claude Desktop, Launch at login and Quit. The first
-two are drawn only where a fact carries them, so on a good machine the group
-is the switch and Quit. Quit is always there, and it is ⌘Q.
+What is left is Network, Claude Desktop, Hub, Launch at login and Quit. The
+first two are drawn only where a fact carries them, so on a good machine the
+group is the hub, the switch and Quit. Quit is always there, and it is ⌘Q.
+
+Hub is the folder your notes are in, and it is the one row that opens a window
+of the system's: pressing it asks you for a folder, folders only. What it is
+for is the next section.
 
 Network is the record's own word and never a connection the app opened: gdoc
 writes `network` on a run that could not reach Google, and the row says so
@@ -343,16 +347,21 @@ and rebuilds it when files there change. Nothing else in a note ever reaches the
 app: the reading stops at the closing fence, a `gdoc:` block inside a fenced
 example pairs nothing, and every id is held to the Drive shape.
 
-The hub is a folder you name, and the app has no picker for it yet. Set it once
-from a terminal, then quit the app and open it again:
+The hub is a folder you name, in the Hub row of Settings. The row says the
+folder you chose, with your home directory written as `~`, or "Choose…" when
+there is none; pressing it opens the system's folder panel, and the notes under
+the folder you pick are read at once. Nothing is written down if you cancel. You
+can still set it from a terminal instead, which takes effect when the app is
+opened again:
 
 ```
 defaults write com.altery.gdoc.presence hubPath -string ~/path/to/hub
 ```
 
-With no hub set, the md icon is greyed on every row. With one set, a note is
-opened through `obsidian://` with the vault and the relative path, after the app
-has proved the file is a regular `.md` file inside the folder you named. A
+With no hub set, the md icon is greyed on every row and says "Choose the hub in
+SETTINGS", which is the row that fixes it. With one set, a note is opened
+through `obsidian://` with the vault and the relative path, after the app has
+proved the file is a regular `.md` file inside the folder you named. A
 symlink is not the note either: what is at the end of it is somewhere you did
 not choose. No line number is promised, because gdoc does not record one.
 

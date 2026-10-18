@@ -11,11 +11,12 @@
 // order of what a person can do something about: the facts first, and the
 // two rows that are not facts at all last.
 //
-// Two of the rows are not statuses. Launch at login is a setting, so it
-// carries the drawn switch and never a status colour. Quit is a row with a
-// keystroke on the right, pressed rather than read. The group's name is
-// theirs: the two facts above them are read, and the two rows below them
-// are the only settings the panel has.
+// Three of the rows are not statuses. Hub is the folder somebody chose, and
+// pressing it opens the system's own folder panel. Launch at login is a
+// setting, so it carries the drawn switch and never a status colour. Quit is
+// a row with a keystroke on the right, pressed rather than read. The group's
+// name is theirs: the two facts above them are read, and the three rows
+// below them are the only settings the panel has.
 //
 // CardTests puts every screen's rows in shuffled and reads the order back.
 
@@ -37,6 +38,9 @@ public enum SettingsRowKind: String, Sendable, CaseIterable {
   /// written on this machine, or a run of this process wrote one and could
   /// not hand it over.
   case desktop
+  /// The folder the notes are in, which is the one row that opens a window
+  /// of the system's rather than saying something.
+  case hub
   /// The one switch in the panel.
   case launchAtLogin
   /// The last row, always.
@@ -48,6 +52,7 @@ public enum SettingsRowKind: String, Sendable, CaseIterable {
     switch self {
     case .network: return "Network"
     case .desktop: return "Claude Desktop"
+    case .hub: return "Hub"
     case .launchAtLogin: return "Launch at login"
     case .quit: return "Quit"
     }

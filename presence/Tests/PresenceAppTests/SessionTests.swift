@@ -443,6 +443,82 @@ final class SessionTests: XCTestCase {
     XCTAssertNil(still.counting)
   }
 
+  /// Choosing the hub: the row opens the system's folder panel, the folder
+  /// that comes back is written down, and the notes in it are read at once.
+  ///
+  /// The panel is injected, so no window opens here and the choice is a
+  /// literal. Nothing is written down when the person cancels it, which is
+  /// the nil: a cancel that stored an empty path would be the app choosing
+  /// for them.
+  func testChoosingTheHubWritesItDownAndReadsTheNotesAtOnce() throws {
+    try writeTheRecord([
+      line(kind: "end", command: "reply", call: 1, doc: Self.doc, extra: "\"ok\":true")
+    ])
+    let hub = root.appendingPathComponent("hub")
+    try FileManager.default.createDirectory(
+      at: hub.appendingPathComponent("notes"), withIntermediateDirectories: true)
+    let note = """
+      ---
+      gdoc:
+        schema: 1
+        document_id: \(Self.doc)
+      ---
+
+      # Scope
+      """
+    try note.write(
+      to: hub.appendingPathComponent("notes/scope.md"), atomically: true, encoding: .utf8)
+
+    let store = Store()
+    let desk = FakeDesk()
+    let session = made(preferences: Preferences(store: store), desk: desk)
+    answered(session)
+    XCTAssertNil(session.facts.hub, "no hub is chosen on a machine nobody has asked")
+    XCTAssertEqual(
+      session.model.settings.first { $0.kind == .hub }?.value, "Choose…",
+      "so the row offers to choose one")
+
+    // Cancelled: the panel was opened, and nothing was written down.
+    session.perform(.chooseHub, nil)
+    XCTAssertEqual(desk.chosen, 1, "the row opened the folder panel")
+    XCTAssertNil(store.object(forKey: Preferences.Key.hubPath.rawValue), "a cancel stores nothing")
+
+    desk.willChoose(hub)
+    session.perform(.chooseHub, nil)
+    XCTAssertEqual(desk.chosen, 2)
+    XCTAssertEqual(
+      store.object(forKey: Preferences.Key.hubPath.rawValue) as? String, hub.path,
+      "the folder is the one key the row writes")
+    XCTAssertEqual(session.preferences.hub, hub.path)
+
+    refreshed(session)
+    XCTAssertEqual(session.facts.hub, hub.path, "and the facts carry it")
+    XCTAssertEqual(
+      session.model.settings.first { $0.kind == .hub }?.value, "~/hub",
+      "the row says the folder, with this home as a tilde")
+
+    // The notes under it are read without waiting for a file to change, so
+    // the md icon of a document the hub pairs is live on the next draw.
+    try waitUntil("the hub was read") { session.facts.pairing[Self.doc] != nil }
+    XCTAssertEqual(session.index.notes[Self.doc], "notes/scope.md")
+    XCTAssertEqual(try noteIcon(of: session).state, .live, "so Open md works")
+  }
+
+  /// Wait for something the session does off the main thread and comes back
+  /// to it with. The scan of the hub is the one of them a press starts.
+  private func waitUntil(
+    _ what: String, _ settled: @escaping @MainActor () -> Bool
+  ) throws {
+    let done = expectation(description: what)
+    Task { @MainActor in
+      for _ in 0..<200 where !settled() {
+        try? await Task.sleep(nanoseconds: 50_000_000)
+      }
+      if settled() { done.fulfill() }
+    }
+    wait(for: [done], timeout: 20)
+  }
+
   /// The Open md icon of the one document row the panel draws.
   private func noteIcon(of session: Session) throws -> ActionModel {
     let row = try XCTUnwrap(session.model.documents?.rows.first)
@@ -877,6 +953,9 @@ final class SessionTests: XCTestCase {
     private var urls: [URL] = []
     private var strings: [String] = []
     private var apps: [String] = []
+    private var folder: URL?
+    private var openings = 0
+    private var from: [String?] = []
 
     var opened: [URL] { lock.withLock { urls } }
     var copied: [String] { lock.withLock { strings } }
@@ -895,6 +974,26 @@ final class SessionTests: XCTestCase {
     func copy(_ text: String) {
       lock.withLock { strings.append(text) }
     }
+
+    /// The folder panel, as the answer it was given: nothing until a test
+    /// says what the person picked, which is the cancel.
+    func chooseFolder(startingAt directory: String?) -> URL? {
+      lock.withLock {
+        openings += 1
+        from.append(directory)
+        return folder
+      }
+    }
+
+    /// What the next press of the Hub row comes back with.
+    func willChoose(_ url: URL) {
+      lock.withLock { folder = url }
+    }
+
+    /// How many times the folder panel was opened, and where each of them
+    /// was asked to start.
+    var chosen: Int { lock.withLock { openings } }
+    var startedAt: [String?] { lock.withLock { from } }
   }
 
   /// This machine's login items, untouched.

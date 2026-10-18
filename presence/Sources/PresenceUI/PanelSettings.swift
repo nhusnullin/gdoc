@@ -1,14 +1,19 @@
 // SETTINGS: the last section, and the one a person comes to on purpose.
 //
 // The group was HEALTH until 2026-10-18. Three of its rows left that
-// morning, and what is left is two facts about the machine and the two
+// morning, and what is left is two facts about the machine and the three
 // settings the panel has, so the label says what the rows are.
 //
 // Every fact here is one somebody else produced. The network is the
 // record's own word for a run that did not reach Google, the extension is a
-// file beside the binary and what the run that wrote it said, and the
-// switch is this machine's login items. Nothing in this file asks anything:
-// it is handed Facts and it words them.
+// file beside the binary and what the run that wrote it said, the hub is the
+// folder somebody chose, and the switch is this machine's login items.
+// Nothing in this file asks anything: it is handed Facts and it words them.
+//
+// The Hub row is always drawn, with or without a folder: a row that only
+// appeared once a hub was chosen would be a setting nobody could find. It
+// was a `defaults write` in the guide until the second morning, which is
+// why Nail's own hub was never set and every md icon was grey.
 //
 // The account and the version are not here. They moved into the header on
 // 2026-10-18, which is PanelHeaderModel.swift, and the Thread mark row went
@@ -27,8 +32,9 @@ extension PanelModel {
   ///
   /// A row with nothing to say is left out and the rest keep their places.
   /// When every fact is good the list is the short one, because a screen of
-  /// green rows is a screen nobody reads; the two that are not facts stay,
-  /// so Quit is always one click away.
+  /// green rows is a screen nobody reads; the three that are not facts stay,
+  /// so Quit is always one click away and the hub can always be chosen:
+  /// testTheHubRowIsTheFolderOrTheWayToChooseOne.
   ///
   /// The Claude Desktop row is not one of the green ones: it is drawn only
   /// where Claude Desktop can have no extension, which is no `gdoc.mcpb`
@@ -47,6 +53,9 @@ extension PanelModel {
     }
 
     rows.append(contentsOf: desktop(facts: facts))
+    rows.append(
+      SettingsRowModel(
+        .hub, value: Sentences.folder(facts.hub, home: facts.home), select: .chooseHub))
     rows.append(loginItem(facts: facts))
     rows.append(SettingsRowModel(.quit, value: SettingsRows.quitShortcut, select: .quit))
     return rows

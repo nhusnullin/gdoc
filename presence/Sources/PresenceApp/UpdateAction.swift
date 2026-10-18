@@ -115,6 +115,7 @@ public actor UpdateAction {
       gdocPath: facts.gdocPath,
       gdocPathTried: facts.gdocPathTried,
       hub: facts.hub,
+      home: facts.home,
       extensionState: facts.extensionState,
       network: facts.network,
       loginItem: facts.loginItem,

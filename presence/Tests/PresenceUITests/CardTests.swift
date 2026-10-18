@@ -503,10 +503,10 @@ final class CardTests: XCTestCase {
     XCTAssertEqual(PanelSection.settings([]).label, "Settings")
     XCTAssertEqual(SectionLabel.text(PanelSection.settings([]).label), "SETTINGS")
     XCTAssertEqual(
-      SettingsRowKind.allCases, [.network, .desktop, .launchAtLogin, .quit])
+      SettingsRowKind.allCases, [.network, .desktop, .hub, .launchAtLogin, .quit])
     XCTAssertEqual(
       SettingsRowKind.allCases.map(\.label),
-      ["Network", "Claude Desktop", "Launch at login", "Quit"])
+      ["Network", "Claude Desktop", "Hub", "Launch at login", "Quit"])
     XCTAssertFalse(
       SettingsRowKind.allCases.map(\.rawValue).contains("mark"),
       "the mark is the header's, and is said in one place")
@@ -521,11 +521,11 @@ final class CardTests: XCTestCase {
     // and Claude Desktop only where no extension has been written, which is
     // why the two move screen to screen and the other two never do.
     let screens: [(String, [SettingsRowKind])] = [
-      ("r8", [.network, .launchAtLogin, .quit]),
-      ("e5", [.desktop, .launchAtLogin, .quit]),
-      ("e8", [.launchAtLogin, .quit]),
-      ("e9", [.launchAtLogin, .quit]),
-      ("e10", [.launchAtLogin, .quit]),
+      ("r8", [.network, .hub, .launchAtLogin, .quit]),
+      ("e5", [.desktop, .hub, .launchAtLogin, .quit]),
+      ("e8", [.hub, .launchAtLogin, .quit]),
+      ("e9", [.hub, .launchAtLogin, .quit]),
+      ("e10", [.hub, .launchAtLogin, .quit]),
     ]
     for (screen, expected) in screens {
       let scene = try XCTUnwrap(Scenes.all.first { $0.id == screen }, "\(screen) is not a scene")
