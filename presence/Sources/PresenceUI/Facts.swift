@@ -219,7 +219,7 @@ public struct Facts: Sendable, Equatable {
     hub: String? = nil,
     extensionState: ExtensionState = .unknown,
     network: NetworkFact? = nil,
-    loginItem: LoginItemState = .on,
+    loginItem: LoginItemState = .off,
     signIn: SignInPhase? = nil,
     pairing: [String: String] = [:],
     signedInAt: Date? = nil,

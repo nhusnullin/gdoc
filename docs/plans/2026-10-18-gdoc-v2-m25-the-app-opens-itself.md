@@ -178,21 +178,21 @@ branch.
   `presence/Tests/PresenceAppTests/LoginItemTests.swift` (or where the two
   tests live), `presence/Sources/PresenceUI/Words.swift` if a word changes
 
-- [ ] no run registers the login item by itself; the first run ever leaves
+- [x] no run registers the login item by itself; the first run ever leaves
       macOS as it found it; `testTheFirstEverRunRegistersOnceAndRecordsOn`
       becomes `testTheFirstEverRunRegistersNothing`
-- [ ] the HEALTH switch registers on "on" and unregisters on "off", records
+- [x] the HEALTH switch registers on "on" and unregisters on "off", records
       the choice, and `requiresApproval` keeps its row and button;
       `testAPersonsOffIsNeverOverridden` stays and a sibling pins that an
       "on" is never made for them
-- [ ] the switch's state is what `SMAppService.mainApp.status` says, read on
+- [x] the switch's state is what `SMAppService.mainApp.status` says, read on
       open, so a registration removed in System Settings shows off
-- [ ] the scene fixtures and renders that showed the switch on by default now
+- [x] the scene fixtures and renders that showed the switch on by default now
       show it off where the record has no choice, and on in the one scene
       whose fixture says the person turned it on; the index caption's "Still
       your call" line about launch at login is replaced by the decision's
       sentence
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 4: the words
 

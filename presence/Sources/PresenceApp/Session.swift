@@ -144,8 +144,6 @@ public final class Session {
   ) {
     let location = Runner.locate(home: places.home, bundle: places.bundle)
     let runner = Runner(location: location, environment: environment)
-    let relaunched = RelaunchPolicy.launcher(in: places.arguments) != nil
-
     self.places = places
     self.version = places.version
     self.calendar = calendar
@@ -163,8 +161,7 @@ public final class Session {
       open: { desk.open($0) },
       clock: { Date() })
     self.stopper = Stopper(gdoc: location.path)
-    self.loginItem = LoginItem(
-      service: loginService, preferences: preferences, relaunched: relaunched)
+    self.loginItem = LoginItem(service: loginService, preferences: preferences)
     self.relauncher =
       places.bundle.flatMap { bundle in
         places.identifier.isEmpty
@@ -191,7 +188,6 @@ public final class Session {
   /// an end seen before its start puts one run in NOW and in TODAY at once.
   public func start(onChange: @escaping () -> Void) {
     self.onChange = onChange
-    loginItem.settle()
     readTheHub()
 
     tail.start { records in

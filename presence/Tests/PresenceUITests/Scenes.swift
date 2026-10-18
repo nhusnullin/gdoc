@@ -84,8 +84,9 @@ enum Scenes {
     "The idle menu bar draws the mark at 45 percent, where principle 1 says idle is nothing "
       + "at all and the mockup's r9 draws nothing. A dim mark says gdoc is installed; a "
       + "blank bar says only that nothing is running.",
-    "Launch at login is registered on the first run, so the switch is on by default. "
-      + "Product decision 32 says off by default, because it is a setting.",
+    "Launch at login is off until you turn it on, which is product decision 32 again: "
+      + "the 2026-10-18 decision withdrew the registration M24 made on the first run, "
+      + "because a gdoc command now opens the app when it is not running.",
     "A publish is kept out of DOCUMENTS until a run names a document, which is why r1's "
       + "DOCUMENTS is empty. Product decision 10 puts a running job in both sections and "
       + "the mockup draws that row dimmed.",
@@ -158,6 +159,7 @@ enum Scenes {
     gdocFound: Bool = true,
     extensionState: ExtensionState = .written,
     network: NetworkFact? = nil,
+    loginItem: LoginItemState = .off,
     signIn: SignInPhase? = nil,
     signedInAt: Date? = nil
   ) -> Facts {
@@ -172,7 +174,7 @@ enum Scenes {
       hub: hub,
       extensionState: extensionState,
       network: network,
-      loginItem: .on,
+      loginItem: loginItem,
       signIn: signIn,
       pairing: SceneDocuments.pairing,
       signedInAt: signedInAt)
@@ -276,9 +278,11 @@ enum Scenes {
       caption:
         "The local day decides. Yesterday is one chevron row with its two counts, and "
         + "nothing older is in the log at all. DOCUMENTS keeps its own fourteen days, "
-        + "which is why two rows there are older than yesterday.",
+        + "which is why two rows there are older than yesterday. This is the next "
+        + "morning, and the one screen whose Launch at login is on: the person turned "
+        + "the switch on the evening before, which is the only way it is ever on.",
       fixture: "e2", moment: "2026-10-18T09:12:00Z", alive: [],
-      facts: machine(), ui: UIState(), appearance: nil),
+      facts: machine(loginItem: .on), ui: UIState(), appearance: nil),
     Scene(
       id: "e3", title: "Everything at once: the order of NOW",
       caption:

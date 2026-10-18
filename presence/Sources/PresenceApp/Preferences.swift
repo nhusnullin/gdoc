@@ -38,8 +38,9 @@ public protocol DefaultsStore: AnyObject {
 extension UserDefaults: DefaultsStore {}
 
 /// The person's answer about launching at login. It is their answer and not
-/// the system's state: an "off" is never overridden by a relaunch or an
-/// update, which is the only reason it is written down at all.
+/// the system's state, which the switch reads off macOS: nothing in this app
+/// registers a login item by itself, so the record is what they said and
+/// never a reason to ask the system for anything.
 public enum LoginItemChoice: String, Sendable, Equatable, CaseIterable {
   case on
   case off
@@ -128,8 +129,8 @@ public final class Preferences: @unchecked Sendable {
     }
   }
 
-  /// The person's launch-at-login answer, or nothing before the first run
-  /// ever has recorded one.
+  /// The person's launch-at-login answer, or nothing until they have pressed
+  /// the switch.
   public var loginItemChoice: LoginItemChoice? {
     get { string(.loginItemChoice).flatMap(LoginItemChoice.init(rawValue:)) }
     set { write(newValue?.rawValue, .loginItemChoice) }
