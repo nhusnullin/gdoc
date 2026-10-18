@@ -244,12 +244,14 @@ branch.
   (its decision table row about launch at login points at the 2026-10-18
   decision), `docs/v2/DECISIONS.md` only if a task found the decision wrong
 
-- [ ] an acceptance table at the foot of this plan: each sentence of the
+- [x] an acceptance table at the foot of this plan: each sentence of the
       mechanism paragraph with the test that holds it
-- [ ] the M24 spec's launch-at-login row and the render index's "Still your
-      call" list say the 2026-10-18 decision reversed them
-- [ ] move this plan to `docs/plans/completed/`
-- [ ] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
+- [x] the M24 spec's launch-at-login row and the render index's "Still your
+      call" list say the 2026-10-18 decision reversed them (the spec's three
+      rows here; the "Still your call" line was replaced in Task 3)
+- [x] move this plan to `docs/plans/completed/` (deferred to Task 7's commit:
+      Task 7 still runs from this plan, and the runner reads it at this path)
+- [x] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
       `make app-lint`, `make app-test`, `make app`
 
 ### Task 7: the reviewer's pass over the changed scenes
@@ -263,3 +265,28 @@ branch.
       subagent that reads images); every blocking or should-fix finding is
       fixed here and listed in the commit message
 - [ ] `make app-lint`, `make app-test`
+
+## Acceptance
+
+Every sentence of the mechanism paragraph above, and the test that holds it.
+A sentence with no test is a sentence nothing keeps true.
+
+| The sentence | What holds it |
+|---|---|
+| Whether the app is running is one `flock`, and the two programs name the same file | `TestTheLockNameIsOneWordInTwoLanguages` (go/boundary), `testTheLockSitsBesideTheMonthFiles`, `testTheNamedDirectoryCarriesTheLockToo` |
+| The app, as its first act, opens `presence/app.lock`, creating it at mode 0o644, and holds `LOCK_EX` on it | `testTheFirstHolderGetsItAndTheFileIsTheModeTheDecisionNames`, `testTheDirectoryIsMadeWhereGdocHasNeverWritten`, `testTheShellTakesTheLockFirstAndLetsGoLast` |
+| It holds the lock for its whole life, and a second instance is refused it | `testASecondHolderIsRefusedWhileTheFirstHoldsIt`, `testAnInstanceThatDoesNotGetTheLockQuits`, `testAReleasedLockIsTheNextInstancesToTake`, `testAReleaseTwiceIsOneRelease` |
+| The kernel drops the lock when the process dies, however it dies | the kernel's, so not a unit test: measured on the machine, MEASURED.md 2026-10-18, the `kill -9` reading |
+| The one instance that waits instead of leaving is the one an update opened | `testOnlyAnInstanceAnotherOneLaunchedWaitsForTheLock`, `testAnInstanceThatWaitsAsksAgainUntilItsPatienceIsSpent`, `testAnInstanceWithNoPatienceAsksOnceAndWaitsNotAtAll`, `testAWaitEndsAsSoonAsTheLockIsFree` |
+| gdoc asks three things and runs `open` only when all three say yes: macOS, the bundle at `~/Applications/GdocPresence.app`, and the lock free | `TestTheOpenerAsksThreeThingsAndRunsOpenGOnce`, over the eight combinations with a real `flock` on the "running" rows |
+| The lock file absent is free, because an app that never ran made none, and gdoc never creates it | the same test's `os.Stat` on every row where the test did not make the file |
+| No byte is read from any file; the record stays the one file gdoc appends to and never reads | `TestOnlyPresenceAppends`, `TestPresenceExportsNoReader` (go/boundary) |
+| The program is `/usr/bin/open -g <bundle>`, and gdoc runs no other program | `TestNothingRunsAnExternalProgram`, `TestOnlyDesktopRunsAProgram`, `TestTheOneProgramOpensOnlyTheExtensionAndTheApp` (go/boundary) |
+| `-g` so no window and no focus moves | the flag is in the argv the two opener tests pin; that it moves nothing is the machine's, MEASURED.md 2026-10-18 |
+| The open is started and not waited for, and its exit status is never read | the `wait: false` the recorder sees in `TestTheOpenerAsksThreeThingsAndRunsOpenGOnce`, and `startProgram`'s `Process.Release` |
+| A command under the flag asks for that argv once; the lock held asks for nothing; the flag off is today's bytes | `TestACommandUnderTheFlagOpensTheAppOnceAndNothingWhenItIsRunning`, `TestTheFlagChangesNoByteOfTheObject` |
+| A machine with no window session runs the command exactly as before | nothing in the envelope depends on the opener: `TestTheFlagChangesNoByteOfTheObject`; the real shell is a recheck line in MEASURED.md 2026-10-18 |
+| `gdoc update`, after it installs or replaces the bundle under the flag, runs the same opener once, and the answer no longer tells the person to open it | `TestAFirstInstallOpensTheAppAndTellsNobodyToOpenIt` |
+| Launch at login: nothing registers on the first run | `testTheFirstEverRunRegistersNothing` |
+| The HEALTH switch registers and unregisters and keeps the choice, and neither an off nor an on is made for the person | `testTheSwitchRegistersUnregistersAndRecordsTheChoice`, `testAPersonsOffIsNeverOverridden`, `testAnOnIsNeverMadeForThePerson` |
+| The row's switch reads what macOS says, and `requiresApproval` keeps its row and button | `testTheSwitchShowsWhatMacOSSays`, `testRequiresApprovalShowsTheRowAndIsNotRetried`, `testARefusedRegistrationIsAnOffRowAndNotARetry` |
