@@ -89,9 +89,11 @@ A section with nothing in it is left out rather than labelled.
 
 ### Documents
 
-Every document gdoc touched in the last fourteen days, newest action first,
-five rows with Show more under them. A read alone makes no row: reading is not
-something that happened to the document. Each row says what the last action
+Every document gdoc touched in the last fourteen days, five rows with Show
+more under them. Documents acted on today come first, newest action first;
+under them the rest of the fourteen days, the ones gdoc did most in those days
+first. The count itself is never printed. A read alone makes no row: reading
+is not something that happened to the document. Each row says what the last action
 was, when, and where the note paired with it is, or "not in the hub". The
 label is "3 today" where every row in the list is from today, and
 "14 days · 12" where one of them is older, counting the rows behind Show more

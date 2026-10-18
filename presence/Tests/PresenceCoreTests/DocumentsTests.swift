@@ -186,6 +186,77 @@ final class DocumentsTests: XCTestCase {
       "the watch's moment is its last poll, not its first")
   }
 
+  /// The order: what gdoc did today, newest first, and then the fortnight
+  /// by how much of it each document was.
+  ///
+  /// A table of seven documents: three acted on in the local day, and four
+  /// older ones carrying one, two, two and three finished actions. The old
+  /// rule put the four older ones in `docD, docF, docE, docG`, which is
+  /// their last action newest first; the rule under test puts them in
+  /// `docE, docF, docG, docD`, which is their count most first with the tie
+  /// broken by the last action.
+  func testTheOrderIsTodayNewestFirstThenTheFortnightByUse() throws {
+    // doc, the moments its writes finished at, newest last.
+    let table: [(doc: String, moments: [String])] = [
+      (docA, ["2026-10-17T09:00:00Z"]),
+      (docB, ["2026-10-17T11:00:00Z"]),
+      (docC, ["2026-10-17T13:00:00Z"]),
+      (docD, ["2026-10-16T10:00:00Z"]),
+      (docE, ["2026-10-08T10:00:00Z", "2026-10-11T10:00:00Z", "2026-10-14T10:00:00Z"]),
+      (docF, ["2026-10-09T10:00:00Z", "2026-10-15T10:00:00Z"]),
+      (docG, ["2026-10-06T10:00:00Z", "2026-10-10T10:00:00Z"]),
+    ]
+    var events: [Event] = []
+    for (index, entry) in table.enumerated() {
+      for (call, at) in entry.moments.enumerated() {
+        events += pair(
+          at: at, command: "reply", run: "run\(index)\(call)", doc: entry.doc)
+      }
+    }
+
+    let fold = try folded(events)
+
+    XCTAssertEqual(
+      fold.rows.map(\.doc), [docC, docB, docA, docE, docF, docG, docD],
+      "today newest first, then the fortnight by its count of finished actions")
+    XCTAssertEqual(
+      fold.rows.map(\.isToday), [true, true, true, false, false, false, false])
+    XCTAssertEqual(
+      fold.rows.map(\.at),
+      [
+        try moment("2026-10-17T13:00:20Z"), try moment("2026-10-17T11:00:20Z"),
+        try moment("2026-10-17T09:00:20Z"), try moment("2026-10-14T10:00:20Z"),
+        try moment("2026-10-15T10:00:20Z"), try moment("2026-10-10T10:00:20Z"),
+        try moment("2026-10-16T10:00:20Z"),
+      ],
+      "the row's moment is still its last action, so the moments are not in order")
+
+    XCTAssertEqual(
+      fold.visible(expanded: false).map(\.doc), [docC, docB, docA, docE, docF],
+      "the five the section draws are the day and the two most used")
+    XCTAssertEqual(fold.more, 2, "Show more names what is left, as it did")
+    XCTAssertEqual(Documents.horizon, 14 * 24 * 60 * 60, "and the horizon is unchanged")
+  }
+
+  /// A document the fortnight listed by use draws exactly what it would
+  /// draw alone: a count is a judgement, and the panel prints none.
+  func testADocumentListedByUseShowsNothingNew() throws {
+    let moments = ["2026-10-08T10:00:00Z", "2026-10-11T10:00:00Z", "2026-10-14T10:00:00Z"]
+    var used: [Event] = []
+    for (call, at) in moments.enumerated() {
+      used += pair(at: at, command: "reply", run: "used\(call)", doc: docE, title: "The note")
+    }
+    let today = pair(at: "2026-10-17T13:00:00Z", command: "publish", run: "day0", doc: docC)
+
+    let alone = try XCTUnwrap(try folded(used).rows.first)
+    let listed = try XCTUnwrap(try folded(used + today).rows.first { $0.doc == docE })
+
+    XCTAssertEqual(listed, alone, "the row by use is the row it always was")
+    XCTAssertEqual(listed.command, "reply", "the last action, which is what the sub-line says")
+    XCTAssertEqual(listed.at, try moment("2026-10-14T10:00:20Z"), "and its time")
+    XCTAssertEqual(listed.state, .done)
+  }
+
   // MARK: - The pieces a test states
 
   private let chapter5 = "1Ch5AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp"
@@ -198,6 +269,11 @@ final class DocumentsTests: XCTestCase {
   private let readOnly = "1RedAaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp"
   private let docA = "1AaaAaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp"
   private let docB = "1BbbAaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp"
+  private let docC = "1CccAaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp"
+  private let docD = "1DddAaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp"
+  private let docE = "1EeeAaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp"
+  private let docF = "1FffAaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp"
+  private let docG = "1GggAaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp"
 
   private func folded(
     _ events: [Event], alive: @escaping (Int32) -> Bool = { _ in false }

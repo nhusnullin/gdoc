@@ -178,16 +178,16 @@ branch.
   `presence/Tests/PresenceCoreTests/DocumentsTests.swift`, the scene
   fixtures and `RenderTests.swift`
 
-- [ ] the order: first every document with an action today, newest first;
+- [x] the order: first every document with an action today, newest first;
       then the rest of the fourteen days by the count of finished actions in
       those days, most first, ties newest first; a table test over a
       fixture with three documents touched today and four older ones with
       different counts
-- [ ] the row's sub-line keeps saying the last action and its time; a
+- [x] the row's sub-line keeps saying the last action and its time; a
       document listed by use shows nothing new, because a count is a
       judgement the panel does not print
-- [ ] "Show N more" and the horizon are unchanged
-- [ ] `make app-lint`, `make app-test`
+- [x] "Show N more" and the horizon are unchanged
+- [x] `make app-lint`, `make app-test`
 
 ### Task 6: pinned and hidden documents
 

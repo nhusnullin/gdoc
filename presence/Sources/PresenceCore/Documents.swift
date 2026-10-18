@@ -1,10 +1,17 @@
 // DOCUMENTS: the same record as TODAY, grouped by the document it touched.
 //
-// One row per document, newest first by its last action, and the document
-// leaves the list fourteen days after that action. There is no pinning and no
-// sorting by state, because a document that jumps when a job ends is a
-// document a person loses: the order is the last action and nothing else.
-// That is the caption of scene e1 of
+// One row per document, and the document leaves the list fourteen days after
+// its last action. The order is two lists: every document acted on in the
+// local day, newest first, and then the rest of the fortnight by how many
+// finished actions each one carries in it, most first, ties newest first.
+// What gdoc just made is what a person reaches for, and under the day the
+// fortnight's own documents are the ones it was mostly about; a document
+// touched once a week ago sinks instead of sitting above one worked on every
+// day. There is still no sorting by state, because a document that jumps when
+// a job ends is a document a person loses, and the count is never drawn: a
+// count is a judgement, so the row says the last action and its time as it
+// always did. The decision is docs/v2/DECISIONS.md, 2026-10-18, "The second
+// morning"; the earlier rule is the caption of scene e1 of
 // docs/design/2026-10-17-presence-screens-v3.html.
 //
 // Three rules decide what a row is, each a product decision of the M24
@@ -61,7 +68,8 @@ public struct DocumentRow: Sendable, Equatable {
 
 /// DOCUMENTS, and the two numbers its label carries.
 public struct DocumentsFold: Sendable, Equatable {
-  /// Every document inside the horizon, newest first by its last action.
+  /// Every document inside the horizon: the day's, newest first, then the
+  /// fortnight's by use.
   public let rows: [DocumentRow]
 
   /// How many documents the horizon holds.
@@ -106,11 +114,15 @@ public enum Documents {
       actions[action.doc, default: []].append(action)
     }
 
+    let since = now.addingTimeInterval(-horizon)
+    let finished = actions.mapValues { found in
+      found.filter { $0.isFinished && $0.at >= since }.count
+    }
     let rows =
       actions
       .compactMap { doc, found in row(doc, found, titles: titles, now: now, calendar: calendar) }
-      .filter { $0.at >= now.addingTimeInterval(-horizon) }
-      .sorted { $0.at == $1.at ? $0.doc < $1.doc : $0.at > $1.at }
+      .filter { $0.at >= since }
+      .sorted { before($0, $1, finished: finished) }
 
     return DocumentsFold(rows: rows)
   }
@@ -125,6 +137,32 @@ public enum Documents {
     /// Whether the thing is still going, which decides it over any finished
     /// action however late.
     var isOpen: Bool { state == .hold || state == .running || state == .live }
+    /// Whether the thing is over and said how it went, which is what the
+    /// order under the day counts. A start whose process is gone said
+    /// nothing, so it counts for nothing.
+    var isFinished: Bool { state == .done || state == .failed || state == .liveStopped }
+  }
+
+  /// Which of two rows is the higher one.
+  ///
+  /// The local day is above the fortnight, and inside the day the last action
+  /// is the only order, because the thing that just happened is the thing a
+  /// hand goes to. Under the day the count of finished actions in the
+  /// fortnight is the order, most first, and two documents used the same
+  /// number of times are newest first. A document's id breaks a tie nothing
+  /// else broke, so one record folds one way:
+  /// testTheOrderIsTodayNewestFirstThenTheFortnightByUse.
+  private static func before(
+    _ left: DocumentRow, _ right: DocumentRow, finished: [String: Int]
+  ) -> Bool {
+    if left.isToday != right.isToday { return left.isToday }
+    if !left.isToday {
+      let mine = finished[left.doc] ?? 0
+      let theirs = finished[right.doc] ?? 0
+      if mine != theirs { return mine > theirs }
+    }
+    if left.at != right.at { return left.at > right.at }
+    return left.doc < right.doc
   }
 
   /// A document's row: the open action where there is one, and the latest
