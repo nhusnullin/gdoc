@@ -133,10 +133,22 @@ public struct PanelHeader: View {
     .metricProbe("header.line")
   }
 
+  /// Where an icon's words hang, which the header's two groups answer
+  /// differently. The right strip ends on the column every value and every
+  /// row's icons end on, so its bubbles do too. The update icon is in the
+  /// left group, after the version, and that rule would carry its words
+  /// across the panel and leave them under the account: the one label it
+  /// has sits under the icon itself.
+  /// testTheHeadersUpdateTooltipHangsUnderItsOwnIcon.
+  public static func tooltipAlign(of kind: ActionKind) -> TooltipAlign {
+    kind == .update ? .centred : .trailing
+  }
+
   private func button(_ action: ActionModel) -> some View {
     ActionButton(
       action.icon, tip: action.tip, state: action.state,
       forcedTooltip: action.forcedTooltip || forced == action.id,
+      align: Self.tooltipAlign(of: action.kind),
       action: { actions.perform(action.kind, action.target) }
     )
     .metricProbe("header.\(action.kind.rawValue)")

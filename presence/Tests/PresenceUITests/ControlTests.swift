@@ -140,6 +140,41 @@ final class ControlTests: XCTestCase {
     XCTAssertEqual(last.origin, placed.origin)
   }
 
+  // The header has two icon groups and only the right one ends on the icon
+  // column. The version's update icon sits in the left group, right after
+  // the version itself, so an action's trailing rule would put its words
+  // 60 pt right of it and under the account: the one label the icon has
+  // would hang off somebody else's. Centred under the icon is its rule.
+  func testTheHeadersUpdateTooltipHangsUnderItsOwnIcon() throws {
+    XCTAssertEqual(
+      PanelHeader.tooltipAlign(of: .update), .centred,
+      "the update icon is the one action in the header's left group")
+    for kind in [ActionKind.signOut, .signIn, .cancelSignIn, .copySignInLink] {
+      XCTAssertEqual(
+        PanelHeader.tooltipAlign(of: kind), .trailing,
+        "\(kind) is in the header's right strip, which ends on the icon column")
+    }
+
+    // Where the header draws it: the mark, gdoc and v2.14.0 come first, so
+    // the icon sits about a third of the way across a 320 pt panel.
+    let panel = CGSize(width: Grid.panelWidth, height: 600)
+    let icon = CGRect(x: 96, y: 8, width: Grid.actionSize, height: Grid.actionSize)
+    let bubble = CGSize(width: 118, height: 20)
+
+    let centred = Tooltip.place(anchor: icon, size: bubble, in: panel, align: .centred)
+    XCTAssertLessThanOrEqual(centred.origin.x, icon.midX)
+    XCTAssertGreaterThanOrEqual(
+      centred.origin.x + bubble.width, icon.midX,
+      "the plate covers the column the icon is in")
+
+    // The rule it is not: an action's bubble ends on the row's trailing
+    // edge whichever icon raised it, which for this one is past its own.
+    let asAnAction = Tooltip.place(anchor: icon, size: bubble, in: panel, align: .trailing)
+    XCTAssertGreaterThan(
+      asAnAction.origin.x, icon.maxX,
+      "which is why the header's left group does not use it")
+  }
+
   // `.show-tip::after{opacity:1}`: the mock holds a tooltip open to show one,
   // and so does a still of the panel. Nothing in the app forces one except
   // the second after Copy link.

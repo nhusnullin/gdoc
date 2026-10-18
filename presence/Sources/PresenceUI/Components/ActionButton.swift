@@ -45,6 +45,11 @@ public struct ActionButton: View {
   /// Held open with no pointer, which is what a still of the panel needs and
   /// `.show-tip` is in the screens file.
   public let forcedTooltip: Bool
+  /// Where the words hang. An action strip ends on the panel's icon column,
+  /// which is what `.trailing` is for and what every row and card here
+  /// wants; an icon drawn anywhere else in a line says which one it is by
+  /// sitting under it: testTheHeadersUpdateTooltipHangsUnderItsOwnIcon.
+  public let align: TooltipAlign
   public let action: () -> Void
 
   @Environment(\.colorScheme) private var scheme
@@ -52,12 +57,13 @@ public struct ActionButton: View {
 
   public init(
     _ icon: Icon, tip: String, state: ActionState = .live, forcedTooltip: Bool = false,
-    action: @escaping () -> Void = {}
+    align: TooltipAlign = .trailing, action: @escaping () -> Void = {}
   ) {
     self.icon = icon
     self.tip = tip
     self.state = state
     self.forcedTooltip = forcedTooltip
+    self.align = align
     self.action = action
   }
 
@@ -128,8 +134,9 @@ public struct ActionButton: View {
     .onHover { hovering = $0 }
     // `.acts [data-tip]::after{right:0}`: an action's words hang off its own
     // right edge, so the last of four icons keeps them inside the panel.
+    // The caller may say otherwise, and the header's update icon does.
     .tooltip(
-      Self.tooltip(tip, state: state), align: .trailing,
+      Self.tooltip(tip, state: state), align: align,
       forced: forcedTooltip || Self.showsTooltipAlways(state)
     )
     .accessibilityLabel(Self.tooltip(tip, state: state))

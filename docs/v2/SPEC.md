@@ -151,7 +151,7 @@ DECISIONS.md.
 
 **The second morning.** The header carries the account, its state and Sign
 out, the gdoc version and its update; the bottom group is SETTINGS, with the
-Hub row that chooses the folder Open md reads, and no Thread mark row. The header, NOW and GDOC never scroll and the
+Hub row that chooses the folder Open md reads, and no Thread mark row. The header, NOW and SETTINGS never scroll and the
 middle does. DOCUMENTS lists pinned documents first, then today's newest
 first, then the fourteen days by use, and never a hidden one until gdoc
 touches it again; pins and hides are the app's preferences. The
