@@ -45,14 +45,48 @@ in a word.
 ## The panel
 
 Click the glyph and the panel opens under it. It is 320 points wide and never
-taller than 600, with the long section scrolling inside. Press Escape or click
-elsewhere and it closes. Nothing in it is a window, there is no dock icon, and
-the only settings in it are the switch for launching at login and Quit.
+taller than 600. Press Escape or click elsewhere and it closes. Nothing in it
+is a window, there is no dock icon, and the settings in it are your hub, the
+switch for launching at login and Quit.
 
-The sections are always in this order, except that Settings comes first on the
-two screens where Settings is the whole point: no token at all, and a sign-in
-in flight. The sign-out question is asked in the header, which is above every
-section already.
+The edges are pinned and the middle scrolls. From the top: the header, Now,
+the middle, Settings. The header, Now and Settings stay where they are
+however long the day was, because those are the three a hand reaches for. The
+one thing that scrolls is the middle, which is Documents, Today and Yesterday.
+Now has a cap of its own, half the panel under the header: four holds and a
+watch are taller than the whole panel, and past that cap Now scrolls inside
+itself rather than pushing Quit off the bottom.
+
+The order is the same on every screen but two, where Settings comes first
+because Settings is the whole point: no token at all, and a sign-in in flight.
+The sign-out question is asked in the header, which is above every section
+already.
+
+### The header
+
+One line across the top, above everything that can scroll: the mark, then
+gdoc with the version you are running, then the address you are signed in as.
+Each of the last two carries its own icon, and the two of them are what the
+header is for: which gdoc this is, and who it is signed in as. Both were rows
+at the foot of the panel until the second morning, which is where a hand had
+to scroll for them.
+
+The version carries the update icon when gdoc's own daily check heard of a
+newer release, and a ring while an update is running, still naming the
+version that is installed. The icon says Update and not Check for updates,
+because this app never asks GitHub anything: see what the app runs, below.
+Where the binary was not found the version reads "not found" and says
+underneath where it was looked for.
+
+The address carries a check while the sign-in works, and an exclamation with
+Sign in where it does not. Its one action is Sign out, and the question that
+action asks is asked here, in place of the line. A sign-in in flight takes the
+line too: "Waiting for Google", the two icons for the link and for Cancel, the
+countdown, and the link itself on the line under it.
+
+Anything either of them has to add is said under the line in the quietest
+grey, one short line each: where gdoc was looked for, how long is left of the
+three minutes, "Account changed" and the two addresses.
 
 ### Now
 
@@ -90,10 +124,14 @@ A section with nothing in it is left out rather than labelled.
 ### Documents
 
 Every document gdoc touched in the last fourteen days, five rows with Show
-more under them. Documents acted on today come first, newest action first;
-under them the rest of the fourteen days, the ones gdoc did most in those days
-first. The count itself is never printed. A read alone makes no row: reading
-is not something that happened to the document. Each row says what the last action
+more under them. The order is three lists, one under the other.
+Pinned documents come first, the newest pin first.
+Then the documents acted on today, newest action first, because what gdoc
+just made is what a hand reaches for. Then the rest of the fourteen days, the
+ones gdoc did most in those days first, so a document touched once last week
+sinks under one worked on every day. The count itself is never printed. A
+read alone makes no row: reading is not something that happened to the
+document. Each row says what the last action
 was, when, and where the note paired with it is, or "not in the hub". The
 label is "3 today" where every row in the list is from today, and
 "14 days · 12" where one of them is older, counting the rows behind Show more
@@ -101,8 +139,8 @@ as well.
 
 A pin holds a document in the list. Right-click a row, or hold a press on it
 for half a second, and the menu says "Pin" and "Hide from the list"; a row
-already pinned says "Unpin". Pinned documents are first in the list, the
-newest pin first, and they never drop off: fourteen days on, or when the app
+already pinned says "Unpin". Pinned documents never drop off: fourteen days
+on, or when the app
 can no longer see the lines about them, the row is still there with the title
 it had and its icons still work, because the pin keeps the name and the id.
 A small pin sits in front of the row's own glyph while it is pinned.
@@ -126,7 +164,8 @@ Four icons sit on the right of every document row, always visible:
 | Link | Copies the document's link, and turns into a green check for a second |
 
 An icon with nothing to do is greyed, and resting the pointer on it says why:
-"No Google Doc yet", "No link yet", "No note is paired with this document",
+"No Google Doc yet", "No link yet", "Choose the hub in SETTINGS", "No note is
+paired with this document",
 "Note moved or deleted", "Install the Desktop extension in Settings". The first
 two are one case: a row whose id is not one Drive could have written has no
 document to open and no link to copy. "Note moved or deleted"
@@ -136,12 +175,23 @@ and the next time you open the panel it is live again. The first time Documents
 has a row, four labels appear under it once, naming the icons, and they go the
 first time you click one.
 
-Continue with Claude activates Claude Desktop and nothing more: no argument, no
-file and no URL. Claude.app does claim a `claude:` scheme, which was measured,
-but nothing in the bundle and nothing published says what a URL under it means,
-so a URL built on a guess is one that may do something else on the next
-release. Until that is written down, the panel brings the app to the front and
-you type.
+Continue with Claude, the branch icon, activates Claude Desktop and nothing
+more: no argument, no file and no URL. Open chat on a hold card is the same
+one activation.
+
+The row does know more than it uses. It remembers
+the Claude Code session its document was last worked on from, because gdoc
+writes that session's own id on the start line of a run that came from one.
+The one link it would build from that id is
+`claude://code/continue?session=<id>&source=gdoc`, and that link is built and
+opened by nobody. The three forms Claude.app carries under its `claude:`
+scheme were read out of the bundle and tried by hand on 2026-10-18, and the
+measurement is in `docs/v2/MEASURED.md`: from outside the app each one brings
+the window to the front and switches nothing. A link here would be a press
+that promises a session and hands you the one you were already in. The day a
+form switches, the id is already in the row. A document whose last run came
+from the chat, or from a terminal, carries no session: the field is written
+on a Claude Code run and nowhere else.
 
 ### Today and Yesterday
 
@@ -154,7 +204,8 @@ than yesterday is in this list; Documents is where the fortnight is.
 
 ### Settings
 
-The last section, where you look for it. It was called Health until the second
+The last section, pinned to the foot where you look for it, under the one
+part of the panel that scrolls. It was called Health until the second
 morning, and three of its rows left with the name. The account and the gdoc
 version are in the header now, each with its one action beside it, and the
 Thread mark row is gone: the mark is drawn in that header, at the panel's top
@@ -183,11 +234,6 @@ row goes and the panel claims nothing. The one exception is a run of Install
 extension that wrote the file and could not hand it over, which is a machine
 with no Claude Desktop on it: the row and its button stay for as long as the
 app is running.
-
-The header carries the installed version after the name, and the update icon
-beside it when gdoc's own daily check heard of a newer release. The icon says
-Update and not Check for updates, because this app never asks GitHub anything:
-see what the app runs, below.
 
 ## The actions, one by one
 
@@ -327,16 +373,17 @@ What the app never does, and no button in it offers:
 - It runs no program but those six, and signals nothing but one wait.
 - It never starts gdoc on a schedule of its own.
 
-What it remembers between launches is six things, in its own preferences: the
-cards you hid, the hub folder, whether the four icon labels have been read, your
-launch-at-login answer, its last self-relaunch, and the last address it saw
-signed in. The two that are about a moment, the hidden cards and the relaunch,
+What it remembers between launches is eight things, in its own preferences:
+the cards you hid, the hub folder, whether the four icon labels have been
+read, your launch-at-login answer, its last self-relaunch, the last address
+it saw signed in, the documents you pinned and the documents you hid. The two
+that are about a moment, the hidden cards and the relaunch,
 are dropped once they are older than sixty-two days, because the app reads two
 month files and a stamp older than that is about a line it can no longer see.
-The other four are answers and are kept until you change them, because your
+The other six are answers and are kept until you change them, because your
 answer is yours. The launch-at-login one drives nothing: what starts the app at
 login is the login item macOS holds, and the switch shows what macOS says. A
-seventh key is a decision somebody writes down, not a line somebody adds.
+ninth key is a decision somebody writes down, not a line somebody adds.
 
 ## The note beside the document
 
@@ -440,9 +487,11 @@ keeps this month and last month and removes the older ones the next time it
 writes. A note or a backup you left in that folder is left alone.
 
 Each line is a short, fixed list of facts: when, which process, which command,
-whether it came from the terminal or from a chat, the document id, and at the
-end whether it worked. A hold adds its own id, which rule held it and when it
-runs out.
+whether it came from the terminal, from a chat or from Claude Code, the
+document id, and at the end whether it worked. A run started by Claude Code
+adds that session's own id, on the start line and nowhere else; a terminal
+run and a chat call carry none. A hold adds its own id, which rule held it
+and when it runs out.
 
 What is never in a line: a word of the document except its title, a comment or
 a reply, a quote, the text of a proposal, the text or the value of a held

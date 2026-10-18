@@ -278,14 +278,19 @@ branch.
   field list, if it names fields), `go/internal/presence/doc.go`,
   `docs/design/2026-10-17-presence-screens-v3.html` (scene captions only)
 
-- [ ] the guide walks the panel in its new order: header with the account
+- [x] the guide walks the panel in its new order: header with the account
       with its version and update, and Sign out, NOW, DOCUMENTS with pins,
       hides and the order rule, TODAY, Yesterday, SETTINGS with the Hub row
       and no Thread mark; and names the session link and when it is used
-- [ ] the scene captions in the screens file that say HEALTH or place the
-      account there say the new place
-- [ ] CLAUDE.md stays under 300 lines
-- [ ] `make test`, `make app-lint`
+      (`TestThePresencePageWalksTheSecondMorningsPanel` holds the phrases and
+      the walk's order)
+- [x] the scene captions in the screens file that say HEALTH or place the
+      account there say the new place (r8, e1, e5, e8, e9, e10 and the foot;
+      the drawn scenes stay the 17 October mockup, and each caption says what
+      moved)
+- [x] CLAUDE.md stays under 300 lines (300, at the ceiling; its presence
+      invariant names no field, so the `session` field changed nothing there)
+- [x] `make test`, `make app-lint`
 
 ### Task 10: the reviewer's pass
 

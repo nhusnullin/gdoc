@@ -183,3 +183,59 @@ func TestThePublishingPageSaysAPencilIsAComment(t *testing.T) {
 		}
 	}
 }
+
+// TestThePresencePageWalksTheSecondMorningsPanel holds the page a colleague
+// reads about the menu bar app to the panel as it stands after 2026-10-18.
+// Nail used the panel for a morning and the top of it moved: the account, its
+// sign-out and the version are in the header, the group they left is SETTINGS
+// and carries the hub, the Thread mark row is gone, the edges are pinned and
+// the middle scrolls, and a document row remembers the Claude Code session its
+// last run came from. A page that walks the old panel sends somebody looking
+// at the foot for a row that is at the top.
+func TestThePresencePageWalksTheSecondMorningsPanel(t *testing.T) {
+	text := guidePage(t, "presence.md")
+	for _, want := range []string{
+		// The header, which is the part that is new.
+		"### The header",
+		// What the two things in it are, each with its one action.
+		"Sign out",
+		"the update icon",
+		// What moved and what did not: the edges are pinned, the middle
+		// scrolls, and NOW has half the body before it scrolls itself.
+		"The edges are pinned and the middle scrolls",
+		// DOCUMENTS: the order rule, in one place, and the two answers a
+		// person gives about one document.
+		"Pinned documents come first",
+		"Hide from the list",
+		// SETTINGS: the hub row, which is what greys the md icon until it
+		// is answered.
+		"Hub is the folder your notes are in",
+		// The session: the field in the record, the link it builds, and
+		// that nobody opens that link today.
+		"the Claude Code session",
+		"claude://code/continue?session=",
+		// The app's own preferences, which the pins and the hides joined.
+		"eight things",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("docs/guide/presence.md never says %q, and somebody reading it walks a panel that is not there", want)
+		}
+	}
+
+	// The page walks the panel from the top, because a guide read in order
+	// is a panel read in order.
+	walk := []string{
+		"### The header", "### Now", "### Documents", "### Today and Yesterday", "### Settings",
+	}
+	at := -1
+	for _, heading := range walk {
+		next := strings.Index(text, heading)
+		if next < 0 {
+			t.Fatalf("docs/guide/presence.md has no %q heading, and the walk is the panel's own order", heading)
+		}
+		if next < at {
+			t.Errorf("docs/guide/presence.md puts %q above the section before it, and the panel does not", heading)
+		}
+		at = next
+	}
+}
