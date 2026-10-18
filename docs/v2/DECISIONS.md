@@ -102,6 +102,7 @@ replaced it)`, or `MEASURED.md`. Nothing else.
 | 2026-10-17 | The presence: gdoc appends one fact line per run to a file it never reads, and a separate menu bar app reads it | holds |
 | 2026-10-17 | The panel: the presence as the screens draw it, the app runs six argv lists, a hold dies with the sign-in it was held under | holds |
 | 2026-10-18 | The app opens itself: gdoc opens the installed app when it is not running, and launch at login is the person's switch | holds |
+| 2026-10-18 | The second morning: the account in the header, the middle scrolls, DOCUMENTS by what was just made and by use, pins, a bright mark, the session a run came from | holds |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -5392,3 +5393,55 @@ reused, a lock is not. Reading the record to see whether the app is alive:
 the record is written by gdoc and says nothing about the app.
 
 The plan is `docs/plans/completed/2026-10-18-gdoc-v2-m25-the-app-opens-itself.md`.
+
+## 2026-10-18. The second morning: the account in the header, the middle scrolls, DOCUMENTS by what was just made and by use, pins, a bright mark, and the session a run came from.
+
+Nail used the panel for a morning and said six things. The scrolling was
+wrong: everything under the header moved as one piece, so NOW and the bottom
+group left the screen. The account and its sign-out belong at the top, where
+the address already is. The group they leave is not HEALTH any more. Open
+chat opened Claude and not the session the document came from. The menu bar
+mark was too dim at rest. And DOCUMENTS should put what gdoc just made first,
+then the most used, with a way to pin a document so it never drops off. This
+entry is the six answers. Serves principle 4 and 3; strains 2 by one field,
+the last paragraph.
+
+**The edges stay and the middle scrolls.** The header, NOW and the bottom
+group never move; DOCUMENTS, TODAY and Yesterday are the one scroll box,
+with the thumb drawn only while the content moves. NOW alone, when it is
+taller than half the body, scrolls inside itself so the bottom group is
+never pushed off. Product decision 2's "each section scrolls inside itself"
+is narrowed to this. Nail chose it over per-section scrolling and over no
+cap.
+
+**The account is the header's.** The header carries the account's glyph,
+the address and Sign out, and asks "Sign out?" in its own line. The bottom
+group is GDOC: the gdoc version, Thread mark, Launch at login, Quit, and the
+Network and Claude Desktop rows when a fact carries them. HEALTH as a word
+goes.
+
+**DOCUMENTS orders by what was just made, then by use.** Documents with an
+action today come first, newest first; the rest of the fourteen days follow
+by the count of finished actions, most first. The count is never printed:
+it orders and says nothing. A pinned document comes before all of these, in
+the order pinned, and never leaves the list; the pin keeps the id and the
+last title so a document whose lines aged out of the record still has its
+row and its open action. Pins are the app's own preference, never a line in
+the record.
+
+**The mark at rest is as bright as the mark at work.** The 45 percent idle
+mark was the one choice principle 1 argued against and Nail has now
+answered: he wants to see it.
+
+**The record gains `session`, and Open chat opens that session.** Claude
+Code hands its children `CLAUDE_CODE_SESSION_ID`; under `via: code` the
+start line carries it, and nothing else does. The Claude Desktop bundle
+carries `claude://code/continue?session=…`, so a document whose latest
+Claude Code run has a session opens that link; whether the Code tab takes a
+session id and not only `last` is measured by Nail watching the window, and
+the link ships only if it does. A session id is an identifier of the
+person's own session and no document word, which is why it is allowed into
+a record that refuses paths, sentences and accounts; it is still one more
+thing in the file beside the token, and principle 2 notes it.
+
+The plan is `docs/plans/2026-10-18-gdoc-v2-m26-the-second-morning.md`.

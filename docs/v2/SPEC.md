@@ -148,6 +148,15 @@ holds `flock` on `presence/app.lock` for its life; gdoc asks the lock without
 blocking and reads no byte. Launch at login is off until the person turns the
 HEALTH switch on; no run registers it by itself. Decided 2026-10-18,
 DECISIONS.md.
+
+**The second morning.** The header carries the account, its state and Sign
+out; the bottom group is GDOC. The header, NOW and GDOC never scroll and the
+middle does. DOCUMENTS lists pinned documents first, then today's newest
+first, then the fourteen days by use; pins are the app's preference. The
+mark at rest is full ink. Under `via: code` the start line carries
+`session`, Claude Code's own session id, and Open chat opens
+`claude://code/continue?session=<id>` where that is measured to work.
+Decided 2026-10-18, DECISIONS.md.
 `auth login` is a real desktop flow: a loopback redirect with PKCE, hand-rolled.
 
 **Two scopes:** Drive, and `https://www.googleapis.com/auth/documents`, the Docs
