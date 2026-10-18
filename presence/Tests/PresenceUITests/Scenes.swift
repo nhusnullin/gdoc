@@ -110,16 +110,18 @@ enum Scenes {
       + "which docs/backlog/a-publish-that-stopped-in-the-render-has-no-name.md holds.",
   ]
 
-  /// How HEALTH's rows are chosen, said once on the index page because it
+  /// How SETTINGS's rows are chosen, said once on the index page because it
   /// is the one section whose length changes from screen to screen, and a
   /// reviewer comparing two screens reads a missing row as a bug.
-  static let healthRowRule =
-    "HEALTH ends in Quit on every screen, and the rows above it keep their places. Network "
-    + "and Claude Desktop are drawn only where a fact carries them: the record's own "
-    + "network stop, and no extension beside the binary. The account and the version are "
-    + "not rows at all since the second morning: they are the header, with Sign out and "
-    + "the update beside them. There is no Skills row either, because nothing gdoc prints "
-    + "names a version of the skills."
+  static let settingsRowRule =
+    "The group is SETTINGS, not HEALTH: what is left in it is two facts about the machine "
+    + "and the two settings the panel has. It ends in Quit on every screen, and the rows "
+    + "above it keep their places. Network and Claude Desktop are drawn only where a fact "
+    + "carries them: the record's own network stop, and no extension beside the binary. "
+    + "The account, the version and the thread mark are not rows at all since the second "
+    + "morning: the first two are the header, with Sign out and the update beside them, "
+    + "and the mark is the header's own mark. There is no Skills row either, because "
+    + "nothing gdoc prints names a version of the skills."
 
   /// The six pages of components, by the name they are written under and
   /// what each of them is. They are drawn by the files that measure those
@@ -252,7 +254,7 @@ enum Scenes {
       id: "r8", title: "Google did not answer",
       caption:
         "The last poll failed, and the record says what kind of trouble it was in one "
-        + "word. The row says the moment and that word, and HEALTH says the same thing "
+        + "word. The row says the moment and that word, and SETTINGS says the same thing "
         + "about the machine: the app opens no connection, so Google not answering is "
         + "only ever something gdoc wrote down.",
       fixture: "r8", moment: "2026-10-17T17:05:00Z", alive: [],
@@ -301,7 +303,7 @@ enum Scenes {
       id: "e5", title: "The first run: no token at all",
       caption:
         "Nothing works without a sign-in, so the header says so and the one sentence "
-        + "names the icon to press. HEALTH is still pinned above everything, because on "
+        + "names the icon to press. SETTINGS is still pinned above everything, because on "
         + "this machine it is the whole of what the panel is for.",
       fixture: nil, moment: "2026-10-17T10:00:00Z", alive: [],
       facts: machine(
@@ -421,7 +423,7 @@ extension Scene {
   /// `.clipped` is the panel the person opens, capped at 600 pt with the
   /// rest under a scroll. `.whole` is the same panel with nothing hidden,
   /// which is what the reviewer's pass reads: a PNG cannot be scrolled, so
-  /// a screen whose HEALTH is past the cap is a screen nobody checked.
+  /// a screen whose SETTINGS is past the cap is a screen nobody checked.
   @MainActor
   func view(_ mode: RenderMode = .clipped) throws -> some View {
     PanelView(model: try model()).rendering(mode)

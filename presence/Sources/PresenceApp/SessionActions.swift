@@ -207,7 +207,7 @@ extension Session {
     changed()
   }
 
-  // MARK: the two runs in HEALTH
+  // MARK: the two runs the panel offers
 
   /// `gdoc update`, with no flag: what the person would have typed. The row
   /// draws a ring until the child's end, and the version beside it moves

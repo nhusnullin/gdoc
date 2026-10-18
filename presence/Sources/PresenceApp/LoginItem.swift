@@ -7,7 +7,7 @@
 // now opens the app when it is not running, which is what that registration
 // was for, and product decision 32 stands again.
 //
-// So the HEALTH switch is the one route to a registration. It records the
+// So the SETTINGS switch is the one route to a registration. It records the
 // person's answer, because their answer is theirs, and it asks the system
 // once each way.
 //
@@ -90,7 +90,7 @@ public struct LoginItem: Sendable {
     self.preferences = preferences
   }
 
-  /// The HEALTH switch, and the one thing in this app that registers
+  /// The SETTINGS switch, and the one thing in this app that registers
   /// anything. The answer is the person's, so it is written down before the
   /// system is asked: a registration macOS refused or is waiting on is still
   /// the answer they gave.

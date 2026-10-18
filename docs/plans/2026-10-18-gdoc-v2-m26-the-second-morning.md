@@ -141,16 +141,16 @@ branch.
   `PanelHealth.swift` and its callers, `docs/guide/presence.md`, the scene
   captions
 
-- [ ] the bottom group's label is SETTINGS: Hub (Task 7), Launch at login,
+- [x] the bottom group's label is SETTINGS: Hub (Task 7), Launch at login,
       Quit, and the Network and Claude Desktop rows when a fact carries
       them; the Thread mark row goes, and the mark stays where it was, in the
       header's own mark; the type and file names follow the word where a
       name said health, and a test states the label and the absent row
-- [ ] `PanelModel`'s "pinned first" rule for the three screens stays for the
+- [x] `PanelModel`'s "pinned first" rule for the three screens stays for the
       two that are still about the group (no token, a sign-in in flight) and
       drops the question, which now lives in the header
-- [ ] `docs/guide/presence.md` names the group and what moved up
-- [ ] `make app-lint`, `make app-test`
+- [x] `docs/guide/presence.md` names the group and what moved up
+- [x] `make app-lint`, `make app-test`
 
 ### Task 4: the middle scrolls, the edges stay
 

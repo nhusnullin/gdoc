@@ -24,7 +24,7 @@ public enum PanelList: String, Sendable, Equatable, CaseIterable {
 /// The one question on the screen, where there is one. Both wait for their
 /// answer, or for the panel to close; the clock never takes one away.
 public enum PanelQuestion: Sendable, Equatable {
-  /// The HEALTH row's confirm, which names what will stop.
+  /// The header's confirm, which names what will stop.
   case signOut
   /// A hold card asking before it dismisses itself, by the hold's id.
   case dismissHold(String)

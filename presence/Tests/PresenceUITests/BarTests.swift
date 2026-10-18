@@ -151,7 +151,7 @@ final class BarTests: XCTestCase {
 
   /// The three facts about the machine that are stuck without a line in the
   /// record: no token, a token that stopped working, and no binary to run.
-  /// Each of them is the same red exclamation the HEALTH row draws.
+  /// Each of them is the same red exclamation the SETTINGS row draws.
   func testNotSignedInExpiredAndGdocNotFoundAreStuck() throws {
     for word in [AuthWord.signedOut, .needsSignIn, .missingScopes] {
       XCTAssertEqual(
@@ -207,7 +207,7 @@ final class BarTests: XCTestCase {
     XCTAssertEqual(try bar([watch], facts: Scenes.machine()), .live)
     XCTAssertEqual(
       try bar([watch], facts: Scenes.machine(network: down)), .live,
-      "Google not answering is a HEALTH row and never an icon")
+      "Google not answering is a SETTINGS row and never an icon")
     XCTAssertEqual(try bar([], facts: Scenes.machine(network: down)), .idle)
   }
 

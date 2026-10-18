@@ -49,9 +49,10 @@ taller than 600, with the long section scrolling inside. Press Escape or click
 elsewhere and it closes. Nothing in it is a window, there is no dock icon, and
 the only settings in it are the switch for launching at login and Quit.
 
-The sections are always in this order, except that Health comes first on the
-three screens where Health is the whole point: no token at all, a sign-in in
-flight, and while Sign out is asking its question.
+The sections are always in this order, except that Settings comes first on the
+two screens where Settings is the whole point: no token at all, and a sign-in
+in flight. The sign-out question is asked in the header, which is above every
+section already.
 
 ### Now
 
@@ -107,7 +108,7 @@ Four icons sit on the right of every document row, always visible:
 
 An icon with nothing to do is greyed, and resting the pointer on it says why:
 "No Google Doc yet", "No link yet", "No note is paired with this document",
-"Note moved or deleted", "Install the Desktop extension in Health". The first
+"Note moved or deleted", "Install the Desktop extension in Settings". The first
 two are one case: a row whose id is not one Drive could have written has no
 document to open and no link to copy. "Note moved or deleted"
 is the one a click produces: Obsidian refused the note the index still names.
@@ -132,12 +133,17 @@ started and a live watch stopped, the last of those with what the watch came
 to. Yesterday is one row with the counts, and it opens in place. Nothing older
 than yesterday is in this list; Documents is where the fortnight is.
 
-### Health
+### Settings
 
-The last section, where you look for it. The rows are Account, Network, gdoc,
-Claude Desktop, Thread mark, Launch at login and Quit. When every fact is good
-the list is the short one: a screen of green rows is a screen nobody reads.
-Quit is always there, and it is ⌘Q.
+The last section, where you look for it. It was called Health until the second
+morning, and three of its rows left with the name. The account and the gdoc
+version are in the header now, each with its one action beside it, and the
+Thread mark row is gone: the mark is drawn in that header, at the panel's top
+left, so the row said the same thing twice.
+
+What is left is Network, Claude Desktop, Launch at login and Quit. The first
+two are drawn only where a fact carries them, so on a good machine the group
+is the switch and Quit. Quit is always there, and it is ⌘Q.
 
 Network is the record's own word and never a connection the app opened: gdoc
 writes `network` on a run that could not reach Google, and the row says so
@@ -155,10 +161,10 @@ extension that wrote the file and could not hand it over, which is a machine
 with no Claude Desktop on it: the row and its button stay for as long as the
 app is running.
 
-The gdoc row carries the installed version, and the newer one beside it when
-gdoc's own daily check heard of one. Its button says Update and not Check for
-updates, because this app never asks GitHub anything: see what the app runs,
-below.
+The header carries the installed version after the name, and the update icon
+beside it when gdoc's own daily check heard of a newer release. The icon says
+Update and not Check for updates, because this app never asks GitHub anything:
+see what the app runs, below.
 
 ## The actions, one by one
 
@@ -219,8 +225,8 @@ Say yes and the app stops those watches, runs `gdoc auth logout`, and asks
 `gdoc auth status` again. `auth logout` removes the token file and nothing
 else.
 
-Whose account it is decides nothing anywhere in gdoc, so the account row is a
-fact and not a gate. The one place the sign-in does decide something is a held
+Whose account it is decides nothing anywhere in gdoc, so the address in the
+header is a fact and not a gate. The one place the sign-in does decide something is a held
 chat write: a hold remembers the sign-in it was raised under, as a hash of the
 refresh token and never an email, and a hold whose sign-in changed is dropped
 rather than sent. Sign out, then sign in as somebody else, and the words you
@@ -234,7 +240,7 @@ forgeable.
 
 It is off until you turn it on. No run of the app registers anything by
 itself: not the first run ever, not a relaunch after an update, and not a
-launch that notices macOS dropped the item. The switch in Health is the one
+launch that notices macOS dropped the item. The switch in Settings is the one
 route, and it is yours both ways: on registers, off unregisters, and an off is
 never turned back on. A registration nobody asked for is a notice in somebody's
 menu bar nobody asked for.
@@ -353,7 +359,7 @@ There is no fourth step. Every later gdoc command under the flag opens the app
 again where it is installed and not running, so a quit app comes back with the
 next thing you ask gdoc to do. `open ~/Applications/GdocPresence.app` still
 works by hand, whenever you want it open and have nothing to ask gdoc. Launch
-at login is the switch in Health, off until you turn it on.
+at login is the switch in Settings, off until you turn it on.
 
 For one run only, without writing anything down, pass the argument instead:
 

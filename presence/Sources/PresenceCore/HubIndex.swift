@@ -2,7 +2,7 @@
 //
 // Open md needs no field in the record: what pairs a note with a document is
 // the `gdoc:` block the binary writes into that note's front matter, and the
-// hub is the folder the person named in HEALTH. So the app reads that one
+// hub is the folder the person named in SETTINGS. So the app reads that one
 // block of every note, and nothing else in the file ever reaches it. This is
 // the one read M23's "opens only the event files and its plist" is widened
 // by, and it is widened by exactly this much.

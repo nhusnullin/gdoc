@@ -300,18 +300,18 @@ enum SheetPieces {
     return try XCTUnwrap(cards.first, "scene r1 drew no job card")
   }
 
-  /// HEALTH with every row that has a fact behind it, which no one screen
+  /// SETTINGS with every row that has a fact behind it, which no one screen
   /// has: r8 is the network stop and the update, e5 is the machine with no
-  /// extension and no token. One of each kind, in `HealthRowKind`'s order,
-  /// which is the order HEALTH is drawn in.
-  static func health() throws -> [HealthRowModel] {
-    var byKind: [HealthRowKind: HealthRowModel] = [:]
+  /// extension and no token. One of each kind, in `SettingsRowKind`'s order,
+  /// which is the order SETTINGS is drawn in.
+  static func settings() throws -> [SettingsRowModel] {
+    var byKind: [SettingsRowKind: SettingsRowModel] = [:]
     for id in ["r8", "e5"] {
-      for row in try scene(id).model().health where byKind[row.kind] == nil {
+      for row in try scene(id).model().settings where byKind[row.kind] == nil {
         byKind[row.kind] = row
       }
     }
-    return HealthRowKind.allCases.compactMap { byKind[$0] }
+    return SettingsRowKind.allCases.compactMap { byKind[$0] }
   }
 
   /// Scene e6's documents: the paired row the strip sits under, and the
@@ -420,7 +420,7 @@ enum SheetPieces {
     words += job.steps.flatMap { [$0.title] + [$0.value].compactMap { $0 } }
     words += [header.version].compactMap { $0 }
     words += [header.update?.tip].compactMap { $0 }
-    words += try health().flatMap { row -> [String] in
+    words += try settings().flatMap { row -> [String] in
       [row.kind.label, row.value] + [row.quiet].compactMap { $0 } + row.actions.map(\.tip)
     }
     words += try documentRows().flatMap { row -> [String] in
@@ -471,7 +471,7 @@ func panelVocabulary() throws -> Set<String> {
       case .yesterday(let yesterday):
         words.insert(yesterday.summary)
         for row in yesterday.rows { words.formUnion(logWords(row)) }
-      case .health(let rows):
+      case .settings(let rows):
         for row in rows {
           words.formUnion([row.kind.label, row.value])
           words.formUnion([row.quiet].compactMap { $0 })

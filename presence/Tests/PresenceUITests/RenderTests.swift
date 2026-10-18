@@ -100,7 +100,7 @@ final class RenderTests: XCTestCase {
   }
 
   /// The reviewer's copy hides nothing: on the screens the cap cuts, the
-  /// whole render is taller, and HEALTH's last row is in it.
+  /// whole render is taller, and SETTINGS's last row is in it.
   func testTheWholeRenderCarriesWhatTheCapCuts() throws {
     for id in ["e1", "e3", "e9"] {
       let scene = try XCTUnwrap(Scenes.all.first { $0.id == id })
@@ -114,7 +114,7 @@ final class RenderTests: XCTestCase {
         wholeHeight, cappedHeight,
         "\(id) is cut at the cap, so the reviewer's copy has to be taller")
       XCTAssertNotNil(
-        whole["health.quit"], "\(id)'s whole render drew no HEALTH at all")
+        whole["settings.quit"], "\(id)'s whole render drew no SETTINGS at all")
     }
   }
 
@@ -175,36 +175,56 @@ final class RenderTests: XCTestCase {
       busy.sections.first?.id, PanelSection.now([]).id, "NOW is first when it is there")
   }
 
-  func testHealthIsPinnedFirstWhenSignedOut() throws {
+  func testSettingsIsPinnedFirstWhenSignedOut() throws {
     let first = try XCTUnwrap(Scenes.all.first { $0.id == "e5" }).model()
     XCTAssertEqual(
-      first.sections.first?.id, PanelSection.health([]).id,
-      "nothing works without a sign-in, so HEALTH is above everything")
+      first.sections.first?.id, PanelSection.settings([]).id,
+      "nothing works without a sign-in, so SETTINGS is above everything")
     XCTAssertEqual(first.empty, EmptyState.firstRun, "the first run says where to press")
 
     let signedIn = try XCTUnwrap(Scenes.all.first { $0.id == "r4" }).model()
     XCTAssertEqual(
-      signedIn.sections.last?.id, PanelSection.health([]).id,
-      "a working token puts HEALTH last, where a person looks for it")
+      signedIn.sections.last?.id, PanelSection.settings([]).id,
+      "a working token puts SETTINGS last, where a person looks for it")
     XCTAssertNil(signedIn.empty)
   }
 
-  /// HEALTH is pinned first on each of the three screens it is the whole
-  /// point of, and on no other. A countdown or a question that scrolled out
-  /// of sight is one nobody answers.
-  func testHealthIsPinnedWhileASignInIsInFlight() throws {
+  /// SETTINGS is pinned first on each of the two screens it is the whole
+  /// point of, and on no other. A countdown that scrolled out of sight is
+  /// one nobody waits for.
+  ///
+  /// The sign-out question was the third of those screens until the second
+  /// morning. It is asked in the header now, which is above every section
+  /// on every screen, so the group goes back to the foot while the question
+  /// is out: testTheSignOutQuestionPinsNothing.
+  func testSettingsIsPinnedWhileASignInIsInFlight() throws {
     let waiting = try XCTUnwrap(Scenes.all.first { $0.id == "e8" }).model()
     XCTAssertEqual(
-      waiting.sections.first?.id, PanelSection.health([]).id,
-      "the sign-in's countdown and its address live in HEALTH")
+      waiting.sections.first?.id, PanelSection.settings([]).id,
+      "the sign-in's countdown and its address live in SETTINGS")
     XCTAssertFalse(
       waiting.sections.contains { if case .today = $0 { return true } else { return false } },
-      "an empty TODAY under a pinned HEALTH is a label over one grey word")
+      "an empty TODAY under a pinned SETTINGS is a label over one grey word")
 
     let firstRun = try XCTUnwrap(Scenes.all.first { $0.id == "e5" }).model()
     XCTAssertFalse(
       firstRun.sections.contains { if case .today = $0 { return true } else { return false } },
       "nothing has happened on a machine with no token, so TODAY says nothing")
+  }
+
+  /// The one screen the second morning took off the pinned list: a token
+  /// that works, and Sign out asking its question in the header. Nothing
+  /// about the group is what that screen is for, so it stays at the foot
+  /// and the day's own rows keep the space above it.
+  func testTheSignOutQuestionPinsNothing() throws {
+    let asking = try XCTUnwrap(Scenes.all.first { $0.id == "e10" }).model()
+    XCTAssertNotNil(asking.header.question, "e10 is the screen the question is out on")
+    XCTAssertEqual(
+      asking.sections.last?.id, PanelSection.settings([]).id,
+      "the question is in the header, so SETTINGS is where it always is")
+    XCTAssertTrue(
+      asking.sections.contains { if case .today = $0 { return true } else { return false } },
+      "and TODAY is not dropped for a question that pins nothing")
   }
 
   /// One document is a document.
@@ -222,15 +242,15 @@ final class RenderTests: XCTestCase {
     XCTAssertFalse(summaries[0].contains("1 documents"), summaries[0])
   }
 
-  /// The rows of HEALTH never move, whichever screen they are on.
-  func testHealthKeepsItsOrderOnEveryScene() throws {
+  /// The rows of SETTINGS never move, whichever screen they are on.
+  func testSettingsKeepsItsOrderOnEveryScene() throws {
     let places = Dictionary(
-      uniqueKeysWithValues: HealthRowKind.allCases.enumerated().map { ($1, $0) })
+      uniqueKeysWithValues: SettingsRowKind.allCases.enumerated().map { ($1, $0) })
     for scene in Scenes.all {
-      let rows = try scene.model().health
-      XCTAssertFalse(rows.isEmpty, "\(scene.id) drew no HEALTH at all")
+      let rows = try scene.model().settings
+      XCTAssertFalse(rows.isEmpty, "\(scene.id) drew no SETTINGS at all")
       let order = rows.map { places[$0.kind] ?? -1 }
-      XCTAssertEqual(order, order.sorted(), "\(scene.id) moved a HEALTH row")
+      XCTAssertEqual(order, order.sorted(), "\(scene.id) moved a SETTINGS row")
       XCTAssertEqual(rows.last?.kind, .quit, "\(scene.id) does not end in Quit")
     }
   }
@@ -526,7 +546,7 @@ final class RenderTests: XCTestCase {
   /// A section label is a claim about what is under it: the count says how
   /// many rows the list has, and the name says what they are. The sheets
   /// borrow their rows from the scene that has the shape they want to show,
-  /// so a label over them read NOW over a log row and a HEALTH row, and
+  /// so a label over them read NOW over a log row and a SETTINGS row, and
   /// "14 days · 12" over two rows and a Show more. The labels are drawn as
   /// what they are, components with nothing under them.
   func testASheetPutsNoLabelOverRowsFromAnotherScene() throws {
@@ -590,16 +610,16 @@ final class RenderTests: XCTestCase {
     }
   }
 
-  /// HEALTH is the one section whose length changes screen to screen, so
+  /// SETTINGS is the one section whose length changes screen to screen, so
   /// the rule is on the page once and no reviewer reads a missing row as a
   /// bug. It is said once, because a rule in two places is two rules.
-  func testTheHealthRowRuleIsSaidOnceOnTheIndex() throws {
+  func testTheSettingsRowRuleIsSaidOnceOnTheIndex() throws {
     let page = html([])
-    let said = page.components(separatedBy: escaped(Scenes.healthRowRule)).count - 1
-    XCTAssertEqual(said, 1, "the HEALTH rule is on the page \(said) times")
+    let said = page.components(separatedBy: escaped(Scenes.settingsRowRule)).count - 1
+    XCTAssertEqual(said, 1, "the SETTINGS rule is on the page \(said) times")
 
-    for part in ["ends in Quit", "not rows at all", "no Skills row"] {
-      XCTAssertTrue(Scenes.healthRowRule.contains(part), "the rule does not say \(part)")
+    for part in ["The group is SETTINGS", "ends in Quit", "not rows at all", "no Skills row"] {
+      XCTAssertTrue(Scenes.settingsRowRule.contains(part), "the rule does not say \(part)")
     }
   }
 
@@ -685,7 +705,7 @@ final class RenderTests: XCTestCase {
       <p>Each line is a choice the render makes against a rule or a
       decision. Nothing else on this page is open: the rest is the
       specification drawn.</p>
-      <p>\(escaped(Scenes.healthRowRule))</p>
+      <p>\(escaped(Scenes.settingsRowRule))</p>
     </section>
     <p>Drawn from the records under Tests/PresenceUITests/Scenes at 2x. The
     first pair of each row is the panel as the person opens it, capped at

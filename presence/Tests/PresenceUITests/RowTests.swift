@@ -199,25 +199,25 @@ final class RowTests: XCTestCase {
   //
   // `.row.compact` puts its value at the content edge, the same edge as a
   // log row's time; only a row with something on its right pulls the value
-  // in to make room for it. HEALTH's rows with no icon were handing the
+  // in to make room for it. SETTINGS's rows with no icon were handing the
   // layout an empty action column, and 8 pt of nothing moved every mark and
   // keystroke left of every time in TODAY.
   func testAValueEndsWhereEveryOtherValueEnds() throws {
-    let value = "⁘"
+    let value = SettingsRows.quitShortcut
     for scheme in [ColorScheme.dark, .light] {
       let log = try inkEnds(
         RowView(.plain, glyph: .check, tone: .ok, title: "Reply", value: value), scheme: scheme)
-      let health = try inkEnds(
-        HealthRows(rows: [HealthRow(.mark, value: value, glyph: .check, tone: .ok)]),
+      let settings = try inkEnds(
+        SettingsRows(rows: [SettingsRow(.quit, value: value, glyph: .check, tone: .ok)]),
         scheme: scheme)
-      XCTAssertEqual(health, log, "the HEALTH value is not on the log's edge in \(scheme)")
+      XCTAssertEqual(settings, log, "the SETTINGS value is not on the log's edge in \(scheme)")
 
       // A row that does carry an icon keeps its value clear of it, which is
       // the Claude Desktop row.
       let withIcon = try probes(
-        HealthRows(
+        SettingsRows(
           rows: [
-            HealthRow(
+            SettingsRow(
               .desktop, value: "not installed", glyph: .empty,
               action: IconAction(.down, tip: Tips.installExtension))
           ]), scheme: scheme)
@@ -225,7 +225,7 @@ final class RowTests: XCTestCase {
         withIcon["row.trailing"], "a row with an icon draws the column in \(scheme)")
 
       let bare = try probes(
-        HealthRows(rows: [HealthRow(.mark, value: value, glyph: .check, tone: .ok)]),
+        SettingsRows(rows: [SettingsRow(.quit, value: value, glyph: .check, tone: .ok)]),
         scheme: scheme)
       XCTAssertNil(bare["row.trailing"], "a row with nothing on its right draws no column")
     }
@@ -411,8 +411,8 @@ final class RowTests: XCTestCase {
     let log = try SheetPieces.logRow()
     let documents = try SheetPieces.documents()
     let rows = try SheetPieces.documentRows()
-    let mark = try XCTUnwrap(
-      SheetPieces.health().first { $0.kind == .mark }, "no scene drew the mark row")
+    let compact = try XCTUnwrap(
+      SheetPieces.settings().first { $0.kind == .quit }, "no scene drew the Quit row")
     let quiet = try SheetPieces.quiet()
     let header = try SheetPieces.header()
 
@@ -421,7 +421,7 @@ final class RowTests: XCTestCase {
       // The five row shapes, and the two labels as components of their own.
       //
       // A label over rows is a section, and a section's header makes a claim
-      // about what is under it: NOW over a log row and a HEALTH row, or
+      // about what is under it: NOW over a log row and a SETTINGS row, or
       // "14 days · 12" over two rows and a Show more, is this page saying
       // something no panel says. The pieces here are pieces, in the order
       // `RowShape` names them, and the labels stand at the foot with nothing
@@ -430,7 +430,7 @@ final class RowTests: XCTestCase {
         PanelHeader(model: header)
         RowView(.two, glyph: .dot, tone: .live, title: live.title, sub: live.sub)
         RowView(.plain, glyph: .check, tone: .ok, title: log.title, value: log.value)
-        RowView(.compact, glyph: .blank, title: mark.kind.label, value: mark.value)
+        RowView(.compact, glyph: .blank, title: compact.kind.label, value: compact.value)
         ForEach(rows) { row in
           RowView(
             .doc, glyph: row.glyph, tone: row.tone, title: row.title, sub: row.sub,

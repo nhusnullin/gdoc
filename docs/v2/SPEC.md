@@ -146,7 +146,7 @@ it opens the app itself once, after it placed or rolled it back, so one run
 opens the app once and never the build it is replacing. The app
 holds `flock` on `presence/app.lock` for its life; gdoc asks the lock without
 blocking and reads no byte. Launch at login is off until the person turns the
-HEALTH switch on; no run registers it by itself. Decided 2026-10-18,
+SETTINGS switch on; no run registers it by itself. Decided 2026-10-18,
 DECISIONS.md.
 
 **The second morning.** The header carries the account, its state and Sign

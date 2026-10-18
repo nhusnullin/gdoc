@@ -2,14 +2,14 @@
 //
 // The button says "Update" and not "Check for updates", because this app
 // never asks GitHub what is published. `gdoc help --json` carries gdoc's own
-// once-a-day check, the HEALTH row says what that check heard, and pressing
+// once-a-day check, the header says what that check heard, and pressing
 // Update runs `update` with no flag at all: what the person would have typed,
 // and nothing the app invented. A flag here would be this app choosing a
 // channel or a major on somebody's behalf.
 //
-// While the child is up the gdoc row draws a ring in its glyph's place, and
-// the version it names is the one still installed: a row that said the new
-// number before the bytes were in place would be a row that lied for a few
+// While the child is up the header draws a ring beside the version, and the
+// version it names is the one still installed: a line that said the new
+// number before the bytes were in place would be a line that lied for a few
 // seconds. Only `action: "updated"` moves it, because that is the one word
 // the command prints for a run that replaced something; `major_available` is
 // a version this app declined to install by passing no flag. It moves the row
@@ -33,7 +33,7 @@ import PresenceUI
 /// Where an update run stands.
 public enum UpdateStanding: Sendable, Equatable {
   case idle
-  /// The child is up, which is the ring on the gdoc row.
+  /// The child is up, which is the ring beside the header's version.
   case running
   /// It replaced the binary, with the version it put there.
   case installed(String)
@@ -43,7 +43,8 @@ public enum UpdateStanding: Sendable, Equatable {
   case failed(String)
 }
 
-/// The two runs behind the HEALTH rows: the update, and the extension.
+/// The two runs the panel offers: the update in the header, and the
+/// extension in SETTINGS.
 ///
 /// An actor because the standing is read on the main thread while the child
 /// is answering off it. The child comes from a closure, which is the runner's
@@ -52,7 +53,7 @@ public actor UpdateAction {
   /// How a call is answered. The app hands over the runner's own `run`.
   public typealias Answer = @Sendable (Call) async throws -> Outcome
 
-  /// Where the gdoc row stands. Install extension never moves it.
+  /// Where the update stands. Install extension never moves it.
   public private(set) var standing: UpdateStanding = .idle
 
   private let answer: Answer

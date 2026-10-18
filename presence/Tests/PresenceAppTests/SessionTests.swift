@@ -61,7 +61,7 @@ final class SessionTests: XCTestCase {
     XCTAssertEqual(
       session.facts.network, NetworkFact(reachable: false), "the last thing gdoc said")
     XCTAssertTrue(
-      session.model.health.contains { $0.kind == .network },
+      session.model.settings.contains { $0.kind == .network },
       "which the panel draws as a row of its own")
 
     // A command that worked afterwards answers it, and the row goes.
@@ -76,7 +76,7 @@ final class SessionTests: XCTestCase {
       line(kind: "end", command: "reply", call: 2, doc: Self.doc, extra: "\"ok\":true"),
     ])
     wait(for: [settled], timeout: 20)
-    XCTAssertFalse(session.model.health.contains { $0.kind == .network })
+    XCTAssertFalse(session.model.settings.contains { $0.kind == .network })
 
     // And the ends that are not about Google, read as the fold reads them.
     let logout = try Event.decode(
@@ -111,7 +111,7 @@ final class SessionTests: XCTestCase {
     let session = made()
     answered(session)
     XCTAssertEqual(session.facts.extensionState, .notInstalled)
-    let row = try XCTUnwrap(session.model.health.first { $0.kind == .desktop })
+    let row = try XCTUnwrap(session.model.settings.first { $0.kind == .desktop })
     XCTAssertEqual(row.value, "not installed")
     XCTAssertEqual(row.actions.map(\.kind), [.installExtension])
 
@@ -121,7 +121,7 @@ final class SessionTests: XCTestCase {
     answered(written)
     XCTAssertEqual(written.facts.extensionState, .written)
     XCTAssertNil(
-      written.model.health.first { $0.kind == .desktop },
+      written.model.settings.first { $0.kind == .desktop },
       "a file that is there says nothing about what Desktop loaded")
   }
 
@@ -156,7 +156,7 @@ final class SessionTests: XCTestCase {
     XCTAssertEqual(
       session.facts.extensionState, .notInstalled,
       "and Desktop was never offered it, whatever is on the disk")
-    let row = try XCTUnwrap(session.model.health.first { $0.kind == .desktop })
+    let row = try XCTUnwrap(session.model.settings.first { $0.kind == .desktop })
     XCTAssertEqual(row.actions.map(\.kind), [.installExtension], "so the button stays")
     XCTAssertTrue(try argv().contains("update --desktop"), "one run, and the flag it was for")
   }

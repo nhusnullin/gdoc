@@ -145,9 +145,9 @@ public struct QuestionModel: Sendable, Equatable {
   public let danger: ButtonWord
 }
 
-/// One HEALTH row, with its words and what sits on its right.
-public struct HealthRowModel: Sendable, Equatable, Identifiable {
-  public let kind: HealthRowKind
+/// One SETTINGS row, with its words and what sits on its right.
+public struct SettingsRowModel: Sendable, Equatable, Identifiable {
+  public let kind: SettingsRowKind
   public let value: String
   public let glyph: GlyphKind
   public let tone: GlyphTone
@@ -165,7 +165,7 @@ public struct HealthRowModel: Sendable, Equatable, Identifiable {
   public var id: String { kind.rawValue }
 
   public init(
-    _ kind: HealthRowKind, value: String = "", glyph: GlyphKind = .blank,
+    _ kind: SettingsRowKind, value: String = "", glyph: GlyphKind = .blank,
     tone: GlyphTone = .quiet, waiting: Bool = false, quiet: String? = nil,
     actions: [ActionModel] = [], isOn: Bool? = nil, select: ActionKind? = nil,
     question: QuestionModel? = nil
@@ -302,7 +302,7 @@ public enum PanelSection: Sendable, Equatable, Identifiable {
   case documents(DocumentsSectionModel)
   case today(LogSectionModel)
   case yesterday(YesterdayModel)
-  case health([HealthRowModel])
+  case settings([SettingsRowModel])
 
   /// The label over the section, as the screens file writes it.
   public var label: String {
@@ -311,7 +311,7 @@ public enum PanelSection: Sendable, Equatable, Identifiable {
     case .documents: return "Documents"
     case .today: return "Today"
     case .yesterday: return "Yesterday"
-    case .health: return "Health"
+    case .settings: return "Settings"
     }
   }
 
@@ -345,9 +345,9 @@ public struct PanelModel: Sendable, Equatable {
     return []
   }
 
-  public var health: [HealthRowModel] {
+  public var settings: [SettingsRowModel] {
     for section in sections {
-      if case .health(let rows) = section { return rows }
+      if case .settings(let rows) = section { return rows }
     }
     return []
   }
@@ -420,28 +420,30 @@ extension PanelModel {
       docs, facts: facts, ui: ui, words: words, busy: !items.isEmpty)
     let today = todaySection(days, ui: ui, words: words)
     let yesterday = yesterdaySection(days, ui: ui, words: words)
-    let health = healthRows(facts: facts)
+    let settings = settingsRows(facts: facts)
     let header = self.header(
       facts: facts, ui: ui, now: now, stopping: stopping(nowFold, sessions: sessions))
 
-    // HEALTH is last, where a person looks for it, except on the three
-    // screens where it is the whole of what the panel is for: a machine
-    // with no token at all, a sign-in in flight, and the time a question is
-    // asked. A question or a countdown that scrolled out of sight is one
-    // nobody answers.
-    let pinned =
-      facts.auth == .signedOut || facts.signIn != nil || ui.isAsking(.signOut, now: now)
+    // SETTINGS is last, where a person looks for it, except on the two
+    // screens where the group is the whole of what the panel is for: a
+    // machine with no token at all, and a sign-in in flight. A countdown
+    // that scrolled out of sight is one nobody waits for.
+    //
+    // The third screen was the sign-out question, and it is not one any
+    // more: the question is asked in the header since 2026-10-18, which is
+    // above everything on every screen and cannot scroll away.
+    let pinned = facts.auth == .signedOut || facts.signIn != nil
 
     var sections: [PanelSection] = []
-    if pinned { sections.append(.health(health)) }
+    if pinned { sections.append(.settings(settings)) }
     if !items.isEmpty { sections.append(.now(items)) }
     sections.append(.documents(documents))
-    // An empty TODAY under a pinned HEALTH is a label over one grey word,
+    // An empty TODAY under a pinned SETTINGS is a label over one grey word,
     // between the person and the row they opened the panel for. NOW is
     // already dropped when it is empty, and this is the same rule.
     if !(pinned && today.rows.isEmpty) { sections.append(.today(today)) }
     if let yesterday { sections.append(.yesterday(yesterday)) }
-    if !pinned { sections.append(.health(health)) }
+    if !pinned { sections.append(.settings(settings)) }
 
     let bare =
       items.isEmpty && documents.rows.isEmpty && today.rows.isEmpty && yesterday == nil

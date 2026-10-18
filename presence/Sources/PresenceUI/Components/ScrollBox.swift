@@ -37,7 +37,7 @@ public enum RenderMode: Sendable {
   case clipped
   /// Into an image for somebody reviewing it, where nothing may be hidden:
   /// no cap, no clip, every row drawn. A reviewer cannot scroll a PNG, and
-  /// a screen whose HEALTH is below the cut is a screen nobody checked.
+  /// a screen whose SETTINGS is below the cut is a screen nobody checked.
   case whole
 }
 

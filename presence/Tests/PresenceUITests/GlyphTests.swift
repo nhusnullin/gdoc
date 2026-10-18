@@ -18,7 +18,7 @@ import XCTest
 @MainActor
 final class GlyphTests: XCTestCase {
   // Every kind in every tone draws, and each pair is a shape rather than an
-  // empty box. The blank is the exception on purpose: a HEALTH row with
+  // empty box. The blank is the exception on purpose: a SETTINGS row with
   // nothing to say in its glyph column still keeps the column, which the
   // screens file does with `border-color:transparent`.
   func testEveryGlyphKindAndToneRenders() throws {

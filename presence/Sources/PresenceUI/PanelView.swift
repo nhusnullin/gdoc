@@ -14,7 +14,7 @@
 // inside itself, which is the decision table's rule, and everything under
 // the header block sits in a box of the same kind: four sections of an ordinary
 // day are taller than 600 pt, and a panel that clipped them would lose
-// HEALTH with nothing saying so. The box draws its thumb and its fade only
+// SETTINGS with nothing saying so. The box draws its thumb and its fade only
 // when there is more under them.
 //
 // RenderTests draws every scene of the screens file through this view, in
@@ -112,8 +112,8 @@ public struct PanelView: View {
       LogList(model: log, list: .today, actions: actions)
     case .yesterday(let yesterday):
       YesterdayList(model: yesterday, actions: actions)
-    case .health(let rows):
-      HealthList(rows: rows, forced: model.forcedTooltip, actions: actions)
+    case .settings(let rows):
+      SettingsList(rows: rows, forced: model.forcedTooltip, actions: actions)
     }
   }
 }
@@ -227,18 +227,18 @@ struct YesterdayList: View {
   }
 }
 
-/// HEALTH: the rows in their one order.
-struct HealthList: View {
-  let rows: [HealthRowModel]
+/// SETTINGS: the rows in their one order.
+struct SettingsList: View {
+  let rows: [SettingsRowModel]
   let forced: String?
   let actions: PanelActions
 
   var body: some View {
-    HealthRows(rows: rows.map(health))
+    SettingsRows(rows: rows.map(settings))
   }
 
-  private func health(_ row: HealthRowModel) -> HealthRow {
-    HealthRow(
+  private func settings(_ row: SettingsRowModel) -> SettingsRow {
+    SettingsRow(
       row.kind, value: row.value, glyph: row.glyph, tone: row.tone, waiting: row.waiting,
       quiet: row.quiet, actions: row.actions.map { $0.icon(forced: forced, actions) },
       isOn: row.isOn,

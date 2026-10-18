@@ -156,7 +156,7 @@ final class StateTests: XCTestCase {
       idle.header.update?.kind, .update,
       "with nothing running the update is there to take")
     XCTAssertEqual(
-      idle.health.first { $0.kind == .desktop }?.actions.map(\.kind), [.installExtension])
+      idle.settings.first { $0.kind == .desktop }?.actions.map(\.kind), [.installExtension])
 
     let running = try drawn([], at: at, facts: updating(true))
     XCTAssertTrue(
@@ -164,7 +164,7 @@ final class StateTests: XCTestCase {
     XCTAssertEqual(
       running.header.version, "v2.14.0", "and the version is the one still installed")
     XCTAssertNil(running.header.update)
-    let desktop = try XCTUnwrap(running.health.first { $0.kind == .desktop })
+    let desktop = try XCTUnwrap(running.settings.first { $0.kind == .desktop })
     XCTAssertEqual(desktop.value, "not installed", "the row is where it was")
     XCTAssertTrue(desktop.actions.isEmpty, "and there is nothing on it to press")
   }
@@ -189,13 +189,13 @@ final class StateTests: XCTestCase {
     XCTAssertEqual(answered.account, Scenes.account)
     XCTAssertEqual(answered.actions.map(\.kind), [.signOut], "now there is")
 
-    // And no HEALTH row says any of it, which is where all of this was
+    // And no SETTINGS row says any of it, which is where all of this was
     // until the second morning.
     XCTAssertFalse(
-      HealthRowKind.allCases.map(\.rawValue).contains("account"),
+      SettingsRowKind.allCases.map(\.rawValue).contains("account"),
       "the account is the header's, and is said in one place")
     XCTAssertFalse(
-      HealthRowKind.allCases.map(\.rawValue).contains("gdoc"),
+      SettingsRowKind.allCases.map(\.rawValue).contains("gdoc"),
       "and so is the version")
   }
 

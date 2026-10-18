@@ -8,7 +8,7 @@
 //
 // What each section then makes of them is its own file: NOW is Now.swift,
 // the live watches are LiveSession.swift, TODAY and Yesterday are Days.swift
-// and DOCUMENTS is Documents.swift. HEALTH takes one fact from the record and
+// and DOCUMENTS is Documents.swift. SETTINGS takes one fact from the record and
 // the rest from two commands, and that one is Reachability.swift. Nothing
 // judges here.
 

@@ -23,7 +23,7 @@ public enum Tips {
   /// the hub and never a complaint about the person who moved it.
   public static let noteMoved = "Note moved or deleted"
   public static let openChat = "Continue with Claude"
-  public static let noExtension = "Install the Desktop extension in Health"
+  public static let noExtension = "Install the Desktop extension in Settings"
   public static let copyLink = "Copy link"
   /// The link icon's own off word, which the screens file writes beside
   /// "No Google Doc yet": there is no link to copy for the same reason
