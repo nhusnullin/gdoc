@@ -5452,4 +5452,4 @@ person's own session and no document word, which is why it is allowed into
 a record that refuses paths, sentences and accounts; it is still one more
 thing in the file beside the token, and principle 2 notes it.
 
-The plan is `docs/plans/2026-10-18-gdoc-v2-m26-the-second-morning.md`.
+The plan is `docs/plans/completed/2026-10-18-gdoc-v2-m26-the-second-morning.md`.

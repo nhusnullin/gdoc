@@ -311,10 +311,37 @@ branch.
 - Modify: this plan, `docs/v2/DECISIONS.md` only if a task found the
   decision wrong
 
-- [ ] an acceptance table at the foot of this plan: each of Nail's ten
+- [x] an acceptance table at the foot of this plan: each of Nail's ten
       sentences with the test that holds its answer
-- [ ] the render index's "Still your call" list drops what this plan
-      decided and keeps the rest
-- [ ] move this plan to `docs/plans/completed/`
-- [ ] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
+- [x] the render index's "Still your call" list drops what this plan
+      decided and keeps the rest (the dim mark goes, and is said once as
+      `Scenes.markRule`, because the mockup still draws nothing at rest)
+- [x] move this plan to `docs/plans/completed/`
+- [x] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
       `make app-lint`, `make app-test`, `make app`
+
+## Acceptance
+
+Nail's ten sentences, in the order of this plan's first paragraph, with the
+answer that shipped and the test that holds it. A test named here is the one
+that fails if the answer is taken back.
+
+| Nail said | The answer | The test |
+|---|---|---|
+| the scrolling is wrong | header, NOW, SETTINGS never move; DOCUMENTS, TODAY and Yesterday are the one scroll box, and NOW stops at half the body | `testTheFourPartsAddUpToTheCapOnE3` (RenderTests), `testNowStopsAtHalfTheBodyAndSettingsKeepsItsPlace`, `testTheThumbSitsThreePointInAndLastsOneSecondAfterTheMove` (ScrollTests) |
+| the account and its sign-out belong at the top | the header is 36 pt and carries the glyph, the address and Sign out, and asks "Sign out?" in its own line | `testTheHeaderIs36WithTheMarkTheNameTheVersionAndTheAccount`, `testTheQuestionAsksInPlaceOfTheHeaderLine` (RowTests), `testTheHeaderClaimsNothingAboutTheAccountBeforeTheFirstAnswer` (StateTests) |
+| the group they leave is not HEALTH any more | the group is SETTINGS: Network, Claude Desktop, Hub, Launch at login, Quit | `testSettingsRowsKeepTheirOrderOnEveryScreen` (CardTests), `testSettingsKeepsItsOrderOnEveryScene` (RenderTests) |
+| Open chat opens Claude and not the session the document came from | the record carries `session` on a Claude Code start, a row remembers it, and the link is built; none of the three `claude://code` forms switched the window, so the opener keeps the activation and the link is not shipped | `TestTheSessionOfACodeRunIsOnItsStart`, `TestTheSessionIsOnTheStartOfACodeRunAndNowhereElse` (Go), `testARowRemembersTheSessionOfItsLatestCodeRun` (FieldsTests), `testTheSessionLinkIsBuiltFromASessionIdOnly` (LinkLineTests); the measurement is `docs/v2/MEASURED.md`, 2026-10-18 |
+| the menu bar mark is too dim | the idle mark is the live mark's own ink, and `idleOpacity` is gone | `testOneTemplateImagePerState` (BarTests) |
+| DOCUMENTS should put what gdoc just made first, then the most used, with a way to pin | today's documents newest first, then the fortnight by the count of finished actions; pins come before all of them, newest pin first, and never fall out | `testTheOrderIsTodayNewestFirstThenTheFortnightByUse`, `testADocumentListedByUseShowsNothingNew`, `testAPinnedDocumentIsFirstAndNeverFallsOutOfTheList` (DocumentsTests), `testAPinnedDocumentWithNoLinesDrawsThePinsOwnRow` (StateTests), `testPinsComeBackNewestFirstAndUnpinLeavesNothing` (PreferencesTests) |
+| the gdoc version and its update belong in the header too | the version follows the name in the caption grey, with the update icon beside it where a newer release is listed and no icon otherwise | `testTheHeaderIs36WithTheMarkTheNameTheVersionAndTheAccount` (RowTests) |
+| a document must be removable from the list and from the statistics | Hide from the list, in the row's own menu: the row goes and its actions stop counting, TODAY keeps its runs, and the next finished action brings it back | `testAHiddenDocumentLeavesTheListUntilTheNextActionOnIt` (DocumentsTests), `testTheRowMenuSaysPinOrUnpinAndHide` (StateTests), `testAHideKeepsItsMomentAndIsNeverPruned` (PreferencesTests) |
+| the md icon is grey on every row, because the hub has no picker | a Hub row in SETTINGS: the folder as `~/…` or "Choose…", the system folder panel behind it, and the grey icon's tooltip names the row | `testTheHubRowIsTheFolderOrTheWayToChooseOne` (StateTests), `testChoosingTheHubWritesItDownAndReadsTheNotesAtOnce` (SessionTests) |
+| the Thread mark row goes, "a pointless thing" | there is no mark row: the mark is the header's own, drawn at the panel's top left | `testSettingsRowsKeepTheirOrderOnEveryScreen` (CardTests) |
+
+Two more rows, for the two answers the questions above raised:
+
+| The question | The answer | The test |
+|---|---|---|
+| does the count count a pin and a hide | "14 days · N" counts a pinned row however old it is and a hidden one not at all | `testAPinnedDocumentIsFirstAndNeverFallsOutOfTheList`, `testAHiddenDocumentLeavesTheListUntilTheNextActionOnIt` (DocumentsTests) |
+| does the page say all of it | the guide walks the panel in its new order, names the session and the one way a hidden document comes back | `TestThePresencePageWalksTheSecondMorningsPanel` (`go/boundary`) |

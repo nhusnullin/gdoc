@@ -693,12 +693,13 @@ final class RenderTests: XCTestCase {
   ///
   /// A reviewer who reads a render as the specification drawn rates a
   /// product choice as a bug, and a choice Nail has not made is not a bug.
-  /// The ten are on the page, above every screen, and each names the rule
+  /// The nine are on the page, above every screen, and each names the rule
   /// or the decision it goes against. The second morning's own pass added
   /// two: where SETTINGS sits on the first-run screen, which the plan says
-  /// two things about, and the light tooltip's plate.
+  /// two things about, and the light tooltip's plate. It also closed one,
+  /// the dim mark, which is a decision now and is said as `markRule`.
   func testTheIndexOpensWithWhatIsStillYourCall() throws {
-    XCTAssertEqual(Scenes.stillYourCall.count, 10, "the pass left ten choices to Nail")
+    XCTAssertEqual(Scenes.stillYourCall.count, 9, "the pass left nine choices to Nail")
 
     let page = html(["<section>a screen</section>"])
     let heading = try XCTUnwrap(page.range(of: "Still your call"), "the page does not open with it")
@@ -713,7 +714,7 @@ final class RenderTests: XCTestCase {
     // What each of them is about, so a line that is quietly dropped is a
     // failure rather than a shorter page.
     let subjects = [
-      "as bright as the mark at work", "decision 32", "decision 10", "trash",
+      "decision 32", "decision 10", "trash",
       "decision 39", "14 days · N", "nameless", "faintest control",
       "pinned above DOCUMENTS", "tooltip's plate in light",
     ]
@@ -721,6 +722,27 @@ final class RenderTests: XCTestCase {
       XCTAssertTrue(
         Scenes.stillYourCall.contains { $0.contains(subject) },
         "no line is about \(subject)")
+    }
+
+    // The mark is not one of them any more: Nail answered it on 2026-10-18.
+    XCTAssertFalse(
+      Scenes.stillYourCall.contains { $0.contains("as bright as the mark at work") },
+      "the dim mark is a decision now and not a choice left open")
+  }
+
+  /// The bright idle mark is said once, as a decision and not a choice.
+  ///
+  /// It left "Still your call" with this milestone, and a reviewer who
+  /// compares the bar of r9 with the mockup, which draws nothing at rest,
+  /// needs the sentence that says the mockup was overruled. Said once,
+  /// because a rule in two places is two rules.
+  func testTheMarkRuleIsSaidOnceOnTheIndex() throws {
+    let page = html([])
+    let said = page.components(separatedBy: escaped(Scenes.markRule)).count - 1
+    XCTAssertEqual(said, 1, "the mark rule is on the page \(said) times")
+
+    for part in ["the mark at work", "2026-10-18", "four states apart and not five"] {
+      XCTAssertTrue(Scenes.markRule.contains(part), "the rule does not say \(part)")
     }
   }
 
@@ -820,6 +842,7 @@ final class RenderTests: XCTestCase {
       decision. Nothing else on this page is open: the rest is the
       specification drawn.</p>
       <p>\(escaped(Scenes.settingsRowRule))</p>
+      <p>\(escaped(Scenes.markRule))</p>
     </section>
     <p>Drawn from the records under Tests/PresenceUITests/Scenes at 2x. The
     first pair of each row is the panel as the person opens it, capped at

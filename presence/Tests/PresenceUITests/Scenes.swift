@@ -84,12 +84,6 @@ enum Scenes {
   /// not findings: a reviewer who rates one of them blocking is rating
   /// Nail's call, which is why they are on the page rather than in a task.
   static let stillYourCall: [String] = [
-    "The mark at rest is as bright as the mark at work, where principle 1 says idle is "
-      + "nothing at all and the mockup's r9 draws nothing. The 45 percent idle mark was the "
-      + "one choice principle 1 argued against and Nail has now answered: he wants to see "
-      + "it. What follows from it is in the bar of every screen: a live watch and an idle "
-      + "machine are now the same image, so the menu bar tells four states apart and not "
-      + "five.",
     "Launch at login is off until you turn it on, which is product decision 32. The "
       + "2026-10-18 decision withdrew the registration M24 made on the first run. A gdoc "
       + "command now opens the app when it is not running.",
@@ -128,6 +122,19 @@ enum Scenes {
       + "note's name is in no line of that run: naming it is a new fact in the record, "
       + "which docs/backlog/a-publish-that-stopped-in-the-render-has-no-name.md holds.",
   ]
+
+  /// The mark at rest, said once on the index page as a decision rather
+  /// than a choice. It was the first line of "Still your call" until
+  /// 2026-10-18, when Nail answered it; the sentence stays on the page
+  /// because the mockup draws nothing at rest and a reviewer comparing the
+  /// two needs to know which of them is current.
+  static let markRule =
+    "The mark at rest is the mark at work. Since the decision of 2026-10-18 the idle bar "
+    + "carries the same ink as a live watch, because Nail asked to see it: principle 1's "
+    + "\"idle is nothing at all\" and the mockup's r9, which draws nothing, were both "
+    + "overruled that day. What follows from it is in the bar of every screen: a live "
+    + "watch and an idle machine are the same image, so the menu bar tells four states "
+    + "apart and not five."
 
   /// How SETTINGS's rows are chosen, said once on the index page because it
   /// is the one section whose length changes from screen to screen, and a
