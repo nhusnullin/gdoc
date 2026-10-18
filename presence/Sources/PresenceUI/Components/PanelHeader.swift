@@ -41,7 +41,8 @@ public struct PanelHeader: View {
         // sub-line: the pair of buttons takes the right-hand column, and a
         // sentence squeezed into what is left reads as half a sentence.
         ConfirmRow(
-          title: question.title, danger: question.danger,
+          title: question.title, glyph: model.glyph, tone: model.tone,
+          danger: question.danger,
           onConfirm: { actions.perform(.signOut, nil) },
           onKeep: { actions.perform(.keep, nil) }
         )
@@ -122,6 +123,10 @@ public struct PanelHeader: View {
           button(action)
         }
       }
+      // `.acts{margin-right:-4px}`, as a row's own strip is pulled: the
+      // icon and not its 24 pt box meets the column every value in the
+      // panel ends on.
+      .padding(.trailing, -Grid.actionOverhang)
     }
     .padding(.horizontal, Grid.rowInset)
     .frame(maxWidth: .infinity, minHeight: Grid.headerHeight, alignment: .leading)

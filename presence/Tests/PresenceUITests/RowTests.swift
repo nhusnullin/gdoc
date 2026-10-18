@@ -178,45 +178,82 @@ final class RowTests: XCTestCase {
     XCTAssertNil(busyMeasured["row.trailing"], "a busy row draws no action column")
   }
 
-  /// The document row keeps 10 pt in front of its glyph for the pin, pinned
-  /// or not, so one pin in a list does not move the titles under it.
+  /// A document row keeps the panel's one left edge until its list has a
+  /// pin, and then every row of that list keeps the pin's 8 pt.
   ///
-  /// The column is 26 pt and what is in it sits at its trailing edge, so a
-  /// glyph in a document row stands where a glyph stands in every other
-  /// row. Every other shape's column is the 16 pt it always was.
-  func testTheDocRowKeepsTenPointsForThePin() throws {
-    XCTAssertEqual(Grid.pinSize, 10)
-    XCTAssertEqual(RowShape.doc.leadingColumn, 26)
+  /// The slot belongs to the list and not to the shape. A fixed 26 pt column
+  /// drew it on every row of every list, so DOCUMENTS stood 10 pt right of
+  /// its own section label and of every other row in the panel, with
+  /// nothing in the room it took.
+  func testTheDocRowKeepsThePanelsLeftEdge() throws {
+    XCTAssertEqual(Grid.pinSize, 8)
+    XCTAssertNil(RowShape.doc.leadingColumn, "the document row is as wide as its own glyph")
     for shape in RowShape.allCases where shape != .doc {
       XCTAssertEqual(shape.leadingColumn, 16, "\(shape) keeps the glyph's own column")
     }
 
     let drawn = try SheetPieces.documentRows()[0]
-    let pinned = RowView(
-      .doc, title: drawn.title, sub: drawn.sub,
-      leading: { DocumentGlyph(drawn.glyph, tone: drawn.tone, pinned: true) },
-      trailing: { ActionButton(.gdocs, tip: Tips.openDoc) })
-    let measured = try probes(pinned, scheme: .dark)
-    XCTAssertEqual(measured["row.pin"]?.width, 10, "the pin's own slot")
-    XCTAssertEqual(measured["row.pin"]?.height, 10)
+    func row(_ pin: PinColumn) -> some View {
+      RowView(
+        .doc, title: drawn.title, sub: drawn.sub,
+        leading: { DocumentGlyph(drawn.glyph, tone: drawn.tone, pin: pin) },
+        trailing: { ActionButton(.gdocs, tip: Tips.openDoc) })
+    }
 
-    let plain = RowView(
-      .doc, title: drawn.title, sub: drawn.sub,
-      leading: { DocumentGlyph(drawn.glyph, tone: drawn.tone) },
-      trailing: { ActionButton(.gdocs, tip: Tips.openDoc) })
-    let empty = try probes(plain, scheme: .dark)
+    let measured = try probes(row(.pinned), scheme: .dark)
+    XCTAssertEqual(measured["row.pin"]?.width, 8, "the pin's own slot")
+    XCTAssertEqual(measured["row.pin"]?.height, 8)
+    XCTAssertEqual(measured["row.status"]?.width, 24, "the slot and the glyph")
+
+    let slot = try probes(row(.slot), scheme: .dark)
     XCTAssertEqual(
-      empty["row.pin"]?.width, 10, "a row with no pin keeps the slot, so the titles line up")
-    XCTAssertEqual(empty["row.status"]?.width, 26, "the column is the slot and the glyph")
+      slot["row.pin"]?.width, 8, "a row under a pinned one keeps the slot, so the titles line up")
     XCTAssertEqual(
-      measured["row.status"]?.width, empty["row.status"]?.width,
+      slot["row.status"]?.width, measured["row.status"]?.width,
       "and a pin changes no width at all")
+
+    let alone = try probes(row(.none), scheme: .dark)
+    XCTAssertNil(alone["row.pin"], "a list with no pin draws no slot at all")
+    XCTAssertEqual(
+      alone["row.status"]?.width, Grid.glyphSize,
+      "so the row's glyph column is every other row's")
 
     // The pin draws ink, and the empty slot draws none.
     XCTAssertGreaterThan(
-      try inkedPixels(DocumentGlyph(.check, tone: .ok, pinned: true), scheme: .dark, side: 26),
-      try inkedPixels(DocumentGlyph(.check, tone: .ok), scheme: .dark, side: 26),
+      try inkedPixels(
+        DocumentGlyph(.check, tone: .ok, pin: .pinned), scheme: .dark, side: 24),
+      try inkedPixels(DocumentGlyph(.check, tone: .ok, pin: .slot), scheme: .dark, side: 24),
       "a pinned row draws something a plain one does not")
+  }
+
+  /// `.acts{margin-right:-4px}`: the icons and not their boxes meet the
+  /// column every value in the panel ends on.
+  ///
+  /// An action's artwork is 16 pt centred in a 24 pt box, so a strip whose
+  /// boxes ended on the row's content edge drew its icons 4 pt inside it:
+  /// every time in TODAY, every value in SETTINGS and the DOCUMENTS count
+  /// ended 4 pt right of every icon under them.
+  func testAnActionStripMeetsTheColumnEveryValueEndsOn() throws {
+    let drawn = try SheetPieces.documentRows()[0]
+    let row = RowView(
+      .doc, title: drawn.title, sub: drawn.sub,
+      leading: { DocumentGlyph(drawn.glyph, tone: drawn.tone) },
+      trailing: {
+        HStack(spacing: Grid.actionGap) {
+          ActionButton(.gdocs, tip: Tips.openDoc)
+          ActionButton(.md, tip: Tips.openNote)
+          ActionButton(.branch, tip: Tips.openChat)
+          ActionButton(.link, tip: Tips.copyLink)
+        }
+      })
+    let strip = try XCTUnwrap(
+      try probeList(row, scheme: .dark).first { $0.name == "row.trailing" })
+    XCTAssertEqual(
+      strip.origin.x + strip.size.width, Grid.panelWidth - Grid.rowInset + Grid.actionOverhang,
+      "the strip hangs 4 pt past the row's inset")
+    XCTAssertEqual(
+      strip.origin.x + strip.size.width - Grid.actionOverhang, Grid.panelWidth - Grid.rowInset,
+      "so the artwork inside it ends on the row's own edge, where a value ends")
   }
 
   // A chevron sits in the middle of the row its words are in.

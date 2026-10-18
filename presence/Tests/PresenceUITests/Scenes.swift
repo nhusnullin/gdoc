@@ -59,6 +59,9 @@ enum SceneDocuments {
   static let policy = "1GcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSs"
   static let concept = "1B2EeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTt"
   static let proposal = "1PrFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUu"
+  /// The oldest of scene e1's twelve, eight days behind the rest of them.
+  /// It is the one a person pinned, which is why it is drawn first.
+  static let wallet = "1Ex06GgHhIiJjKkLlMmNnOoPpQqRrSsTt"
 
   /// The hub index: a document, and the note paired with it. Northwind and
   /// Partner bank are in no note, which is what greys their md icon.
@@ -83,7 +86,10 @@ enum Scenes {
   static let stillYourCall: [String] = [
     "The mark at rest is as bright as the mark at work, where principle 1 says idle is "
       + "nothing at all and the mockup's r9 draws nothing. The 45 percent idle mark was the "
-      + "one choice principle 1 argued against and Nail has now answered: he wants to see it.",
+      + "one choice principle 1 argued against and Nail has now answered: he wants to see "
+      + "it. What follows from it is in the bar of every screen: a live watch and an idle "
+      + "machine are now the same image, so the menu bar tells four states apart and not "
+      + "five.",
     "Launch at login is off until you turn it on, which is product decision 32. The "
       + "2026-10-18 decision withdrew the registration M24 made on the first run. A gdoc "
       + "command now opens the app when it is not running.",
@@ -105,6 +111,17 @@ enum Scenes {
       + "on different screens. Since the second morning it counts a pinned row as well, "
       + "however old that document is, and counts a hidden one not at all: the number is "
       + "the list, and a pin and a hide are what the list is.",
+    "SETTINGS is pinned above DOCUMENTS on the two screens the group is the whole of the "
+      + "panel on, no token and a sign-in in flight, which is e5 and e8. It is the one "
+      + "place Quit is not the last row in the panel, and the plan of the second morning "
+      + "says both things: Task 3 keeps the pinned-first rule for those two screens and "
+      + "Task 4 makes SETTINGS the foot of every panel. The code does what Task 3 says. "
+      + "Dropping the rule costs nothing on the first-run screen, which is 409 pt, so "
+      + "which of the two sentences wins is yours.",
+    "The tooltip's plate in light is rgb(242,242,243) on the white panel, about 1.1 to 1, "
+      + "with a one-pixel rgb(208,208,209) edge and its shadow for the rest. In dark it is "
+      + "44 on 28. It is the second-faintest surface the light panel draws, after the off "
+      + "switch, and it is the mockup's own `[data-tip]::after`.",
     "The publish that stopped in the render is nameless, in r2's card and in every row "
       + "after it, where the mockup draws \"Publish stopped · Chapter 4\". gdoc writes no "
       + "title on a start and none on the end of a publish that created nothing, so the "
@@ -116,8 +133,8 @@ enum Scenes {
   /// is the one section whose length changes from screen to screen, and a
   /// reviewer comparing two screens reads a missing row as a bug.
   static let settingsRowRule =
-    "The group is SETTINGS, not HEALTH: what is left in it is two facts about the machine "
-    + "and the three settings the panel has, the Hub row among them: it says the folder the "
+    "The group is SETTINGS, not HEALTH: what is left in it is two facts about the machine, "
+    + "the two settings the panel has and Quit. The Hub row is one of the two: it says the folder the "
     + "notes are in, or offers to choose one, and pressing it opens the system's folder "
     + "panel. It ends in Quit on every screen, and the rows "
     + "above it keep their places. Network and Claude Desktop are drawn only where a fact "
@@ -135,9 +152,25 @@ enum Scenes {
   static let sheets: [(name: String, about: String)] = [
     ("bar-states", "The menu bar: the five states and the check, monochrome, at the item's size."),
     ("glyphs", "The 16 px status glyph in every kind and tone, and the ring in its two sizes."),
-    ("icons", "The action icons at 16 px, live and dimmed, and the Copy check."),
-    ("rows", "The five row shapes, the chevron, the quiet line, and the two labels as pieces."),
-    ("cards", "The hold card asking and offering, the stuck card, the live row, the job card."),
+    (
+      "icons",
+      "The action icons at 16 px, live and dimmed, and the Copy check; then the pin, "
+        + "which is no action: it is drawn in the column it sits in, before a state "
+        + "glyph, beside the empty slot the other rows of that list keep and beside a "
+        + "row from a list with no pin at all."
+    ),
+    (
+      "rows",
+      "The header with the version, the update icon, the account and Sign out; then the "
+        + "five row shapes, the chevron, the quiet line, and the two labels as pieces."
+    ),
+    (
+      "cards",
+      "The hold card asking and offering, the stuck card, the live row, the job card; "
+        + "then the hint strip of four labels, the sign-in URL on its plate, the "
+        + "signed-in account with its one sentence, and the SETTINGS rows, the Hub row "
+        + "among them."
+    ),
     (
       "controls",
       "The switch, the two text buttons, the one inline confirm, and two tooltips: an "
@@ -221,17 +254,21 @@ enum Scenes {
     Scene(
       id: "r3", title: "A comment and a reply, both read back",
       caption:
-        "Two writes landed and were verified, the comment from Claude Code and the reply "
-        + "from the terminal. The stuck card stays until the publish is run again, and "
-        + "Copy link on the first row is half a second into its green check.",
+        "Three writes landed and were verified: the restyle of 10:12 from the terminal, "
+        + "the comment of 11:38 from Claude Code and the reply of 11:40 from the "
+        + "terminal, which is why DOCUMENTS says three. The stuck card stays until the "
+        + "publish is run again, and Copy link on the first row is half a second into "
+        + "its green check.",
       fixture: "r3", moment: "2026-10-17T11:40:30Z", alive: [],
       facts: machine(),
       ui: UIState(copied: SceneDocuments.chapter5, copiedAt: copiedOnR3), appearance: nil),
     Scene(
-      id: "r3l", title: "The same screen in the light appearance",
+      id: "r3l", title: "The same screen, and the light appearance is what it is about",
       caption:
-        "The panel follows the system and nothing else: the same three surfaces, three "
-        + "text levels and hairlines in their light values.",
+        "The same record and the same moment as r3, drawn again because the light "
+        + "appearance is the thing to read here: the same three surfaces, three text "
+        + "levels and hairlines in their light values. Every scene on this page is drawn "
+        + "in both appearances, so the four images in this row are r3's four.",
       fixture: "r3", moment: "2026-10-17T11:40:30Z", alive: [],
       facts: machine(),
       ui: UIState(copied: SceneDocuments.chapter5, copiedAt: copiedOnR3), appearance: .light),
@@ -281,15 +318,28 @@ enum Scenes {
       fixture: "r9", moment: "2026-10-17T18:59:00Z", alive: [],
       facts: machine(latestStable: "v2.15.0"), ui: UIState(), appearance: nil),
     Scene(
-      id: "e1", title: "More than five documents",
+      id: "e1", title: "More than five documents, one of them pinned",
       caption:
         "DOCUMENTS opened: the list scrolls inside its own box with the thumb and the "
         + "fade, and the panel stays under 600 pt. The middle of the panel scrolls as "
         + "well on this screen, and its own indicator is hidden while the inner box "
-        + "carries one: two thumbs in one column is the panel saying which of them a "
-        + "drag would move, which it cannot.",
+        + "carries one: two thumbs over one list is the panel saying which of them a "
+        + "drag would move, which it cannot. The first row is the wallet note, pinned "
+        + "two days ago: a pin puts a document first however old its last action is, "
+        + "the pin is the tack before its state glyph, and every row of a list with a "
+        + "pin in it keeps that slot, so the titles under it break where they would "
+        + "anyway. Pin, Unpin and Hide from the list are the row's own menu, which no "
+        + "still can show.",
       fixture: "e1", moment: "2026-10-17T18:10:00Z", alive: [],
-      facts: machine(), ui: UIState(expanded: [.documents]), appearance: nil),
+      facts: machine(),
+      ui: UIState(
+        expanded: [.documents],
+        pinned: [
+          DocumentChoice(
+            doc: SceneDocuments.wallet, at: Date(timeIntervalSince1970: 1_792_141_200),
+            title: "Wallet note: the partner shortlist")
+        ]),
+      appearance: nil),
     Scene(
       id: "e2", title: "Midnight: yesterday folds into one row",
       caption:
@@ -312,11 +362,16 @@ enum Scenes {
       id: "e5", title: "The first run: no token at all",
       caption:
         "Nothing works without a sign-in, so the header says so and the one sentence "
-        + "names the icon to press. SETTINGS is still pinned above everything, because on "
-        + "this machine it is the whole of what the panel is for.",
+        + "names the icon to press. Nothing else on this machine is set up either: the "
+        + "Hub row offers to choose a folder, and this is the one screen that offer is "
+        + "drawn on. No document has run here yet, so the grey note icon a missing hub "
+        + "makes is on no screen at all. SETTINGS "
+        + "is still pinned above everything, because on this machine it is the whole of "
+        + "what the panel is for.",
       fixture: nil, moment: "2026-10-17T10:00:00Z", alive: [],
       facts: machine(
-        auth: .signedOut, account: nil, gdocFound: true, extensionState: .notInstalled),
+        auth: .signedOut, account: nil, gdocFound: true, extensionState: .notInstalled,
+        hub: nil),
       ui: UIState(), appearance: nil),
     Scene(
       id: "e6", title: "Icons with nothing to open, and the first hint",

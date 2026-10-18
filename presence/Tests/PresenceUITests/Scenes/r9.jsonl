@@ -57,8 +57,8 @@
 {"v":1,"at":"2026-10-17T16:40:55Z","gdoc":"v2.14.0","pid":7300,"run":"3000000000000020","event":"released","hold":"h_1"}
 {"v":1,"at":"2026-10-17T16:40:55Z","gdoc":"v2.14.0","pid":7300,"run":"3000000000000020","call":2,"event":"start","command":"reply","via":"chat","doc":"1GcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSs"}
 {"v":1,"at":"2026-10-17T16:41:00Z","gdoc":"v2.14.0","pid":7300,"run":"3000000000000020","call":2,"event":"end","command":"reply","via":"chat","doc":"1GcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSs","title":"Altery Group Channel Management Policy","ok":true,"verified":true,"ms":5000}
-{"v":1,"at":"2026-10-17T17:10:40Z","gdoc":"v2.14.0","pid":7200,"run":"3000000000000014","call":1,"event":"end","command":"comments","via":"terminal","doc":"1Ch5AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp","ok":true,"ms":1790000}
-{"v":1,"at":"2026-10-17T17:10:50Z","gdoc":"v2.14.0","pid":7200,"run":"3000000000000015","call":1,"event":"start","command":"comments","via":"terminal","doc":"1Ch5AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp","wait":true}
+{"v":1,"at":"2026-10-17T17:04:00Z","gdoc":"v2.14.0","pid":7200,"run":"3000000000000014","call":1,"event":"end","command":"comments","via":"terminal","doc":"1Ch5AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp","ok":false,"stop":"network","ms":1390000}
+{"v":1,"at":"2026-10-17T17:06:00Z","gdoc":"v2.14.0","pid":7200,"run":"3000000000000015","call":1,"event":"start","command":"comments","via":"terminal","doc":"1Ch5AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp","wait":true}
 {"v":1,"at":"2026-10-17T17:40:40Z","gdoc":"v2.14.0","pid":7200,"run":"3000000000000015","call":1,"event":"end","command":"comments","via":"terminal","doc":"1Ch5AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp","ok":true,"ms":1790000}
 {"v":1,"at":"2026-10-17T17:40:50Z","gdoc":"v2.14.0","pid":7200,"run":"3000000000000016","call":1,"event":"start","command":"comments","via":"terminal","doc":"1Ch5AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp","wait":true}
 {"v":1,"at":"2026-10-17T18:09:50Z","gdoc":"v2.14.0","pid":7400,"run":"3000000000000022","call":1,"event":"start","command":"export","via":"terminal","doc":"1B2EeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTt"}

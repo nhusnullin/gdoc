@@ -161,6 +161,91 @@ final class RenderTests: XCTestCase {
     XCTAssertEqual(header1 + middle1 + settings1 + 2 * Grid.unit, Grid.panelMaxHeight)
   }
 
+  /// The question is asked on the header's own line, and the middle gives
+  /// way for it.
+  ///
+  /// A row states a minimum and not a height, so the header stretched into
+  /// whatever a capped panel had spare: scene e10's header was 131 pt with
+  /// "Sign out?" drawn in the middle of a hole, and DOCUMENTS and TODAY had
+  /// 18 pt between them. The header takes its own height, as SETTINGS does,
+  /// and the one part that gives way is the middle.
+  func testTheQuestionLeavesTheHeaderAtThirtySix() throws {
+    let scene = try XCTUnwrap(Scenes.all.first { $0.id == "e10" })
+    for scheme in [ColorScheme.dark, .light] {
+      let capped = try probeList(try scene.view(), scheme: scheme)
+      let whole = try probeList(try scene.view(.whole), scheme: scheme)
+
+      let line = try XCTUnwrap(capped.first { $0.name == "header.line" })
+      XCTAssertEqual(line.size.height, Grid.headerHeight, "the question is one 36 pt line")
+
+      let header = try XCTUnwrap(capped.first { $0.name == "header" })
+      let open = try XCTUnwrap(whole.first { $0.name == "header" })
+      XCTAssertEqual(
+        header.size.height, open.size.height,
+        "the capped panel draws the same header as the open one")
+
+      let now = try XCTUnwrap(capped.first { $0.name == "panel.now" }, "e10 draws NOW")
+      let middle = try XCTUnwrap(capped.first { $0.name == "panel.middle" })
+      let settings = try XCTUnwrap(capped.first { $0.name == "panel.settings" })
+      let panel = try XCTUnwrap(capped.first { $0.name == "panel" })
+      XCTAssertGreaterThan(
+        middle.size.height, Grid.sectionLabelHeight + Grid.twoLineRowHeight,
+        "the middle keeps the room the header is not using")
+      XCTAssertEqual(
+        header.size.height + now.size.height + middle.size.height + settings.size.height
+          + 2 * Grid.unit,
+        Grid.panelMaxHeight,
+        "and the four parts are the panel, with nothing spare anywhere in it")
+      XCTAssertEqual(panel.size.height, Grid.panelMaxHeight)
+
+      // The middle is the one part the cap took anything from.
+      for name in ["header", "panel.now", "panel.settings"] {
+        XCTAssertEqual(
+          try XCTUnwrap(capped.first { $0.name == name }).size.height,
+          try XCTUnwrap(whole.first { $0.name == name }).size.height,
+          "\(name) is the same height capped as open")
+      }
+      XCTAssertLessThan(
+        middle.size.height, try XCTUnwrap(whole.first { $0.name == "panel.middle" }).size.height,
+        "and the middle is what gave way")
+    }
+  }
+
+  /// A list with no pin in it keeps the panel's one left edge.
+  ///
+  /// Every document row reserved the pin's slot, pinned or not, so DOCUMENTS
+  /// stood 10 pt right of NOW, of TODAY, of SETTINGS and of its own section
+  /// label on every screen in the set, with nothing drawn in the room it
+  /// took. The slot is the list's and not the shape's: scene e1 has a pin
+  /// and keeps it on every row, and no other scene draws one at all.
+  func testOnlyAListWithAPinKeepsThePinsSlot() throws {
+    let pinned = try XCTUnwrap(Scenes.all.first { $0.id == "e1" })
+    let rows = try XCTUnwrap(try pinned.model().documents).rows
+    XCTAssertTrue(rows[0].isPinned, "e1's first row is the pinned one")
+    let kept = try probeList(try pinned.view(.whole), scheme: .dark)
+      .filter { $0.name == "row.status" }
+    XCTAssertFalse(kept.isEmpty, "e1 drew no document row")
+    for column in kept {
+      XCTAssertEqual(
+        column.size.width, Grid.glyphSize + Grid.pinSize,
+        "every row of a list with a pin keeps the slot")
+    }
+
+    for scene in Scenes.all where scene.id != "e1" {
+      let model = try scene.model()
+      guard let documents = model.documents, !documents.rows.isEmpty else { continue }
+      XCTAssertFalse(
+        documents.rows.contains(where: \.isPinned), "\(scene.id) pins nothing")
+      let columns = try probeList(try scene.view(.whole), scheme: .dark)
+        .filter { $0.name == "row.status" }
+      for column in columns {
+        XCTAssertEqual(
+          column.size.width, Grid.glyphSize,
+          "\(scene.id) has no pin, so its rows start where every other row does")
+      }
+    }
+  }
+
   /// The two busiest screens. The cap is the panel's own frame: a section a
   /// person opens scrolls inside itself and never grows the window.
   func testThePanelNeverPassesSixHundred() throws {
@@ -608,10 +693,12 @@ final class RenderTests: XCTestCase {
   ///
   /// A reviewer who reads a render as the specification drawn rates a
   /// product choice as a bug, and a choice Nail has not made is not a bug.
-  /// The eight are on the page, above every screen, and each names the rule
-  /// or the decision it goes against.
+  /// The ten are on the page, above every screen, and each names the rule
+  /// or the decision it goes against. The second morning's own pass added
+  /// two: where SETTINGS sits on the first-run screen, which the plan says
+  /// two things about, and the light tooltip's plate.
   func testTheIndexOpensWithWhatIsStillYourCall() throws {
-    XCTAssertEqual(Scenes.stillYourCall.count, 8, "the pass left eight choices to Nail")
+    XCTAssertEqual(Scenes.stillYourCall.count, 10, "the pass left ten choices to Nail")
 
     let page = html(["<section>a screen</section>"])
     let heading = try XCTUnwrap(page.range(of: "Still your call"), "the page does not open with it")
@@ -628,6 +715,7 @@ final class RenderTests: XCTestCase {
     let subjects = [
       "as bright as the mark at work", "decision 32", "decision 10", "trash",
       "decision 39", "14 days · N", "nameless", "faintest control",
+      "pinned above DOCUMENTS", "tooltip's plate in light",
     ]
     for subject in subjects {
       XCTAssertTrue(
@@ -737,7 +825,10 @@ final class RenderTests: XCTestCase {
     first pair of each row is the panel as the person opens it, capped at
     600 pt with the rest under a scroll. The second pair is the same panel
     with nothing hidden, which is the one to review: a PNG cannot be
-    scrolled.</p>
+    scrolled. A capped still draws the scroll thumb whatever happened,
+    because on the screen the thumb comes with the scrolling and goes a
+    second after it, and a still of a panel nobody has touched would be a
+    still of the one thing nobody can check.</p>
     <p>One record per scene, and each of them its own day: the nine r
     screens are one Saturday told nine times and agree with each other, and
     every e screen is a record of its own, written for the one thing it

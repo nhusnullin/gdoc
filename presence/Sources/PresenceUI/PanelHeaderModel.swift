@@ -29,20 +29,34 @@ extension PanelModel {
         nil
       }
 
+    let version = versionPieces(facts)
+    let account = accountPieces(facts)
+
     // The question is asked in place of the line. The pair of buttons takes
     // the right-hand side, and a version and an address beside them is one
     // line asking one thing and saying two others.
+    //
+    // It keeps the account's own glyph, as the hold card's question keeps
+    // the hold's pause: a check that became an empty ring while the question
+    // stood said the panel had stopped knowing whose account it is, at the
+    // one moment a person is deciding about it.
+    //
+    // And it is the only line drawn under itself. The quiet line about a
+    // changed address is something that already happened, and under "Sign
+    // out?" in the same ink and at the same indent as the consequence it
+    // read as a second consequence: press this and the account changes.
+    // It comes back when the question is answered.
     if ui.isAsking(.signOut, now: now) {
       return HeaderModel(
         mark: facts.mark,
+        glyph: account.glyph,
+        tone: account.tone,
+        waiting: account.waiting,
         question: QuestionModel(
           title: "Sign out?", consequence: stopping.sentence, danger: .signOut),
-        quiet: [accountChanged(facts)].compactMap { $0 },
         banner: banner)
     }
 
-    let version = versionPieces(facts)
-    let account = accountPieces(facts)
     return HeaderModel(
       mark: facts.mark,
       version: version.text,

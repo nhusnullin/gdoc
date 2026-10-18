@@ -396,6 +396,118 @@ findings themselves are in the commit.
   nobody pressed, and never with the clock. The safe half still wins by
   default: a panel closed on a question has answered Keep.
 
+## Amendments, 2026-10-18, after the second morning's pass
+
+Six reviewers who drew nothing read every rendered screen and every
+component sheet of milestone 26 against the checklist above: eighteen scenes
+between five of them, and one on the six sheets. Two findings were blocking,
+sixteen were to fix, the rest were notes. Every blocking and should-fix one
+is closed in the pass's own commit except the two at the foot of this
+section. These are the lines that moved.
+
+- **The panel's header takes its own height, as SETTINGS does.** A row states
+  a minimum and not a height, so the header stretched into whatever a capped
+  panel had spare: on the sign-out question it took 190 pt, drew "Sign out?"
+  in the middle of a hole and left DOCUMENTS and TODAY 18 pt between them,
+  with the scroll thumb hanging over SETTINGS. The middle is the one part
+  that gives way, which is what the second morning pinned the edges for.
+- **A reserved column is only kept where something is in it.** Every document
+  row kept the pin's slot, pinned or not, so DOCUMENTS stood 10 pt right of
+  NOW, of TODAY, of SETTINGS and of its own section label on every screen,
+  with nothing drawn in the room it took. The slot belongs to the list: a
+  list with a pin keeps it on every row, so one pin does not move the titles
+  under it, and a list with no pin keeps none. This is the leading-edge half
+  of the third pass's "an empty box is not nothing".
+- **The icons and not their boxes meet the panel's right edge.** An action's
+  artwork is 16 pt centred in a 24 pt box, so every time in TODAY and every
+  value in SETTINGS ended 4 pt right of every icon under it. The mockup
+  answers it in one rule, `.acts{margin-right:-4px}`, which the Swift had
+  only on the stuck card.
+- **An action's tooltip ends where the icons end.** The bubble ended on the
+  panel's own 8 pt padding, which is 12 pt right of the icon it belongs to
+  and over the scroll thumb. A bubble about a row may cover the row under
+  it, which its plate and shadow are for, and may not cover the one thing
+  that says there is more of the list.
+- **A question keeps the glyph of the thing it is about.** "Sign out?" drew
+  the empty ring, which is the panel's "nobody has asked" and the glyph
+  beside "Claude Desktop, not installed", so the panel stopped saying whose
+  account it is at the one moment a person is deciding about it. The hold
+  card's question keeps the hold's pause; the header's keeps the account's
+  check.
+- **A question is the only thing said under itself.** The quiet line about a
+  changed address was drawn under "Sign out?" in the same ink and at the
+  same indent as the consequence, so it read as a second consequence: press
+  this and the account changes. It is the app's memory of something that
+  already happened, and it comes back when the question is answered.
+- **The pin is not a circle, and it is no action.** Its head was a ring on a
+  stem in a column full of rings, where it read as a magnifying glass beside
+  a state; it is a tack seen from the side now, a bar and a needle, which is
+  the one silhouette in that column that is not round. And it was drawn in
+  the icons sheet's action rows, live and dimmed, where it said the panel had
+  a pin to press and a dead one to explain: Pin is a word in the row's menu,
+  and the glyph is a mark in the leading column, so the sheet draws it there.
+- **A fixture of one day carries the whole day.** Scene r8 showed a poll
+  Google did not answer at 17:04; r9, the same Saturday at 18:59, had the
+  same poll ending well. The record now carries the network stop and the
+  wait that started again six minutes later, inside the three-minute gap, so
+  the watch is one stretch and the day is one day.
+- **A sheet draws a piece in the shape the panel draws it in.** The controls
+  sheet handed the consequence in as the confirm row's own sub-line, which
+  made a two-line row of a one-line question: the pair dropped 17 pt below
+  the words it answers and the sentence wrapped where the panel runs it full
+  width under the row.
+- **Every state this milestone added is on a screen.** No render drew a pin,
+  and none drew the Hub row's "Choose…": the new surface of two tasks had
+  been looked at by nobody. Scene e1 pins its oldest document and e5, the
+  first run, has no hub. A hide is still on no screen, because a hidden
+  document is a row that is not there, and a still cannot show an absence.
+- **A caption names what the render draws**, four more times: r3 said two
+  writes over three, the index said three settings over two and Quit, the
+  cards and rows sheets named four pieces each and drew the milestone's own
+  header, hint strip, URL field, account block and SETTINGS rows besides, and
+  r3l's caption did not say it is r3 drawn again for its appearance. The
+  index now also says why a capped still carries a thumb nobody has scrolled.
+- **Principle 7 asks for the facts the record carries.** A reason line is the
+  cause with its location first and the state of the world second, which is
+  two sentences where the record holds two: an export that stopped with no
+  stop code says where the cause is and stops, and a second sentence would be
+  the panel writing one.
+- **The screens file asks no question the milestone answered.** Scenes r9 and
+  e1 still asked Nail what the menu bar should show in the quiet, which Task
+  1 settled, and r8's story still sent him to HEALTH for the reason.
+
+Left as they are, with the reason:
+
+- **Where SETTINGS sits on the first-run screen is Nail's call, not this
+  pass's.** The plan of the second morning says both things: Task 3 keeps
+  the pinned-first rule for the two screens the group is the whole of the
+  panel on, and Task 4 makes SETTINGS the foot of every panel. The code does
+  what Task 3 says, so e5 and e8 are the two screens where Quit is not the
+  last row. It is on the index page's "Still your call" list with its
+  measurement rather than changed here.
+- **A watch between two polls says live and dims its Stop.** Scene r8's last
+  poll failed at 17:04 and the panel is drawn at 17:05, inside the
+  three-minute gap, so the watch is a watch and the Stop has no process to
+  signal and says so under the pointer. The third pass's "a watch that is
+  over says so in its title" is about the token being refused, which no
+  next poll can get past.
+- **The confirm's words stop 3.5 pt short of the icon column.** A compact
+  button carries the mockup's own 8 pt of padding and an action's box 4 pt,
+  so the two cannot both put ink on the same column; the plates are where
+  the icons were.
+- **A quiet line sits 8 pt right of the banner's sub-line under the same
+  header.** `.quiet` is the screens file's 44 pt and the banner's text column
+  is a row's 36 pt. Both are the mockup's, now drawn as neighbours; making
+  them one is a drawing Nail approved.
+- **The dimmed icon stays at its own ink.** It measures 1.37 to 1 in dark,
+  which is faint for a control that has to be hovered before it says why a
+  hub is missing, and `.act.off{opacity:.38}` is the mockup's number.
+  Lifting it is a palette decision.
+- **The two-line row centres its actions and hangs its glyph.** The third
+  pass moved the glyph to the top so it sits against the title; the strip
+  stayed centred, as the mockup draws it, because four icons hung from the
+  title line read as a second title.
+
 ## The render for review
 
 Every scene is drawn twice: the panel as the person opens it, capped at

@@ -50,7 +50,8 @@ public enum Icon: String, Sendable, CaseIterable {
   /// The chevron of a Show more row.
   case chevron
   /// The pin a document row carries while it is pinned, drawn at
-  /// `Grid.pinSize` in its own slot before the status glyph.
+  /// `Grid.pinSize` in the slot before the status glyph that a list with a
+  /// pin in it keeps on every row.
   case pin
 
   /// The CSS width of this icon, which is also its viewBox.
@@ -58,6 +59,13 @@ public enum Icon: String, Sendable, CaseIterable {
   /// `.act svg` is 16; `.row-chevron svg` is the one at 12, on a 12 viewBox
   /// of its own.
   public var side: CGFloat { self == .chevron ? 12 : 16 }
+
+  /// The icons a trailing edge draws as something to press. The pin is not
+  /// one of them: it is a mark in a row's leading column, and Pin is a word
+  /// in the row's menu, so a pin in an action strip says the panel has a pin
+  /// to press and a dimmed pin says it has a dead one:
+  /// testThePinIsNoAction.
+  public static var actions: [Icon] { allCases.filter { $0 != .pin } }
 
   /// The SVG elements of this icon, in the order the file writes them.
   var parts: [IconPart] {
@@ -123,12 +131,18 @@ public enum Icon: String, Sendable, CaseIterable {
     case .chevron:
       return [.path("M3 4.5 6 7.5l3-3")]
     case .pin:
-      // A head and a stem, which is a pin seen from the side. It is drawn
-      // at 10 pt, where a thumbtack's three pieces close into a blot: two
-      // shapes are what is still legible in a row.
+      // A tack seen from the side: a flat head and the needle under it. Two
+      // shapes are all that survive at 8 pt, where a thumbtack's three
+      // pieces close into a blot.
+      //
+      // The head was a circle until 2026-10-18, and the column this glyph
+      // sits in is a column of circles: the hollow ring is a status glyph of
+      // its own, so a ring on a stem beside one read as a magnifying glass
+      // standing next to a state. A bar is the one silhouette in that
+      // column that is not round: testThePinIsNotACircleOnAStem.
       return [
-        .circle(x: 8, y: 5.75, radius: 3.25),
-        .path("M8 9.25V13.5"),
+        .path("M4.5 4H11.5"),
+        .path("M8 4V12.5"),
       ]
     }
   }

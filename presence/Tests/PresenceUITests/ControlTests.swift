@@ -65,7 +65,7 @@ final class ControlTests: XCTestCase {
     // words inside the panel whichever of them the pointer is on.
     let action = CGRect(x: 280, y: 100, width: 24, height: 24)
     let trailing = Tooltip.place(anchor: action, size: bubble, in: panel, align: .trailing)
-    XCTAssertEqual(trailing.origin.x + bubble.width, panel.width - Tooltip.margin)
+    XCTAssertEqual(trailing.origin.x + bubble.width, panel.width - Tooltip.actionMargin)
 
     // And when a centred bubble would hang out of the panel, it slides in:
     // the margin is the panel's own padding, so no tooltip touches its edge.
@@ -99,11 +99,15 @@ final class ControlTests: XCTestCase {
   }
 
   // The third of four icons in a document row. Its words are drawn under
-  // the icon the pointer is on and end on the panel's right inset, so the
-  // bubble of the third icon is the bubble of the fourth one place up: a
+  // the icon the pointer is on and end where the icons themselves end, so
+  // the bubble of the third icon is the bubble of the fourth one place up: a
   // plate that hung off each icon's own edge stepped left across the row
   // and read as four different things.
-  func testAnActionTooltipSitsUnderItsIconAndEndsOnThePanelsInset() throws {
+  //
+  // The column and not the panel's padding, because the panel's bare 8 pt
+  // put the bubble 12 pt right of the icon it belonged to and over the
+  // scroll thumb, which is the one thing a bubble about a row may not cover.
+  func testAnActionTooltipSitsUnderItsIconAndEndsOnTheIconColumn() throws {
     // The document row's icons: 108 pt of column against the panel's right
     // inset, four 24 pt icons with 4 pt between them.
     let panel = CGSize(width: Grid.panelWidth, height: 420)
@@ -119,8 +123,11 @@ final class ControlTests: XCTestCase {
       "the bubble hangs 6 pt under the icon the pointer is on")
     XCTAssertFalse(placed.above, "there is room under it, so it is not flipped over the row")
     XCTAssertEqual(
-      placed.origin.x + bubble.width, panel.width - Tooltip.margin,
-      "and ends on the panel's own inset rather than on the icon's edge")
+      placed.origin.x + bubble.width, columnEnd,
+      "and ends on the column the icons end on rather than on the panel's padding")
+    XCTAssertEqual(
+      Tooltip.actionMargin, Grid.unit + Grid.rowInset,
+      "which is the row's own trailing edge")
     XCTAssertGreaterThanOrEqual(placed.origin.x, Tooltip.margin)
     XCTAssertGreaterThanOrEqual(
       placed.origin.y, third.maxY, "the icon's own row is never covered")
@@ -299,6 +306,40 @@ final class ControlTests: XCTestCase {
       "a fifth component makes a button of its own")
   }
 
+  /// The sheet asks the question in the shape the header asks it in.
+  ///
+  /// The sheet handed the consequence in as the confirm row's own sub-line,
+  /// which made a two-line row of a one-line question: the pair dropped
+  /// 17 pt below the words it answers and the sentence wrapped inside the
+  /// row's narrower column, where the panel draws it full width under the
+  /// row. The one page whose job is the confirm drew a confirm the panel has
+  /// no shape for.
+  func testTheSheetAsksAsTheHeaderAsks() throws {
+    let (question, header) = try SheetPieces.signOut()
+    let piece = VStack(alignment: .leading, spacing: 0) {
+      ConfirmRow(
+        title: question.title, glyph: header.glyph, tone: header.tone,
+        danger: question.danger)
+      QuietLine(question.consequence)
+    }
+    let sheet = try probes(piece, scheme: .dark)
+    let panel = try probes(
+      PanelHeader(model: header), scheme: .dark)
+
+    XCTAssertNotNil(sheet["row.plain"], "the question is the one-line shape")
+    XCTAssertNil(sheet["row.two"], "and not the two-line one")
+    XCTAssertNotNil(sheet["quiet"], "the consequence is a quiet line of its own")
+    XCTAssertEqual(sheet["row.plain"]?.height, Grid.rowHeight, "a one-line row, at 32")
+    XCTAssertNotNil(panel["row.plain"], "the header asks on the one-line shape too")
+    XCTAssertNil(panel["row.two"])
+    XCTAssertEqual(
+      panel["header.line"]?.height, Grid.headerHeight,
+      "and the header's own line is the 36 pt it is on every other screen")
+    XCTAssertEqual(
+      sheet["quiet"]?.width, panel["quiet"]?.width,
+      "the consequence runs the width the panel gives it")
+  }
+
   // MARK: the renders
 
   /// The sheet: the four controls in both appearances, so they are looked at
@@ -315,7 +356,7 @@ final class ControlTests: XCTestCase {
   /// control it is explaining.
   func testTheControlSheetRenders() throws {
     let shots = try shotsDirectory()
-    let question = try SheetPieces.signOut()
+    let (question, header) = try SheetPieces.signOut()
     let tips = try SheetPieces.tips()
 
     for scheme in [ColorScheme.dark, .light] {
@@ -327,8 +368,18 @@ final class ControlTests: XCTestCase {
           TextButton(.openChat, kind: .primary)
           TextButton(.dismiss, kind: .plain)
         }
-        ConfirmRow(
-          title: question.title, sub: question.consequence, danger: question.danger)
+        // In the shape the header draws it in: the question is a one-line
+        // row with its pair on that line, and the consequence is a quiet
+        // line under it, full width. Passing the consequence as the row's
+        // own sub-line made a two-line row of it, dropped the pair 17 pt
+        // below the question and wrapped a sentence the panel does not
+        // wrap: testTheSheetAsksAsTheHeaderAsks.
+        VStack(alignment: .leading, spacing: 0) {
+          ConfirmRow(
+            title: question.title, glyph: header.glyph, tone: header.tone,
+            danger: question.danger)
+          QuietLine(question.consequence)
+        }
         // One icon per band, each with its own layer: the panel draws one
         // bubble at a time, so two icons under one layer is one bubble.
         // The band is tall enough for the bubble under the icon, because

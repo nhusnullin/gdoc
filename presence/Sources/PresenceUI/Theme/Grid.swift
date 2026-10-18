@@ -32,11 +32,19 @@ public enum Grid {
   /// The glyph, an action button and the radius they share.
   public static let glyphSize: CGFloat = 16
   /// The pin, and the slot a document row keeps for it in front of the
-  /// glyph. Every document row keeps it, pinned or not, so the titles in
-  /// the list break at the same place whatever is pinned.
-  public static let pinSize: CGFloat = 10
+  /// glyph where that list has a pin in it. Every row of such a list keeps
+  /// it, pinned or not, so the titles break at the same place whatever is
+  /// pinned; a list with no pin keeps no slot, so DOCUMENTS stands on the
+  /// panel's one left edge with every other row.
+  public static let pinSize: CGFloat = Grid.unit
   public static let actionSize: CGFloat = 24
   public static let controlRadius: CGFloat = 6
+  /// `.acts{margin-right:-4px}`: an action's artwork is 16 pt centred in a
+  /// 24 pt box, so a strip whose boxes end on the content edge draws its
+  /// icons 4 pt inside it. The strip is pulled back by that much, and the
+  /// panel keeps one right edge for its values, its times and its icons:
+  /// testAnActionStripMeetsTheColumnEveryValueEndsOn.
+  public static let actionOverhang: CGFloat = (actionSize - glyphSize) / 2
 
   /// A row's own inset and the gaps inside it.
   public static let rowInset: CGFloat = 12

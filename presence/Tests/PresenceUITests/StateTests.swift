@@ -321,6 +321,37 @@ final class StateTests: XCTestCase {
       "there is no second address, so there is no sentence")
   }
 
+  /// The question is the only thing said under itself, and it keeps the
+  /// account's own glyph.
+  ///
+  /// Two things went wrong on scene e10 at once. The glyph went to the empty
+  /// ring, which is the panel's "nobody has asked" and the glyph beside
+  /// "Claude Desktop, not installed", so the panel stopped saying whose
+  /// account it is at the one moment a person is deciding about it. And the
+  /// quiet line about a changed address was drawn under the question in the
+  /// same ink and at the same indent as its consequence, which reads as a
+  /// second consequence: press this and the account changes.
+  func testTheQuestionKeepsTheAccountsGlyphAndSaysNothingElse() throws {
+    let facts = Facts(
+      account: "second@example.com", auth: .ok, previousAccount: "first@example.com",
+      versions: Versions(app: "2.15.0"), gdocPath: Scenes.gdocPath)
+    let quiet = try drawn([], at: "2026-10-17T10:00:00Z", facts: facts).header
+    XCTAssertEqual(quiet.glyph, .check, "the token works, so the header says so")
+    XCTAssertEqual(
+      quiet.quiet, ["Account changed: first@example.com → second@example.com"],
+      "and the memory of the address before is a line of its own")
+
+    let asked = try drawn(
+      [], at: "2026-10-17T10:00:00Z", facts: facts,
+      ui: UIState(question: .signOut, questionAt: try at("2026-10-17T10:00:00Z"))
+    ).header
+    XCTAssertEqual(asked.glyph, quiet.glyph, "the question keeps the account's own glyph")
+    XCTAssertEqual(asked.tone, quiet.tone)
+    XCTAssertEqual(asked.quiet, [], "and nothing but its own consequence is said under it")
+    XCTAssertNil(asked.version, "no version and no address beside a question")
+    XCTAssertNil(asked.account)
+  }
+
   // MARK: - The pieces a test states
 
   private func question(of panel: PanelModel) throws -> QuestionModel {

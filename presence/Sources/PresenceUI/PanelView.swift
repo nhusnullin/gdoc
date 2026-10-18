@@ -73,7 +73,14 @@ public struct PanelView: View {
     let palette = Palette.of(scheme)
     let parts = PanelParts(model.sections)
     return VStack(alignment: .leading, spacing: 0) {
+      // At its own height, like SETTINGS under it. A row states a minimum
+      // and not a height, so the header stretched into whatever the capped
+      // panel had spare: on the sign-out question it took 190 pt, drew
+      // "Sign out?" in the middle of a hole and left DOCUMENTS and TODAY
+      // 18 pt between them. The middle is the one part that gives way:
+      // testTheQuestionLeavesTheHeaderAtThirtySix.
       PanelHeader(model: model.header, forced: model.forcedTooltip, actions: actions)
+        .fixedSize(horizontal: false, vertical: true)
 
       VStack(alignment: .leading, spacing: 0) {
         if let notice = model.notice {
@@ -274,6 +281,15 @@ struct DocumentsList: View {
   let forced: String?
   let actions: PanelActions
 
+  /// What the rows keep in front of their glyph. A list with a pin in it
+  /// keeps the slot on every row, so one pin does not move the titles under
+  /// it; a list with no pin keeps none, so DOCUMENTS stands on the panel's
+  /// one left edge. The whole list decides it and not the rows on the
+  /// screen, so opening Show more moves nothing sideways.
+  private var pinColumn: PinColumn {
+    model.rows.contains(where: \.isPinned) ? .slot : .none
+  }
+
   var body: some View {
     if let empty = model.empty {
       QuietLine(empty)
@@ -285,7 +301,9 @@ struct DocumentsList: View {
         VStack(alignment: .leading, spacing: 0) {
           RowView(
             .doc, title: row.title, sub: row.sub, gone: row.gone,
-            leading: { DocumentGlyph(row.glyph, tone: row.tone, pinned: row.isPinned) },
+            leading: {
+              DocumentGlyph(row.glyph, tone: row.tone, pin: row.isPinned ? .pinned : pinColumn)
+            },
             trailing: {
               HStack(spacing: Grid.actionGap) {
                 ForEach(row.actions) { action in

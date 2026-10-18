@@ -366,11 +366,15 @@ enum SheetPieces {
     return try XCTUnwrap(model.empty, "r1's DOCUMENTS says nothing about being empty")
   }
 
-  /// Scene e10's question: the words, what follows from them, and the loud
-  /// word. The controls sheet draws the one inline confirm the panel has,
-  /// which is the header's own since the second morning.
-  static func signOut() throws -> QuestionModel {
-    try XCTUnwrap(try scene("e10").model().header.question, "scene e10 asked nothing")
+  /// Scene e10's question, and the header it is asked in: the words, what
+  /// follows from them, the loud word and the account glyph the question
+  /// keeps. The controls sheet draws the one inline confirm the panel has,
+  /// which is the header's own since the second morning, and it draws it in
+  /// the shape the header draws it in: the question on one line, the
+  /// consequence as a quiet line under it.
+  static func signOut() throws -> (question: QuestionModel, header: HeaderModel) {
+    let header = try scene("e10").model().header
+    return (try XCTUnwrap(header.question, "scene e10 asked nothing"), header)
   }
 
   /// The words on two of a document row's icons, one live and one with
@@ -411,7 +415,7 @@ enum SheetPieces {
       try quiet(),
       SignedInBanner.words, Scenes.signInURL,
     ]
-    let question = try signOut()
+    let question = try signOut().question
     words += [question.title, question.consequence, question.danger.rawValue]
     let tips = try self.tips()
     words += [tips.live, tips.dead.words]

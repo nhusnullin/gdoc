@@ -345,7 +345,7 @@ const SCENES=[
  +SEC('Documents','',DOC(G('glyph-check glyph-ok'),'Altery Group Channel Management Policy','replied 16:41','05-rules/group-channel.md ↔ Policies')+DOC(G('glyph-dot glyph-live'),'Ch 5. Commercial Model: review draft v0.1','live','falcon/chapters/05.md'))
  +SEC('Today','',log('16:41',5))),
  cap:"Таймера у холда нет: он живёт, пока жив чат Desktop, который его поднял. Закрыл чат, холд исчез, в логе «Hold closed · chat ended · nothing written». Так gdoc устроен уже сейчас. Таймер как настройка, выключенная по умолчанию. Нужен?"},
-{id:"r8",time:"17:05",title:"Что-то не так с инструментом",story:"В офисе gdoc не достучался до Google. Иконка не меняется, ты так решил. Кликнул, в HEALTH видно что именно, и значок Update.",
+{id:"r8",time:"17:05",title:"Что-то не так с инструментом",story:"В офисе gdoc не достучался до Google. Иконка не меняется, ты так решил. Кликнул: в шапке версия и значок Update, в SETTINGS строка Network с причиной.",
  screen:BAR(ST(),'17:05',true)+P(
   SEC('Now','',LIVE('Live · Chapter 5 storyline','last poll failed 17:04 · network'))
  +SEC('Health','',HEALTH_ALL)),
@@ -354,14 +354,14 @@ const SCENES=[
  screen:BAR('','18:55',false)+P(
   SEC('Documents','5 today',DOC(G('glyph-dot glyph-dim'),'Ch 5. Commercial Model: review draft v0.1','live stopped 18:55','falcon/chapters/05.md ↔ Falcon / Drafts')+DOC(G('glyph-check glyph-ok'),'Altery Group Channel Management Policy','replied 16:41','05-rules/group-channel.md ↔ Policies')+MORE('Show 3 more'))
  +SEC('Today','',log('18:55',4)+MORE('Yesterday · 12 actions'))),
- cap:"Если иконки нет, меню открыть неоткуда. Два варианта: серый ⁘ в тишине, или иконка исчезает и лог живёт в Claude Code. Скажи, какой."},
+ cap:"Если иконки нет, меню открыть неоткуда. Решено 2026-10-18: в тишине знак ⁘ такой же яркий, как в работе. Ты хочешь его видеть."},
 
 // ---------- Part 2: edges, from the product owner's decisions ----------
 {id:"e1",time:"КРАЯ",title:"Документов больше пяти: «Show more» и скролл внутри",story:"Предложение продакта, не решение: DOCUMENTS показывает последние 5 по последнему действию, TODAY последние 8. «Show more» раскрывает раздел на месте, и раздел скроллится внутри себя, а вся панель не выше 600 px. Поиска и фильтра нет: двадцать документов помещаются в один скролл. Документ живёт в списке 14 дней после последнего действия, потом уходит.",
  screen:BAR(ST(),'18:10',true)+P(
   SEC('Documents','14 days · 12',`<div class="scrollbox">`+DOC(G('glyph-check glyph-ok'),'Ch 5. Commercial Model: review draft v0.1','replied 16:41','falcon/chapters/05.md')+DOC(G('glyph-check glyph-ok'),'Altery Group Channel Management Policy','replied 16:41','05-rules/group-channel.md')+DOC(G('glyph-check glyph-ok'),'Chapter 4','published 14:31','falcon/chapters/04.md')+DOC(G('glyph-check glyph-ok'),'Northwind, Altery and a wallet partner call: screening quota and conversion rate','commented 11:38','not in the hub')+DOC(G('glyph-check glyph-ok'),'Partner bank setup','restyled 10:12','not in the hub')+DOC(G('glyph-check glyph-ok'),'B2B2C payment card concept: the frozen vocabulary','published Mon','falcon/b2b2c-concept.md')+DOC(G('glyph-check glyph-ok'),'Proposal: Expansion of Project Falcon to two further regions, draft v1','exported Mon','falcon/proposal-mea-v1.md')+`<div class="fade"></div></div>`+MORE('Show less',true))
  +SEC('Today','',log('18:55',3))),
- cap:"В строке меню здесь знак ⁘, хотя ничего не идёт: вид в тишине твой открытый вопрос, серый знак или ничего. Раздел раскрыт, внутри скролл с полосой справа и затуханием снизу. «Show less» сворачивает обратно до пяти. Порядок один: по последнему действию, новые сверху, без закрепления и без сортировки по состоянию, иначе документ прыгает, когда задание кончилось. Это порядок до 2026-10-18; с того дня списков три: закреплённые (новое закрепление выше), потом сегодняшние по последнему действию, потом остальной двухнедельный срок по числу действий в нём. По состоянию по-прежнему не сортируется."},
+ cap:"В строке меню здесь знак ⁘, хотя ничего не идёт: с 2026-10-18 в тишине он такой же яркий, как в работе. Раздел раскрыт, внутри скролл с полосой справа и затуханием снизу. «Show less» сворачивает обратно до пяти. Порядок один: по последнему действию, новые сверху, без закрепления и без сортировки по состоянию, иначе документ прыгает, когда задание кончилось. Это порядок до 2026-10-18; с того дня списков три: закреплённые (новое закрепление выше), потом сегодняшние по последнему действию, потом остальной двухнедельный срок по числу действий в нём. По состоянию по-прежнему не сортируется."},
 {id:"e2",time:"КРАЯ",title:"Полночь: вчера сворачивается в одну строку",story:"TODAY в полночь уезжает под заголовок «Yesterday», свёрнутый в одну строку: сколько действий, сколько документов. Клик раскрывает на месте. Старше вчера в панели нет ничего: история это вопрос к Claude Code или к хабу.",
  screen:BAR(ST(),'09:12',true)+P(
   SEC('Documents','',DOC(G('glyph-check glyph-ok'),'Ch 5. Commercial Model: review draft v0.1','live stopped yesterday','falcon/chapters/05.md'))

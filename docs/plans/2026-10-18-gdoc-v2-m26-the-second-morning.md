@@ -297,13 +297,13 @@ branch.
 **Files:**
 - Modify: whatever the pass finds under `presence/`
 
-- [ ] render every scene (`PRESENCE_SHOTS=... make app-test`) and run the
+- [x] render every scene (`PRESENCE_SHOTS=... make app-test`) and run the
       checklist of `docs/design/2026-10-17-presence-design-principles.md`
       over every scene as a reviewer who drew nothing (a subagent that reads
       images), against the mockup where it still applies and against this
       plan's sentences where it does not; every blocking or should-fix
       finding is fixed here and listed in the commit message
-- [ ] `make app-lint`, `make app-test`, `make app`
+- [x] `make app-lint`, `make app-test`, `make app`
 
 ### Task 11: the acceptance rows and the close
 
