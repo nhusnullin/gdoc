@@ -314,6 +314,16 @@ func dispatch(ctx context.Context, args []string, errOut io.Writer, set settings
 		rec.Made(presenceMade(*c, r))
 		rec.End(r)
 	}()
+	// And where this run is recorded, the app that shows it is opened if it is
+	// not already open. Here, after the start line and before the work, so a
+	// person reading the panel sees the run that opened it; and only where rec
+	// is not nil, which is the presence setting and a command that reports, so
+	// the flag off starts nothing: desktop.go's openPresenceApp says what it
+	// asks before it starts anything, and
+	// TestACommandUnderTheFlagOpensTheAppOnceAndNothingWhenItIsRunning.
+	if rec != nil {
+		openPresenceApp()
+	}
 	// The run goes on the context, so the one command with parts can say which
 	// of them it is on without a run threaded through every room between here
 	// and the work: presence.WithRun and publish.go's three calls.

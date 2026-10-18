@@ -138,13 +138,13 @@ branch.
   `go/cmd/gdoc/update.go`, `go/cmd/gdoc/doc.go`, `go/cmd/gdoc/*_test.go`,
   `go/boundary/boundary_test.go`, `go/boundary/doc.go`
 
-- [ ] the seam takes the program's arguments as a list: `runProgram(name,
+- [x] the seam takes the program's arguments as a list: `runProgram(name,
       args ...string)`; `startProgram` still refuses any name but
       `macOSOpen`; `withExtension` passes one argument as before
-- [ ] a second function in `desktop.go`, `startProgramDetached`, or a flag on
+- [x] a second function in `desktop.go`, `startProgramDetached`, or a flag on
       the one, starts the program and does not wait; it is used by the
       opener only
-- [ ] `openPresenceApp(set, dirs)` in `desktop.go`: on macOS, under the flag,
+- [x] `openPresenceApp(set, dirs)` in `desktop.go`: on macOS, under the flag,
       when the bundle is at `~/Applications/GdocPresence.app`, when the lock
       file is absent or a `LOCK_EX | LOCK_NB` on it succeeds (released at
       once, nothing read), runs `/usr/bin/open -g <bundle>` detached; every
@@ -152,24 +152,24 @@ branch.
       file; a table test over the eight combinations through a recorder seam
       and a temporary directory, with a real `flock` held by the test for the
       "running" rows
-- [ ] dispatch calls it right after `presence.Begin` and only when `rec` is
+- [x] dispatch calls it right after `presence.Begin` and only when `rec` is
       not nil, so the flag off is today's bytes:
       `TestTheFlagChangesNoByteOfTheObject` still passes, and a new test
       shows a command under the flag asks the seam for exactly
       `/usr/bin/open -g <bundle>` once, and a command with the lock held asks
       for nothing
-- [ ] `gdoc update`, after `ApplyBundle` placed or replaced the bundle under
+- [x] `gdoc update`, after `ApplyBundle` placed or replaced the bundle under
       the flag, calls the same opener once; a test over the update screen
       shows the argv once and the `open` line gone from the answer's words
       (the answer no longer tells the person to open it)
-- [ ] the three boundary tests state the new narrowness: os/exec in
+- [x] the three boundary tests state the new narrowness: os/exec in
       `desktop.go` alone; one `exec.Command` call whose first argument is the
       opener constant and whose arguments are the constant and a list, with
       the list's two shapes pinned (`[mcpb]` and `[-g, bundle]`); the seam has
       two callers, `withExtension` and `openPresenceApp`, and no third; the
       names of the tests change where their sentences change, and `doc.go`
       and `CLAUDE.md` name the new names in Task 6
-- [ ] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`
+- [x] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`
 
 ### Task 3: launch at login is the person's switch
 

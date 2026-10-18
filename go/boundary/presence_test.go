@@ -288,6 +288,36 @@ func TestTheSwiftFixtureIsTheGoFixture(t *testing.T) {
 	}
 }
 
+// lockName is the file the app holds its lock on, and the two files that each
+// state it from their own end. A literal here, as the bundle's name is.
+const (
+	lockName    = "app.lock"
+	lockInGo    = "go/cmd/gdoc/desktop.go"
+	lockInSwift = "presence/Sources/PresenceApp/Places.swift"
+)
+
+// TestTheLockNameIsOneWordInTwoLanguages holds the one question gdoc asks
+// about the app across the two programs that answer it.
+//
+// The app holds flock on that file for its whole life and gdoc asks for the
+// same lock without blocking: that is the whole of how either program knows
+// the other is running. A rename on one side is an app that holds a lock
+// nobody asks about and a gdoc that opens a second app on every command, and
+// the only machine that would show it is a colleague's. Decided 2026-10-18,
+// DECISIONS.md, "The app opens itself".
+func TestTheLockNameIsOneWordInTwoLanguages(t *testing.T) {
+	for _, file := range []string{lockInGo, lockInSwift} {
+		b, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(file)))
+		if err != nil {
+			t.Errorf("%s names the lock and it is not there: %v", file, err)
+			continue
+		}
+		if !strings.Contains(string(b), lockName) {
+			t.Errorf("%s names no %s; the app holds that lock and gdoc asks for it", file, lockName)
+		}
+	}
+}
+
 // bundleInZip is where the app travels inside a darwin release zip and where
 // the updater looks for it; bundleInBin is where a build on this machine
 // writes it. Both are literals, and so are the three files below.

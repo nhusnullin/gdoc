@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -26,10 +27,18 @@ const (
 	oldTemplate = `{"name":"gdoc","version":"@VERSION@","server":{"mcp_config":{"command":"@BIN@","args":["mcp","--trusted-email-domains=${user_config.trusted_email_domains}"]}}}`
 )
 
+// started is one program the seam was asked for: the name, whether the caller
+// waited for it, and the whole of its arguments.
+type started struct {
+	name string
+	wait bool
+	args []string
+}
+
 // opened is what the one program gdoc may run was handed, call by call. A test
 // that says nothing was run proves it from this.
 type opened struct {
-	calls [][2]string
+	calls []started
 }
 
 // desktopSeams points the opener at a recorder and the operating system at the
@@ -38,8 +47,8 @@ func desktopSeams(t *testing.T, osName string) *opened {
 	t.Helper()
 	rec := &opened{}
 	oldRun, oldOS := runProgram, desktopOS
-	runProgram = func(name, arg string) error {
-		rec.calls = append(rec.calls, [2]string{name, arg})
+	runProgram = func(name string, wait bool, args ...string) error {
+		rec.calls = append(rec.calls, started{name: name, wait: wait, args: append([]string(nil), args...)})
 		return nil
 	}
 	desktopOS = osName
@@ -251,9 +260,9 @@ func TestDesktopCallsTheRunnerWithOpenAndThePathOnly(t *testing.T) {
 	if code != 0 || got["ok"] != true {
 		t.Fatalf("the update must answer: %v (exit %d)", got, code)
 	}
-	want := [2]string{"/usr/bin/open", filepath.Join(filepath.Dir(path), "gdoc.mcpb")}
-	if len(rec.calls) != 1 || rec.calls[0] != want {
-		t.Errorf("the one program gdoc runs is %v, and this run asked for %v", want, rec.calls)
+	want := started{name: "/usr/bin/open", wait: true, args: []string{filepath.Join(filepath.Dir(path), "gdoc.mcpb")}}
+	if len(rec.calls) != 1 || !reflect.DeepEqual(rec.calls[0], want) {
+		t.Errorf("the one program gdoc runs is %+v, and this run asked for %+v", want, rec.calls)
 	}
 }
 

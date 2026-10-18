@@ -781,12 +781,13 @@
 // TestRollbackWithThePresenceOnSwapsBoth and
 // TestRollbackWithNoPreviousAppWarnsAndKeepsIt.
 //
-// gdoc never launches the app. The first launch is the person, so a first
-// install says `open ~/Applications/GdocPresence.app` on its step line and a
-// refresh says nothing of the sort, because the app that is running shows its
-// own row about having been updated: TestTheResultSaysToOpenTheAppOnce.
-// withExtension stays the one caller of runProgram, which go/boundary's
-// TestTheOneProgramOpensOnlyTheExtension holds by reading the syntax tree.
+// An install is a running app. The run that placed the bundle opens it where
+// it is not already running, so no step line asks a person to go and open
+// anything: TestAFirstInstallOpensTheAppAndTellsNobodyToOpenIt. It is the one
+// opener every other command calls, desktop.go's openPresenceApp, and the
+// seam it goes through has those two callers and no third, which go/boundary's
+// TestTheOneProgramOpensOnlyTheExtensionAndTheApp holds by reading the syntax
+// tree. Decided 2026-10-18, DECISIONS.md, "The app opens itself".
 //
 // # The update draws its steps on stderr
 //
