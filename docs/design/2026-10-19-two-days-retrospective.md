@@ -68,3 +68,74 @@ Names are the brief's, so a future run can call the same seat by name.
 The roster above is the one to call again. The two seats that paid for
 themselves most were the reviewer who drew nothing and the trust guardian;
 the plan reviewer prevented at least one rerun per milestone.
+
+## Part 2. Where the tokens went, and the cuts
+
+No meter was read during the shift, so these are counts of what ran, from
+the logs and the boards, ranked by what each kind of run costs. The ranking
+is the honest part; the shares are estimates.
+
+### What ran
+
+| Run | Count over the two days | Why it is expensive |
+|---|---|---|
+| ralphex task iterations (Opus, a fresh worker per task) | M20 10, M21 8, M22 9, M23 12, M24b 9, M24a 26 + 6, M25 7, M26 11, M27 9: about 107 iterations | each worker reads CLAUDE.md (300 lines), the plan, the spec, the package comments and the files it touches, then writes tests and code; a UI task also renders every scene (`PRESENCE_SHOTS`) and reads PNGs |
+| revmux rounds | M24a twice (3h43m and 3h30m), M26 1h27m, M27 50m, M25 16m, the night's four: 10 rounds; each is Codex ×3 plus up to five Claude passes, each pass reading the whole diff | the five Claude passes are five full reads of a 20k-line diff; passes 3 to 5 found little |
+| reviewer-who-drew-nothing passes | inside the plan: M24a ×2, M26, M27; after the run: M24a, M26 (×5 reviewers), M27 (×5): about 20 reviewer agents | each reads 60 to 120 PNGs; an image is far dearer than its caption |
+| this PM session | one context of about 15M tokens, compacted twice | 30-minute monitors re-armed about 60 times, a board refresh and an artifact publish after nearly every iteration, renders read by me after the reviewers had read them, the night report rebuilt and published five times |
+| design night subagents | four seats, Codex, plan reviewer | cheap next to the rest |
+
+The order of cost: revmux (five passes over big diffs, run twice on M24a),
+then the task iterations, then the image-reading reviewers, then this
+session. The three releases on 2026-10-18 each paid a whole review cycle for
+a few hundred changed lines.
+
+### The cuts, in the order they save
+
+1. **One review cycle per day, not per sentence.** M25, the sign-out fix,
+   M26 and M27 each ran their own revmux. Collect the morning's sentences
+   into one milestone and run one review in the evening. Same result, a
+   third of the review cost. The sign-out fix alone was right to ship fast;
+   everything else could have waited six hours.
+2. **Cap revmux for UI milestones.** One Codex round and two Claude passes
+   for `presence/`; the full five passes only where `go/` changed. On M24a
+   the fourth and fifth passes moved commas. The reviewer who drew nothing
+   is the review that matters for a panel.
+3. **One reviewer over fewer, smaller images.** Five reviewers each read the
+   same 120 PNGs. One reviewer over the whole-panel dark renders at 1x (18
+   images), with the light appearance only where dark had a finding, and
+   the captions read as text from `index.html`. Keep the second,
+   independent pass after the run; it is the one that found the 33.
+4. **Render once per milestone.** `PRESENCE_SHOTS` only in the reviewer's
+   task, never in a task's own validation. Every render is 120 PNGs the
+   worker then reads.
+5. **Fewer, fuller tasks.** "The words", "the acceptance rows" and "the
+   close" were three iterations on every plan; one is enough. A measurement
+   task that spawns experiments (M25 Task 5, M26 Task 8) should be the PM's
+   ten minutes, not a worker's forty.
+6. **A smaller model where the task is mechanical.** Docs tasks, fixture
+   edits, board scripts and the close do not need Opus. Where ralphex
+   allows a per-task model, say so in the plan; where it does not, run the
+   mechanical tasks as one Sonnet subagent from the PM session.
+7. **The PM session does less.** Refresh and publish the board every 30
+   minutes or on a phase change, not per iteration; never read a render the
+   reviewer already read; rebuild the report once at the end of the day;
+   compact as soon as a milestone ships. The board and report publishes
+   themselves cost nothing in tokens, but each round trip carries the
+   context with it.
+8. **Shorter briefs for the worker.** CLAUDE.md at 300 lines is read 107
+   times; the invariant list is the expensive half. A worker for a `presence/`
+   task needs the two app invariants and the app's doc comments, not the
+   guard's. A per-area `CLAUDE.md` section the plan names ("read the presence
+   half") would halve the fixed cost per iteration.
+
+Rules 1, 2 and 3 are worth more than the other five together. The next
+morning's sentences go into one plan, one run, one capped review, one
+reviewer with eighteen images.
+
+### What to keep as it is
+
+The decision entry before the spec, the plan review before the run, the
+worktree with its branch, the merge of main before a dependent task, the
+fresh reviewer before the PR, the zip verified after the release, and the
+report Nail reads in the morning. None of these is where the tokens went.
