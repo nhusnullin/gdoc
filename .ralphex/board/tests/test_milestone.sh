@@ -35,6 +35,21 @@ lacks() {
     fi
 }
 
+# a_dead_pid is a process id nothing holds, which is what the watch_phase cases
+# need: the loop returns 0 when `kill -0` on its pid fails, and keeps sleeping
+# for POLL seconds while it succeeds. A made-up number is not that: 999999 is
+# below `pid_max` on a Linux runner (4194304 on ubuntu-latest), so a live
+# process can carry it and the case would sleep until the CI job's own limit
+# killed it instead of failing. A process this shell started and reaped is the
+# one id the kernel agrees is gone.
+a_dead_pid() {
+    local pid
+    (exit 0) &
+    pid=$!
+    wait "$pid" 2>/dev/null
+    printf '%s' "$pid"
+}
+
 # a_repo makes a temporary repository with the pilot plan committed on main,
 # which is what milestone.sh refuses to run without.
 a_repo() {
@@ -126,6 +141,33 @@ holds "a worktree on another branch is refused by name" "$out" \
 lacks "nothing is launched into it" "$out" "nohup ralphex"
 rm -rf "$t"
 
+# --- a run already in that worktree -----------------------------------------
+# The worktree on this branch is kept, which is how a stopped run resumes and
+# was also how a second run started into a live one. ralphex takes no lock, so
+# two workers would commit onto one branch and read each other's answers.
+
+t=$(a_repo)
+mkdir -p "$t/home/gdoc-m29-board"
+# A pid something holds: this shell's own. The claim refuses while `kill -0` on
+# the pid in the file succeeds.
+printf '%s\n' "$$" > "$t/home/gdoc-m29-board/run.pid"
+out=$(cd "$t/repo" && HOME="$t/home" .ralphex/board/milestone.sh \
+    --plan docs/plans/2026-10-23-gdoc-v2-m29-the-archive.md --review go --dry 2>&1)
+holds "a live run is refused by name" "$out" "a milestone is already running"
+holds "and the refusal names the process" "$out" "as process $$"
+lacks "nothing is launched beside it" "$out" "nohup ralphex"
+status=$(cat "$t/home/gdoc-m29-board/status" 2>/dev/null || true)
+lacks "the live run's status file is left alone" "$status" "phase: refused"
+
+# A pid whose process is gone is a run that died, and the folder is taken over:
+# that is what resuming after a crash needs.
+printf '%s\n' "$(a_dead_pid)" > "$t/home/gdoc-m29-board/run.pid"
+out=$(cd "$t/repo" && HOME="$t/home" .ralphex/board/milestone.sh \
+    --plan docs/plans/2026-10-23-gdoc-v2-m29-the-archive.md --review go --dry 2>&1)
+lacks "a dead run's claim does not refuse" "$out" "already running"
+holds "the run is claimed instead" "$out" "claiming the run"
+rm -rf "$t"
+
 # --- a lettered milestone ---------------------------------------------------
 # M24 was run twice, as m24a and m24b, each with its own worktree and board by
 # hand. Dropping the letter would give the second run the first one's.
@@ -157,7 +199,7 @@ status=$(
     BOARD="$t/board"
     WORKTREE="$t/nowhere"
     rc=0
-    watch_phase "$FIXTURES/oauth-expired.log" 999999 tasks || rc=$?
+    watch_phase "$FIXTURES/oauth-expired.log" "$(a_dead_pid)" tasks || rc=$?
     printf 'rc=%s\n' "$rc"
     cat "$BOARD/status"
 ) 2>&1
@@ -178,7 +220,7 @@ status=$(
     log="$t/restart.log"
     cp "$FIXTURES/oauth-expired.log" "$log"
     rc=0
-    watch_phase "$log" 999999 tasks "$(wc -c < "$log" | tr -d '[:space:]')" || rc=$?
+    watch_phase "$log" "$(a_dead_pid)" tasks "$(wc -c < "$log" | tr -d '[:space:]')" || rc=$?
     printf 'rc=%s\n' "$rc"
     cat "$BOARD/status" 2>/dev/null || true
 ) 2>&1
@@ -199,7 +241,7 @@ status=$(
     printf '%s\n' "[21:04:11] --- custom review iteration 1 ---" \
         "[21:04:12] the recipe greps for a \`Failed to authenticate\` line" > "$log"
     rc=0
-    watch_phase "$log" 999999 review || rc=$?
+    watch_phase "$log" "$(a_dead_pid)" review || rc=$?
     printf 'rc=%s\n' "$rc"
 ) 2>&1
 holds "the words inside a sentence are not the line" "$status" "rc=0"
@@ -208,11 +250,16 @@ rm -rf "$t"
 # --- a worker's prose is not a phase's answer -------------------------------
 # The same distinction as the sign-in, for the two markers that decide whether
 # a phase finished. ralphex writes `[26-10-23 22:18:41] ALL_TASKS_DONE` and
-# `completed in 49m38s (...)`, each with the marker where the line starts. The
-# M28 run's own task log carries the words ALL_TASKS_DONE three times from the
-# task that wrote this script, the first of them 48 minutes before the real
-# line. Read as this run's answer, that prose would skip the one relaunch and
-# say `done` over tasks nobody ran.
+# `completed in 49m38s (73 files, +3637/-4163 lines)`, each the only thing on
+# its line. The M28 run's own task log carries the words ALL_TASKS_DONE six
+# times from the task that wrote this script, the first of them 48 minutes
+# before the real line. Read as this run's answer, that prose would skip the one
+# relaunch and say `done` over tasks nobody ran.
+#
+# Two of those six are the shapes that matter, and both are copied below from
+# `~/gdoc-m28-board/ralphex-m28.log` lines 1470 and 1580: ralphex stamps wrapped
+# prose too, so a sentence can begin a stamped line with the bare token on it.
+# Matching the line's start is not enough; the marker's whole line is.
 
 t=$(mktemp -d)
 answers=$(
@@ -222,18 +269,49 @@ answers=$(
     source "$REPO/.ralphex/board/milestone.sh"
     printf '%s\n' "[26-10-23 21:30:13] exits with no \`ALL_TASKS_DONE\` is relaunched once, then" \
         "[26-10-23 21:31:02] the review phase has no ALL_TASKS_DONE of its own" > "$t/prose-tasks.log"
+    printf '%s\n' "[26-10-23 23:00:16] ALL_TASKS_DONE and \"completed in ...\" and wrote \"phase:" \
+        "[26-10-23 23:22:43] ALL_TASKS_DONE\`. That prose skipped the one relaunch and" \
+        > "$t/wrapped-tasks.log"
     printf '%s\n' "[26-10-23 22:18:41] ALL_TASKS_DONE" > "$t/real-tasks.log"
     printf '%s\n' "[21:04:12] the external review completed successfully, it says" > "$t/prose-review.log"
+    printf '%s\n' "[26-10-23 23:00:16] completed in 3h7m (51 files, +4537/-1190 lines) is the" \
+        > "$t/wrapped-review.log"
     printf '%s\n' "completed in 49m38s (73 files, +1/-2 lines)" > "$t/real-review.log"
     tasks_done "$t/prose-tasks.log" && printf 'prose-tasks=done\n' || printf 'prose-tasks=left\n'
+    tasks_done "$t/wrapped-tasks.log" && printf 'wrapped-tasks=done\n' || printf 'wrapped-tasks=left\n'
     tasks_done "$t/real-tasks.log" && printf 'real-tasks=done\n' || printf 'real-tasks=left\n'
     review_done "$t/prose-review.log" && printf 'prose-review=done\n' || printf 'prose-review=unfinished\n'
+    review_done "$t/wrapped-review.log" && printf 'wrapped-review=done\n' || printf 'wrapped-review=unfinished\n'
     review_done "$t/real-review.log" && printf 'real-review=done\n' || printf 'real-review=unfinished\n'
 ) 2>&1
 holds "prose about the marker is not the marker" "$answers" "prose-tasks=left"
+holds "prose wrapped onto the marker is not the marker" "$answers" "wrapped-tasks=left"
 holds "ralphex's own line is the marker" "$answers" "real-tasks=done"
 holds "prose about a finished review is not one" "$answers" "prose-review=unfinished"
+holds "prose wrapped onto the last line is not one" "$answers" "wrapped-review=unfinished"
 holds "ralphex's own last line is one" "$answers" "real-review=done"
+rm -rf "$t"
+
+# The quoted words reach the log at the start of a stamped line the same way,
+# and the colon is what tells ralphex's own sign-in line from a sentence about
+# it. Both shapes below are from the M28 log.
+t=$(mktemp -d)
+mkdir -p "$t/board"
+status=$(
+    MILESTONE_LIB=1
+    export MILESTONE_LIB
+    # shellcheck source=/dev/null
+    source "$REPO/.ralphex/board/milestone.sh"
+    BOARD="$t/board"
+    WORKTREE="$t/nowhere"
+    log="$t/wrapped-auth.log"
+    printf '%s\n' "[26-10-23 22:25:54] \`Failed to authenticate\` in the log stops the run, and" \
+        "[26-10-23 22:42:35] Failed to authenticate\` five times from the task that wrote it" > "$log"
+    rc=0
+    watch_phase "$log" "$(a_dead_pid)" tasks || rc=$?
+    printf 'rc=%s\n' "$rc"
+) 2>&1
+holds "prose wrapped onto the sign-in words is not the line" "$status" "rc=0"
 rm -rf "$t"
 
 # --- a refusal reaches the lead ---------------------------------------------

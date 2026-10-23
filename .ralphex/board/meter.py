@@ -189,6 +189,17 @@ def transcripts(folder):
     charged like any other and appear in no parent file: reading only the top
     level dropped 101 million tokens of M26 alone, and the team's seats are
     subagents, so the pilot would be undercounted the most.
+
+    What this does not read, named so no reader mistakes the review numbers for
+    the whole: revmux is a separate program, not an agent a session spawns, and
+    each lens writes its own stream into
+    `<worktree>/.revmux/tasks/<task>/round-NN/agents/<lens>.jsonl`, which is
+    nowhere under this folder. Those lines carry `usage` and no `requestId`, so
+    `message.id` would be the key. Measured once, they are 87.6 million tokens
+    across M24a, M25, M26 and M27, all of it review. `docs/team/measure.md`
+    states the floor that follows. Adding them is worth doing before a UI
+    milestone runs under the new team, because cut 2 shrinks the lens roster and
+    that saving is invisible here.
     """
     return sorted(glob.glob(os.path.join(folder, "**", "*.jsonl"), recursive=True))
 

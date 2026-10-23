@@ -145,6 +145,49 @@ refresh_board() {
     write_status "$phase" "wait: the board and this file refresh every $((BOARD_EVERY / 60)) minutes"
 }
 
+# claim_the_run is the one run a worktree may hold at a time.
+#
+# A worktree on another branch is refused above, but one on this branch is kept
+# so a stopped run resumes, and until this refusal that was also how a second
+# run started into a live one: the lead launches the same line twice, or the
+# operator relaunches a phase the board already says is running. ralphex takes
+# no lock of its own, so two workers would then commit onto one branch, append
+# to one log, and read each other's ALL_TASKS_DONE as their own answer.
+#
+# The claim is a pid in a file beside the board. A pid whose process is gone is
+# a run that died, and this run takes the folder over, which is what resuming
+# needs. `flock` is not used, because it is not on a Mac and the lead's machine
+# is one.
+#
+# Honest about its limit: the kernel reuses process ids, so a file naming a pid
+# that something unrelated now carries refuses a run that could have started.
+# That errs towards the lead reading one line and deciding, which is the safe
+# way round.
+claim_the_run() {
+    local pid=""
+    [[ ! -f "$BOARD/run.pid" ]] || pid=$(tr -dc '0-9' < "$BOARD/run.pid")
+    if [[ -n "$pid" && "$pid" != "$$" ]] && kill -0 "$pid" 2>/dev/null; then
+        # Not `fail`: the status file is the live run's, and three lines saying
+        # `refused` over a run that is running is worse than no lines at all.
+        printf 'make milestone: %s\n' \
+            "a milestone is already running in $WORKTREE as process $pid. Read $BOARD/status, or stop that run first." >&2
+        exit 1
+    fi
+    say "+ # claiming the run: $$ into $BOARD/run.pid"
+    [[ -n "$DRY" ]] && return 0
+    printf '%s\n' "$$" > "$BOARD/run.pid"
+    # The claim dies with the process that made it. A run killed before the trap
+    # leaves the file, and the `kill -0` above reads it as the dead run it is.
+    trap 'release_the_run' EXIT
+}
+
+release_the_run() {
+    local pid=""
+    [[ ! -f "$BOARD/run.pid" ]] || pid=$(tr -dc '0-9' < "$BOARD/run.pid")
+    [[ "$pid" == "$$" ]] || return 0
+    rm -f "$BOARD/run.pid"
+}
+
 # step prints a command and runs it, or only prints it under DRY=1. An argument
 # with a space in it is printed quoted, because the dry run's output is the
 # contract the tests read and a person pastes.
@@ -186,10 +229,14 @@ launch() {
 }
 
 # ralphex's own line, "[21:18:06] Failed to authenticate: OAuth session
-# expired", with the message where the line starts. A worker's prose reaches the
-# same log, and the words quoted inside a sentence are not a dead sign-in: the
-# M28 run's log carries them five times from the task that wrote this script.
-AUTH_FAILED='^(\[[0-9 :-]+\] )?Failed to authenticate'
+# expired", with the message where the line starts and the colon after it. A
+# worker's prose reaches the same log, and the words quoted inside a sentence
+# are not a dead sign-in: the M28 run's log carries them six times from the task
+# that wrote this script. The line start alone does not tell the two apart,
+# because ralphex stamps every line it passes through, wrapped prose included,
+# so a sentence that wraps onto the words begins a stamped line too. The colon
+# is ralphex's own form and no quoting of the words carries it.
+AUTH_FAILED='^(\[[0-9 :-]+\] )?Failed to authenticate:'
 
 # watch_phase waits for one ralphex to end, refreshing the board on the way.
 # Returns 0 when the process ended, 2 when the Claude CLI's sign-in expired.
@@ -221,14 +268,20 @@ watch_phase() {
 }
 
 # ralphex's own marker, "[26-10-23 22:18:41] ALL_TASKS_DONE", and its own last
-# line, "completed in 49m38s (73 files, ...)", each with the marker where the
-# message starts. The same distinction AUTH_FAILED draws, for the two answers
-# that decide whether a phase finished: the M28 task log carries the words
-# ALL_TASKS_DONE three times from the task that wrote this script, the first of
-# them 48 minutes before the real line. The `<<<RALPHEX:` form is the signal a
-# worker prints, which reaches the log on a line of its own.
-TASKS_DONE='^(\[[0-9 :-]+\] )?(<<<RALPHEX:)?ALL_TASKS_DONE'
-REVIEW_DONE='^(\[[0-9 :-]+\] )?completed in '
+# line, "completed in 49m38s (73 files, +3637/-4163 lines)". The same
+# distinction AUTH_FAILED draws, for the two answers that decide whether a phase
+# finished: the M28 task log carries the words ALL_TASKS_DONE six times from the
+# task that wrote this script, the first of them 48 minutes before the real
+# line.
+#
+# The whole line is matched, not its start, because ralphex stamps wrapped prose
+# too: two of those six sentences wrap onto a line that begins with the bare
+# token, and a start-anchored pattern reads both as the marker. The marker is
+# the only thing on its line in all eleven runs from M20 to M28, and every
+# `completed in` line ends in "lines)". The `<<<RALPHEX:...>>>` form is the
+# signal a worker prints, which reaches the log on a line of its own.
+TASKS_DONE='^(\[[0-9 :-]+\] )?(<<<RALPHEX:)?ALL_TASKS_DONE(>>>)?[[:space:]]*$'
+REVIEW_DONE='^(\[[0-9 :-]+\] )?completed in .* lines\)[[:space:]]*$'
 
 # tasks_done and review_done read from `from`, the log's size before this
 # launch, for the same reason watch_phase does: the log is appended to, so the
@@ -334,6 +387,7 @@ main() {
         step git worktree add -b "$BRANCH" "$WORKTREE" main
     fi
     step mkdir -p "$BOARD"
+    claim_the_run
     # --init forgets the page and starts its clock at now, which on a resumed
     # run would say the run began when the lead picked it up. The time the
     # first launch wrote is in the page's own sidecar, and is handed back.

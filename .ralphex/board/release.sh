@@ -219,6 +219,13 @@ pr_number() {
     ask gh pr view "$BRANCH" --json number --jq .number
 }
 
+# pr_state is OPEN, MERGED or CLOSED. `gh pr view` answers about a merged PR the
+# same way it answers about an open one, so the number alone does not say
+# whether the merge already happened, and a resumed run has to know.
+pr_state() {
+    ask gh pr view "$BRANCH" --json state --jq .state
+}
+
 # checks_red names every check that is not a pass. gh's buckets are pass, fail,
 # pending, skipping and cancel; a pending check is not green either, and the
 # merge waits for it rather than racing it.
@@ -313,10 +320,17 @@ merge_and_tag() {
     [[ "$here" == "main" ]] || fail \
         "GO=$GO must be run from a checkout on main; this one is on ${here:-no branch}. Nothing is merged."
 
-    green_or_stop "release, the checks are not green"
-
-    step gh pr merge "$PR" --merge \
-        || stop "release, the merge failed" "gh pr merge refused PR $PR. Nothing is tagged."
+    # A run that merged and then stopped before the tag is resumed by the same
+    # command, so the merge is skipped rather than attempted again: `gh pr merge`
+    # refuses a merged PR, and without this the only way on was by hand, which
+    # is the one thing this script exists to stop.
+    if [[ "$(pr_state)" == "MERGED" ]]; then
+        say "+ # PR $PR is already merged, so the merge and its gate are skipped"
+    else
+        green_or_stop "release, the checks are not green"
+        step gh pr merge "$PR" --merge \
+            || stop "release, the merge failed" "gh pr merge refused PR $PR. Nothing is tagged."
+    fi
     step git pull --ff-only origin main \
         || stop "release, merged but not tagged" "PR $PR is merged, and git pull --ff-only did not fast-forward main. Nothing is tagged."
     step make tag "VERSION=$GO" \
@@ -391,9 +405,19 @@ main() {
     # The refusals come before anything is pushed, so a typo costs the message
     # and nothing else. Only a minor: the nightly owns the patch numbers, and
     # two tags on one number are two releases a colleague cannot tell apart.
+    #
+    # The second and third are `make tag`'s own refusals, made here instead of
+    # after the merge. `make tag` runs last, so a dirty tree or a version that
+    # is already a tag used to stop the run with the PR merged and nothing
+    # published. A lead with one uncommitted file is the likely case: they have
+    # just been writing the decision entry.
     if [[ -n "$GO" ]]; then
         printf '%s' "$GO" | grep -Eq '^v[0-9]+\.[0-9]+\.0$' \
             || fail "GO=$GO is not vX.Y.0. Patch versions are the nightly's."
+        git diff --quiet HEAD 2>/dev/null \
+            || fail "the tree has uncommitted changes, and make tag refuses them after the merge. Commit them first. Nothing is merged."
+        git rev-parse -q --verify "refs/tags/$GO" >/dev/null 2>&1 \
+            && fail "GO=$GO is already a tag. Nothing is merged."
     fi
 
     derive_names

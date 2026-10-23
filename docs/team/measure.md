@@ -34,12 +34,13 @@ Three rules make the sum right, and all three are in `meter.py` with a test:
   403.5 million tokens by line and 237.8 million by response. The 237.8 million
   is what was charged.
 - **The subagents too.** A session's own turns are in
-  `<folder>/<session>.jsonl`, and the turns of every subagent it spawned are one
-  level down, in `<session>/subagents/agent-*.jsonl`. Those responses are
-  charged like any other and appear in no parent file. They are most of a review
-  round, because revmux's lenses are subagents: reading only the top level put
-  M26 at 136.8 million and dropped 101.0 million. The meter reads every
-  `*.jsonl` under the folder, which is why it reports more files than sessions.
+  `<folder>/<session>.jsonl`, and the turns of every agent it spawned with the
+  Task tool are one level down, in `<session>/subagents/agent-*.jsonl`. Those
+  responses are charged like any other and appear in no parent file: reading
+  only the top level put M26 at 136.8 million and dropped 101.0 million, across
+  twelve agents spawned by four sessions, the reviewers over the renders among
+  them. The meter reads every `*.jsonl` under the folder, which is why it
+  reports more files than sessions.
 - **A window per iteration.** A transcript folder holds every session that ever
   ran in that worktree, including ones run by hand after the milestone. Windows
   run from one marker to the next, the last one ends an hour after its last
@@ -49,6 +50,23 @@ Three rules make the sum right, and all three are in `meter.py` with a test:
 Cache reads dominate every row. That is the same context sent again on each
 turn, which is the cost the team is built to cut: a shorter context, fewer
 turns per task, and one review round where the old recipe ran five.
+
+One thing the meter does not read, so every review number below is a floor.
+revmux is a separate program, not an agent a session spawns: `revmux-review.sh`
+runs the binary, and each lens writes its own stream into
+`<worktree>/.revmux/tasks/<task>/round-NN/agents/<lens>.jsonl`, which is nowhere
+under `~/.claude/projects/`. Those files carry `usage` the same way, and summed
+the same way, once per response, they are 56.4M on M24a, 5.6M on M25, 13.1M on
+M26 and 12.5M on M27: 87.6M, all of it review. Added in, the four runs' review
+total is 814.9M over 37 rounds, 22.0M a round rather than 19.7M.
+
+Two reasons the bar below is still the one to use. The baseline and the pilot
+are read by the same script, so what it cannot see is missing from both sides of
+the comparison. And the pilot is a Go milestone with the full lens roster, so
+cut 2, the smaller roster for a UI milestone, is not what it measures. Reading
+the lens logs is a change to the meter, not to the method, and it is worth
+making before the first UI milestone runs under the new team: that is the one
+where the cut is the thing being tested and the saving would be invisible.
 
 ## The baseline: M24a, M25, M26, M27
 
@@ -71,10 +89,11 @@ Five readings of the table:
   and M27. It is the run that carried the full review on every milestone and the
   reviewers over the renders, which is what cut 2 and cut 3 take out.
 - **A review round costs more than a task iteration.** 19.7 million against
-  14.6, and 30.5 against 14.8 on M24a. The round is one session fanning out to
-  revmux's lenses, each a subagent with its own copy of the context. Cut 2, one
-  round over three lenses for a UI milestone, is aimed at the most expensive row
-  in this table.
+  14.6, and 30.5 against 14.8 on M24a, and more than that once the lens logs
+  above are added: 22.0 against 14.6. A round is a session, whatever it spawned
+  with the Task tool, and revmux's own lenses beside it, each with its own copy
+  of the context. Cut 2, one round over three lenses for a UI milestone, is
+  aimed at the most expensive row in this table.
 - **One task iteration costing 144.1 million is a context, not a task.** M24a's
   iteration 23 was one session sending its whole growing context back on every
   turn for 633 responses. The area briefs and the smaller plans aim at that row.
@@ -120,7 +139,9 @@ until Nail says so, because every comparison after this one is made against
 them.
 
 - [ ] Nail confirms the method, and the baseline of 14.6M per task iteration
-      and 19.7M per review round, before the pilot runs.
+      and 19.7M per review round as the meter reads it, before the pilot runs.
+      The review figure is a floor: with revmux's own lens logs added it is
+      22.0M, and the bar a third of it at 7.3M rather than 6.6M.
 
 One thing to confirm with it. The rule Nail approved is "a third of the
 baseline", and the two numbers under it are arithmetic on the baseline. The

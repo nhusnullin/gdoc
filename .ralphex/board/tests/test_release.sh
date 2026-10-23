@@ -84,7 +84,16 @@ PLAN
 printf '%s\n' "\$*" >> "$tmp/gh-args"
 case "\$1\$2" in
     prview)
-        [[ -f "$tmp/pr" ]] && printf '84\n'
+        # The number and the state come from the same command. gh answers both
+        # about a merged PR, which is why the state is the thing asked.
+        case "\$*" in
+            *state*)
+                if [[ -f "$tmp/merged" ]]; then printf 'MERGED\n'
+                elif [[ -f "$tmp/pr" ]]; then printf 'OPEN\n'
+                fi
+                ;;
+            *) [[ -f "$tmp/pr" ]] && printf '84\n' ;;
+        esac
         ;;
     prcreate)
         : > "$tmp/pr"
@@ -271,6 +280,24 @@ holds "a patch version is refused by name" "$out" \
     "GO=v2.19.1 is not vX.Y.0. Patch versions are the nightly's."
 lacks "a refused version merges nothing" "$out" "gh pr merge"
 
+# `make tag` runs last and refuses a dirty tree and a version that is already a
+# tag. Made after the merge, each of those two refusals is a PR merged and
+# nothing published, and the only way on was to tag by hand. They are made
+# before the merge instead. A lead with one uncommitted file is the likely case:
+# they have just been writing the decision entry.
+printf '\nhalf a decision entry\n' >> "$t/repo/docs/plans/2026-10-23-gdoc-v2-m29-the-archive.md"
+out=$(a_run "$t" --go v2.20.0)
+holds "a dirty tree is refused by name" "$out" "the tree has uncommitted changes"
+holds "and says what refuses it later" "$out" "make tag refuses them after the merge"
+lacks "a dirty tree merges nothing" "$out" "gh pr merge"
+(cd "$t/repo" && git checkout -q -- .) >/dev/null 2>&1
+
+(cd "$t/repo" && git tag v2.20.0) >/dev/null 2>&1
+out=$(a_run "$t" --go v2.20.0)
+holds "a version that is already a tag is refused by name" "$out" "GO=v2.20.0 is already a tag"
+lacks "an existing tag merges nothing" "$out" "gh pr merge"
+(cd "$t/repo" && git tag -d v2.20.0) >/dev/null 2>&1
+
 : > "$t/red"
 out=$(a_run "$t" --go v2.20.0)
 holds "a red check is refused by name" "$out" "test / go is fail"
@@ -317,6 +344,22 @@ t=$(a_repo)
 out=$(a_live "$t")
 holds "a check that appears late is waited for" "$out" "ready: PR 84, checks green"
 lacks "and is not read as a PR with no checks" "$out" "could not be read, or the PR has none"
+rm -rf "$t"
+
+# --- a run resumed after the merge ------------------------------------------
+# A run that merged and then stopped before the tag is resumed by the same
+# command. `gh pr view` answers about a merged PR the same way it answers about
+# an open one, so the number alone said "open" and the merge was attempted
+# again; `gh pr merge` refuses that, and the only way on was to tag by hand.
+
+t=$(a_repo)
+: > "$t/pr"
+: > "$t/merged"
+out=$(a_run "$t" --go v2.20.0)
+holds "a merged PR is not merged again" "$out" "PR 84 is already merged"
+lacks "and gh pr merge is not called" "$out" "gh pr merge"
+holds "the run goes on to the tag" "$out" "make tag VERSION=v2.20.0"
+holds "and on to the release it waits for" "$out" "--branch v2.20.0"
 rm -rf "$t"
 
 # --- GO from the wrong checkout ---------------------------------------------
