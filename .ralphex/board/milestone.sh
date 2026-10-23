@@ -277,11 +277,18 @@ watch_phase() {
 # The whole line is matched, not its start, because ralphex stamps wrapped prose
 # too: two of those six sentences wrap onto a line that begins with the bare
 # token, and a start-anchored pattern reads both as the marker. The marker is
-# the only thing on its line in all eleven runs from M20 to M28, and every
-# `completed in` line ends in "lines)". The `<<<RALPHEX:...>>>` form is the
-# signal a worker prints, which reaches the log on a line of its own.
+# the only thing on its line in all eleven runs from M20 to M28. The
+# `<<<RALPHEX:...>>>` form is the signal a worker prints, which reaches the log
+# on a line of its own.
+#
+# The diff count is optional, because ralphex carries both format strings and
+# drops the parenthetical when the branch diff against main is empty: the line
+# is then `completed in 0s` alone. Requiring "lines)" read that finished review
+# as a branch nobody reviewed and never sent the lead to the release. The
+# duration must start with a digit and the line must end there or after the
+# count, which is what keeps wrapped prose out.
 TASKS_DONE='^(\[[0-9 :-]+\] )?(<<<RALPHEX:)?ALL_TASKS_DONE(>>>)?[[:space:]]*$'
-REVIEW_DONE='^(\[[0-9 :-]+\] )?completed in .* lines\)[[:space:]]*$'
+REVIEW_DONE='^(\[[0-9 :-]+\] )?completed in [0-9][0-9a-z.]*( \([0-9]+ files, [+][0-9]+/-[0-9]+ lines\))?[[:space:]]*$'
 
 # tasks_done and review_done read from `from`, the log's size before this
 # launch, for the same reason watch_phase does: the log is appended to, so the
@@ -322,7 +329,11 @@ run_task_phase() {
 }
 
 run_review_phase() {
-    local prefix="" args=(--external-only --branch "$BRANCH")
+    # --idle-timeout for the same reason the task phase carries it: the fix
+    # rounds between the external rounds are claude sessions, and watch_phase
+    # has no ceiling of its own. Without it a silent worker leaves the status
+    # file saying the review is running until somebody looks at the log.
+    local prefix="" args=(--external-only --branch "$BRANCH" "--idle-timeout=$IDLE")
     if [[ "$REVIEW" == "ui" ]]; then
         # Cut 2: one round over a smaller lens set. A panel's review is the
         # reviewer who draws nothing, not the fifth pass over the diff.

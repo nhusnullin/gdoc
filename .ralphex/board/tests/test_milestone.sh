@@ -99,6 +99,11 @@ holds "the iteration cap is Tasks plus two" "$out" "--max-iterations=8"
 holds "the idle timeout" "$out" "--idle-timeout=20m"
 holds "the task log" "$out" "$t/home/gdoc-m29-board/ralphex-m29-tasks.log"
 holds "the review phase" "$out" "nohup ralphex --external-only"
+# A stalled review is --idle-timeout's job too. Without the flag the review
+# phase has no ceiling of its own: watch_phase waits on a silent worker for ever
+# and the status file keeps saying the review is running.
+holds "the review carries the idle timeout" "$out" \
+    "--external-only --branch gdoc-v2-m29-the-archive --idle-timeout=20m"
 lacks "a go review keeps the config" "$out" "--max-external-iterations"
 lacks "a go review keeps the roster" "$out" "REVMUX_LENSES"
 holds "the status file" "$out" "status: phase: done | next: make release BRANCH=gdoc-v2-m29-the-archive"
@@ -113,6 +118,8 @@ holds "a ui review caps the loop" "$out" "--max-external-iterations=1"
 holds "a ui review caps the patience" "$out" "--review-patience=1"
 holds "a ui review names the smaller lens set" "$out" "REVMUX_LENSES=bugs,impl,adversarial"
 holds "a ui review still runs the task phase" "$out" "ralphex --tasks-only"
+holds "a ui review carries the idle timeout" "$out" \
+    "--external-only --branch gdoc-v2-m29-the-archive --idle-timeout=20m"
 rm -rf "$t"
 
 # --- the refusals -----------------------------------------------------------
@@ -277,12 +284,20 @@ answers=$(
     printf '%s\n' "[26-10-23 23:00:16] completed in 3h7m (51 files, +4537/-1190 lines) is the" \
         > "$t/wrapped-review.log"
     printf '%s\n' "completed in 49m38s (73 files, +1/-2 lines)" > "$t/real-review.log"
+    # ralphex drops the parenthetical when the branch diff is empty, and prints
+    # `completed in 0s` alone. Both format strings are in the binary, and a
+    # finished review read as unfinished never sends the lead to the release.
+    printf '%s\n' "completed in 0s" > "$t/bare-review.log"
+    printf '%s\n' "[26-10-23 23:00:16] completed in 0s was all the log said, which" \\
+        > "$t/wrapped-bare-review.log"
     tasks_done "$t/prose-tasks.log" && printf 'prose-tasks=done\n' || printf 'prose-tasks=left\n'
     tasks_done "$t/wrapped-tasks.log" && printf 'wrapped-tasks=done\n' || printf 'wrapped-tasks=left\n'
     tasks_done "$t/real-tasks.log" && printf 'real-tasks=done\n' || printf 'real-tasks=left\n'
     review_done "$t/prose-review.log" && printf 'prose-review=done\n' || printf 'prose-review=unfinished\n'
     review_done "$t/wrapped-review.log" && printf 'wrapped-review=done\n' || printf 'wrapped-review=unfinished\n'
     review_done "$t/real-review.log" && printf 'real-review=done\n' || printf 'real-review=unfinished\n'
+    review_done "$t/bare-review.log" && printf 'bare-review=done\n' || printf 'bare-review=unfinished\n'
+    review_done "$t/wrapped-bare-review.log" && printf 'wrapped-bare=done\n' || printf 'wrapped-bare=unfinished\n'
 ) 2>&1
 holds "prose about the marker is not the marker" "$answers" "prose-tasks=left"
 holds "prose wrapped onto the marker is not the marker" "$answers" "wrapped-tasks=left"
@@ -290,6 +305,8 @@ holds "ralphex's own line is the marker" "$answers" "real-tasks=done"
 holds "prose about a finished review is not one" "$answers" "prose-review=unfinished"
 holds "prose wrapped onto the last line is not one" "$answers" "wrapped-review=unfinished"
 holds "ralphex's own last line is one" "$answers" "real-review=done"
+holds "the last line without the diff count is one" "$answers" "bare-review=done"
+holds "prose wrapped onto that shorter line is not one" "$answers" "wrapped-bare=unfinished"
 rm -rf "$t"
 
 # The quoted words reach the log at the start of a stamped line the same way,
