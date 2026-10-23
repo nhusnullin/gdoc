@@ -251,10 +251,11 @@ one page the lead session loads at start.
 
 ### Task 8: [Final] Update documentation
 
-- [ ] `.ralphex/board/README.md` leads with `make milestone` and
+- [x] `.ralphex/board/README.md` leads with `make milestone` and
       `make release`; the hand recipes move under "when the script cannot"
-- [ ] CLAUDE.md untouched (approved item 9)
-- [ ] move this plan to `docs/plans/completed/`
+- [x] CLAUDE.md untouched (approved item 9): `git diff main...HEAD` names it
+      not once
+- [x] move this plan to `docs/plans/completed/`
 
 ## Post-Completion
 

@@ -381,7 +381,7 @@ iteration and per review round, into the table in `docs/team/measure.md`
 next to the M24a, M25, M26 and M27 baseline, with the two numbers the meter
 cannot read: the lead session's own context at the end, and how many
 messages Nail had to send. The verdict the pilot is measured against is in
-`docs/plans/2026-10-23-gdoc-v2-m28-the-team.md`: Nail spoke only to the
+`docs/plans/completed/2026-10-23-gdoc-v2-m28-the-team.md`: Nail spoke only to the
 lead, zero blocking findings at the end, per task and per review round at
 most a third of the baseline, and nothing reverted the next day.
 

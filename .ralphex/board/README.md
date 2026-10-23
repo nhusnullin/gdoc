@@ -1,13 +1,11 @@
-# The run board
+# The delivery platform
 
-One HTML page that shows where a ralphex milestone run is, published as a Claude
-Code artifact and republished on every task iteration and every review round.
-Nail follows the run on his phone; the chat carries one short line per refresh
-and nothing else. Used for M2 to M5 (2026-09-06 to 2026-09-08). Nail asked for
-it to be kept.
-
-The page reads what ralphex already writes: its logs, the plan's checkboxes,
-`git log main..<branch>`. Nothing here talks to ralphex or changes the run.
+Two scripts behind two make targets, a page that shows where a run is, and a
+meter that says what it cost. `make milestone` owns a run from the worktree to
+the end of the review. `make release` takes the finished branch to a green pull
+request and stops there. Both are what a Claude Code session used to do by
+hand, and the hand recipes are still here, at the bottom, for the day a script
+cannot.
 
 Who runs all this, and why it is split the way it is, is `docs/team/README.md`,
 with the lead's own page beside it in `docs/team/lead.md`.
@@ -16,13 +14,86 @@ with the lead's own page beside it in `docs/team/lead.md`.
 
 | File | Holds |
 |---|---|
+| `milestone.sh` | one run: the worktree, the task phase, the review phase, the status file |
+| `release.sh` | the branch to a green pull request, and, on Nail's go, the merge, the tag and the zip read back |
+| `meter.py` | what a run cost, summed out of its transcripts. `docs/team/measure.md` is the method and the baseline |
 | `board.html` | the page template. Header placeholders and an empty snapshot the script fills |
 | `refresh_board.py` | rebuilds the snapshot from the logs, the plan and git. Prints one status line for the artifact label |
+| `tests/` | the platform's own suite. Every case is a dry run or a stub, so `make platform-test` costs a second and no tokens |
 
-## The recipe, as a Claude Code session runs it
+## `make milestone`
 
-The whole run lives in one Claude Code session with a scratchpad directory for
-the logs and the page. `SCRATCH` below is that directory.
+```bash
+nohup make milestone PLAN=docs/plans/<file>.md REVIEW=go > /dev/null 2>&1 &
+```
+
+The plan file names everything else. `2026-10-23-gdoc-v2-m29-the-archive.md`
+gives the branch `gdoc-v2-m29-the-archive`, the worktree `../gdoc-m29` and the
+board folder `~/gdoc-m29-board`, which is the naming every run since M20 has
+used by hand.
+
+`REVIEW` is `go` or `ui`, and the plan's own `Review:` line answers it when the
+command line does not. `go` keeps the configured review: three external
+iterations, patience two, revmux's full roster. `ui` is one iteration, patience
+one and three lenses, because on M26 and M27 the passes after the third moved
+commas. The plan's `Tasks:` line becomes the iteration cap.
+
+`DRY=1` prints every command and runs none. `IDLE` overrides the worker's idle
+timeout, twenty minutes by default.
+
+The script strips the four `CLAUDE_*` variables, which make the Claude CLI
+refuse to start inside another session, and the two `GDOC_LIVE_*` ones, which
+were set in the shell that ran M18 to M27 and made a worker's plain `make test`
+write documents into Drive.
+
+### What the lead reads while it runs
+
+`~/gdoc-<mNN>-board/status`, three lines, replaced in place:
+
+```
+phase: review (go)
+commit: 1180aaf feat: the lead playbook and the team page
+next: wait: the board and this file refresh every 30 minutes
+```
+
+The phase, the last commit on the branch, and the one next action. That is the
+whole interface. The lead does not read the log, and the board refreshes every
+thirty minutes or on a phase change, never per iteration.
+
+Two recipes are in the script, because ralphex does not cover them. A log line
+`Failed to authenticate` stops the run and writes `needs /login`. A ralphex that
+exited with tasks left is relaunched once; after that the run stops and names
+the log. A stalled worker is `--idle-timeout`'s job.
+
+## `make release`
+
+```bash
+make release BRANCH=gdoc-v2-m29-the-archive
+make release BRANCH=gdoc-v2-m29-the-archive GO=v2.20.0
+```
+
+Without `GO` the script pushes the branch, opens the pull request with the
+plan's summary, waits for the checks and writes `ready: PR <n>, checks green`.
+It merges nothing and tags nothing.
+
+With `GO=vX.Y.0`, and only on a pull request whose checks are green, it merges,
+pulls, runs `make tag`, waits for the release workflow and reads the arm64 zip
+back: the checksum, the bundle, the signature, the plist version, the
+architectures, and `gdoc help --json`. It writes `released vX.Y.0, verified` or
+the step that failed.
+
+The lead passes `GO` only after Nail's message. That is the one step in a
+milestone that is his and not the team's.
+
+## When the script cannot
+
+The hand recipe, as a Claude Code session ran a milestone before M28. It is
+here for a run the scripts cannot carry: a plan shaped unlike the others, a
+board that needs an option `milestone.sh` does not pass, a platform the team is
+still fixing. It costs a session's context on every turn, which is why it is no
+longer the first thing on this page.
+
+`SCRATCH` below is the session's scratchpad directory.
 
 1. **Plan on main.** Write `docs/plans/<date>-<slug>.md`, commit and push it on
    `main`. ralphex creates the branch from `main`, and the reviewer must not see
@@ -119,7 +190,9 @@ the logs and the page. `SCRATCH` below is that directory.
   authenticate: OAuth session expired" in the log, the run dead a line
   later). `claude login` from a shell only sends the word "login" as a prompt;
   the fix is `/login` inside an interactive `claude`, then the launch line
-  again. `claude -p "say ok"` is the probe.
+  again. `claude -p "say ok"` is the probe. `milestone.sh` stops the run and
+  writes `needs /login` when it reads that line, so the lead does not have to
+  find it.
 - A task worker can finish its task, commit, print its summary and still not
   exit: `claude -p` waits for the worker's own background shells, and a worker
   that idled on reviewers with `until [ -f /tmp/never-exists-... ]; do sleep;
@@ -133,3 +206,7 @@ the logs and the page. `SCRATCH` below is that directory.
   `docs`, `refactor`, `chore`. A ralphex fix commit says "review findings" and
   is counted separately. `docs(plans)` and `chore(board)` are never task
   commits: a plan edited mid-run, or the board itself.
+- Two days of presence milestones (M20 to M27) ate a week's token quota, and
+  the retrospective in `docs/design/2026-10-19-two-days-retrospective.md` found
+  most of it in the recipe above rather than in the work. The cuts it approved
+  are what the two scripts hold.
