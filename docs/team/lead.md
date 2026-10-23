@@ -41,7 +41,7 @@ lines are the run's budget and `make milestone` reads them.
 |---|---|---|
 | `gdoc-trust-guardian` | before the run, when the plan touches `go/internal/guard`, `go/internal/auth`, `go/internal/presence`, `go/cmd/gdoc/desktop.go` or an invariant in `CLAUDE.md` | for a plan that touches none of them |
 | `planning:plan-review` | once, after the plan is written and before the run | again after the fixes, unless the plan changed shape |
-| `gdoc-design-reviewer` | once, after a UI run's renders are made and before the PR | for a run that changed no screen |
+| `gdoc-design-reviewer` | once, after a UI run's renders are made and before the PR. Name the renders directory in the prompt as an absolute path: the seat holds `Read` alone, so it expands no variable | for a run that changed no screen |
 | `codex-second-opinion` | a decision that is genuinely contested, or one you have gone in circles on | a question answered by reading the tree |
 | `gdoc-platform-operator` | the status file's next line is not a `wait:`, or the board stopped refreshing | a run that is going |
 

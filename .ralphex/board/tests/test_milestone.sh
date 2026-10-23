@@ -175,6 +175,102 @@ lacks "a dead run's claim does not refuse" "$out" "already running"
 holds "the run is claimed instead" "$out" "claiming the run"
 rm -rf "$t"
 
+# --- a branch that outlived its worktree ------------------------------------
+# The lead removed ../gdoc-m29 after a stopped run, or a release merged the
+# branch and left it behind. `git worktree add -b` refuses a branch that is
+# already there, so the form has to be picked by whether the ref exists.
+
+t=$(a_repo)
+(
+    cd "$t/repo" || exit 1
+    git worktree add -q -b gdoc-v2-m29-the-archive ../gdoc-m29 main
+    git worktree remove ../gdoc-m29
+) >/dev/null 2>&1
+out=$(cd "$t/repo" && HOME="$t/home" .ralphex/board/milestone.sh \
+    --plan docs/plans/2026-10-23-gdoc-v2-m29-the-archive.md --review go --dry 2>&1)
+holds "an existing branch gets the worktree back" "$out" \
+    "git worktree add ../gdoc-m29 gdoc-v2-m29-the-archive"
+lacks "and is not asked for a second time" "$out" "add -b gdoc-v2-m29-the-archive"
+holds "the registration a removed folder left is pruned" "$out" "git worktree prune"
+holds "and the run goes on to the tasks" "$out" "nohup ralphex --tasks-only"
+rm -rf "$t"
+
+# --- a setup command that failed --------------------------------------------
+# Every refusal writes the status file, because the launch line is detached and
+# stderr alone is a run the lead never hears about. A setup command that exited
+# through `set -e` wrote nothing, and the lead read the previous run's three
+# lines as a live run. A file where the worktree goes is one such failure.
+
+t=$(a_repo)
+: > "$t/gdoc-m29"
+mkdir -p "$t/home/gdoc-m29-board"
+printf 'phase: done\ncommit: (an older run)\nnext: make release BRANCH=x\n' \
+    > "$t/home/gdoc-m29-board/status"
+out=$(cd "$t/repo" && HOME="$t/home" .ralphex/board/milestone.sh \
+    --plan docs/plans/2026-10-23-gdoc-v2-m29-the-archive.md --review go 2>&1)
+holds "a worktree that could not be added is refused by name" "$out" "could not be added"
+status=$(cat "$t/home/gdoc-m29-board/status" 2>/dev/null || true)
+holds "and the refusal reaches the status file" "$status" "phase: refused"
+lacks "the older run's answer is gone" "$status" "phase: done"
+lacks "nothing is launched" "$out" "nohup ralphex"
+rm -rf "$t"
+
+# --- the claim names the worker, not only the script ------------------------
+# ralphex is launched with nohup, so killing `make milestone` leaves it running.
+# A claim that named only the script would read as a dead run and let the next
+# launch start a second worker into the same worktree and onto one branch.
+
+t=$(mktemp -d)
+out=$(
+    MILESTONE_LIB=1
+    export MILESTONE_LIB
+    # shellcheck source=/dev/null
+    source "$REPO/.ralphex/board/milestone.sh"
+    BOARD="$t/board"
+    WORKTREE="$t/nowhere"
+    mkdir -p "$BOARD"
+    sleep 30 &
+    worker=$!
+    # The script that launched it is gone; the worker it left is not.
+    printf '%s\n%s\n' "$(a_dead_pid)" "$worker" > "$BOARD/run.pid"
+    rc=0
+    # The refusal is on stderr, where the launch line discards it; the case
+    # reads it, so it is joined to stdout here.
+    ( claim_the_run ) 2>&1 || rc=$?
+    printf 'rc=%s\n' "$rc"
+    kill "$worker" 2>/dev/null
+    wait "$worker" 2>/dev/null || true
+) 2>&1
+holds "a worker that outlived its script refuses the next run" "$out" \
+    "a milestone is already running"
+holds "and the refusal is a non-zero status" "$out" "rc=1"
+rm -rf "$t"
+
+# A release takes the worker with it, so the relaunch the status file asks for
+# is not refused by the run it replaces.
+t=$(mktemp -d)
+out=$(
+    MILESTONE_LIB=1
+    export MILESTONE_LIB
+    # shellcheck source=/dev/null
+    source "$REPO/.ralphex/board/milestone.sh"
+    BOARD="$t/board"
+    mkdir -p "$BOARD"
+    sleep 30 &
+    worker=$!
+    printf '%s\n%s\n' "$$" "$worker" > "$BOARD/run.pid"
+    release_the_run
+    # 143 is 128 + SIGTERM: the kernel agrees the worker was signalled. The
+    # status is caught, because sourcing milestone.sh turns errexit on here.
+    st=0
+    wait "$worker" 2>/dev/null || st=$?
+    printf 'worker-status=%s\n' "$st"
+    [[ -f "$BOARD/run.pid" ]] && printf 'claim=left\n' || printf 'claim=dropped\n'
+) 2>&1
+holds "the release signals the worker" "$out" "worker-status=143"
+holds "and drops the claim" "$out" "claim=dropped"
+rm -rf "$t"
+
 # --- a lettered milestone ---------------------------------------------------
 # M24 was run twice, as m24a and m24b, each with its own worktree and board by
 # hand. Dropping the letter would give the second run the first one's.
@@ -234,9 +330,9 @@ status=$(
 holds "a restart reads nothing the dead run wrote" "$status" "rc=0"
 lacks "a restart does not ask for /login again" "$status" "needs /login"
 
-# A reviewer quoting the words is not a dead sign-in: the M28 review log carries
-# them five times. Only ralphex's own line, where the message starts the line,
-# stops a run.
+# A reviewer quoting the words is not a dead sign-in: the M28 log carries them on
+# six lines and none of them is ralphex's. Only ralphex's own line, where the
+# message starts the line and the colon follows it, stops a run.
 status=$(
     MILESTONE_LIB=1
     export MILESTONE_LIB
@@ -258,12 +354,12 @@ rm -rf "$t"
 # The same distinction as the sign-in, for the two markers that decide whether
 # a phase finished. ralphex writes `[26-10-23 22:18:41] ALL_TASKS_DONE` and
 # `completed in 49m38s (73 files, +3637/-4163 lines)`, each the only thing on
-# its line. The M28 run's own task log carries the words ALL_TASKS_DONE six
-# times from the task that wrote this script, the first of them 48 minutes
-# before the real line. Read as this run's answer, that prose would skip the one
-# relaunch and say `done` over tasks nobody ran.
+# its line. The M28 run's own log carries the words ALL_TASKS_DONE on ten lines
+# that are not the marker, all from the task that wrote this script, the first of
+# them 48 minutes before it. Read as this run's answer, that prose would skip the
+# one relaunch and say `done` over tasks nobody ran.
 #
-# Two of those six are the shapes that matter, and both are copied below from
+# Two of those ten are the shapes that matter, and both are copied below from
 # `~/gdoc-m28-board/ralphex-m28.log` lines 1470 and 1580: ralphex stamps wrapped
 # prose too, so a sentence can begin a stamped line with the bare token on it.
 # Matching the line's start is not enough; the marker's whole line is.
@@ -288,7 +384,7 @@ answers=$(
     # `completed in 0s` alone. Both format strings are in the binary, and a
     # finished review read as unfinished never sends the lead to the release.
     printf '%s\n' "completed in 0s" > "$t/bare-review.log"
-    printf '%s\n' "[26-10-23 23:00:16] completed in 0s was all the log said, which" \\
+    printf '%s\n' "[26-10-23 23:00:16] completed in 0s was all the log said, which" \
         > "$t/wrapped-bare-review.log"
     tasks_done "$t/prose-tasks.log" && printf 'prose-tasks=done\n' || printf 'prose-tasks=left\n'
     tasks_done "$t/wrapped-tasks.log" && printf 'wrapped-tasks=done\n' || printf 'wrapped-tasks=left\n'

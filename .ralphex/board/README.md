@@ -70,7 +70,9 @@ relaunched once; after that the run stops and names the log. A stalled worker is
 Each phase has to say it finished: the tasks with `ALL_TASKS_DONE`, the review
 with ralphex's own `completed in`. Both are read the way the sign-in line is,
 where the message starts the line: a worker writing about `ALL_TASKS_DONE` is
-not a finished task list, and the M28 log carries those words three times. A
+not a finished task list, and the M28 log carries those words on ten lines that
+are not the marker. The patterns and the lines they were measured against are
+in `milestone.sh` beside `TASKS_DONE`. A
 phase that ended without its own line writes `stopped in <phase>` and the log
 to read, never `done`.
 

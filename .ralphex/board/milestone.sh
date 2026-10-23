@@ -154,7 +154,7 @@ refresh_board() {
 # no lock of its own, so two workers would then commit onto one branch, append
 # to one log, and read each other's ALL_TASKS_DONE as their own answer.
 #
-# The claim is a pid in a file beside the board. A pid whose process is gone is
+# The claim is a file of pids beside the board. A pid whose process is gone is
 # a run that died, and this run takes the folder over, which is what resuming
 # needs. `flock` is not used, because it is not on a Mac and the lead's machine
 # is one.
@@ -163,15 +163,25 @@ refresh_board() {
 # that something unrelated now carries refuses a run that could have started.
 # That errs towards the lead reading one line and deciding, which is the safe
 # way round.
+# The file holds this script's pid on the first line and the ralphex it launched
+# on the second, because the worker is the half that outlives the script: it is
+# launched with nohup, so killing `make milestone` leaves it running. A claim
+# that named only the script would then read as a dead run, and the next launch
+# would start a second worker beside the first.
 claim_the_run() {
-    local pid=""
-    [[ ! -f "$BOARD/run.pid" ]] || pid=$(tr -dc '0-9' < "$BOARD/run.pid")
-    if [[ -n "$pid" && "$pid" != "$$" ]] && kill -0 "$pid" 2>/dev/null; then
-        # Not `fail`: the status file is the live run's, and three lines saying
-        # `refused` over a run that is running is worse than no lines at all.
-        printf 'make milestone: %s\n' \
-            "a milestone is already running in $WORKTREE as process $pid. Read $BOARD/status, or stop that run first." >&2
-        exit 1
+    local pid
+    if [[ -f "$BOARD/run.pid" ]]; then
+        while read -r pid; do
+            pid=$(printf '%s' "$pid" | tr -dc '0-9')
+            [[ -n "$pid" && "$pid" != "$$" ]] || continue
+            kill -0 "$pid" 2>/dev/null || continue
+            # Not `fail`: the status file is the live run's, and three lines
+            # saying `refused` over a run that is running is worse than no
+            # lines at all.
+            printf 'make milestone: %s\n' \
+                "a milestone is already running in $WORKTREE as process $pid. Read $BOARD/status, or stop that run first." >&2
+            exit 1
+        done < "$BOARD/run.pid"
     fi
     say "+ # claiming the run: $$ into $BOARD/run.pid"
     [[ -n "$DRY" ]] && return 0
@@ -181,10 +191,32 @@ claim_the_run() {
     trap 'release_the_run' EXIT
 }
 
+# claim_the_worker rewrites the claim with the worker this phase launched, so
+# the pid that survives the script is in the file the next launch reads. The
+# phase before it left a dead pid; only the live one is worth keeping.
+claim_the_worker() {
+    [[ -z "$DRY" ]] || return 0
+    [[ "${LAUNCHED_PID:-0}" -gt 0 ]] || return 0
+    printf '%s\n%s\n' "$$" "$LAUNCHED_PID" > "$BOARD/run.pid"
+}
+
+# release_the_run drops the claim this process made, and takes the worker with
+# it. A phase that ended leaves no worker to kill. The exits that do leave one
+# are the dead sign-in, where no amount of running fixes the worker, and the
+# lead killing the script, where stopping the run is what they meant; a worker
+# that outlived either would hold the worktree against the relaunch the status
+# file asks for. Honest about its limit: the kill reaches ralphex and not a
+# claude it has already started, so a worker killed mid-iteration may still
+# write that iteration's commit.
 release_the_run() {
-    local pid=""
-    [[ ! -f "$BOARD/run.pid" ]] || pid=$(tr -dc '0-9' < "$BOARD/run.pid")
-    [[ "$pid" == "$$" ]] || return 0
+    local first="" pid=""
+    [[ -f "$BOARD/run.pid" ]] || return 0
+    first=$(head -1 "$BOARD/run.pid" | tr -dc '0-9')
+    [[ "$first" == "$$" ]] || return 0
+    pid=$(sed -n 2p "$BOARD/run.pid" | tr -dc '0-9')
+    if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+        kill "$pid" 2>/dev/null || true
+    fi
     rm -f "$BOARD/run.pid"
 }
 
@@ -225,14 +257,19 @@ launch() {
     if [[ -z "$DRY" ]]; then
         eval "$cmd &"
         LAUNCHED_PID=$!
+        # The claim carries the worker from here on, so a script that dies
+        # leaves a file that names what is still running.
+        claim_the_worker
     fi
 }
 
 # ralphex's own line, "[21:18:06] Failed to authenticate: OAuth session
 # expired", with the message where the line starts and the colon after it. A
 # worker's prose reaches the same log, and the words quoted inside a sentence
-# are not a dead sign-in: the M28 run's log carries them six times from the task
-# that wrote this script. The line start alone does not tell the two apart,
+# are not a dead sign-in: `~/gdoc-m28-board/ralphex-m28.log` carries them on six
+# lines and none of them is ralphex's. The count is not the evidence, because
+# every sentence a worker writes about the words lands in the same log and moves
+# it; the shape is. The line start alone does not tell the two apart,
 # because ralphex stamps every line it passes through, wrapped prose included,
 # so a sentence that wraps onto the words begins a stamped line too. The colon
 # is ralphex's own form and no quoting of the words carries it.
@@ -270,14 +307,16 @@ watch_phase() {
 # ralphex's own marker, "[26-10-23 22:18:41] ALL_TASKS_DONE", and its own last
 # line, "completed in 49m38s (73 files, +3637/-4163 lines)". The same
 # distinction AUTH_FAILED draws, for the two answers that decide whether a phase
-# finished: the M28 task log carries the words ALL_TASKS_DONE six times from the
-# task that wrote this script, the first of them 48 minutes before the real
-# line.
+# finished: `~/gdoc-m28-board/ralphex-m28.log` carries the words ALL_TASKS_DONE
+# on ten lines beside the one line that is the marker, all from the task that
+# wrote this script, the first of them 48 minutes before the marker. That count
+# grew while the task wrote, so the shape and not the number is the evidence.
 #
 # The whole line is matched, not its start, because ralphex stamps wrapped prose
-# too: two of those six sentences wrap onto a line that begins with the bare
-# token, and a start-anchored pattern reads both as the marker. The marker is
-# the only thing on its line in all eleven runs from M20 to M28. The
+# too: two of those sentences, on lines 1470 and 1580, wrap onto a line that
+# begins with the bare token, and a start-anchored pattern reads both as the
+# marker. The marker is the only thing on its line in all eleven runs from M20
+# to M28. The
 # `<<<RALPHEX:...>>>` form is the signal a worker prints, which reaches the log
 # on a line of its own.
 #
@@ -395,9 +434,26 @@ main() {
             "$WORKTREE is on ${here:-no branch}, not $BRANCH. Remove it, or run the milestone it belongs to."
         say "+ # $WORKTREE is already a worktree on $BRANCH, keeping it"
     else
-        step git worktree add -b "$BRANCH" "$WORKTREE" main
+        # A branch can outlive its worktree: the lead removed the folder, or a
+        # release merged the branch and left it behind. `add -b` refuses a
+        # branch that exists, and a folder removed with `rm -rf` leaves its
+        # registration, which `add` refuses too. Prune, then pick the form by
+        # whether the ref is there, so the second run of one milestone adds the
+        # worktree back instead of dying in git.
+        #
+        # Each of the three carries `|| fail`, because a setup command that
+        # exits through `set -e` writes no status file, and the status file is
+        # the only thing the lead reads.
+        step git worktree prune || fail "git worktree prune failed in $REPO."
+        if git show-ref -q --verify "refs/heads/$BRANCH"; then
+            step git worktree add "$WORKTREE" "$BRANCH" \
+                || fail "$WORKTREE could not be added for the existing branch $BRANCH."
+        else
+            step git worktree add -b "$BRANCH" "$WORKTREE" main \
+                || fail "$WORKTREE could not be added on a new $BRANCH."
+        fi
     fi
-    step mkdir -p "$BOARD"
+    step mkdir -p "$BOARD" || fail "$BOARD could not be made."
     claim_the_run
     # --init forgets the page and starts its clock at now, which on a resumed
     # run would say the run began when the lead picked it up. The time the
@@ -409,7 +465,7 @@ main() {
     [[ ! -f "${HTML%.html}.json" ]] \
         || started=$(sed -n -E 's/.*"started"[^"]*"([^"]+)".*/\1/p' "${HTML%.html}.json" | head -1)
     [[ -z "$started" ]] || init+=(--started "$started")
-    step "${init[@]}"
+    step "${init[@]}" || fail "the board page could not be initialised: $HTML."
 
     run_task_phase
     run_review_phase
