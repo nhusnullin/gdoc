@@ -130,6 +130,7 @@ release:
 platform-test:
 	.ralphex/board/tests/test_milestone.sh
 	.ralphex/board/tests/test_release.sh
+	.ralphex/board/tests/test_meter.sh
 
 # The team's own check. The seats under .claude/agents/ are files, so what can
 # be wrong with one is a typo in its frontmatter, a model or a tool list that

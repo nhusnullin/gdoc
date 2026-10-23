@@ -84,6 +84,19 @@ machine, then compact. The run's status lines, the review rounds and the diff
 are spent context. Carrying them into tomorrow is the cost the retrospective
 measured.
 
+## The measurement
+
+```
+.ralphex/board/meter.py ../gdoc-<mNN>
+```
+
+After a run, before the compact: the meter sums the worktree's transcripts per
+task iteration and per review round. Put the run's row in
+`docs/team/measure.md` next to the baseline, with two numbers the meter cannot
+read: your own context at the end of the day, and how many messages Nail had to
+send. The method and the baseline are in that page, and Nail confirms them once
+before the pilot.
+
 ## When to message Nail
 
 Three things, and nothing else:

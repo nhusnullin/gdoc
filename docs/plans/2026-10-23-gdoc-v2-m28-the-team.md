@@ -210,15 +210,15 @@ one page the lead session loads at start.
 - Create: `.ralphex/board/meter.py`, `.ralphex/board/tests/test_meter.sh`,
   `docs/team/measure.md`
 
-- [ ] `meter.py <worktree path>` sums the `usage` blocks of every transcript
+- [x] `meter.py <worktree path>` sums the `usage` blocks of every transcript
       under `~/.claude/projects/<that path>/`: input, output, cache read,
       cache creation, sessions; and splits task sessions from review sessions
       by the ralphex log's phase markers
-- [ ] test: a fixture folder of two small transcripts gives the expected
+- [x] test: a fixture folder of two small transcripts gives the expected
       sums
-- [ ] `docs/team/measure.md`: the method in a paragraph, and the baseline
+- [x] `docs/team/measure.md`: the method in a paragraph, and the baseline
       run on M24a, M25, M26 and M27 as a table per task and per review round
-- [ ] the file ends with an open line for Nail's confirmation of the method
+- [x] the file ends with an open line for Nail's confirmation of the method
       and the baseline, which the lead records before the pilot runs
 
 ### Task 6: the pilot plan

@@ -188,7 +188,7 @@ done
 
 TEAM=$REPO/docs/team
 
-for page in README.md lead.md; do
+for page in README.md lead.md measure.md; do
     if [[ -f $TEAM/$page ]]; then
         pass "docs/team/$page exists"
     else
@@ -233,8 +233,17 @@ holds "the lead compacts after a release" "$leadpage" "compact"
 holds "the lead never re-reads the renders" "$leadpage" \
     "Never re-read the renders"
 holds "the lead reads the status file, not the log" "$leadpage" "status"
+holds "the lead measures the run" "$leadpage" ".ralphex/board/meter.py"
 
-for file in "$TEAM"/README.md "$TEAM"/lead.md; do
+# The measurement page is the third brief: the method, the baseline, and the
+# line Nail has to confirm before the pilot is compared against it.
+measurepage=$(cat "$TEAM/measure.md" 2>/dev/null)
+holds "the measure page names the meter" "$measurepage" ".ralphex/board/meter.py"
+holds "the measure page names the baseline runs" "$measurepage" "M24a"
+holds "the measure page states the third" "$measurepage" "a third of the baseline"
+holds "the measure page keeps a line for Nail" "$measurepage" "- [ ] Nail confirms"
+
+for file in "$TEAM"/*.md; do
     [[ -f $file ]] || continue
     short=${file#"$REPO"/}
     missing=()

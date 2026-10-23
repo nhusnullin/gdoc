@@ -108,6 +108,8 @@ a sentence's.
 
 - `docs/team/lead.md`: the lead's own page, which the lead session loads at
   start.
+- `docs/team/measure.md`: what a run cost, how it is counted, and the baseline
+  of M24a, M25, M26 and M27 the cuts are measured against.
 - `.ralphex/board/README.md`: the platform's recipes, for when a script cannot.
 - `docs/design/2026-10-19-two-days-retrospective.md`: what the cuts are numbered
   against.
