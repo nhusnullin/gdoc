@@ -243,10 +243,10 @@ one page the lead session loads at start.
 
 ### Task 7: Verify acceptance criteria
 
-- [ ] every item of the Overview this run builds is in place: two make
+- [x] every item of the Overview this run builds is in place: two make
       targets, three agents, the team page and the lead playbook, the meter
       with its baseline, the pilot plan
-- [ ] `make platform-test`, `make team-check`, `make vet`,
+- [x] `make platform-test`, `make team-check`, `make vet`,
       `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`
 
 ### Task 8: [Final] Update documentation
