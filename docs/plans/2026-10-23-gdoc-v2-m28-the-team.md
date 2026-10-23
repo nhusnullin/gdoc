@@ -226,7 +226,7 @@ one page the lead session loads at start.
 **Files:**
 - Create: `docs/plans/2026-10-23-gdoc-v2-m29-the-archive.md`
 
-- [ ] the pilot is the two approved document items. DECISIONS.md and
+- [x] the pilot is the two approved document items. DECISIONS.md and
       MEASURED.md entries before 2026-10-16 move to
       `docs/v2/DECISIONS-archive.md` and `docs/v2/MEASURED-archive.md`; the
       register stays whole in DECISIONS.md with each row saying which file
@@ -234,11 +234,11 @@ one page the lead session loads at start.
       CLAUDE.md or a Go comment still resolves through the register; a
       boundary test checks every register row has its entry in one of the
       two files
-- [ ] `go/cmd/gdoc/doc.go` keeps the package comment and every rule CLAUDE.md
+- [x] `go/cmd/gdoc/doc.go` keeps the package comment and every rule CLAUDE.md
       or another file sends a reader to; the long walkthrough sections move
       to topic files as file comments; `TestOnlyThePackageCommentReachesGoDoc`
       and `TestEveryPackageHasExactlyOnePackageComment` pass
-- [ ] the pilot plan states `Tasks:` and `Review: go`, follows the lead
+- [x] the pilot plan states `Tasks:` and `Review: go`, follows the lead
       playbook, and the plan reviewer reads it before the run
 
 ### Task 7: Verify acceptance criteria
