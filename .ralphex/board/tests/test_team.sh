@@ -180,6 +180,79 @@ for file in "$AGENTS"/gdoc-*.md; do
     fi
 done
 
+# --- the team pages --------------------------------------------------------
+# The two pages a session reads instead of asking: `docs/team/README.md` for
+# who holds what, `docs/team/lead.md` for what the lead does. They are checked
+# the same way a definition is, because they are briefs too: a page that sends
+# the lead to a file that moved sends it nowhere.
+
+TEAM=$REPO/docs/team
+
+for page in README.md lead.md; do
+    if [[ -f $TEAM/$page ]]; then
+        pass "docs/team/$page exists"
+    else
+        bad "docs/team/$page is missing"
+    fi
+done
+
+teampage=$(cat "$TEAM/README.md" 2>/dev/null)
+for team in "Stream-aligned" "Platform" "Enabling" "Complicated subsystem"; do
+    holds "the team page names the team" "$teampage" "$team"
+done
+for seat in gdoc-platform-operator gdoc-design-reviewer gdoc-trust-guardian \
+    planning:plan-review codex-second-opinion; do
+    holds "the team page names the seat" "$teampage" "$seat"
+done
+holds "the team page names the models" "$teampage" "Opus"
+holds "the team page names the models" "$teampage" "Sonnet"
+for mode in "X-as-a-Service" "facilitating" "collaboration" "The day"; do
+    holds "the team page names the interaction mode" "$teampage" "$mode"
+done
+
+leadpage=$(cat "$TEAM/lead.md" 2>/dev/null)
+holds "the lead has the five questions as a template" "$leadpage" \
+    "the five questions"
+if [[ $(grep -c '^[1-5]\. <' "$TEAM/lead.md" 2>/dev/null) -eq 5 ]]; then
+    pass "the lead's template has five numbered questions"
+else
+    bad "the lead's template does not hold five numbered questions"
+fi
+holds "the lead knows who to call" "$leadpage" "gdoc-trust-guardian"
+holds "the lead knows who to call" "$leadpage" "planning:plan-review"
+holds "the lead knows who to call" "$leadpage" "gdoc-design-reviewer"
+holds "the lead knows who to call" "$leadpage" "gdoc-platform-operator"
+holds "the lead messages Nail on a decision" "$leadpage" "A decision"
+holds "the lead messages Nail on a blocked run" "$leadpage" \
+    "A blocked run he must act on"
+holds "the lead messages Nail on a release" "$leadpage" "A release"
+holds "one milestone and one review a day" "$leadpage" \
+    "One milestone and one review a day"
+holds "the release stops without the go" "$leadpage" "Without \`GO\`"
+holds "the lead compacts after a release" "$leadpage" "compact"
+holds "the lead never re-reads the renders" "$leadpage" \
+    "Never re-read the renders"
+holds "the lead reads the status file, not the log" "$leadpage" "status"
+
+for file in "$TEAM"/README.md "$TEAM"/lead.md; do
+    [[ -f $file ]] || continue
+    short=${file#"$REPO"/}
+    missing=()
+    while read -r path; do
+        [[ -n $path ]] || continue
+        [[ -e $REPO/$path ]] || missing+=("$path")
+    done <<< "$(paths_in "$file")"
+    if [[ ${#missing[@]} -eq 0 ]]; then
+        pass "$short names only paths that exist"
+    else
+        bad "$short names paths that do not exist: ${missing[*]}"
+    fi
+done
+
+# The board README is the platform's page, and it points at the team's.
+board=$(cat "$REPO/.ralphex/board/README.md" 2>/dev/null)
+holds "the board README points at the team" "$board" "docs/team/README.md"
+
 printf '\n'
 if [[ $fails -eq 0 ]]; then
     printf 'test_team: all checks pass\n'

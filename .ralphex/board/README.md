@@ -9,6 +9,9 @@ it to be kept.
 The page reads what ralphex already writes: its logs, the plan's checkboxes,
 `git log main..<branch>`. Nothing here talks to ralphex or changes the run.
 
+Who runs all this, and why it is split the way it is, is `docs/team/README.md`,
+with the lead's own page beside it in `docs/team/lead.md`.
+
 ## Files
 
 | File | Holds |

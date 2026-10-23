@@ -195,14 +195,14 @@ one page the lead session loads at start.
 - Create: `docs/team/README.md`, `docs/team/lead.md`
 - Modify: `.ralphex/board/README.md` (one line pointing at `docs/team/`)
 
-- [ ] `docs/team/README.md`: the four teams, their seats and models, the
+- [x] `docs/team/README.md`: the four teams, their seats and models, the
       interaction modes, the day's flow, from the brainstorm file
-- [ ] `docs/team/lead.md`, one page: the five product questions as a
+- [x] `docs/team/lead.md`, one page: the five product questions as a
       template; who to call and when; message Nail only on a decision, a
       blocked run he must act on, or a release; one milestone and one review
       a day; `make release` without `GO` until Nail says; compact after a
       release; never re-read renders the reviewer read
-- [ ] test: `make team-check` also checks every path the two pages name
+- [x] test: `make team-check` also checks every path the two pages name
 
 ### Task 5: the meter and the baseline, before the pilot
 
