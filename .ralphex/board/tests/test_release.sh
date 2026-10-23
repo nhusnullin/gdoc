@@ -91,9 +91,14 @@ case "\$1\$2" in
         printf 'https://github.com/altery/gdoc/pull/84\n'
         ;;
     prchecks)
-        if [[ "\$*" == *--json* && -f "$tmp/red" ]]; then
-            printf 'test / go is fail\n'
-        fi
+        # --watch is the wait, which exits non-zero on a red check the way gh
+        # does. The two reads after it are the full list of checks and the
+        # not-green ones, which the jq tells apart.
+        case "\$*" in
+            *--watch*) [[ -f "$tmp/red" ]] && exit 1 ;;
+            *select*) [[ -f "$tmp/red" ]] && printf 'test / go is fail\n' ;;
+            *--json*) [[ -f "$tmp/no-checks" ]] || printf 'test / go\n' ;;
+        esac
         ;;
     runlist)
         printf '9001\n'
@@ -123,6 +128,19 @@ a_run() {
         cd "$tmp/repo" || exit 1
         PATH="$tmp/bin:$PATH" HOME="$tmp/home" \
             .ralphex/board/release.sh --branch gdoc-v2-m29-the-archive --dry "$@"
+    ) 2>&1
+}
+
+# a_live is the same run without --dry, which is the only way to assert what a
+# step that fails does. The push reaches the bare repository beside it and the
+# stub answers for gh, so nothing leaves the folder.
+a_live() {
+    local tmp=$1
+    shift
+    (
+        cd "$tmp/repo" || exit 1
+        PATH="$tmp/bin:$PATH" HOME="$tmp/home" \
+            .ralphex/board/release.sh --branch gdoc-v2-m29-the-archive "$@"
     ) 2>&1
 }
 
@@ -205,6 +223,49 @@ lacks "a red check tags nothing" "$out" "make tag"
 
 out=$(a_run "$t")
 holds "a red check stops the wait too" "$out" "the checks are not green"
+rm -rf "$t"
+
+# --- a red check in a run that is not dry -----------------------------------
+# `gh pr checks --watch` exits non-zero on the first red check. Under `set -e`
+# that would end the script with the status file still saying the checks are
+# running, which the lead reads as "wait, nobody has work".
+
+t=$(a_repo)
+: > "$t/red"
+out=$(a_live "$t")
+holds "the red watch does not kill the script" "$out" "the PR's checks are not green: test / go is fail"
+holds "the status file says so" "$(cat "$t/home/gdoc-m29-board/status" 2>/dev/null)" \
+    "phase: release, the checks are not green"
+lacks "and does not leave the lead waiting" "$(cat "$t/home/gdoc-m29-board/status" 2>/dev/null)" \
+    "wait:"
+rm -rf "$t"
+
+# --- a PR whose checks cannot be read ---------------------------------------
+# An empty answer is a read that failed or a PR with no checks at all. Neither
+# is green, and the one gate before a merge never guesses.
+
+t=$(a_repo)
+: > "$t/no-checks"
+out=$(a_live "$t")
+holds "no checks is not green" "$out" "could not be read, or the PR has none"
+rm -rf "$t"
+
+# --- GO from the wrong checkout ---------------------------------------------
+# `make tag` commits the version bump on HEAD and pushes HEAD. From a
+# milestone's worktree that is the feature branch, and main never gets it.
+
+t=$(a_repo)
+: > "$t/pr"
+out=$(
+    cd "$t/repo" || exit 1
+    git checkout -q gdoc-v2-m29-the-archive
+    PATH="$t/bin:$PATH" HOME="$t/home" \
+        .ralphex/board/release.sh --branch gdoc-v2-m29-the-archive --dry --go v2.20.0 2>&1
+)
+holds "a checkout that is not main is refused by name" "$out" \
+    "must be run from a checkout on main; this one is on gdoc-v2-m29-the-archive"
+lacks "and merges nothing" "$out" "gh pr merge"
+lacks "and tags nothing" "$out" "make tag"
 rm -rf "$t"
 
 t=$(a_repo)

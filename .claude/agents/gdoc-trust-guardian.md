@@ -79,8 +79,9 @@ if we did not", and what it would cost to drop.
 ## Who else to call
 
 - The plan reviewer, `planning:plan-review`, reads a plan for missing tests,
-  wrong order and over-engineering. It runs before you and answers a different
-  question. Say so if a plan reaches you without it.
+  wrong order and over-engineering. It runs after you, on the plan your veto
+  left, because a veto changes what there is to review. It answers a different
+  question, so a plan it has not read yet is no reason to hold yours back.
 - Codex, `codex-second-opinion`, reads a design against the tree and names the
   holes. Ask for it when your veto is contested, or when you and the plan's
   author disagree about what the code already does. Two models that read the

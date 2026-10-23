@@ -113,7 +113,9 @@ verify_step() {
 # lead reads one file from the worktree to the release. A branch that carries no
 # milestone number writes no status, and the lines on stdout are all there is.
 derive_names() {
-    MILESTONE=$(printf '%s' "$BRANCH" | grep -oE 'm[0-9]+' | head -1 || true)
+    # The letter belongs to the milestone, the way milestone.sh and meter.py
+    # read it: m24a and m24b were two runs with two board folders.
+    MILESTONE=$(printf '%s' "$BRANCH" | grep -oE 'm[0-9]+[a-z]?' | head -1 || true)
     BOARD=""
     [[ -z "$MILESTONE" ]] || BOARD="$HOME/gdoc-$MILESTONE-board"
 }
@@ -194,6 +196,25 @@ checks_red() {
         --jq '.[] | select(.bucket != "pass" and .bucket != "skipping") | .name + " is " + .bucket'
 }
 
+# checks_named is every check the PR has, pass or not. An empty answer is the
+# one green claim this script will not make: a read that failed and a PR with no
+# checks at all both look like "nothing is red", and neither is green.
+checks_named() {
+    ask gh pr checks "$BRANCH" --json name --jq '.[].name'
+}
+
+# green_or_stop is the one gate. The caller says what to do when it is not
+# green, because before the merge nothing is published and after it everything
+# is.
+green_or_stop() {
+    local phase=$1 named red
+    named=$(checks_named)
+    [[ -n "$named" ]] || stop "$phase" \
+        "the PR's checks could not be read, or the PR has none. Nothing is merged. Run: gh pr checks $BRANCH"
+    red=$(checks_red)
+    [[ -z "$red" ]] || stop "$phase" "the PR's checks are not green: $red. Nothing is merged."
+}
+
 open_pr() {
     local plan title body n
     plan=$(plan_file)
@@ -201,23 +222,26 @@ open_pr() {
     body=$(mktemp)
     pr_body "$plan" "$body"
 
-    step git push -u origin "$BRANCH"
+    step git push -u origin "$BRANCH" \
+        || stop "release, the push failed" "git push refused $BRANCH. Nothing is open."
     n=$(pr_number)
     if [[ -n "$n" ]]; then
         say "+ # PR $n is already open for $BRANCH"
     else
         step gh pr create --base main --head "$BRANCH" \
-            --title "$title" --body-file "$body"
+            --title "$title" --body-file "$body" \
+            || stop "release, the PR was not opened" "gh pr create failed for $BRANCH."
         n=$(pr_number)
     fi
 
     write_status "release, waiting for the checks" "wait: the PR's checks are running"
-    step gh pr checks "$BRANCH" --watch --fail-fast
+    # The watch exits non-zero on the first red check, and on a PR that reports
+    # none at all. Either way the answer is the read below, which names the
+    # check: a failed watch must not kill the script before the status file
+    # stops saying the checks are still running.
+    step gh pr checks "$BRANCH" --watch --fail-fast || true
 
-    local red
-    red=$(checks_red)
-    [[ -z "$red" ]] || stop "release, the checks are not green" \
-        "the PR's checks are not green: $red. Nothing is merged."
+    green_or_stop "release, the checks are not green"
 
     [[ -n "$n" ]] || n="?"
     PR="$n"
@@ -227,15 +251,25 @@ open_pr() {
 }
 
 # merge_and_tag is everything after Nail's go, and it runs only on a PR whose
-# checks are green.
+# checks are green, and only from a checkout that is on main.
 merge_and_tag() {
-    local red
-    red=$(checks_red)
-    [[ -z "$red" ]] || fail "the PR's checks are not green: $red. Nothing is merged."
+    # `make tag` commits the version bump on HEAD, tags HEAD and pushes HEAD. In
+    # a milestone's worktree that is the feature branch: the bump would land
+    # there, main would never get it, and the tag would name a commit no branch
+    # carries.
+    local here
+    here=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)
+    [[ "$here" == "main" ]] || fail \
+        "GO=$GO must be run from a checkout on main; this one is on ${here:-no branch}. Nothing is merged."
 
-    step gh pr merge "$PR" --merge
-    step git pull --ff-only origin main
-    step make tag "VERSION=$GO"
+    green_or_stop "release, the checks are not green"
+
+    step gh pr merge "$PR" --merge \
+        || stop "release, the merge failed" "gh pr merge refused PR $PR. Nothing is tagged."
+    step git pull --ff-only origin main \
+        || stop "release, merged but not tagged" "PR $PR is merged, and git pull --ff-only did not fast-forward main. Nothing is tagged."
+    step make tag "VERSION=$GO" \
+        || stop "release, merged but not tagged" "PR $PR is merged, and make tag VERSION=$GO failed. Nothing is published."
 }
 
 # wait_for_release waits for the run the tag started. The tag is the run's
@@ -257,7 +291,8 @@ wait_for_release() {
     done
     [[ -n "$run" ]] || stop "released $GO, NOT verified" \
         "no release workflow run appeared for $GO after $((RUN_TRIES * RUN_WAIT))s"
-    step gh run watch "$run" --exit-status
+    step gh run watch "$run" --exit-status \
+        || stop "released $GO, NOT verified" "the release workflow run $run failed. The tag is pushed."
 }
 
 # verify reads the release back the way a colleague's Mac meets it: the asset
@@ -271,12 +306,14 @@ verify() {
     work=$(mktemp -d)
     app="$work/unpacked/$BUNDLE"
 
-    step gh release download "$GO" --dir "$work" --pattern "$asset" --pattern "$sums"
+    step gh release download "$GO" --dir "$work" --pattern "$asset" --pattern "$sums" \
+        || stop "released $GO, NOT verified" "the release's assets could not be downloaded: $asset, $sums."
     verify_step "the checksum" "$asset: OK" \
         "cd $work && grep ' $asset\$' $sums | shasum -a 256 -c -"
     verify_step "the bundle is in the zip" "$EXECUTABLE" \
         "unzip -Z1 $work/$asset | grep '^$EXECUTABLE\$'"
-    step unzip -q "$work/$asset" -d "$work/unpacked"
+    step unzip -q "$work/$asset" -d "$work/unpacked" \
+        || stop "released $GO, NOT verified" "$asset could not be unzipped."
     verify_step "the signature" "valid on disk" \
         "codesign --verify --deep --strict -vv $app"
     verify_step "the plist version" "$ver" \

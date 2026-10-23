@@ -73,6 +73,10 @@ takes the fast lane.
 make release BRANCH=<branch>
 ```
 
+Run it from the checkout that is on `main`, not from the milestone's worktree:
+`make tag` commits the version bump on HEAD and pushes HEAD, and the script
+refuses `GO` anywhere but `main`.
+
 Without `GO` this pushes the branch, opens the PR, waits for the checks and
 stops at `ready`. That is where it stops until Nail's message. You pass
 `GO=vX.Y.0` only after he has said go, in words, for that version. There is no

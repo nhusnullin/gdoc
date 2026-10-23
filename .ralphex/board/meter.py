@@ -13,14 +13,19 @@ Claude Code writes one JSONL transcript per session under
 every assistant message in it carries a `usage` block. That block is the meter:
 input, output, cache read and cache creation tokens, as the API charged them.
 
-Two things make a naive sum wrong, and both are handled here:
+Three things make a naive sum wrong, and all three are handled here:
 
 - One API response is written as one line per content block, so a response with
   thinking, text and two tool calls appears four times, each line repeating the
   whole usage of the response. Summing lines overcounts by whatever the shape of
-  the turn was: M26 reads as 220 million tokens by line and 137 million by
+  the turn was: M26 reads as 403 million tokens by line and 238 million by
   response. The `requestId` is the response, so the sum is per requestId and the
   repeats are counted and reported, never added.
+- A session's subagents write their own transcripts one level down, in
+  `<session>/subagents/agent-*.jsonl`, and their responses appear in no parent
+  file. Reading only the top level dropped 101 of M26's 238 million tokens.
+  Every `*.jsonl` under the folder is read, which is why the file count is
+  higher than the session count.
 - A transcript folder holds every session that ever ran in that worktree, the
   tasks, the review and anything run by hand afterwards. The ralphex logs say
   when each iteration ran, so each response lands in the iteration whose window
@@ -175,6 +180,19 @@ def add(row, session, usage):
         row["tokens"][i] += usage.get(key, 0) or 0
 
 
+def transcripts(folder):
+    """Every transcript file of a worktree, the subagents' included.
+
+    Claude Code writes a session's own turns to `<folder>/<session>.jsonl` and
+    the turns of each subagent it spawned to
+    `<folder>/<session>/subagents/agent-*.jsonl`. A subagent's responses are
+    charged like any other and appear in no parent file: reading only the top
+    level dropped 101 million tokens of M26 alone, and the team's seats are
+    subagents, so the pilot would be undercounted the most.
+    """
+    return sorted(glob.glob(os.path.join(folder, "**", "*.jsonl"), recursive=True))
+
+
 def read_usage(folder):
     """Every charged response in a transcript folder, once each.
 
@@ -184,7 +202,7 @@ def read_usage(folder):
     responses = []
     repeats = 0
     seen = set()
-    for path in sorted(glob.glob(os.path.join(folder, "*.jsonl"))):
+    for path in transcripts(folder):
         for line in open(path, encoding="utf-8", errors="replace"):
             line = line.strip()
             if not line:
@@ -285,7 +303,7 @@ def main(argv):
 
     print(f"worktree:    {os.path.abspath(os.path.expanduser(args.worktree))}")
     print(f"transcripts: {folder}")
-    print(f"             {len(glob.glob(os.path.join(folder, '*.jsonl')))} files, "
+    print(f"             {len(transcripts(folder))} files, "
           f"{len(everything['sessions'])} sessions, {len(responses)} responses, "
           f"{repeats} repeats dropped")
     for log in logs:

@@ -6,7 +6,9 @@ went: about 107 Opus task iterations, ten revmux rounds, some twenty reviewer
 agents reading up to 120 images each, and one project-manager session that held
 product, runs, monitors, boards, releases and reports in one context. M26 alone
 cost 220 million tokens over its 27 worker sessions, 214 million of them cache
-reads, which is the same context sent again on every turn.
+reads, which is the same context sent again on every turn. `docs/team/measure.md`
+read that worktree again with the meter, the subagents included, and counted
+237.8 million.
 
 This page is the team that replaced that session, organised by Team Topologies.
 Nail decides what. The team lead decides how. Nail talks to the lead and to

@@ -60,10 +60,16 @@ The phase, the last commit on the branch, and the one next action. That is the
 whole interface. The lead does not read the log, and the board refreshes every
 thirty minutes or on a phase change, never per iteration.
 
-Two recipes are in the script, because ralphex does not cover them. A log line
-`Failed to authenticate` stops the run and writes `needs /login`. A ralphex that
-exited with tasks left is relaunched once; after that the run stops and names
-the log. A stalled worker is `--idle-timeout`'s job.
+Two recipes are in the script, because ralphex does not cover them. A ralphex
+line `Failed to authenticate` stops the run and writes `needs /login`; the words
+inside a worker's own sentence do not, and neither does the line a dead run left
+in the log before this one started. A ralphex that exited with tasks left is
+relaunched once; after that the run stops and names the log. A stalled worker is
+`--idle-timeout`'s job.
+
+Each phase has to say it finished: the tasks with `ALL_TASKS_DONE`, the review
+with ralphex's own `completed in`. A phase that ended without its line writes
+`stopped in <phase>` and the log to read, never `done`.
 
 ## `make release`
 
@@ -84,6 +90,11 @@ the step that failed.
 
 The lead passes `GO` only after Nail's message. That is the one step in a
 milestone that is his and not the team's.
+
+Run it from the checkout that is on `main`, never from the milestone's worktree.
+`make tag` commits the version bump on HEAD, tags HEAD and pushes HEAD, so from
+a feature branch the bump would land there and `main` would never get it. The
+script refuses `GO` anywhere but `main` for that reason.
 
 ## When the script cannot
 

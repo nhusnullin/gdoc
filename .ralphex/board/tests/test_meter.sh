@@ -40,7 +40,9 @@ holds() {
 # ralphex worker, session B the review and its subagent. One response of
 # session A is written as two lines, one per content block, which is the repeat
 # the meter must drop. One response of session B is an hour before the run
-# started, which is the row the meter must keep outside it.
+# started, which is the row the meter must keep outside it. The subagent's
+# response is where Claude Code puts it, in
+# <session>/subagents/agent-1.jsonl, carrying the session that spawned it.
 a_run() {
     local tmp
     tmp=$(mktemp -d)
@@ -120,9 +122,14 @@ with open(os.path.join(folder, "sessionA.jsonl"), "w") as f:
 lines = []
 lines += response("sessionB", at(-60), 6, ["text"])             # before the run
 lines += response("sessionB", at(21), 4, ["text"])
-lines += response("sessionB", at(25), 5, ["text"], sidechain=True)
 with open(os.path.join(folder, "sessionB.jsonl"), "w") as f:
     f.write("\n".join(lines) + "\n")
+
+# The subagent of session B, one level down, as Claude Code writes it.
+nested = os.path.join(folder, "sessionB", "subagents")
+os.makedirs(nested)
+with open(os.path.join(nested, "agent-1.jsonl"), "w") as f:
+    f.write("\n".join(response("sessionB", at(25), 5, ["text"], sidechain=True)) + "\n")
 PY
     printf '%s' "$tmp"
 }
@@ -135,8 +142,8 @@ out=$(python3 -I "$METER" /Users/nobody/gdoc-m99 \
     --log "$tmp/ralphex-m99-review.log" 2>&1)
 
 # Six responses of the seven lines, because one response was two content
-# blocks.
-holds "the header" "$out" "2 files, 2 sessions, 6 responses, 1 repeats dropped"
+# blocks. Three files, because the subagent's transcript is one of them.
+holds "the header" "$out" "3 files, 2 sessions, 6 responses, 1 repeats dropped"
 
 # Task iteration 1 holds the scale 1 and scale 2 responses: 30 input, 300
 # output, 3,000 cache read, 30,000 cache creation.
@@ -144,7 +151,8 @@ holds "task iteration 1" "$out" "^task iteration 1 +1 +2 +30 +300 +3,000 +30,000
 holds "task iteration 2" "$out" "^task iteration 2 +1 +1 +30 +300 +3,000 +30,000 +33,330"
 holds "the task phase" "$out" "^tasks, all iterations +1 +3 +60 +600 +6,000 +60,000 +66,660"
 
-# The review iteration holds the session and its subagent: scale 4 and 5.
+# The review iteration holds the session and its subagent: scale 4 and 5. The
+# subagent's 5 is the half the meter used to drop.
 holds "custom review iteration 1" "$out" "^custom review iteration 1 +1 +2 +90 +900 +9,000 +90,000 +99,990"
 holds "the review phase" "$out" "^review, all iterations +1 +2 +90 +900 +9,000 +90,000 +99,990"
 

@@ -90,7 +90,10 @@ derive_names() {
     # Strip the leading date, which is how every branch since M2 is named.
     slug=$(printf '%s' "$base" | sed -E 's/^[0-9]{4}-[0-9]{2}-[0-9]{2}-//')
     BRANCH="$slug"
-    MILESTONE=$(printf '%s' "$slug" | grep -oE 'm[0-9]+' | head -1 || true)
+    # The letter belongs to the milestone: M24 was run twice, as m24a and m24b,
+    # and dropping the letter would give the second run the first one's worktree
+    # and the first one's logs. meter.py reads the same shape.
+    MILESTONE=$(printf '%s' "$slug" | grep -oE 'm[0-9]+[a-z]?' | head -1 || true)
     [[ -n "$MILESTONE" ]] || fail "the plan file name carries no milestone number: $PLAN"
     WORKTREE="../gdoc-$MILESTONE"
     BOARD="$HOME/gdoc-$MILESTONE-board"
@@ -113,11 +116,19 @@ write_status() {
     printf 'phase: %s\ncommit: %s\nnext: %s\n' "$phase" "$commit" "$next" > "$BOARD/status"
 }
 
-refresh_board() {
-    local phase=$1
+# refresh_html redraws the board page. The pid is what tells a running task from
+# a stopped one, so a refresh without it reads as "Stopped" all run long. The
+# board is a page a person opens, so a refresh that fails is never a failed run.
+refresh_html() {
+    local pid=${1:-0}
     [[ -f "$HTML" ]] || return 0
     python3 "$REPO/.ralphex/board/refresh_board.py" --html "$HTML" \
-        --repo "$WORKTREE" >/dev/null 2>&1 || true
+        --repo "$WORKTREE" --pid "$pid" >/dev/null 2>&1 || true
+}
+
+refresh_board() {
+    local phase=$1 pid=${2:-0}
+    refresh_html "$pid"
     write_status "$phase" "wait: the board and this file refresh every $((BOARD_EVERY / 60)) minutes"
 }
 
@@ -137,9 +148,14 @@ step() {
     "$@"
 }
 
-# launch prints the detached ralphex line and returns its pid in LAUNCHED_PID.
-# The command is built as one string so that what the dry run prints is exactly
-# what a real run executes.
+# launch prints the detached ralphex line and returns its pid in LAUNCHED_PID
+# and the log's size before the launch in LAUNCHED_AT. The command is built as
+# one string so that what the dry run prints is exactly what a real run
+# executes.
+#
+# A launch appends to the phase log, so the log of a run that died is still
+# there when the lead starts the next one. LAUNCHED_AT is where this run's
+# output begins, and watch_phase reads nothing before it.
 launch() {
     local log=$1; shift
     local prefix=$1; shift
@@ -148,25 +164,35 @@ launch() {
     cmd="( cd \"$WORKTREE\" && ${prefix}$(env_strip) nohup ralphex $* >> \"$log\" 2>&1 )"
     say "+ $cmd &"
     LAUNCHED_PID=0
+    LAUNCHED_AT=0
+    [[ ! -f "$log" ]] || LAUNCHED_AT=$(wc -c < "$log" | tr -d '[:space:]')
     if [[ -z "$DRY" ]]; then
         eval "$cmd &"
         LAUNCHED_PID=$!
     fi
 }
 
+# ralphex's own line, "[21:18:06] Failed to authenticate: OAuth session
+# expired", with the message where the line starts. A worker's prose reaches the
+# same log, and the words quoted inside a sentence are not a dead sign-in: the
+# M28 run's log carries them five times from the task that wrote this script.
+AUTH_FAILED='^(\[[0-9 :-]+\] )?Failed to authenticate'
+
 # watch_phase waits for one ralphex to end, refreshing the board on the way.
 # Returns 0 when the process ended, 2 when the Claude CLI's sign-in expired.
+# `from` is the log's size before this launch, so nothing an earlier run wrote
+# is read as this one's.
 #
 # Only the two recipes ralphex does not already cover live here. A stalled
 # worker is --idle-timeout's job, and a rate limit is ralphex's own wait.
 watch_phase() {
-    local log=$1 pid=$2 phase=$3
+    local log=$1 pid=$2 phase=$3 from=${4:-0}
     local since=0
     while :; do
         # "Failed to authenticate: OAuth session expired" kills the run a line
         # later, and no amount of waiting fixes it: only /login inside an
         # interactive claude does.
-        if [[ -f "$log" ]] && grep -q 'Failed to authenticate' "$log"; then
+        if [[ -f "$log" ]] && grep -Eq "$AUTH_FAILED" <(tail -c "+$((from + 1))" "$log"); then
             write_status "stopped in $phase" \
                 "needs /login: run /login inside an interactive claude, then start make milestone again"
             return 2
@@ -176,13 +202,21 @@ watch_phase() {
         since=$((since + POLL))
         if (( since >= BOARD_EVERY )); then
             since=0
-            refresh_board "$phase"
+            refresh_board "$phase" "$pid"
         fi
     done
 }
 
 tasks_done() {
     [[ -f "$1" ]] && grep -q 'ALL_TASKS_DONE' "$1"
+}
+
+# review_done is ralphex's own last line, "completed in 49m38s (73 files, ...)",
+# which refresh_board.py reads as finished too. A review that was killed, timed
+# out or crashed never writes it, and a branch whose log lacks it is not a
+# reviewed branch.
+review_done() {
+    [[ -f "$1" ]] && grep -Eq '^completed in |review .*completed successfully' "$1"
 }
 
 run_task_phase() {
@@ -192,7 +226,8 @@ run_task_phase() {
             "--max-iterations=$((TASKS + 2))" "--idle-timeout=$IDLE" "$PLAN"
         write_status "tasks, attempt $attempt of 2" "wait: the tasks are running"
         [[ -n "$DRY" ]] && return 0
-        watch_phase "$TASK_LOG" "$LAUNCHED_PID" "tasks" || exit 1
+        refresh_html "$LAUNCHED_PID"
+        watch_phase "$TASK_LOG" "$LAUNCHED_PID" "tasks" "$LAUNCHED_AT" || exit 1
         tasks_done "$TASK_LOG" && return 0
         if (( attempt == 2 )); then
             write_status "stopped in tasks" \
@@ -215,7 +250,15 @@ run_review_phase() {
     launch "$REVIEW_LOG" "$prefix" "${args[@]}"
     write_status "review ($REVIEW)" "wait: the review is running"
     [[ -n "$DRY" ]] && return 0
-    watch_phase "$REVIEW_LOG" "$LAUNCHED_PID" "review ($REVIEW)" || exit 1
+    refresh_html "$LAUNCHED_PID"
+    watch_phase "$REVIEW_LOG" "$LAUNCHED_PID" "review ($REVIEW)" "$LAUNCHED_AT" || exit 1
+    # The task phase has ALL_TASKS_DONE; this is the review's own answer. A
+    # review that ended without it is a branch nobody reviewed, and saying
+    # `done` over it would send the lead to the release.
+    review_done "$REVIEW_LOG" && return 0
+    write_status "stopped in review ($REVIEW)" \
+        "the review ended before it finished: read $REVIEW_LOG"
+    exit 1
 }
 
 main() {
@@ -243,7 +286,14 @@ main() {
     git cat-file -e "main:$PLAN" 2>/dev/null || fail "$PLAN is not committed on main."
 
     if [[ -d "$WORKTREE" ]]; then
-        say "+ # $WORKTREE is already a worktree, keeping it"
+        # A worktree is kept so a stopped run resumes where it was. One holding
+        # another branch is another run's, and launching into it would append to
+        # that run's logs and commit onto its branch.
+        local here
+        here=$(git -C "$WORKTREE" rev-parse --abbrev-ref HEAD 2>/dev/null || true)
+        [[ "$here" == "$BRANCH" ]] || fail \
+            "$WORKTREE is on ${here:-no branch}, not $BRANCH. Remove it, or run the milestone it belongs to."
+        say "+ # $WORKTREE is already a worktree on $BRANCH, keeping it"
     else
         step git worktree add -b "$BRANCH" "$WORKTREE" main
     fi
@@ -255,6 +305,8 @@ main() {
     run_task_phase
     run_review_phase
 
+    # The last refresh, with no pid: the run is over and the page says so.
+    [[ -n "$DRY" ]] || refresh_html 0
     write_status "done" "make release BRANCH=$BRANCH"
 }
 

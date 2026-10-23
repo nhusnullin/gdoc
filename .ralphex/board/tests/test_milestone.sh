@@ -110,6 +110,40 @@ out=$(cd "$t/repo" && HOME="$t/home" .ralphex/board/milestone.sh --review go --d
 holds "a missing plan is refused by name" "$out" "PLAN=docs/plans/<file>.md is required"
 rm -rf "$t"
 
+# --- a worktree holding another branch --------------------------------------
+# A worktree is kept so a stopped run resumes. One on another branch is another
+# run's: M24 ran twice, as m24a and m24b.
+
+t=$(a_repo)
+(
+    cd "$t/repo" || exit 1
+    git worktree add -q -b somebody-elses ../gdoc-m29 main
+) >/dev/null 2>&1
+out=$(cd "$t/repo" && HOME="$t/home" .ralphex/board/milestone.sh \
+    --plan docs/plans/2026-10-23-gdoc-v2-m29-the-archive.md --review go --dry 2>&1)
+holds "a worktree on another branch is refused by name" "$out" \
+    "is on somebody-elses, not gdoc-v2-m29-the-archive"
+lacks "nothing is launched into it" "$out" "nohup ralphex"
+rm -rf "$t"
+
+# --- a lettered milestone ---------------------------------------------------
+# M24 was run twice, as m24a and m24b, each with its own worktree and board by
+# hand. Dropping the letter would give the second run the first one's.
+
+t=$(a_repo)
+(
+    cd "$t/repo" || exit 1
+    git mv docs/plans/2026-10-23-gdoc-v2-m29-the-archive.md \
+        docs/plans/2026-10-23-gdoc-v2-m29b-the-archive-again.md
+    git commit -q -m "docs: the second half of the pilot"
+) >/dev/null 2>&1
+out=$(cd "$t/repo" && HOME="$t/home" .ralphex/board/milestone.sh \
+    --plan docs/plans/2026-10-23-gdoc-v2-m29b-the-archive-again.md --review go --dry 2>&1)
+holds "the letter stays in the worktree" "$out" "../gdoc-m29b main"
+holds "the letter stays in the board folder" "$out" "mkdir -p $t/home/gdoc-m29b-board"
+holds "the letter stays in the log" "$out" "ralphex-m29b-tasks.log"
+rm -rf "$t"
+
 # --- the OAuth recipe -------------------------------------------------------
 # watch_phase reads the log, so the recorded log of a dead sign-in is the test.
 
@@ -130,6 +164,45 @@ status=$(
 holds "the expired sign-in stops the phase" "$status" "rc=2"
 holds "the expired sign-in names the fix" "$status" "needs /login"
 holds "the phase is named" "$status" "phase: stopped in tasks"
+
+# The log is appended to, never truncated, so the restart after /login meets the
+# dead run's own line. Everything before the launch is another run's.
+status=$(
+    MILESTONE_LIB=1
+    export MILESTONE_LIB
+    # shellcheck source=/dev/null
+    source "$REPO/.ralphex/board/milestone.sh"
+    BOARD="$t/board-restart"
+    mkdir -p "$BOARD"
+    WORKTREE="$t/nowhere"
+    log="$t/restart.log"
+    cp "$FIXTURES/oauth-expired.log" "$log"
+    rc=0
+    watch_phase "$log" 999999 tasks "$(wc -c < "$log" | tr -d '[:space:]')" || rc=$?
+    printf 'rc=%s\n' "$rc"
+    cat "$BOARD/status" 2>/dev/null || true
+) 2>&1
+holds "a restart reads nothing the dead run wrote" "$status" "rc=0"
+lacks "a restart does not ask for /login again" "$status" "needs /login"
+
+# A reviewer quoting the words is not a dead sign-in: the M28 review log carries
+# them five times. Only ralphex's own line, where the message starts the line,
+# stops a run.
+status=$(
+    MILESTONE_LIB=1
+    export MILESTONE_LIB
+    # shellcheck source=/dev/null
+    source "$REPO/.ralphex/board/milestone.sh"
+    BOARD="$t/board"
+    WORKTREE="$t/nowhere"
+    log="$t/prose.log"
+    printf '%s\n' "[21:04:11] --- custom review iteration 1 ---" \
+        "[21:04:12] the recipe greps for a \`Failed to authenticate\` line" > "$log"
+    rc=0
+    watch_phase "$log" 999999 review || rc=$?
+    printf 'rc=%s\n' "$rc"
+) 2>&1
+holds "the words inside a sentence are not the line" "$status" "rc=0"
 rm -rf "$t"
 
 # --- the lens set reaches revmux --------------------------------------------
@@ -180,7 +253,7 @@ holds "the round still runs" "$args" "--no-tui"
 # second either finishes or does not.
 
 a_run() {
-    local done_on_second=$1 tmp
+    local done_on_second=$1 review_finishes=${2:-yes} tmp
     tmp=$(a_repo)
     cp "$REPO/.ralphex/board/board.html" "$tmp/repo/.ralphex/board/"
     mkdir -p "$tmp/bin"
@@ -191,8 +264,14 @@ for a in "\$@"; do [[ "\$a" == "--external-only" ]] && phase=review; done
 n=1
 if [[ -f "$tmp/calls-\$phase" ]]; then n=\$(( \$(cat "$tmp/calls-\$phase") + 1 )); fi
 printf '%s' "\$n" > "$tmp/calls-\$phase"
+if [[ "\$phase" == review ]]; then
+    printf -- '--- custom review iteration 1 ---\n'
+    # ralphex's own last line. A review that was killed never writes it.
+    [[ "$review_finishes" == yes ]] && printf 'completed in 1m2s (3 files, +4/-5 lines)\n'
+    exit 0
+fi
 printf -- '--- task iteration %s/8 ---\n' "\$n"
-if [[ "\$phase" == review ]] || { [[ "$done_on_second" == yes ]] && (( n >= 2 )); }; then
+if [[ "$done_on_second" == yes ]] && (( n >= 2 )); then
     printf '<<<RALPHEX:ALL_TASKS_DONE>>>\n'
 fi
 STUB
@@ -216,6 +295,15 @@ holds "the lead's next action is the release" "$run" "next: make release BRANCH=
 run=$(a_run no)
 holds "the second attempt is the last" "$run" "calls=2"
 holds "tasks left after the relaunch stop the run" "$run" "tasks are left after one relaunch"
+
+# --- a review that ended before it finished ---------------------------------
+# The task phase has ALL_TASKS_DONE. A review that was killed, timed out or
+# crashed writes no completion line, and the run must not say `done` over it.
+
+run=$(a_run yes no)
+holds "an unfinished review stops the run" "$run" "phase: stopped in review (go)"
+holds "it names the log to read" "$run" "the review ended before it finished"
+lacks "it does not send the lead to the release" "$run" "make release"
 
 printf '\n'
 if [[ $fails -eq 0 ]]; then
