@@ -157,14 +157,14 @@ one page the lead session loads at start.
 - Create: `.ralphex/board/release.sh`, `.ralphex/board/tests/test_release.sh`
 - Modify: `Makefile`
 
-- [ ] `release.sh` as in Technical Details: without `GO` it stops at a green
+- [x] `release.sh` as in Technical Details: without `GO` it stops at a green
       PR; with `GO` it merges, tags and verifies
-- [ ] test: a dry run without `GO` prints push, PR and wait, and nothing
+- [x] test: a dry run without `GO` prints push, PR and wait, and nothing
       after
-- [ ] test: a dry run with `GO=v2.20.0` prints merge, pull, tag, wait and the
+- [x] test: a dry run with `GO=v2.20.0` prints merge, pull, tag, wait and the
       six verification commands in that order
-- [ ] test: `GO=v2.19.1` and a red check are each refused by name
-- [ ] `make platform-test` green
+- [x] test: `GO=v2.19.1` and a red check are each refused by name
+- [x] `make platform-test` green
 
 ### Task 3: the agent definitions
 
