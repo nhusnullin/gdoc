@@ -140,16 +140,16 @@ one page the lead session loads at start.
   `.ralphex/board/tests/fixtures/oauth-expired.log`
 - Modify: `Makefile`, `.ralphex/scripts/revmux-review.sh`
 
-- [ ] `milestone.sh` with the worktree, branch, board folder, task phase,
+- [x] `milestone.sh` with the worktree, branch, board folder, task phase,
       review phase by size and status file as in Technical Details; `DRY=1`
       prints every command and runs none
-- [ ] `revmux-review.sh` passes `--lenses "$REVMUX_LENSES"` when the variable
+- [x] `revmux-review.sh` passes `--lenses "$REVMUX_LENSES"` when the variable
       is set and behaves as today when it is not
-- [ ] the OAuth recipe and the one relaunch
-- [ ] test: dry runs for `REVIEW=ui` and `REVIEW=go` print the expected
+- [x] the OAuth recipe and the one relaunch
+- [x] test: dry runs for `REVIEW=ui` and `REVIEW=go` print the expected
       ralphex flags and lens set
-- [ ] test: the OAuth fixture log makes the script write `needs /login`
-- [ ] `make platform-test` green
+- [x] test: the OAuth fixture log makes the script write `needs /login`
+- [x] `make platform-test` green
 
 ### Task 2: `make release`, the PR up to green and the go
 

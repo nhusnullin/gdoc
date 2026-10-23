@@ -98,4 +98,22 @@ tag:
 	git push origin HEAD
 	git push origin "refs/tags/$(VERSION)"
 
-.PHONY: test vet build dist app app-test app-lint tag
+# The delivery platform: the two recipes a milestone used to be run by hand.
+# `make milestone` owns a run from the worktree to the end of the review and
+# writes ~/gdoc-<mNN>-board/status in three lines, which is all the team lead
+# reads while it runs. The lead starts it detached and goes away:
+#
+#   nohup make milestone PLAN=docs/plans/<file>.md REVIEW=go > /dev/null 2>&1 &
+#
+# REVIEW is go or ui and may come from the plan's own `Review:` line. DRY=1
+# prints every command and runs none, which is what the tests assert. IDLE
+# overrides the worker's idle timeout, 20 minutes by default.
+milestone:
+	@.ralphex/board/milestone.sh --plan "$(PLAN)"$(if $(REVIEW), --review $(REVIEW))$(if $(IDLE), --idle $(IDLE))$(if $(DRY), --dry)
+
+# The platform's own suite. No model runs in it: every case is a dry run or a
+# stub, so it costs a second and no tokens.
+platform-test:
+	.ralphex/board/tests/test_milestone.sh
+
+.PHONY: test vet build dist app app-test app-lint tag milestone platform-test
