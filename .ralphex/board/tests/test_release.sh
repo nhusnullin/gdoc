@@ -97,7 +97,17 @@ case "\$1\$2" in
         case "\$*" in
             *--watch*) [[ -f "$tmp/red" ]] && exit 1 ;;
             *select*) [[ -f "$tmp/red" ]] && printf 'test / go is fail\n' ;;
-            *--json*) [[ -f "$tmp/no-checks" ]] || printf 'test / go\n' ;;
+            *--json*)
+                # A PR whose checks GitHub has not created yet answers
+                # nothing, which the late marker makes happen once.
+                if [[ -f "$tmp/no-checks" ]]; then
+                    :
+                elif [[ -f "$tmp/late" && ! -f "$tmp/late-seen" ]]; then
+                    : > "$tmp/late-seen"
+                else
+                    printf 'test / go\n'
+                fi
+                ;;
         esac
         ;;
     runlist)
@@ -140,6 +150,7 @@ a_live() {
     (
         cd "$tmp/repo" || exit 1
         PATH="$tmp/bin:$PATH" HOME="$tmp/home" \
+            RUN_TRIES="${RUN_TRIES:-2}" RUN_WAIT="${RUN_WAIT:-0}" \
             .ralphex/board/release.sh --branch gdoc-v2-m29-the-archive "$@"
     ) 2>&1
 }
@@ -248,6 +259,19 @@ t=$(a_repo)
 : > "$t/no-checks"
 out=$(a_live "$t")
 holds "no checks is not green" "$out" "could not be read, or the PR has none"
+lacks "no checks merges nothing" "$out" "gh pr merge"
+rm -rf "$t"
+
+# --- checks that GitHub has not created yet ---------------------------------
+# go.yml runs on the push, so the check runs appear a moment after it. An empty
+# answer there is "not known yet", not a PR with no checks, and the wait is what
+# tells the two apart.
+
+t=$(a_repo)
+: > "$t/late"
+out=$(a_live "$t")
+holds "a check that appears late is waited for" "$out" "ready: PR 84, checks green"
+lacks "and is not read as a PR with no checks" "$out" "could not be read, or the PR has none"
 rm -rf "$t"
 
 # --- GO from the wrong checkout ---------------------------------------------

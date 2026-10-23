@@ -305,6 +305,40 @@ holds "an unfinished review stops the run" "$run" "phase: stopped in review (go)
 holds "it names the log to read" "$run" "the review ended before it finished"
 lacks "it does not send the lead to the release" "$run" "make release"
 
+# --- a second run over the first one's log -----------------------------------
+# The logs are appended to, never truncated, so a run on a branch that ran
+# before meets that run's ALL_TASKS_DONE and its `completed in ...` line.
+# Reading either as this run's would say `done` over tasks nobody ran.
+
+a_resume() {
+    local tmp
+    tmp=$(a_repo)
+    cp "$REPO/.ralphex/board/board.html" "$tmp/repo/.ralphex/board/"
+    mkdir -p "$tmp/bin" "$tmp/home/gdoc-m29-board"
+    printf -- '--- task iteration 1/8 ---\n<<<RALPHEX:ALL_TASKS_DONE>>>\n' \
+        > "$tmp/home/gdoc-m29-board/ralphex-m29-tasks.log"
+    printf 'completed in 1m2s (3 files, +4/-5 lines)\n' \
+        > "$tmp/home/gdoc-m29-board/ralphex-m29-review.log"
+    # A ralphex that ends with tasks left and writes no marker of its own.
+    cat > "$tmp/bin/ralphex" <<'STUB'
+#!/usr/bin/env bash
+printf -- '--- task iteration 1/8 ---\n'
+STUB
+    chmod +x "$tmp/bin/ralphex"
+    (
+        cd "$tmp/repo" || exit 1
+        PATH="$tmp/bin:$PATH" HOME="$tmp/home" POLL=0 BOARD_EVERY=99999 \
+            .ralphex/board/milestone.sh \
+            --plan docs/plans/2026-10-23-gdoc-v2-m29-the-archive.md --review go
+    ) >/dev/null 2>&1
+    cat "$tmp/home/gdoc-m29-board/status" 2>/dev/null
+    rm -rf "$tmp"
+}
+
+run=$(a_resume)
+holds "an earlier run's marker is not this run's" "$run" "tasks are left after one relaunch"
+lacks "and the lead is not sent to the release" "$run" "make release"
+
 printf '\n'
 if [[ $fails -eq 0 ]]; then
     printf 'test_milestone: all checks pass\n'

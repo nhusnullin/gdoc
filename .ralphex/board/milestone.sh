@@ -207,8 +207,13 @@ watch_phase() {
     done
 }
 
+# tasks_done and review_done read from `from`, the log's size before this
+# launch, for the same reason watch_phase does: the log is appended to, so the
+# marker an earlier run wrote is still in it, and reading it as this run's would
+# say `done` over tasks nobody ran.
 tasks_done() {
-    [[ -f "$1" ]] && grep -q 'ALL_TASKS_DONE' "$1"
+    local log=$1 from=${2:-0}
+    [[ -f "$log" ]] && grep -q 'ALL_TASKS_DONE' <(tail -c "+$((from + 1))" "$log")
 }
 
 # review_done is ralphex's own last line, "completed in 49m38s (73 files, ...)",
@@ -216,7 +221,8 @@ tasks_done() {
 # out or crashed never writes it, and a branch whose log lacks it is not a
 # reviewed branch.
 review_done() {
-    [[ -f "$1" ]] && grep -Eq '^completed in |review .*completed successfully' "$1"
+    local log=$1 from=${2:-0}
+    [[ -f "$log" ]] && grep -Eq '^completed in |review .*completed successfully' <(tail -c "+$((from + 1))" "$log")
 }
 
 run_task_phase() {
@@ -227,8 +233,9 @@ run_task_phase() {
         write_status "tasks, attempt $attempt of 2" "wait: the tasks are running"
         [[ -n "$DRY" ]] && return 0
         refresh_html "$LAUNCHED_PID"
-        watch_phase "$TASK_LOG" "$LAUNCHED_PID" "tasks" "$LAUNCHED_AT" || exit 1
-        tasks_done "$TASK_LOG" && return 0
+        local from=$LAUNCHED_AT
+        watch_phase "$TASK_LOG" "$LAUNCHED_PID" "tasks" "$from" || exit 1
+        tasks_done "$TASK_LOG" "$from" && return 0
         if (( attempt == 2 )); then
             write_status "stopped in tasks" \
                 "tasks are left after one relaunch: read $TASK_LOG"
@@ -251,11 +258,12 @@ run_review_phase() {
     write_status "review ($REVIEW)" "wait: the review is running"
     [[ -n "$DRY" ]] && return 0
     refresh_html "$LAUNCHED_PID"
-    watch_phase "$REVIEW_LOG" "$LAUNCHED_PID" "review ($REVIEW)" "$LAUNCHED_AT" || exit 1
+    local from=$LAUNCHED_AT
+    watch_phase "$REVIEW_LOG" "$LAUNCHED_PID" "review ($REVIEW)" "$from" || exit 1
     # The task phase has ALL_TASKS_DONE; this is the review's own answer. A
     # review that ended without it is a branch nobody reviewed, and saying
     # `done` over it would send the lead to the release.
-    review_done "$REVIEW_LOG" && return 0
+    review_done "$REVIEW_LOG" "$from" && return 0
     write_status "stopped in review ($REVIEW)" \
         "the review ended before it finished: read $REVIEW_LOG"
     exit 1

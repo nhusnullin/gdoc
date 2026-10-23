@@ -38,9 +38,10 @@ BUNDLE="presence/GdocPresence.app"
 EXECUTABLE="$BUNDLE/Contents/MacOS/GdocPresence"
 ARCHS="x86_64 arm64"
 
-# How long to wait for the tag's workflow run to appear. A tag pushed by a
-# person triggers the run within seconds, but `gh run list` can answer before
-# GitHub has created it, and an empty answer is not a failure.
+# How long to wait for something GitHub makes a moment after it is asked: the
+# tag's workflow run, and the PR's check runs. A push triggers both within
+# seconds, but `gh` can answer before GitHub has created them, and an empty
+# answer is not a failure.
 RUN_TRIES="${RUN_TRIES:-10}"
 RUN_WAIT="${RUN_WAIT:-6}"
 
@@ -203,6 +204,24 @@ checks_named() {
     ask gh pr checks "$BRANCH" --json name --jq '.[].name'
 }
 
+# wait_for_checks waits for GitHub to create the PR's check runs. `gh pr checks`
+# exits non-zero and names nothing on a PR that reports none, and --watch waits
+# only on checks that already exist, so a watch started seconds after the push
+# can answer before the workflow's runs are there. An empty answer is "not known
+# yet" here, the way wait_for_release reads an empty run list. The gate below is
+# still the one that decides.
+wait_for_checks() {
+    local try=1
+    show gh pr checks "$BRANCH" --json name
+    [[ -n "$DRY" ]] && return 0
+    while (( try <= RUN_TRIES )); do
+        [[ -z "$(checks_named)" ]] || return 0
+        sleep "$RUN_WAIT"
+        try=$((try + 1))
+    done
+    return 0
+}
+
 # green_or_stop is the one gate. The caller says what to do when it is not
 # green, because before the merge nothing is published and after it everything
 # is.
@@ -235,6 +254,7 @@ open_pr() {
     fi
 
     write_status "release, waiting for the checks" "wait: the PR's checks are running"
+    wait_for_checks
     # The watch exits non-zero on the first red check, and on a PR that reports
     # none at all. Either way the answer is the read below, which names the
     # check: a failed watch must not kill the script before the status file
