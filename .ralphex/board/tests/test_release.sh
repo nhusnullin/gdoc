@@ -193,6 +193,51 @@ lacks "the body stops at the next section" "$body" "Nothing here reaches the PR 
 holds "the body carries a test plan" "$body" "make platform-test"
 rm -rf "$t"
 
+# The range the body is cut from ends at the next `## ` heading, which is then
+# dropped. A plan whose Overview is its last section has no next heading, and
+# the last line of the Overview itself must not be dropped in its place.
+t=$(a_repo)
+body=$(
+    cd "$t/repo" || exit 1
+    RELEASE_LIB=1
+    export RELEASE_LIB
+    # shellcheck source=/dev/null
+    source .ralphex/board/release.sh
+    REPO=$(git rev-parse --show-toplevel)
+    BRANCH=gdoc-v2-m29-the-archive
+    printf '%s\n' "# gdoc v2 Milestone 29: the archive. Plan" "" \
+        "## Overview" "" "the first line of the Overview" \
+        "the last line of the Overview" \
+        > docs/plans/2026-10-23-gdoc-v2-m29-the-archive.md
+    f=$(mktemp)
+    pr_body "$(plan_file)" "$f"
+    cat "$f"
+)
+holds "an Overview that ends the plan keeps its last line" "$body" "the last line of the Overview"
+rm -rf "$t"
+
+# --- what a release leaves behind -------------------------------------------
+# The PR's body is a temp file and the published zip is unpacked in a temp
+# directory holding tens of megabytes. A release that ended well leaves
+# neither; one that stopped keeps them and says where, because the zip a verify
+# step disagreed about is the evidence.
+
+t=$(a_repo)
+: > "$t/pr"
+mkdir -p "$t/tmp"
+out=$(
+    cd "$t/repo" || exit 1
+    PATH="$t/bin:$PATH" HOME="$t/home" TMPDIR="$t/tmp" \
+        .ralphex/board/release.sh --branch gdoc-v2-m29-the-archive --dry --go v2.20.0 2>&1
+)
+left=$(ls -A "$t/tmp" 2>/dev/null)
+if [[ -z "$left" ]]; then
+    pass "a finished release leaves no temp file behind"
+else
+    bad "a finished release left $left in TMPDIR"
+fi
+rm -rf "$t"
+
 # --- with GO: merge, pull, tag, wait, and the six answers -------------------
 
 t=$(a_repo)

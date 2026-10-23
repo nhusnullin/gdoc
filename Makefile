@@ -106,7 +106,11 @@ tag:
 # writes ~/gdoc-<mNN>-board/status in three lines, which is all the team lead
 # reads while it runs. The lead starts it detached and goes away:
 #
-#   nohup make milestone PLAN=docs/plans/<file>.md REVIEW=go > /dev/null 2>&1 &
+#   nohup make milestone PLAN=docs/plans/<file>.md REVIEW=go > ~/milestone-launch.log 2>&1 &
+#
+# The log is where a refusal lands: a detached run that discarded it would be
+# a run the lead never hears about. A refusal that knows the board folder also
+# writes `phase: refused` into the status file.
 #
 # REVIEW is go or ui and may come from the plan's own `Review:` line. DRY=1
 # prints every command and runs none, which is what the tests assert. IDLE

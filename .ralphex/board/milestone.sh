@@ -48,7 +48,20 @@ UI_LENSES="${UI_LENSES:-bugs,impl,adversarial}"
 STRIP=(CLAUDECODE CLAUDE_CODE_ENTRYPOINT CLAUDE_CODE_SESSION_ID CLAUDE_CODE_CHILD_SESSION GDOC_LIVE_TEST GDOC_LIVE_WRITE)
 
 say() { printf '%s\n' "$*"; }
-fail() { printf 'make milestone: %s\n' "$*" >&2; exit 1; }
+
+# fail refuses by name, on stderr and in the status file. The documented launch
+# line is detached with stdout and stderr discarded, so stderr alone is a run
+# the lead never hears about: they come back to no board, no status and no
+# message. Everything after the first two refusals knows BOARD, so that is
+# where the refusal is written.
+fail() {
+    printf 'make milestone: %s\n' "$*" >&2
+    if [[ -n "${BOARD:-}" && -z "$DRY" ]]; then
+        { mkdir -p "$BOARD" \
+            && printf 'phase: refused\ncommit: (nothing ran)\nnext: %s\n' "$*" > "$BOARD/status"; } || true
+    fi
+    exit 1
+}
 
 # env_strip prints the `env -u A -u B ...` prefix every launch carries.
 env_strip() {
@@ -207,22 +220,31 @@ watch_phase() {
     done
 }
 
+# ralphex's own marker, "[26-10-23 22:18:41] ALL_TASKS_DONE", and its own last
+# line, "completed in 49m38s (73 files, ...)", each with the marker where the
+# message starts. The same distinction AUTH_FAILED draws, for the two answers
+# that decide whether a phase finished: the M28 task log carries the words
+# ALL_TASKS_DONE three times from the task that wrote this script, the first of
+# them 48 minutes before the real line. The `<<<RALPHEX:` form is the signal a
+# worker prints, which reaches the log on a line of its own.
+TASKS_DONE='^(\[[0-9 :-]+\] )?(<<<RALPHEX:)?ALL_TASKS_DONE'
+REVIEW_DONE='^(\[[0-9 :-]+\] )?completed in '
+
 # tasks_done and review_done read from `from`, the log's size before this
 # launch, for the same reason watch_phase does: the log is appended to, so the
 # marker an earlier run wrote is still in it, and reading it as this run's would
 # say `done` over tasks nobody ran.
 tasks_done() {
     local log=$1 from=${2:-0}
-    [[ -f "$log" ]] && grep -q 'ALL_TASKS_DONE' <(tail -c "+$((from + 1))" "$log")
+    [[ -f "$log" ]] && grep -Eq "$TASKS_DONE" <(tail -c "+$((from + 1))" "$log")
 }
 
-# review_done is ralphex's own last line, "completed in 49m38s (73 files, ...)",
-# which refresh_board.py reads as finished too. A review that was killed, timed
-# out or crashed never writes it, and a branch whose log lacks it is not a
-# reviewed branch.
+# review_done is ralphex's own last line, which refresh_board.py reads as
+# finished too. A review that was killed, timed out or crashed never writes it,
+# and a branch whose log lacks it is not a reviewed branch.
 review_done() {
     local log=$1 from=${2:-0}
-    [[ -f "$log" ]] && grep -Eq '^completed in |review .*completed successfully' <(tail -c "+$((from + 1))" "$log")
+    [[ -f "$log" ]] && grep -Eq "$REVIEW_DONE" <(tail -c "+$((from + 1))" "$log")
 }
 
 run_task_phase() {
@@ -274,7 +296,13 @@ main() {
     REPO=$(git rev-parse --show-toplevel)
 
     [[ -n "$PLAN" ]] || fail "PLAN=docs/plans/<file>.md is required."
-    [[ -f "$REPO/$PLAN" || -f "$PLAN" ]] || fail "$PLAN is not a file."
+    # Everything after this reads the plan, the worktree and main as paths from
+    # the repository root: `docs/plans/<file>.md` and `../gdoc-<mNN>`. One
+    # directory down, the plan's fields were read from a path that was not
+    # there and the run died in sed rather than in one of its own refusals.
+    PLAN=${PLAN#"$REPO/"}
+    cd "$REPO"
+    [[ -f "$PLAN" ]] || fail "$PLAN is not a file."
 
     derive_names
 
@@ -306,9 +334,17 @@ main() {
         step git worktree add -b "$BRANCH" "$WORKTREE" main
     fi
     step mkdir -p "$BOARD"
-    step python3 "$REPO/.ralphex/board/refresh_board.py" --init \
-        --plan "$PLAN" --branch "$BRANCH" --heading "$HEADING" \
-        --html "$HTML" --logs "$TASK_LOG" "$REVIEW_LOG" --repo "$WORKTREE"
+    # --init forgets the page and starts its clock at now, which on a resumed
+    # run would say the run began when the lead picked it up. The time the
+    # first launch wrote is in the page's own sidecar, and is handed back.
+    local init=(python3 "$REPO/.ralphex/board/refresh_board.py" --init
+        --plan "$PLAN" --branch "$BRANCH" --heading "$HEADING"
+        --html "$HTML" --logs "$TASK_LOG" "$REVIEW_LOG" --repo "$WORKTREE")
+    local started=""
+    [[ ! -f "${HTML%.html}.json" ]] \
+        || started=$(sed -n -E 's/.*"started"[^"]*"([^"]+)".*/\1/p' "${HTML%.html}.json" | head -1)
+    [[ -z "$started" ]] || init+=(--started "$started")
+    step "${init[@]}"
 
     run_task_phase
     run_review_phase

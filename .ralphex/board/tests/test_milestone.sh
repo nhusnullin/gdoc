@@ -205,6 +205,80 @@ status=$(
 holds "the words inside a sentence are not the line" "$status" "rc=0"
 rm -rf "$t"
 
+# --- a worker's prose is not a phase's answer -------------------------------
+# The same distinction as the sign-in, for the two markers that decide whether
+# a phase finished. ralphex writes `[26-10-23 22:18:41] ALL_TASKS_DONE` and
+# `completed in 49m38s (...)`, each with the marker where the line starts. The
+# M28 run's own task log carries the words ALL_TASKS_DONE three times from the
+# task that wrote this script, the first of them 48 minutes before the real
+# line. Read as this run's answer, that prose would skip the one relaunch and
+# say `done` over tasks nobody ran.
+
+t=$(mktemp -d)
+answers=$(
+    MILESTONE_LIB=1
+    export MILESTONE_LIB
+    # shellcheck source=/dev/null
+    source "$REPO/.ralphex/board/milestone.sh"
+    printf '%s\n' "[26-10-23 21:30:13] exits with no \`ALL_TASKS_DONE\` is relaunched once, then" \
+        "[26-10-23 21:31:02] the review phase has no ALL_TASKS_DONE of its own" > "$t/prose-tasks.log"
+    printf '%s\n' "[26-10-23 22:18:41] ALL_TASKS_DONE" > "$t/real-tasks.log"
+    printf '%s\n' "[21:04:12] the external review completed successfully, it says" > "$t/prose-review.log"
+    printf '%s\n' "completed in 49m38s (73 files, +1/-2 lines)" > "$t/real-review.log"
+    tasks_done "$t/prose-tasks.log" && printf 'prose-tasks=done\n' || printf 'prose-tasks=left\n'
+    tasks_done "$t/real-tasks.log" && printf 'real-tasks=done\n' || printf 'real-tasks=left\n'
+    review_done "$t/prose-review.log" && printf 'prose-review=done\n' || printf 'prose-review=unfinished\n'
+    review_done "$t/real-review.log" && printf 'real-review=done\n' || printf 'real-review=unfinished\n'
+) 2>&1
+holds "prose about the marker is not the marker" "$answers" "prose-tasks=left"
+holds "ralphex's own line is the marker" "$answers" "real-tasks=done"
+holds "prose about a finished review is not one" "$answers" "prose-review=unfinished"
+holds "ralphex's own last line is one" "$answers" "real-review=done"
+rm -rf "$t"
+
+# --- a refusal reaches the lead ---------------------------------------------
+# The documented launch line is detached, with stdout and stderr discarded, so
+# a refusal printed on stderr is a run the lead never hears about. Where the
+# board folder is known the refusal is written where the lead looks.
+
+t=$(a_repo)
+(
+    cd "$t/repo" || exit 1
+    HOME="$t/home" .ralphex/board/milestone.sh \
+        --plan docs/plans/2026-10-23-gdoc-v2-m29-the-archive.md --review both
+) >/dev/null 2>&1
+status=$(cat "$t/home/gdoc-m29-board/status" 2>/dev/null)
+holds "a refusal says so in the status file" "$status" "phase: refused"
+holds "and names itself there" "$status" "REVIEW=both is neither go nor ui"
+lacks "and sends the lead nowhere else" "$status" "wait:"
+rm -rf "$t"
+
+# --- the plan read from another directory -----------------------------------
+# Everything after the first refusal reads the plan, the worktree and main as
+# paths from the repository root. From any other directory the old script died
+# with a bare `sed:` error instead of one of its own refusals.
+
+t=$(a_repo)
+out=$(cd "$t/repo/docs" && HOME="$t/home" ../.ralphex/board/milestone.sh \
+    --plan docs/plans/2026-10-23-gdoc-v2-m29-the-archive.md --review go --dry 2>&1)
+holds "the worktree is still beside the repository" "$out" "../gdoc-m29 main"
+holds "the plan's own task count is still read" "$out" "--max-iterations=8"
+lacks "and nothing dies in sed" "$out" "No such file or directory"
+rm -rf "$t"
+
+# --- a resumed run keeps the board's clock ----------------------------------
+# A kept worktree is a resumed run, and `--init` resets the page's start time to
+# now. The time the first launch wrote is handed back, so the page says when the
+# run began rather than when it was picked up.
+
+t=$(a_repo)
+mkdir -p "$t/home/gdoc-m29-board"
+printf '{\n  "started": "09:07"\n}\n' > "$t/home/gdoc-m29-board/m29-run-board.json"
+out=$(cd "$t/repo" && HOME="$t/home" .ralphex/board/milestone.sh \
+    --plan docs/plans/2026-10-23-gdoc-v2-m29-the-archive.md --review go --dry 2>&1)
+holds "the started time is handed back" "$out" "--started 09:07"
+rm -rf "$t"
+
 # --- the lens set reaches revmux --------------------------------------------
 # A stub revmux records its arguments, so the test asserts what the review
 # script passes without running a review.

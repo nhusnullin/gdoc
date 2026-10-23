@@ -24,7 +24,7 @@ with the lead's own page beside it in `docs/team/lead.md`.
 ## `make milestone`
 
 ```bash
-nohup make milestone PLAN=docs/plans/<file>.md REVIEW=go > /dev/null 2>&1 &
+nohup make milestone PLAN=docs/plans/<file>.md REVIEW=go > ~/milestone-launch.log 2>&1 &
 ```
 
 The plan file names everything else. `2026-10-23-gdoc-v2-m29-the-archive.md`
@@ -68,8 +68,15 @@ relaunched once; after that the run stops and names the log. A stalled worker is
 `--idle-timeout`'s job.
 
 Each phase has to say it finished: the tasks with `ALL_TASKS_DONE`, the review
-with ralphex's own `completed in`. A phase that ended without its line writes
-`stopped in <phase>` and the log to read, never `done`.
+with ralphex's own `completed in`. Both are read the way the sign-in line is,
+where the message starts the line: a worker writing about `ALL_TASKS_DONE` is
+not a finished task list, and the M28 log carries those words three times. A
+phase that ended without its own line writes `stopped in <phase>` and the log
+to read, never `done`.
+
+A run that was refused before it started says so in the same file, as
+`phase: refused` with the refusal as the next line, because the launch above is
+detached and nobody is watching stderr.
 
 ## `make release`
 

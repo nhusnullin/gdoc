@@ -48,6 +48,33 @@ RUN_WAIT="${RUN_WAIT:-6}"
 say() { printf '%s\n' "$*"; }
 fail() { printf 'make release: %s\n' "$*" >&2; exit 1; }
 
+# The one temp root this run writes into: the PR's body, and under GO the
+# published zip and the bundle unpacked out of it, which together are tens of
+# megabytes. A run that ended well removes it. A run that stopped keeps it and
+# says where, because the zip a verify step disagreed about is the evidence.
+# The template is explicit so TMPDIR is honoured, which macOS's bare `mktemp`
+# ignores.
+# tmproot sets TMPROOT once. It is not called in a command substitution,
+# because that runs it in a subshell and the root the subshell made is one
+# nothing in this process knows to remove.
+TMPROOT=""
+tmproot() {
+    local root=${TMPDIR:-/tmp}
+    [[ -n "$TMPROOT" ]] || TMPROOT=$(mktemp -d "${root%/}/gdoc-release.XXXXXX")
+}
+
+on_exit() {
+    local code=$?
+    [[ -n "$TMPROOT" ]] || return 0
+    if (( code == 0 )); then
+        rm -rf "$TMPROOT"
+    else
+        printf 'make release: what this run wrote is kept in %s\n' "$TMPROOT" >&2
+    fi
+    return 0
+}
+trap on_exit EXIT
+
 parse_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -173,7 +200,10 @@ pr_body() {
     local plan=$1 out=$2
     {
         if [[ -n "$plan" ]]; then
-            sed -n '/^## Overview/,/^## /p' "$plan" | sed '$d'
+            # The range ends at the next `## ` heading, which is dropped. A
+            # plan whose Overview is its last section has no next heading, and
+            # the range ends at the end of the file instead.
+            sed -n '/^## Overview/,/^## /p' "$plan" | sed '$ {/^## /d;}'
         else
             printf 'The branch %s.\n' "$BRANCH"
         fi
@@ -238,7 +268,8 @@ open_pr() {
     local plan title body n
     plan=$(plan_file)
     title=$(pr_title "$plan")
-    body=$(mktemp)
+    tmproot
+    body="$TMPROOT/pr-body.md"
     pr_body "$plan" "$body"
 
     step git push -u origin "$BRANCH" \
@@ -323,7 +354,9 @@ verify() {
     local ver=${GO#v}
     local asset="gdoc-$GO-$PLATFORM.zip" sums="SHA256SUMS-$GO"
     local work app
-    work=$(mktemp -d)
+    tmproot
+    work="$TMPROOT/release"
+    mkdir -p "$work"
     app="$work/unpacked/$BUNDLE"
 
     step gh release download "$GO" --dir "$work" --pattern "$asset" --pattern "$sums" \
