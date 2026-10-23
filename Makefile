@@ -131,4 +131,12 @@ platform-test:
 	.ralphex/board/tests/test_milestone.sh
 	.ralphex/board/tests/test_release.sh
 
-.PHONY: test vet build dist app app-test app-lint tag milestone release platform-test
+# The team's own check. The seats under .claude/agents/ are files, so what can
+# be wrong with one is a typo in its frontmatter, a model or a tool list that
+# widened past what the seat is for, or a path in the brief that moved. All
+# three are cheap to check and expensive to find at the moment the seat is
+# called. No model runs here either.
+team-check:
+	.ralphex/board/tests/test_team.sh
+
+.PHONY: test vet build dist app app-test app-lint tag milestone release platform-test team-check

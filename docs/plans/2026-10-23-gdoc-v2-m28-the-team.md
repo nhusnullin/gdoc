@@ -175,18 +175,18 @@ one page the lead session loads at start.
   `.ralphex/board/tests/test_team.sh`
 - Modify: `Makefile`
 
-- [ ] platform operator: Sonnet, Bash and Read; reads the status file and
+- [x] platform operator: Sonnet, Bash and Read; reads the status file and
       the README recipes; acts only when a recipe failed; reports three lines;
       never pushes, merges or tags
-- [ ] design reviewer: Sonnet, Read only; the principles checklist, the
+- [x] design reviewer: Sonnet, Read only; the principles checklist, the
       mockup, the dark whole-panel renders at 1x (18 images), the light ones
       only where dark has a finding, captions as text from `index.html`;
       rates blocking / should-fix / note and never fixes
-- [ ] trust guardian with the skeptic: Opus, Read, Grep and Glob; the
+- [x] trust guardian with the skeptic: Opus, Read, Grep and Glob; the
       CLAUDE.md invariants, `guard`, `auth`, `presence`, `desktop.go`; signs
       a decision entry or names its veto
-- [ ] the plan reviewer and Codex are named by their existing agent names
-- [ ] test: `make team-check` checks frontmatter, model, tools and that every
+- [x] the plan reviewer and Codex are named by their existing agent names
+- [x] test: `make team-check` checks frontmatter, model, tools and that every
       path a definition names exists
 
 ### Task 4: the lead playbook and the team page
