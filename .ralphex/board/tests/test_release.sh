@@ -1,0 +1,420 @@
+#!/usr/bin/env bash
+# test_release.sh - what `make release` does, asserted without pushing
+# anything. Every case is a dry run in a temporary repository with a stub `gh`
+# on PATH, so the suite costs a second, no tokens and no network.
+#
+# Run by `make platform-test`.
+
+set -uo pipefail
+
+HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+REPO=$(cd "$HERE/../../.." && pwd)
+
+fails=0
+pass() { printf '  ok   %s\n' "$1"; }
+bad() { printf '  FAIL %s\n' "$1"; fails=$((fails + 1)); }
+
+holds() {
+    local what=$1 text=$2 want=$3
+    if printf '%s' "$text" | grep -qF -- "$want"; then
+        pass "$what: $want"
+    else
+        bad "$what: expected to find \"$want\""
+    fi
+}
+
+lacks() {
+    local what=$1 text=$2 want=$3
+    if printf '%s' "$text" | grep -qF -- "$want"; then
+        bad "$what: did not expect \"$want\""
+    else
+        pass "$what: no $want"
+    fi
+}
+
+# in_order asserts that the lines appear in the order given, which is what a
+# release is: a merge before a tag, and a checksum before the signature of what
+# it checksummed.
+in_order() {
+    local what=$1 text=$2
+    shift 2
+    local last=0 n pat
+    for pat in "$@"; do
+        n=$(printf '%s\n' "$text" | grep -nF -- "$pat" | head -1 | cut -d: -f1)
+        if [[ -z "$n" ]]; then
+            bad "$what: \"$pat\" is missing"
+            return
+        fi
+        if (( n <= last )); then
+            bad "$what: \"$pat\" comes before the step it must follow"
+            return
+        fi
+        last=$n
+    done
+    pass "$what: $# steps, in order"
+}
+
+# a_repo makes a temporary repository with the pilot plan on main and the
+# milestone's branch, plus a stub `gh` that records its arguments. The stub
+# answers no pull request until `gh pr create` runs, which is the state a first
+# release meets. `origin` is a bare repository beside it, so the one case that
+# runs for real pushes to a folder and reaches no network.
+a_repo() {
+    local tmp
+    tmp=$(mktemp -d)
+    mkdir -p "$tmp/repo/docs/plans" "$tmp/repo/.ralphex/board" "$tmp/bin" "$tmp/home"
+    cp "$REPO/.ralphex/board/release.sh" "$tmp/repo/.ralphex/board/"
+    cat > "$tmp/repo/docs/plans/2026-10-23-gdoc-v2-m29-the-archive.md" <<'PLAN'
+# gdoc v2 Milestone 29: the archive. Plan
+
+Tasks: 4
+Review: go
+
+## Overview
+
+The two approved document items: the decisions archive and the command's
+topic files.
+
+## Context
+
+Nothing here reaches the PR body.
+PLAN
+    cat > "$tmp/bin/gh" <<STUB
+#!/usr/bin/env bash
+printf '%s\n' "\$*" >> "$tmp/gh-args"
+case "\$1\$2" in
+    prview)
+        # The number and the state come from the same command. gh answers both
+        # about a merged PR, which is why the state is the thing asked.
+        case "\$*" in
+            *state*)
+                if [[ -f "$tmp/merged" ]]; then printf 'MERGED\n'
+                elif [[ -f "$tmp/pr" ]]; then printf 'OPEN\n'
+                fi
+                ;;
+            *) [[ -f "$tmp/pr" ]] && printf '84\n' ;;
+        esac
+        ;;
+    prcreate)
+        : > "$tmp/pr"
+        printf 'https://github.com/altery/gdoc/pull/84\n'
+        ;;
+    prchecks)
+        # --watch is the wait, which exits non-zero on a red check the way gh
+        # does. The two reads after it are the full list of checks and the
+        # not-green ones, which the jq tells apart.
+        case "\$*" in
+            *--watch*) [[ -f "$tmp/red" ]] && exit 1 ;;
+            *select*) [[ -f "$tmp/red" ]] && printf 'test / go is fail\n' ;;
+            *--json*)
+                # A PR whose checks GitHub has not created yet answers
+                # nothing, which the late marker makes happen once.
+                if [[ -f "$tmp/no-checks" ]]; then
+                    :
+                elif [[ -f "$tmp/late" && ! -f "$tmp/late-seen" ]]; then
+                    : > "$tmp/late-seen"
+                else
+                    printf 'test / go\n'
+                fi
+                ;;
+        esac
+        ;;
+    runlist)
+        printf '9001\n'
+        ;;
+esac
+exit 0
+STUB
+    chmod +x "$tmp/bin/gh"
+    (
+        cd "$tmp/repo" || exit 1
+        git init -q -b main
+        git config user.email t@example.com
+        git config user.name test
+        git add -A
+        git commit -q -m "docs: the pilot plan"
+        git branch gdoc-v2-m29-the-archive
+        git init -q --bare "$tmp/remote.git"
+        git remote add origin "$tmp/remote.git"
+    ) >/dev/null 2>&1
+    printf '%s' "$tmp"
+}
+
+a_run() {
+    local tmp=$1
+    shift
+    (
+        cd "$tmp/repo" || exit 1
+        PATH="$tmp/bin:$PATH" HOME="$tmp/home" \
+            .ralphex/board/release.sh --branch gdoc-v2-m29-the-archive --dry "$@"
+    ) 2>&1
+}
+
+# a_live is the same run without --dry, which is the only way to assert what a
+# step that fails does. The push reaches the bare repository beside it and the
+# stub answers for gh, so nothing leaves the folder.
+a_live() {
+    local tmp=$1
+    shift
+    (
+        cd "$tmp/repo" || exit 1
+        PATH="$tmp/bin:$PATH" HOME="$tmp/home" \
+            RUN_TRIES="${RUN_TRIES:-2}" RUN_WAIT="${RUN_WAIT:-0}" \
+            .ralphex/board/release.sh --branch gdoc-v2-m29-the-archive "$@"
+    ) 2>&1
+}
+
+# --- without GO: the PR, the checks, and nothing after ----------------------
+
+t=$(a_repo)
+out=$(a_run "$t")
+holds "the push" "$out" "git push -u origin gdoc-v2-m29-the-archive"
+holds "the PR" "$out" "gh pr create --base main --head gdoc-v2-m29-the-archive"
+holds "the PR's title is the plan's heading" "$out" "gdoc v2 Milestone 29: the archive"
+holds "the PR's body is a file" "$out" "--body-file"
+holds "the wait for the checks" "$out" "gh pr checks gdoc-v2-m29-the-archive --watch --fail-fast"
+# A dry run opened no pull request, so there is no number to name: the live
+# case below is where the number reaches the status file.
+holds "the one line the lead reads" "$out" "ready: PR ?, checks green"
+holds "the next action is Nail's word" "$out" "Nail's word, then: make release"
+lacks "nothing is merged" "$out" "gh pr merge"
+lacks "nothing is tagged" "$out" "make tag"
+lacks "nothing is downloaded" "$out" "gh release download"
+rm -rf "$t"
+
+# --- the PR's body is the plan's Overview -----------------------------------
+
+t=$(a_repo)
+body=$(
+    cd "$t/repo" || exit 1
+    RELEASE_LIB=1
+    export RELEASE_LIB
+    # shellcheck source=/dev/null
+    source .ralphex/board/release.sh
+    REPO=$(git rev-parse --show-toplevel)
+    BRANCH=gdoc-v2-m29-the-archive
+    f=$(mktemp)
+    pr_body "$(plan_file)" "$f"
+    cat "$f"
+)
+holds "the body carries the Overview" "$body" "the decisions archive"
+lacks "the body stops at the next section" "$body" "Nothing here reaches the PR body"
+holds "the body carries a test plan" "$body" "make platform-test"
+rm -rf "$t"
+
+# The range the body is cut from ends at the next `## ` heading, which is then
+# dropped. A plan whose Overview is its last section has no next heading, and
+# the last line of the Overview itself must not be dropped in its place.
+t=$(a_repo)
+body=$(
+    cd "$t/repo" || exit 1
+    RELEASE_LIB=1
+    export RELEASE_LIB
+    # shellcheck source=/dev/null
+    source .ralphex/board/release.sh
+    REPO=$(git rev-parse --show-toplevel)
+    BRANCH=gdoc-v2-m29-the-archive
+    printf '%s\n' "# gdoc v2 Milestone 29: the archive. Plan" "" \
+        "## Overview" "" "the first line of the Overview" \
+        "the last line of the Overview" \
+        > docs/plans/2026-10-23-gdoc-v2-m29-the-archive.md
+    f=$(mktemp)
+    pr_body "$(plan_file)" "$f"
+    cat "$f"
+)
+holds "an Overview that ends the plan keeps its last line" "$body" "the last line of the Overview"
+rm -rf "$t"
+
+# --- what a release leaves behind -------------------------------------------
+# The PR's body is a temp file and the published zip is unpacked in a temp
+# directory holding tens of megabytes. A release that ended well leaves
+# neither; one that stopped keeps them and says where, because the zip a verify
+# step disagreed about is the evidence.
+
+t=$(a_repo)
+: > "$t/pr"
+mkdir -p "$t/tmp"
+out=$(
+    cd "$t/repo" || exit 1
+    PATH="$t/bin:$PATH" HOME="$t/home" TMPDIR="$t/tmp" \
+        .ralphex/board/release.sh --branch gdoc-v2-m29-the-archive --dry --go v2.20.0 2>&1
+)
+left=$(ls -A "$t/tmp" 2>/dev/null)
+if [[ -z "$left" ]]; then
+    pass "a finished release leaves no temp file behind"
+else
+    bad "a finished release left $left in TMPDIR"
+fi
+rm -rf "$t"
+
+# --- with GO: merge, pull, tag, wait, and the six answers -------------------
+
+t=$(a_repo)
+: > "$t/pr"
+out=$(a_run "$t" --go v2.20.0)
+in_order "the release" "$out" \
+    "gh pr merge 84 --merge" \
+    "git pull --ff-only origin main" \
+    "make tag VERSION=v2.20.0" \
+    "gh run watch" \
+    "shasum -a 256 -c -" \
+    "unzip -Z1" \
+    "codesign --verify --deep --strict -vv" \
+    "plutil -extract CFBundleShortVersionString raw" \
+    "lipo -archs" \
+    "gdoc help --json | jq -r .version"
+holds "the asset is the arm64 zip" "$out" "gdoc-v2.20.0-darwin-arm64.zip"
+holds "the checksum file is the tag's" "$out" "SHA256SUMS-v2.20.0"
+holds "the bundle is looked for by its executable" "$out" \
+    "presence/GdocPresence.app/Contents/MacOS/GdocPresence"
+holds "the workflow run is found by the tag" "$out" "--branch v2.20.0"
+holds "the last line is the release" "$out" "released v2.20.0, verified"
+rm -rf "$t"
+
+# --- the refusals -----------------------------------------------------------
+
+t=$(a_repo)
+: > "$t/pr"
+out=$(a_run "$t" --go v2.19.1)
+holds "a patch version is refused by name" "$out" \
+    "GO=v2.19.1 is not vX.Y.0. Patch versions are the nightly's."
+lacks "a refused version merges nothing" "$out" "gh pr merge"
+
+# `make tag` runs last and refuses a dirty tree and a version that is already a
+# tag. Made after the merge, each of those two refusals is a PR merged and
+# nothing published, and the only way on was to tag by hand. They are made
+# before the merge instead. A lead with one uncommitted file is the likely case:
+# they have just been writing the decision entry.
+printf '\nhalf a decision entry\n' >> "$t/repo/docs/plans/2026-10-23-gdoc-v2-m29-the-archive.md"
+out=$(a_run "$t" --go v2.20.0)
+holds "a dirty tree is refused by name" "$out" "the tree has uncommitted changes"
+holds "and says what refuses it later" "$out" "make tag refuses them after the merge"
+lacks "a dirty tree merges nothing" "$out" "gh pr merge"
+(cd "$t/repo" && git checkout -q -- .) >/dev/null 2>&1
+
+(cd "$t/repo" && git tag v2.20.0) >/dev/null 2>&1
+out=$(a_run "$t" --go v2.20.0)
+holds "a version that is already a tag is refused by name" "$out" "GO=v2.20.0 is already a tag"
+lacks "an existing tag merges nothing" "$out" "gh pr merge"
+(cd "$t/repo" && git tag -d v2.20.0) >/dev/null 2>&1
+
+: > "$t/red"
+out=$(a_run "$t" --go v2.20.0)
+holds "a red check is refused by name" "$out" "test / go is fail"
+holds "a red check merges nothing" "$out" "Nothing is merged."
+lacks "a red check tags nothing" "$out" "make tag"
+
+out=$(a_run "$t")
+holds "a red check stops the wait too" "$out" "the checks are not green"
+rm -rf "$t"
+
+# --- a red check in a run that is not dry -----------------------------------
+# `gh pr checks --watch` exits non-zero on the first red check. Under `set -e`
+# that would end the script with the status file still saying the checks are
+# running, which the lead reads as "wait, nobody has work".
+
+t=$(a_repo)
+: > "$t/red"
+out=$(a_live "$t")
+holds "the red watch does not kill the script" "$out" "the PR's checks are not green: test / go is fail"
+holds "the status file says so" "$(cat "$t/home/gdoc-m29-board/status" 2>/dev/null)" \
+    "phase: release, the checks are not green"
+lacks "and does not leave the lead waiting" "$(cat "$t/home/gdoc-m29-board/status" 2>/dev/null)" \
+    "wait:"
+rm -rf "$t"
+
+# --- a PR whose checks cannot be read ---------------------------------------
+# An empty answer is a read that failed or a PR with no checks at all. Neither
+# is green, and the one gate before a merge never guesses.
+
+t=$(a_repo)
+: > "$t/no-checks"
+out=$(a_live "$t")
+holds "no checks is not green" "$out" "could not be read, or the PR has none"
+lacks "no checks merges nothing" "$out" "gh pr merge"
+rm -rf "$t"
+
+# --- checks that GitHub has not created yet ---------------------------------
+# go.yml runs on the push, so the check runs appear a moment after it. An empty
+# answer there is "not known yet", not a PR with no checks, and the wait is what
+# tells the two apart.
+
+t=$(a_repo)
+: > "$t/late"
+out=$(a_live "$t")
+holds "a check that appears late is waited for" "$out" "ready: PR 84, checks green"
+lacks "and is not read as a PR with no checks" "$out" "could not be read, or the PR has none"
+rm -rf "$t"
+
+# --- a run resumed after the merge ------------------------------------------
+# A run that merged and then stopped before the tag is resumed by the same
+# command. `gh pr view` answers about a merged PR the same way it answers about
+# an open one, so the number alone said "open" and the merge was attempted
+# again; `gh pr merge` refuses that, and the only way on was to tag by hand.
+
+t=$(a_repo)
+: > "$t/pr"
+: > "$t/merged"
+out=$(a_run "$t" --go v2.20.0)
+holds "a merged PR is not merged again" "$out" "PR 84 is already merged"
+lacks "and gh pr merge is not called" "$out" "gh pr merge"
+holds "the run goes on to the tag" "$out" "make tag VERSION=v2.20.0"
+holds "and on to the release it waits for" "$out" "--branch v2.20.0"
+rm -rf "$t"
+
+# --- GO from the wrong checkout ---------------------------------------------
+# `make tag` commits the version bump on HEAD and pushes HEAD. From a
+# milestone's worktree that is the feature branch, and main never gets it.
+
+t=$(a_repo)
+: > "$t/pr"
+out=$(
+    cd "$t/repo" || exit 1
+    git checkout -q gdoc-v2-m29-the-archive
+    PATH="$t/bin:$PATH" HOME="$t/home" \
+        .ralphex/board/release.sh --branch gdoc-v2-m29-the-archive --dry --go v2.20.0 2>&1
+)
+holds "a checkout that is not main is refused by name" "$out" \
+    "must be run from a checkout on main; this one is on gdoc-v2-m29-the-archive"
+lacks "and merges nothing" "$out" "gh pr merge"
+lacks "and tags nothing" "$out" "make tag"
+rm -rf "$t"
+
+t=$(a_repo)
+out=$(
+    cd "$t/repo" || exit 1
+    PATH="$t/bin:$PATH" HOME="$t/home" .ralphex/board/release.sh --dry 2>&1
+)
+holds "a missing branch is refused by name" "$out" "BRANCH=<branch> is required"
+out=$(
+    cd "$t/repo" || exit 1
+    PATH="$t/bin:$PATH" HOME="$t/home" \
+        .ralphex/board/release.sh --branch gdoc-v2-m99-nothing --dry 2>&1
+)
+holds "an unknown branch is refused by name" "$out" "is not a branch in this repository"
+rm -rf "$t"
+
+# --- the status file --------------------------------------------------------
+# The lead reads ~/gdoc-mNN-board/status from the worktree to the release, so
+# the release half writes the same three lines.
+
+t=$(a_repo)
+: > "$t/pr"
+status=$(
+    cd "$t/repo" || exit 1
+    PATH="$t/bin:$PATH" HOME="$t/home" \
+        .ralphex/board/release.sh --branch gdoc-v2-m29-the-archive >/dev/null 2>&1
+    cat "$t/home/gdoc-m29-board/status"
+)
+holds "the phase" "$status" "phase: ready"
+holds "the commit" "$status" "docs: the pilot plan"
+holds "the next action" "$status" "PR 84, checks green"
+rm -rf "$t"
+
+printf '\n'
+if [[ $fails -eq 0 ]]; then
+    printf 'test_release: all checks pass\n'
+else
+    printf 'test_release: %s check(s) failed\n' "$fails"
+    exit 1
+fi

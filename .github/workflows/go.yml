@@ -38,6 +38,16 @@ jobs:
       - name: dist
         run: make dist
 
+      # The delivery platform is load-bearing for every milestone, and its one
+      # gate before a merge is "the PR's checks are green". Both suites run no
+      # model: every case is a dry run, a stub or a file read, so they cost a
+      # second and no tokens. Without them here a regression in milestone.sh,
+      # release.sh or meter.py reaches a green PR.
+      - name: the platform and the team
+        run: |
+          make platform-test
+          make team-check
+
   # The app, built the way the release builds it, minus the upload: nothing
   # downloads a push. The version is dev, which bundle.sh stamps 0.0.0, because
   # a push comes from no release and a plist that named one would be a bundle

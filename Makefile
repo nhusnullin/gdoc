@@ -1,6 +1,9 @@
 # gdoc v2 build. The module lives in go/, the binaries land in bin/.
 # CGO is off in dist: a static binary is principle 1.
-GO := cd go && go
+# GOCMD, not GO: `make release GO=vX.Y.0` is Nail's go for a release, and a
+# variable named on the command line wins over the file's, so a release would
+# otherwise rename the compiler.
+GOCMD := cd go && go
 
 # The version comes from the tag, so a colleague's report names the build it
 # came from and nobody has to write a number down twice.
@@ -32,11 +35,11 @@ VERSION = $(if $(filter-out %-dirty,$(DESCRIBED)),$(DESCRIBED),dev)
 LDFLAGS = -s -w -X main.version=$(VERSION) -X gdoc/internal/auth.BundledClientSecret=$(GDOC_OAUTH_CLIENT_SECRET)
 
 test:
-	$(GO) test -race ./...
+	$(GOCMD) test -race ./...
 
 # vet is the plan's other two validation commands, in one target.
 vet:
-	$(GO) vet ./...
+	$(GOCMD) vet ./...
 	cd go && test -z "$$(gofmt -l .)" || { gofmt -l .; exit 1; }
 
 # The build lines carry the client secret through LDFLAGS, so make must not echo
@@ -50,7 +53,7 @@ SECRET_STATE = client secret $(if $(GDOC_OAUTH_CLIENT_SECRET),set,NOT set: this 
 build:
 	mkdir -p bin
 	@echo "go build bin/gdoc, version $(VERSION), $(SECRET_STATE)"
-	@$(GO) build -trimpath -ldflags "$(LDFLAGS)" -o ../bin/gdoc ./cmd/gdoc
+	@$(GOCMD) build -trimpath -ldflags "$(LDFLAGS)" -o ../bin/gdoc ./cmd/gdoc
 
 dist:
 	mkdir -p bin
@@ -98,4 +101,47 @@ tag:
 	git push origin HEAD
 	git push origin "refs/tags/$(VERSION)"
 
-.PHONY: test vet build dist app app-test app-lint tag
+# The delivery platform: the two recipes a milestone used to be run by hand.
+# `make milestone` owns a run from the worktree to the end of the review and
+# writes ~/gdoc-<mNN>-board/status in three lines, which is all the team lead
+# reads while it runs. The lead starts it detached and goes away:
+#
+#   nohup make milestone PLAN=docs/plans/<file>.md REVIEW=go > ~/milestone-launch.log 2>&1 &
+#
+# The log is where a refusal lands: a detached run that discarded it would be
+# a run the lead never hears about. A refusal that knows the board folder also
+# writes `phase: refused` into the status file.
+#
+# REVIEW is go or ui and may come from the plan's own `Review:` line. DRY=1
+# prints every command and runs none, which is what the tests assert. IDLE
+# overrides the worker's idle timeout, 20 minutes by default.
+milestone:
+	@.ralphex/board/milestone.sh --plan "$(PLAN)"$(if $(REVIEW), --review $(REVIEW))$(if $(IDLE), --idle $(IDLE))$(if $(DRY), --dry)
+
+# `make release BRANCH=<branch>` takes a finished branch to a green pull request
+# and stops there. The merge, the tag and the read-back of the published zip
+# need GO=vX.Y.0, which the lead passes only after Nail's message:
+#
+#   make release BRANCH=gdoc-v2-m29-the-archive
+#   make release BRANCH=gdoc-v2-m29-the-archive GO=v2.20.0
+#
+# DRY=1 prints every command and runs none, which is what the tests assert.
+release:
+	@.ralphex/board/release.sh --branch "$(BRANCH)"$(if $(GO), --go $(GO))$(if $(DRY), --dry)
+
+# The platform's own suite. No model runs in it: every case is a dry run or a
+# stub, so it costs a second and no tokens.
+platform-test:
+	.ralphex/board/tests/test_milestone.sh
+	.ralphex/board/tests/test_release.sh
+	.ralphex/board/tests/test_meter.sh
+
+# The team's own check. The seats under .claude/agents/ are files, so what can
+# be wrong with one is a typo in its frontmatter, a model or a tool list that
+# widened past what the seat is for, or a path in the brief that moved. All
+# three are cheap to check and expensive to find at the moment the seat is
+# called. No model runs here either.
+team-check:
+	.ralphex/board/tests/test_team.sh
+
+.PHONY: test vet build dist app app-test app-lint tag milestone release platform-test team-check

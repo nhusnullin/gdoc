@@ -39,8 +39,18 @@ new_out=$(revmux new --task "$task" --run "$run")
 scope_path=$(echo "$new_out" | jq -r .scope)
 cp "$prompt_file" "$scope_path"
 
+# REVMUX_LENSES, when `make milestone REVIEW=ui` sets it, replaces the profile's
+# roster with a smaller lens set. Nail's cut 2 of 2026-10-23: the full eight
+# lenses only where go/ changed, because on M24a the fourth and fifth passes
+# over a panel's diff moved commas. Unset, the roster is revmux's own default
+# and this script behaves as it did before M28.
+revmux_args=(--task "$task" --run "$run" --no-tui)
+if [[ -n "${REVMUX_LENSES:-}" ]]; then
+    revmux_args+=(--lenses "$REVMUX_LENSES")
+fi
+
 set +e
-report_json=$(revmux --task "$task" --run "$run" --no-tui)
+report_json=$(revmux "${revmux_args[@]}")
 revmux_exit=$?
 set -e
 
