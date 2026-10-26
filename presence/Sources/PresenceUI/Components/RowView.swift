@@ -117,6 +117,10 @@ public struct RowView<Leading: View, Trailing: View>: View {
   /// the row itself is a press. A row whose press opens a document says so
   /// in the Google Docs icon's own words: NowPress.tip.
   public let titleTip: String?
+  /// What a press held on the title area does, where the row has a menu.
+  /// It is the title's and not the row's: the five icons are a column of
+  /// their own, and a slow click on one of them is that icon's press alone.
+  public let titleHeld: (() -> Void)?
   public let value: String?
   public let sub: String?
   /// The title's colour, where the row is not drawn on the panel's own
@@ -138,6 +142,7 @@ public struct RowView<Leading: View, Trailing: View>: View {
     titlePrefix: String? = nil,
     titleColumn: CGFloat? = nil,
     titleTip: String? = nil,
+    titleHeld: (() -> Void)? = nil,
     value: String? = nil,
     sub: String? = nil,
     titleInk: Swatch? = nil,
@@ -152,6 +157,7 @@ public struct RowView<Leading: View, Trailing: View>: View {
     self.titlePrefix = titlePrefix
     self.titleColumn = titleColumn
     self.titleTip = titleTip
+    self.titleHeld = titleHeld
     self.value = value
     self.sub = sub
     self.titleInk = titleInk
@@ -194,6 +200,7 @@ public struct RowView<Leading: View, Trailing: View>: View {
         .frame(minHeight: Typography.rowTitle.lineHeight)
         .metricProbe("row.title")
         .tooltip(titleTip ?? "", align: .leading)
+        .heldPress(titleHeld)
 
         if let sub {
           Text(sub)
@@ -252,6 +259,7 @@ extension RowView where Leading == StatusGlyph, Trailing == EmptyView {
     titlePrefix: String? = nil,
     titleColumn: CGFloat? = nil,
     titleTip: String? = nil,
+    titleHeld: (() -> Void)? = nil,
     value: String? = nil,
     sub: String? = nil,
     gone: Bool = false,
@@ -259,7 +267,7 @@ extension RowView where Leading == StatusGlyph, Trailing == EmptyView {
   ) {
     self.init(
       shape, title: title, titlePrefix: titlePrefix, titleColumn: titleColumn,
-      titleTip: titleTip, value: value,
+      titleTip: titleTip, titleHeld: titleHeld, value: value,
       sub: sub, gone: gone, hovering: hovering,
       leading: { StatusGlyph(glyph, tone: tone) }, trailing: { EmptyView() })
   }
@@ -276,6 +284,7 @@ extension RowView where Leading == StatusGlyph {
     titlePrefix: String? = nil,
     titleColumn: CGFloat? = nil,
     titleTip: String? = nil,
+    titleHeld: (() -> Void)? = nil,
     value: String? = nil,
     sub: String? = nil,
     titleInk: Swatch? = nil,
@@ -286,7 +295,7 @@ extension RowView where Leading == StatusGlyph {
   ) {
     self.init(
       shape, title: title, titlePrefix: titlePrefix, titleColumn: titleColumn,
-      titleTip: titleTip, value: value,
+      titleTip: titleTip, titleHeld: titleHeld, value: value,
       sub: sub, titleInk: titleInk, gone: gone,
       hovering: hovering, busy: busy,
       leading: { StatusGlyph(glyph, tone: tone) }, trailing: trailing)

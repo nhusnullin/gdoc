@@ -230,9 +230,14 @@ struct DocumentsList: View {
     } else {
       VStack(alignment: .leading, spacing: 0) {
         ForEach(model.rows) { row in
+          // One value for both ways into the row's menu, so the words the
+          // secondary click draws and the words the held press pops up are
+          // the same list and the anchor is the row's own.
+          let menu = RowMenu(items: row.menu, actions: actions)
           VStack(alignment: .leading, spacing: 0) {
             RowView(
-              .doc, glyph: row.glyph, tone: row.tone, title: row.title, sub: row.sub,
+              .doc, glyph: row.glyph, tone: row.tone, title: row.title,
+              titleHeld: menu.held, sub: row.sub,
               gone: row.gone,
               trailing: {
                 HStack(spacing: Grid.actionGap) {
@@ -245,7 +250,7 @@ struct DocumentsList: View {
                 }
               }
             )
-            .rowMenu(row.menu, actions: actions)
+            .rowMenu(menu)
             if model.showsStrip, row.id == model.rows.first?.id {
               IconStrip()
             }
@@ -267,28 +272,40 @@ extension View {
     modifier(OpensDocument(press: press))
   }
 
-  /// A document row's own menu, on a secondary click and on a press held
-  /// half a second.
+  /// A document row's own menu: the secondary click, and the anchor the
+  /// held press opens it from.
   ///
-  /// Two ways in, because the menu is the one place a pin and a hide are and
-  /// a menu bar's panel is reached by both hands: a right-click is what the
+  /// Two ways in, because the menu is the one place a hide is and a menu
+  /// bar's panel is reached by both hands: a right-click is what the
   /// platform does, and a held press is what a trackpad under one finger
-  /// does. The held press draws the same two words in a popover, because
-  /// nothing in SwiftUI opens a context menu from code.
+  /// does. The secondary click is SwiftUI's `.contextMenu`, which tracks an
+  /// `NSMenu`; the held press is `RowMenu.held`, on the row's title area,
+  /// which pops up an `NSMenu` of the same words from the anchor behind
+  /// that title. Neither is a window, which is the fourth look's answer to
+  /// the popover that could have closed the panel under itself.
   ///
   /// It decides nothing: the words and the kinds are the model's, and the
   /// press leaves through `PanelActions` like every other press.
-  func rowMenu(_ items: [MenuItemModel], actions: PanelActions) -> some View {
-    modifier(RowMenu(items: items, actions: actions))
+  func rowMenu(_ menu: RowMenu) -> some View {
+    modifier(menu)
   }
 }
 
 /// The menu of one row, in its two ways in.
-private struct RowMenu: ViewModifier {
+struct RowMenu: ViewModifier {
   let items: [MenuItemModel]
   let actions: PanelActions
+  let present: MenuPresenter
+  /// Where the system's menu is measured from, filled in by the tree.
+  let anchor = MenuAnchorBox()
 
-  @State private var held = false
+  init(
+    items: [MenuItemModel], actions: PanelActions, present: MenuPresenter = .system()
+  ) {
+    self.items = items
+    self.actions = actions
+    self.present = present
+  }
 
   func body(content: Content) -> some View {
     // A row with nothing to offer opens nothing. A pinned row is that row,
@@ -299,18 +316,37 @@ private struct RowMenu: ViewModifier {
     } else {
       content
         .contextMenu { words }
-        .onLongPressGesture(minimumDuration: Timing.menuHold) { held = true }
-        .popover(isPresented: $held, arrowEdge: .bottom) {
-          VStack(alignment: .leading, spacing: 0) { words }
-            .padding(Grid.unit / 2)
+        .background {
+          // Behind the title area, which is the row less its icon column:
+          // the menu opens under the words the press was held on.
+          MenuAnchor(box: anchor)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.trailing, Grid.actionColumn)
         }
+    }
+  }
+
+  /// The held press of this row's title, where the row has a menu at all.
+  var held: (() -> Void)? {
+    guard !items.isEmpty else { return nil }
+    let entries = entries
+    let present = present
+    let anchor = anchor
+    let press: @MainActor () -> Void = { present.open(entries, anchor.view) }
+    return press
+  }
+
+  /// The words as the system draws them, each wired to the press the
+  /// `.contextMenu`'s own button sends.
+  var entries: [MenuEntry] {
+    items.map { item in
+      MenuEntry(word: item.word, press: { actions.perform(item.kind, item.target) })
     }
   }
 
   @ViewBuilder private var words: some View {
     ForEach(items) { item in
       Button(item.word) {
-        held = false
         actions.perform(item.kind, item.target)
       }
     }

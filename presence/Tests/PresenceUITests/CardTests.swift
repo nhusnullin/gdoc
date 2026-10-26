@@ -400,6 +400,70 @@ final class CardTests: XCTestCase {
     XCTAssertTrue(LiveRow.showsRing(pending: true))
   }
 
+  /// The held press of a document row opens the system's own menu, with the
+  /// words the model put in it and nothing else.
+  ///
+  /// It was a SwiftUI popover until the fourth look, which is a window of
+  /// its own, and the panel is a borderless `KeyPanel` that closes the
+  /// moment it loses key: the menu could have taken the panel it belongs to
+  /// with it. The press now hands the words to a presenter, which is an
+  /// `NSMenu` popped up from the row's own view in the app and a recorder
+  /// here. Opening the menu does nothing to the document, and a word of it
+  /// does exactly what the same word of the secondary click's menu does.
+  func testTheHeldPressOpensTheSystemMenuWithTheRowsOwnWords() throws {
+    var offered: [[String]] = []
+    var entries: [MenuEntry] = []
+    var pressed: [(kind: ActionKind, target: String?)] = []
+    let actions = PanelActions { kind, target in pressed.append((kind, target)) }
+    let present = MenuPresenter { words, _ in
+      offered.append(words.map(\.word))
+      entries = words
+    }
+
+    let menu = RowMenu(
+      items: [MenuItemModel(.hideDoc, word: "Hide from the list", target: SceneDocuments.chapter4)],
+      actions: actions, present: present)
+    let press = try XCTUnwrap(menu.held, "a row with a word in its menu has a held press")
+    press()
+    XCTAssertEqual(offered, [["Hide from the list"]], "the words are the model's")
+    XCTAssertTrue(pressed.isEmpty, "opening a menu does nothing to the document")
+
+    try XCTUnwrap(entries.first).press()
+    XCTAssertEqual(pressed.count, 1, "one word, one press")
+    XCTAssertEqual(pressed.first?.kind, .hideDoc)
+    XCTAssertEqual(pressed.first?.target, SceneDocuments.chapter4)
+
+    XCTAssertNil(
+      RowMenu(items: [], actions: actions, present: present).held,
+      "a pinned row offers nothing, so a press held on it opens nothing")
+  }
+
+  /// The gesture is the title's own, and the view the menu is measured from
+  /// catches nothing.
+  ///
+  /// The press sat on the whole row, action strip included, so a slow click
+  /// on an icon both did the icon's thing and opened the menu. It is the
+  /// title area's now: the five icons are a column of their own and the
+  /// gesture is not over them. The anchor is behind that title, and its
+  /// `hitTest` is nil, so a click meant for the row or for one of its icons
+  /// goes where it was going.
+  func testTheHeldPressIsTheTitlesAndTheAnchorCatchesNothing() throws {
+    let anchor = MenuAnchorView(frame: NSRect(x: 0, y: 0, width: 160, height: 44))
+    XCTAssertNil(
+      anchor.hitTest(NSPoint(x: 80, y: 22)), "the anchor is a place to measure from")
+
+    var held = 0
+    let row = RowView(
+      .doc, glyph: .blank, title: "Ch 4. Pricing", titleHeld: { held += 1 },
+      trailing: { EmptyView() })
+    try XCTUnwrap(row.titleHeld, "the row carries the press on its title")()
+    XCTAssertEqual(held, 1)
+
+    let plain = RowView(.doc, glyph: .blank, title: "Ch 4. Pricing", trailing: { EmptyView() })
+    XCTAssertNil(plain.titleHeld, "a row with no menu carries no gesture at all")
+    XCTAssertEqual(Timing.menuHold, 0.5, "half a second, which is what the guide promises")
+  }
+
   // `.stuck .acts` holds Open md, Continue with Claude and the bare cross,
   // in that order: the one that closes the card is the last, so a pointer
   // moving right never crosses it on the way to something else. Scene e9's

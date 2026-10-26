@@ -387,6 +387,27 @@ final class SourceRulesTests: XCTestCase {
       "the shell reads nothing itself, so it never names the core")
   }
 
+  /// No view in the app opens a window of its own.
+  ///
+  /// The panel is a borderless `KeyPanel` whose delegate closes it the
+  /// moment it loses key, and a SwiftUI popover is a window: a row's menu
+  /// that took key would take the panel it belongs to with it. Since the
+  /// fourth look a held press opens the system's own `NSMenu` from the row's
+  /// own view, which is no window at all, and the secondary click is
+  /// `.contextMenu`, which has never been one either.
+  func testNoViewOpensASecondWindow() throws {
+    // Spelled in pieces so this file is not its own failure.
+    let window = "popover" + "("
+
+    var files = 0
+    try eachSwiftFile { path, text in
+      guard path.hasPrefix("Sources/") else { return }
+      files += 1
+      XCTAssertFalse(text.contains(window), "\(path) opens a window of its own")
+    }
+    XCTAssertGreaterThan(files, 0, "no source was read, so this test guards nothing")
+  }
+
   /// Whether this line declares a function or an initialiser, which is where
   /// a shell that had started reading something would say so.
   private func declares(_ line: String) -> Bool {

@@ -380,18 +380,18 @@ branch.
   `presence/Tests/PresenceCoreTests/SourceRulesTests.swift`
 - Delete: `docs/backlog/the-held-press-may-never-reach-a-rows-menu.md`
 
-- [ ] the right-click stays SwiftUI's `.contextMenu`. Only the held press
+- [x] the right-click stays SwiftUI's `.contextMenu`. Only the held press
       changes: it builds an `NSMenu` from the same `MenuItemModel`s the
       `.contextMenu` draws, and pops it up with `popUp(positioning:at:in:)`
       from a `MenuAnchor`, an `NSViewRepresentable` placed behind the row's
       title area. The anchor's `hitTest` returns nil, so it never catches a
       click meant for the row or for its icons
-- [ ] no second window exists to take key. The gesture is on the title area and not
+- [x] no second window exists to take key. The gesture is on the title area and not
       over the five icons. A source rule: no `.popover(` under
       `Sources/PresenceUI`. A test through an injected menu presenter: the
       held press hands it the model's words and nothing else
-- [ ] `git rm` the backlog file
-- [ ] `make app-lint`, `make app-test`
+- [x] `git rm` the backlog file
+- [x] `make app-lint`, `make app-test`
 
 ### Task 7: the update buttons say what happened
 
