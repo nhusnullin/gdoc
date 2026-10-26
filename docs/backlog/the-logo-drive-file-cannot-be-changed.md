@@ -22,8 +22,7 @@ What the fix has to decide first:
 - Whether the setting overrides `logo.drive` or replaces it, and what happens
   to the cache under `assets/<id>` when the id changes. The cache is keyed by
   id, so an old entry would sit there unused.
-- The stated mime and pixels in `house.yaml` still hold the file to its size,
-  so a new logo of another size is refused until that changes too.
+- A logo of any size now fits by the width stated in `house.yaml`.
 
 Either way it is a `docs/v2/DECISIONS.md` entry before code, because the M22
 decision made the firm's file in the firm's Drive the one source.

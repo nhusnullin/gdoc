@@ -16,6 +16,12 @@
 // refuses an empty one rather than writing a document with no mark in its
 // header: TestBuildRefusesALogoWithNoBytes.
 //
+// The house states the logo's width, and Build reads the PNG header so its
+// height follows the picture's own ratio. Bytes that are not a PNG are refused
+// by name. TestTheLogoHeightFollowsThePicturesRatio,
+// TestBuildRefusesALogoThatIsNotAPNG and
+// TestTheFirstPageHeaderCarriesTheLogoWhereTheHouseAnchorsIt are the pins.
+//
 // This comment holds why the package refuses what it refuses. What it reports
 // is in the code beside it.
 //

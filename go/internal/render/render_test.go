@@ -4,6 +4,8 @@ import (
 	"archive/zip"
 	"bytes"
 	"flag"
+	"image"
+	"image/png"
 	"os"
 	"path/filepath"
 	"strings"
@@ -57,6 +59,25 @@ func houseLogo(t *testing.T) []byte {
 		t.Fatalf("read the placeholder logo: %v", err)
 	}
 	return raw
+}
+
+func logoPNG(t *testing.T, width, height int) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, image.NewRGBA(image.Rect(0, 0, width, height))); err != nil {
+		t.Fatalf("encode logo: %v", err)
+	}
+	return buf.Bytes()
+}
+
+func TestBuildRefusesALogoThatIsNotAPNG(t *testing.T) {
+	_, err := Build(config(t), []byte("GIF89a"), fields(), nil, nil, nil, 0)
+	if err == nil {
+		t.Fatal("Build accepted a logo that is not a PNG")
+	}
+	if !strings.Contains(err.Error(), "PNG") {
+		t.Errorf("error %q does not name PNG", err)
+	}
 }
 
 func build(t *testing.T) *Package {

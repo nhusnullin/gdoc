@@ -30,8 +30,8 @@ func TestTheFirstPageHeaderCarriesTheLogoWhereTheHouseAnchorsIt(t *testing.T) {
 	if got := extent.SelectAttrValue("cx", ""); got != "1857375" {
 		t.Errorf("logo cx = %q, want 1857375 EMU (146.25pt)", got)
 	}
-	if got := extent.SelectAttrValue("cy", ""); got != "675132" {
-		t.Errorf("logo cy = %q, want 675132 EMU (53.16pt)", got)
+	if got := extent.SelectAttrValue("cy", ""); got != "675077" {
+		t.Errorf("logo cy = %q, want 675077 EMU (53.156pt)", got)
 	}
 	h := anchor.SelectElement("wp:positionH")
 	if got := h.SelectAttrValue("relativeFrom", ""); got != "column" {
@@ -52,6 +52,26 @@ func TestTheFirstPageHeaderCarriesTheLogoWhereTheHouseAnchorsIt(t *testing.T) {
 	}
 	if got := doc.FindElement("//a:blip").SelectAttrValue("r:embed", ""); got != "rId1" {
 		t.Errorf("the logo names relationship %q, want rId1", got)
+	}
+}
+
+func TestTheLogoHeightFollowsThePicturesRatio(t *testing.T) {
+	pkg, err := Build(config(t), logoPNG(t, 400, 100), fields(), nil, nil, nil, 0)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	doc := parse(t, part(t, pkg, "word/header2.xml"))
+	for _, path := range []string{"//wp:extent", "//a:ext"} {
+		extent := doc.FindElement(path)
+		if extent == nil {
+			t.Fatalf("%s is missing", path)
+		}
+		if got := extent.SelectAttrValue("cx", ""); got != "1857375" {
+			t.Errorf("%s cx = %q, want 1857375", path, got)
+		}
+		if got := extent.SelectAttrValue("cy", ""); got != "464344" {
+			t.Errorf("%s cy = %q, want 464344", path, got)
+		}
 	}
 }
 

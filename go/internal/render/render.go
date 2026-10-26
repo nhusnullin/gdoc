@@ -2,7 +2,9 @@ package render
 
 import (
 	"archive/zip"
+	"bytes"
 	"fmt"
+	"image/png"
 	"io"
 	"path"
 	"sort"
@@ -124,7 +126,12 @@ func Build(cfg *house.Config, logo []byte, f cover.Fields, body []*etree.Element
 	if len(logo) == 0 {
 		return nil, fmt.Errorf("render: no logo bytes, and the first page's header carries the mark")
 	}
-	b := &builder{cfg: cfg, fields: f}
+	logoImage, err := png.DecodeConfig(bytes.NewReader(logo))
+	if err != nil {
+		return nil, fmt.Errorf("render: the logo is not a PNG: %w", err)
+	}
+	logoHeight := cfg.Logo.WidthPt * float64(logoImage.Height) / float64(logoImage.Width)
+	b := &builder{cfg: cfg, fields: f, logoHeight: logoHeight}
 	if err := checkMedia(media); err != nil {
 		return nil, err
 	}

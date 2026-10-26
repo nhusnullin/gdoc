@@ -27,7 +27,7 @@ type pair struct{ A, B string }
 // Every value is a literal, printed by show, never read out of house.yaml or
 // computed from the master.
 var knownOffline = map[string]pair{
-	"logo height (pt)":                         {`53.16`, `72.75`},
+	"logo height (pt)":                         {`53.156`, `72.75`},
 	"HEADING_1 colour":                         {`"#22265F"`, `"#06436E"`},
 	"HEADING_1 indentStart":                    {`0`, `36`},
 	"HEADING_2 colour":                         {`"#22265F"`, `"#06436E"`},

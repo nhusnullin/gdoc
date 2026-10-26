@@ -1,6 +1,6 @@
 // Package asset is one file in Drive, read as bytes, held to what the caller
 // says of it, and cached beside the token. It knows nothing about logos: it is
-// handed an id and a statement of mime and pixels, so the second asset gdoc
+// handed an id and a statement of mime, so the second asset gdoc
 // ever needs is the same call with another id.
 //
 // It exists because of the M22 decision that the firm's logo is the firm's
@@ -50,20 +50,22 @@
 //
 // # A wrong file refuses even when the cache is good
 //
-// A file in Drive that is not a PNG of the stated size stops the run, and the
+// A file in Drive that is not a PNG within the side ceiling stops the run, and the
 // cache is left exactly as it was: TestABadFileRefusesEvenWithAGoodCache. The
 // firm's file is wrong and a refusal is the only message that reaches whoever
 // can fix it. Falling back there would hide a broken file for as long as a
 // cache survives. The same check runs over the cached bytes, so a cache
 // somebody corrupted is no cache: a file gdoc half understands reaches a
-// document by no route. The check reads the header first and judges the size
-// on it, because Go's decoder allocates the whole picture from what the header
-// states: TestAHugeStatedSizeIsRefusedWithoutDecoding holds that. It then
+// document by no route. The check reads the header first and judges both sides
+// against MaxSide, because Go's decoder allocates the whole picture from what
+// the header says: TestAHugeStatedSizeIsRefusedWithoutDecoding,
+// TestASideOverTheCeilingIsRefusedBeforeDecoding and TestTheSideCeilingIs4096
+// hold that. It then
 // decodes the picture whole, because a header states a size a file cut off
 // after it does not carry: TestAHalfPNGIsRefusedByBothRoutes holds both
 // routes.
 //
-// Want is the caller's statement, and image/png is the only mime this room
+// Want is the caller's mime statement, and image/png is the only mime this room
 // checks, because it is the only one it can decode. A statement naming
 // anything else is refused rather than accepted unread.
 //
@@ -95,5 +97,7 @@
 //
 // Interval is a day and TestTheIntervalIsADay states the literal. MaxBytes is
 // a megabyte, far above the five kilobytes a logo is, because it is there to
-// stop an answer nothing bounds: TestTheReadIsBounded.
+// stop an answer nothing bounds: TestTheReadIsBounded. MaxSide is 4096, which
+// bounds decoded allocation before a whole PNG is read:
+// TestTheSideCeilingIs4096.
 package asset

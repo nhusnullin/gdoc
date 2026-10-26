@@ -17,6 +17,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"image/png"
 	"os"
 	"path/filepath"
 	"testing"
@@ -93,8 +94,7 @@ func TestPublishCarriesTheHouseLogo(t *testing.T) {
 	if id == "" {
 		t.Fatal("the embedded house style carries its own logo bytes, so there is no file in Drive for this run to measure")
 	}
-	want := asset.Want{Mime: cfg.Logo.Mime, Width: cfg.Logo.Px[0], Height: cfg.Logo.Px[1]}
-	t.Logf("the house names logo %s, stated as %s at %dx%d px", id, want.Mime, want.Width, want.Height)
+	want := asset.Want{Mime: cfg.Logo.Mime}
 
 	// The first build. Nothing is cached, so the room asks Drive once.
 	first := &countedReach{t: t, id: id}
@@ -108,6 +108,11 @@ func TestPublishCarriesTheHouseLogo(t *testing.T) {
 	if got.Source != asset.FromDrive {
 		t.Errorf("the first build read the logo from %q, and a config directory with no cache has only Drive to read it from (reason: %q)", got.Source, got.Reason)
 	}
+	image, err := png.DecodeConfig(bytes.NewReader(got.Raw))
+	if err != nil {
+		t.Fatalf("the house logo is not a PNG: %v", err)
+	}
+	t.Logf("the house names logo %s, read as %s at %dx%d px", id, want.Mime, image.Width, image.Height)
 	if got.CacheError != "" {
 		t.Errorf("the fetched logo could not be cached, so the second half of this test measures nothing: %s", got.CacheError)
 	}
@@ -235,11 +240,7 @@ func liveHouseLogo(t *testing.T, cfg *house.Config) []byte {
 	if id == "" {
 		return houseLogo(t, cfg)
 	}
-	got, err := asset.Fetch(context.Background(), &countedReach{t: t, id: id}, id, asset.Want{
-		Mime:   cfg.Logo.Mime,
-		Width:  cfg.Logo.Px[0],
-		Height: cfg.Logo.Px[1],
-	})
+	got, err := asset.Fetch(context.Background(), &countedReach{t: t, id: id}, id, asset.Want{Mime: cfg.Logo.Mime})
 	if err != nil {
 		t.Fatalf("the house logo could not be read: %v", err)
 	}

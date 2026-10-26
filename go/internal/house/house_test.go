@@ -226,21 +226,18 @@ func TestTheThreeTablesAreThereWithTheirColumns(t *testing.T) {
 	}
 }
 
-// TestTheLogoDecodesAsAPNGOfTheStatedSize reads the copy under testdata
+// TestTheLogoStatesItsMimeWidthAndPlacement reads the copy under testdata
 // rather than the embedded file, because the firm's logo is one file in Drive
 // and no test in this tree carries its bytes. The copy is the embedded file
 // with the placeholder's base64 in place of them, so what is under test is
 // still the house's own statement of the mark and the decode of it.
-func TestTheLogoDecodesAsAPNGOfTheStatedSize(t *testing.T) {
+func TestTheLogoStatesItsMimeWidthAndPlacement(t *testing.T) {
 	cfg := loadBase64House(t)
 	if cfg.Logo.Mime != "image/png" {
 		t.Errorf("logo.mime = %q, want image/png", cfg.Logo.Mime)
 	}
-	if len(cfg.Logo.Px) != 2 || cfg.Logo.Px[0] != 509 || cfg.Logo.Px[1] != 185 {
-		t.Errorf("logo.px = %v, want [509 185]", cfg.Logo.Px)
-	}
-	if cfg.Logo.WidthPt != 146.25 || cfg.Logo.HeightPt != 53.16 {
-		t.Errorf("logo size = %v by %v pt, want 146.25 by 53.16", cfg.Logo.WidthPt, cfg.Logo.HeightPt)
+	if cfg.Logo.WidthPt != 146.25 {
+		t.Errorf("logo.width_pt = %v, want 146.25", cfg.Logo.WidthPt)
 	}
 	raw, err := cfg.LogoBytes()
 	if err != nil {
@@ -598,11 +595,7 @@ func houseWithLogo(t *testing.T, block string) []byte {
 // name the bytes. The caller appends one of them, or both, or neither.
 const logoBlock = `logo:
   mime: image/png
-  px:
-  - 195
-  - 97
   width_pt: 146.25
-  height_pt: 72.75
   anchor:
     in: first_page_header
     relative_h: column
@@ -612,6 +605,24 @@ const logoBlock = `logo:
     wrap: square
     wrap_dist_pt: 9
 `
+
+func TestALogoThatStatesPixelsIsRefusedNamingTheKey(t *testing.T) {
+	for _, c := range []struct{ key, line string }{
+		{"px", "  px: [195, 97]\n"},
+		{"height_pt", "  height_pt: 72.75\n"},
+	} {
+		t.Run(c.key, func(t *testing.T) {
+			block := strings.Replace(logoBlock, "  width_pt: 146.25\n", c.line+"  width_pt: 146.25\n", 1)
+			_, err := LoadFile(write(t, houseWithLogo(t, block+"  drive: "+aDriveID+"\n")))
+			if err == nil {
+				t.Fatalf("a logo stating %s was accepted", c.key)
+			}
+			if !strings.Contains(err.Error(), c.key) {
+				t.Errorf("error %q does not name %s", err, c.key)
+			}
+		})
+	}
+}
 
 // aDriveID is a file id of the shape Drive mints, written out here so no test
 // in this package names the firm's own file.
@@ -702,7 +713,6 @@ func TestADriveLogoCarriesNoBytes(t *testing.T) {
 	}
 	for _, c := range []struct{ name, drop, names string }{
 		{"no width", "  width_pt: 146.25\n", "logo.width_pt"},
-		{"no height", "  height_pt: 72.75\n", "logo.height_pt"},
 		{"no anchor", "    in: first_page_header\n", "logo.anchor"},
 		{"no wrap", "    wrap: square\n", "logo.anchor.wrap"},
 	} {

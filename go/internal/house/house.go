@@ -3,10 +3,10 @@
 // house.yaml is the style: page geometry, the ten named styles, the cover,
 // the header and footer with the positioned logo, the three front-matter
 // tables cell by cell, the legend, the live contents field, heading numbering
-// and the logo: its mime, its size, its placement, and either the bytes or the
+// and the logo: its mime, drawn width, placement, and either the bytes or the
 // id of the one file in Drive that holds them. TestTheTenStylesAreThere,
 // TestFrontMatterIsFourteenBlocksInOrder, TestTheThreeTablesAreThereWithTheirColumns,
-// TestTOCIsALiveFieldOverThreeHeadingLevels and TestTheLogoDecodesAsAPNGOfTheStatedSize
+// TestTOCIsALiveFieldOverThreeHeadingLevels and TestTheLogoStatesItsMimeWidthAndPlacement
 // are the pins over what the file has to carry.
 //
 // This comment holds why the package refuses what it refuses. What it reports
@@ -97,14 +97,15 @@
 // TestALogoNamesExactlyOneOfDriveAndBase64 is the pin.
 //
 // The PNG check follows the bytes out of this package. With logo.base64 the
-// bytes are here and Validate decodes them against the stated mime and
-// pixels. With logo.drive they are not, this package reaches no network, so
-// the same check is internal/asset's, the room that fetches them. All this
-// package can judge there is the id's shape, and it does.
+// bytes are here and Validate reads a real PNG size from their header. With
+// logo.drive they are not, this package reaches no network, so internal/asset,
+// the room that fetches them, checks the mime, byte ceiling and side ceiling.
+// All this package can judge there is the id's shape, and it does.
 // TestADriveIdThatIsNotOneIsRefusedByName and TestADriveLogoCarriesNoBytes
 // are the pins, and the second one holds what stays required either way:
-// the two sizes and the anchor, which is how render places the mark whichever
-// place the bytes came from. LogoBytes on a Drive house is an error naming
+// the drawn width and the anchor. Render reads the picture's own ratio for the
+// height. TestALogoThatStatesPixelsIsRefusedNamingTheKey pins that px and
+// height_pt are no longer house keys. LogoBytes on a Drive house is an error naming
 // the file rather than empty bytes, because an unbranded document is the one
 // thing this must not resolve to.
 //
@@ -544,17 +545,16 @@ type HeadingNumbering struct {
 	Note         string `yaml:"note"`
 }
 
-// Logo is the mark in the first page's header. The size, the placement and
-// the mime are always here; the bytes are in one of two places, and Drive and
-// Base64 are those two. Exactly one of them is set.
+// Logo is the mark in the first page's header. Its drawn width, placement and
+// mime are always here; its height follows the picture's own ratio. The bytes
+// are in one of two places, and Drive and Base64 are those two. Exactly one of
+// them is set.
 type Logo struct {
-	Mime     string  `yaml:"mime"`
-	Px       []int   `yaml:"px"`
-	WidthPt  float64 `yaml:"width_pt"`
-	HeightPt float64 `yaml:"height_pt"`
-	Anchor   Anchor  `yaml:"anchor"`
-	Drive    string  `yaml:"drive"`
-	Base64   string  `yaml:"base64"`
+	Mime    string  `yaml:"mime"`
+	WidthPt float64 `yaml:"width_pt"`
+	Anchor  Anchor  `yaml:"anchor"`
+	Drive   string  `yaml:"drive"`
+	Base64  string  `yaml:"base64"`
 }
 
 // Anchor is where the logo sits and what the text does around it.
@@ -630,7 +630,7 @@ func (c *Config) LogoBytes() ([]byte, error) {
 // is, every front_matter block names a kind that exists and a ref that is
 // there, every highlight is one of OOXML's names rather than a colour, the
 // seven marks are there with a kind, a hex colour and an opener of their own,
-// and the logo really is a PNG of the size the file states. Each of those is something
+// and the logo really has a PNG header with positive dimensions. Each is something
 // render reads by name, so a config that fails one here is a document it would
 // build silently wrong.
 //
@@ -985,9 +985,7 @@ func pageBreakExtra(b Block) string {
 // about a file it cannot read.
 var driveFileID = regexp.MustCompile(`^[A-Za-z0-9_-]{25,}$`)
 
-// validateLogo checks the logo against what the file says of it. A stated
-// size that is not the real one would put the mark on the page at the wrong
-// scale, and nothing downstream reads the PNG to notice.
+// validateLogo checks the logo against what the file says of it.
 //
 // The bytes are in one of two places and the file names exactly one of them:
 // logo.drive, one file in Drive by id, or logo.base64, the bytes here. Both
@@ -996,16 +994,12 @@ var driveFileID = regexp.MustCompile(`^[A-Za-z0-9_-]{25,}$`)
 //
 // The PNG check follows the bytes. With logo.base64 the bytes are here and
 // the check is here. With logo.drive they are not, this package reaches no
-// network and never will, so internal/asset checks the PNG against the mime
-// and the pixels this file states, which is the room that has the bytes. What
-// stays here either way is everything render reads to place the mark on the
-// page: the two sizes and the anchor.
+// network and never will, so internal/asset checks the PNG against the mime,
+// byte ceiling and side ceiling. What stays here either way is everything
+// render reads to place the mark on the page: the width and the anchor.
 func (c *Config) validateLogo() error {
 	if c.Logo.Mime != "image/png" {
 		return fmt.Errorf("logo: mime is %q, and only image/png is carried", c.Logo.Mime)
-	}
-	if len(c.Logo.Px) != 2 {
-		return fmt.Errorf("logo: px names %d numbers, want width and height", len(c.Logo.Px))
 	}
 	if err := c.validateLogoPlacement(); err != nil {
 		return err
@@ -1037,7 +1031,6 @@ func (c *Config) validateLogoPlacement() error {
 		value float64
 	}{
 		{"logo.width_pt", c.Logo.WidthPt},
-		{"logo.height_pt", c.Logo.HeightPt},
 	} {
 		if f.value <= 0 {
 			return fmt.Errorf("%s is %v, and render scales the mark by it", f.key, f.value)
@@ -1059,8 +1052,8 @@ func (c *Config) validateLogoPlacement() error {
 	return nil
 }
 
-// validateLogoPNG decodes the bytes in logo.base64 and holds them to the mime
-// and the pixels the file states.
+// validateLogoPNG decodes the header of the bytes in logo.base64 and requires
+// a real PNG size. Render reads that same ratio when it draws the mark.
 func (c *Config) validateLogoPNG() error {
 	raw, err := c.LogoBytes()
 	if err != nil {
@@ -1070,9 +1063,8 @@ func (c *Config) validateLogoPNG() error {
 	if err != nil {
 		return fmt.Errorf("logo: not a PNG: %w", err)
 	}
-	if img.Width != c.Logo.Px[0] || img.Height != c.Logo.Px[1] {
-		return fmt.Errorf("logo: the file says %dx%d px and the image is %dx%d",
-			c.Logo.Px[0], c.Logo.Px[1], img.Width, img.Height)
+	if img.Width <= 0 || img.Height <= 0 {
+		return fmt.Errorf("logo: the PNG is %dx%d, and both sides must be positive", img.Width, img.Height)
 	}
 	return nil
 }

@@ -155,7 +155,7 @@ func (b *builder) logoDrawing(p *etree.Element) {
 	v := sub(anchor, "wp:positionV", "relativeFrom", a.RelativeV)
 	sub(v, "wp:posOffset").SetText(emu(a.OffsetYPt))
 
-	sub(anchor, "wp:extent", "cx", emu(lg.WidthPt), "cy", emu(lg.HeightPt))
+	sub(anchor, "wp:extent", "cx", emu(lg.WidthPt), "cy", emu(b.logoHeight))
 	sub(anchor, "wp:effectExtent", "l", "0", "t", "0", "r", "0", "b", "0")
 	sub(anchor, "wp:wrapSquare", "wrapText", "bothSides",
 		"distT", dist, "distB", dist, "distL", dist, "distR", dist)
@@ -175,7 +175,7 @@ func (b *builder) logoDrawing(p *etree.Element) {
 	spPr := sub(pic, "pic:spPr")
 	xfrm := sub(spPr, "a:xfrm")
 	sub(xfrm, "a:off", "x", "0", "y", "0")
-	sub(xfrm, "a:ext", "cx", emu(lg.WidthPt), "cy", emu(lg.HeightPt))
+	sub(xfrm, "a:ext", "cx", emu(lg.WidthPt), "cy", emu(b.logoHeight))
 	sub(spPr, "a:prstGeom", "prst", "rect")
 	sub(spPr, "a:ln")
 }

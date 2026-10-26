@@ -492,7 +492,7 @@ literals in the tests: `Цели проекта` is `цели-проекта`; `
   `docs/backlog/the-logo-drive-file-cannot-be-changed.md`
 - Delete: `docs/backlog/a-logo-of-another-size-stops-every-build.md`
 
-- [ ] test first:
+- [x] test first:
   - `render`: `TestTheLogoHeightFollowsThePicturesRatio`: a 400x100 PNG made
     in the test with `image/png`. `wp:extent` and `a:ext` read `cx="1857375"`
     (146.25 pt) and `cy="464344"` (36.5625 pt)
@@ -519,34 +519,34 @@ literals in the tests: `Цели проекта` is `цели-проекта`; `
     this room does not carry" stay. `TestAHugeStatedSizeIsRefusedWithoutDecoding`
     and `TestAHalfPNGIsRefusedByBothRoutes` stay unchanged
   - `drift`: `knownOffline["logo height (pt)"]` becomes {`53.156`, `72.75`}
-- [ ] run them: red
-- [ ] `house`, `asset`, `render` and `cmd/gdoc/logo.go` as in Technical
+- [x] run them: red
+- [x] `house`, `asset`, `render` and `cmd/gdoc/logo.go` as in Technical
       Details. `house.yaml` and `testdata/house-base64.yaml` lose `px` and
       `height_pt`. Every other `Want{...Width, Height}` in the asset and
       `cmd/gdoc` tests drops the two sizes
-- [ ] `go/internal/live/houselogo_test.go`: the two places that read
+- [x] `go/internal/live/houselogo_test.go`: the two places that read
       `cfg.Logo.Px` (about line 96, and `liveHouseLogo` about line 240) build
       `asset.Want{Mime: cfg.Logo.Mime}`. Where the first one logged the stated
       size, the test logs the size `png.DecodeConfig` reads off the bytes it
       got instead. `go vet ./internal/live` compiles it with no live variable
       set
-- [ ] `drift/compare.go`: the `Known` comment says the house draws the mark
+- [x] `drift/compare.go`: the `Known` comment says the house draws the mark
       `width_pt` wide at the picture's own ratio, and the master carries the
       old mark at 72.75 pt
-- [ ] `go test ./internal/render -run TestTheGoldenParts -update`: only
+- [x] `go test ./internal/render -run TestTheGoldenParts -update`: only
       `testdata/header2.xml` moves, at the two `cy` values; the commit message
       says so
-- [ ] `house/house.go` package comment, `asset/doc.go` ("A wrong file refuses
+- [x] `house/house.go` package comment, `asset/doc.go` ("A wrong file refuses
       even when the cache is good", the size sentences, `Want`),
       `render/doc.go` (the logo paragraph) and the comment on `logoFor` in
       `cmd/gdoc/logo.go` say mime, byte ceiling and side ceiling, and name the
       new tests. Nothing in any of them still says "the stated size" or
       "pixels the file states"
-- [ ] `docs/backlog/the-logo-drive-file-cannot-be-changed.md`: the last bullet,
+- [x] `docs/backlog/the-logo-drive-file-cannot-be-changed.md`: the last bullet,
       which says a logo of another size is refused, is replaced by one line
       saying any size now fits by width
-- [ ] `git rm docs/backlog/a-logo-of-another-size-stops-every-build.md`
-- [ ] `make test` green
+- [x] `git rm docs/backlog/a-logo-of-another-size-stops-every-build.md`
+- [x] `make test` green
 
 ### Task 4: six points after the two top headings
 
