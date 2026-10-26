@@ -557,7 +557,7 @@ literals in the tests: `Цели проекта` is `цели-проекта`; `
   `go/internal/drift/pins_test.go`
 - Delete: `docs/backlog/no-space-after-the-two-top-headings.md`
 
-- [ ] test first, literals only:
+- [x] test first, literals only:
   - `house`: `TestHeading1IsTheHouseHeading` asserts
     `heading_1.space_after_pt` is 6; a new `TestHeading2HasSixPointsAfter`
     asserts the same of `heading_2`
@@ -566,20 +566,20 @@ literals in the tests: `Цели проекта` is `цели-проекта`; `
     `w:after="120"` on `Heading2`
   - `restyle`: `TestAHeadingTakesTheHouseHeadingLook` wants `spaceBelow` 6,
     and its comment says "6pt below"
-- [ ] run them: red
-- [ ] `house.yaml`: `space_after_pt: 6` on `heading_1` and `heading_2`
-- [ ] run `make test` and read the drift gate's failure: it names
+- [x] run them: red
+- [x] `house.yaml`: `space_after_pt: 6` on `heading_1` and `heading_2`
+- [x] run `make test` and read the drift gate's failure: it names
       `HEADING_1 spaceBelow` and `HEADING_2 spaceBelow` and prints both sides
-- [ ] `drift/compare.go` `Known`: the two rows with the reason in Technical
+- [x] `drift/compare.go` `Known`: the two rows with the reason in Technical
       Details and a comment above them. `pins_test.go` `knownOffline`: the
       two pairs, written as the literals the failure printed, expected
       {`6`, `0`}
-- [ ] `go test ./internal/render -run TestTheGoldenParts -update`: only
+- [x] `go test ./internal/render -run TestTheGoldenParts -update`: only
       `testdata/styles.xml` moves, at two `w:after` values
-- [ ] any other test that stated the old 0 for these two headings, found by
+- [x] any other test that stated the old 0 for these two headings, found by
       the run, states 6; none is loosened to stop stating a value
-- [ ] `git rm docs/backlog/no-space-after-the-two-top-headings.md`
-- [ ] `make test` green
+- [x] `git rm docs/backlog/no-space-after-the-two-top-headings.md`
+- [x] `make test` green
 
 ### Task 5: export leaves a fenced code block alone
 

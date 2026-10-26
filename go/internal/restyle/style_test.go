@@ -127,8 +127,8 @@ func styleOf(t *testing.T, body map[string]any, key string) map[string]any {
 	return s
 }
 
-// A HEADING_1 paragraph takes the house heading look: 12pt above, nothing
-// below, the 1.15 line spacing the document defaults state, and no indent.
+// A HEADING_1 paragraph takes the house heading look: 12pt above, 6pt below,
+// the 1.15 line spacing the document defaults state, and no indent.
 func TestAHeadingTakesTheHouseHeadingLook(t *testing.T) {
 	cfg := embeddedHouse(t)
 	plan := TabRequests(fixtureTab(t), cfg)
@@ -138,8 +138,8 @@ func TestAHeadingTakesTheHouseHeadingLook(t *testing.T) {
 	if got := magnitude(t, ps, "spaceAbove"); got != 12 {
 		t.Errorf("spaceAbove is %v, want 12 (house says %v)", got, h.SpaceBeforePt)
 	}
-	if got := magnitude(t, ps, "spaceBelow"); got != 0 {
-		t.Errorf("spaceBelow is %v, want 0 (house says %v)", got, h.SpaceAfterPt)
+	if got := magnitude(t, ps, "spaceBelow"); got != 6 {
+		t.Errorf("spaceBelow is %v, want 6 (house says %v)", got, h.SpaceAfterPt)
 	}
 	if got := magnitude(t, ps, "indentStart"); got != 0 {
 		t.Errorf("indentStart is %v, want 0 (house says %v)", got, h.IndentStartPt)

@@ -107,6 +107,11 @@ var Known = map[string]string{
 	"HEADING_1 colour": "the master's style declares #06436E and every heading paragraph overrides it to the house navy; house.yaml states the effective one",
 	"HEADING_2 colour": "the master's style declares #06436E and every heading paragraph overrides it to the house navy; house.yaml states the effective one",
 
+	// The house gives its two top headings the same space after that its third
+	// and fourth headings carry; the master carries none.
+	"HEADING_1 spaceBelow": "Nail's decision of 2026-10-26: six points after the two top headings, as heading_3 and heading_4 carry; the master says 0",
+	"HEADING_2 spaceBelow": "Nail's decision of 2026-10-26: six points after the two top headings, as heading_3 and heading_4 carry; the master says 0",
+
 	// The master's heading styles carry Word's list indents, and every heading
 	// paragraph overrides them back to zero.
 	"HEADING_1 indentStart": "the master's style indents the heading and every heading paragraph sets the indent back to zero; house.yaml states the effective one",

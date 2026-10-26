@@ -71,8 +71,22 @@ func TestHeading1IsTheHouseHeading(t *testing.T) {
 	if s.SpaceBeforePt == nil || *s.SpaceBeforePt != 12 {
 		t.Errorf("heading_1.space_before_pt = %v, want 12", s.SpaceBeforePt)
 	}
+	if s.SpaceAfterPt == nil || *s.SpaceAfterPt != 6 {
+		t.Errorf("heading_1.space_after_pt = %v, want 6", s.SpaceAfterPt)
+	}
 	if !s.KeepWithNext {
 		t.Error("heading_1.keep_with_next = false, want true")
+	}
+}
+
+func TestHeading2HasSixPointsAfter(t *testing.T) {
+	cfg := load(t)
+	s, ok := cfg.Style("heading_2")
+	if !ok {
+		t.Fatal("styles.heading_2 is missing")
+	}
+	if s.SpaceAfterPt == nil || *s.SpaceAfterPt != 6 {
+		t.Errorf("heading_2.space_after_pt = %v, want 6", s.SpaceAfterPt)
 	}
 }
 

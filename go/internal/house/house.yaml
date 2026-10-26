@@ -91,7 +91,7 @@ styles:
     bold: true
     color: '#22265F'
     space_before_pt: 12
-    space_after_pt: 0
+    space_after_pt: 6
     indent_start_pt: 0
     keep_with_next: true
   heading_2:
@@ -99,7 +99,7 @@ styles:
     bold: false
     color: '#22265F'
     space_before_pt: 12
-    space_after_pt: 0
+    space_after_pt: 6
     indent_start_pt: 0
     keep_with_next: true
   heading_3:

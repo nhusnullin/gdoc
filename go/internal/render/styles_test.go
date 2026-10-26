@@ -57,14 +57,24 @@ func TestHeading1IsSixteenPointBoldNavyWithTwelvePointsAbove(t *testing.T) {
 	if got := h1.FindElement("w:pPr/w:spacing").SelectAttrValue("w:before", ""); got != "240" {
 		t.Errorf("Heading1 w:before = %q, want 240 twips", got)
 	}
-	if got := h1.FindElement("w:pPr/w:spacing").SelectAttrValue("w:after", ""); got != "0" {
-		t.Errorf("Heading1 w:after = %q, want 0", got)
+	if got := h1.FindElement("w:pPr/w:spacing").SelectAttrValue("w:after", ""); got != "120" {
+		t.Errorf("Heading1 w:after = %q, want 120 twips", got)
 	}
 	if h1.FindElement("w:pPr/w:keepNext") == nil {
 		t.Error("Heading1 does not keep with the paragraph behind it")
 	}
 	if got := h1.SelectElement("w:basedOn").SelectAttrValue("w:val", ""); got != "Normal" {
 		t.Errorf("Heading1 is based on %q, want Normal", got)
+	}
+}
+
+func TestHeading2HasSixPointsAfter(t *testing.T) {
+	pkg := build(t)
+	doc := parse(t, part(t, pkg, "word/styles.xml"))
+	h2 := style(t, doc, "Heading2")
+
+	if got := h2.FindElement("w:pPr/w:spacing").SelectAttrValue("w:after", ""); got != "120" {
+		t.Errorf("Heading2 w:after = %q, want 120 twips", got)
 	}
 }
 
