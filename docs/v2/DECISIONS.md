@@ -100,12 +100,14 @@ replaced it)`, or `measured`. Nothing else.
 | 2026-10-17 | What the second M20 review closed: a comment the editor wrapped in Obsidian's spelling, a comment the note never closes, and the old span on the way home | holds | DECISIONS.md |
 | 2026-10-17 | What the third M20 review closed: an opener with no closer inside a sentence, and the refusal that blamed an export the author never made | holds | DECISIONS.md |
 | 2026-10-17 | What the fourth M20 review closed: an escaped opener refused as a comment the line never closes | holds | DECISIONS.md |
-| 2026-10-17 | The logo lives in Drive, not in the tree | holds | DECISIONS.md |
+| 2026-10-17 | The logo lives in Drive, not in the tree | superseded 2026-10-26 (the pin on exact pixels only: a logo of any size fits by width; the Drive id, the cache and the refusals hold) | DECISIONS.md |
 | 2026-10-17 | The presence: gdoc appends one fact line per run to a file it never reads, and a separate menu bar app reads it | holds | DECISIONS.md |
 | 2026-10-17 | The panel: the presence as the screens draw it, the app runs six argv lists, a hold dies with the sign-in it was held under | holds | DECISIONS.md |
 | 2026-10-18 | The app opens itself: gdoc opens the installed app when it is not running, and launch at login is the person's switch | holds | DECISIONS.md |
 | 2026-10-18 | The second morning: the account in the header, the middle scrolls, DOCUMENTS by what was just made and by use, pins, a bright mark, the session a run came from | holds | DECISIONS.md |
 | 2026-10-18 | The third look: nothing scrolls, DOCUMENTS is the pinned and the last five, the note is found and not configured, the update glyph has three states | holds | DECISIONS.md |
+| 2026-10-26 | The fixes: a cover line and the footer keep their own look, a logo of any size fits by width, six points after the two top headings, Russian heading ids keep their letters, the guard refuses an empty leaf in a style mask, export keeps code and repeated headings apart | holds | DECISIONS.md |
+| 2026-10-26 | The fourth look: every document on the panel opens on a click, a mark only for a failed run, names that survive, buttons that say what happened, a panel that stays open, a bounded hub | holds | DECISIONS.md |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -1175,3 +1177,124 @@ gdoc's own stamp keeps GitHub to once in 24 hours, and the person's press is
 the way past it.
 
 The plan is `docs/plans/completed/2026-10-18-gdoc-v2-m27-the-third-look.md`.
+
+## 2026-10-26. The fixes: a cover line and the footer keep their own look, a logo of any size fits by width, six points after the two top headings, Russian heading ids keep their letters, the guard refuses an empty leaf in a style mask, export keeps code and repeated headings apart.
+
+An outside review of commit `7be00df` named sixteen bugs, and the team checked
+each one with a test against the code. Nail chose which to fix before this
+day, and the lead's handoff of 2026-10-26 holds his choices: the render
+fields, the Russian heading ids, the null leaf in the guard, the two export
+heading bugs, and a logo that fits any size. He added one of his own that
+day: after a heading he wants space before the text starts. The rest of the
+report stays in `docs/backlog/small-defects-from-the-outside-bug-report.md`.
+On the evening of 2026-10-26 the lead put five questions with a
+recommendation on the night plan page, and Nail answered, in his words: "I'm
+ok with night plan and proposed recommendations". Serves principles 1 and 2.
+
+**A cover line and the footer keep their own look.** A cover line's `align`,
+`italic`, `color` and `line_spacing` in `house.yaml` reach the docx, where the
+render dropped them. The footer paragraph's alignment and its rule reach it
+too, and so does a label's `keep_with_next`. A footer logo is refused by name,
+the way a header logo in the wrong place is refused, because Nail does not
+want one.
+
+**A logo of any size fits by width.** This replaces one clause of
+2026-10-17's "The logo lives in Drive". The exact-pixel pin goes, because a
+bigger picture in Drive stopped every build until v2.20.0 pinned the new
+size. The picture is drawn `width_pt` wide and its height follows its own
+ratio. The mime type and the byte ceiling still refuse a wrong file, a side
+over 4096 pixels is refused before the picture is decoded, so a small file
+cannot claim a huge one, and the
+Drive id, the cache and the refusal to build without a logo all hold.
+
+**Six points after the two top headings.** `heading_1` and `heading_2` take
+`space_after_pt: 6`, the value `heading_3` and `heading_4` already carry. The
+master template said 0. That difference is named in the drift gate's known
+list with this entry as its reason. A restyle applies the same value. Nail
+chose 6 over Google's default of 10.
+
+**Russian heading ids keep their letters.** A Markdown id keeps Cyrillic the
+way GitHub does, so `## Цели проекта` is `#цели-проекта`, and a repeated
+heading takes `-1`, `-2` after the first. An id that works today keeps
+working. For most headings it is the same id. A heading with an accent or an
+underscore gets GitHub's id, and its old id stays as an alias a `#` link still
+resolves through. A heading with no letter at all keeps the id `heading`. The docx bookmark stays ASCII, `_h_` and a hash, because Word repairs
+any other name. Measured the same evening in MEASURED.md, "Drive's import of a
+Russian heading and a link to it": a link through such a bookmark lands on the
+Russian heading, so the fallback Nail approved, plain ids, is not needed.
+
+**The guard refuses an empty leaf in a style mask.** A styling request whose
+`fields` names a field the style object holds as `null` is refused by name,
+because an in-place restyle must not clear a value nobody stated.
+`AllowFile` accepting any level stays as it is, by Nail's call.
+
+**Export keeps code and repeated headings apart.** The strip of a heading's
+number never runs on a line inside a fenced code block. A link to the second
+of two headings with one name points at the second.
+
+**Two runs in one night.** The team's rule is one milestone a day. Nail
+approved two for this night: this one on codex, as the M29 pilot ran, and the
+panel on Claude. Out of both: restyle applying the whole template,
+suggestions in footnotes, the release pipeline rethink, a live review's
+progress in the thread, the installer signing in, and the rest of the outside
+report.
+
+Trust guardian, 2026-10-26: signed. The guard only narrows, refusing a mask
+path held as null, and `TestAMaskMayNameOnlyWhatTheRequestSets` and
+`TestTheAssetGrantAdmitsNoDocument` hold unchanged. The logo keeps its mime
+check, its 1 MiB byte ceiling and, in place of the pixel pin, a 4096-pixel side
+ceiling judged on the header before any decode.
+
+The plan is `docs/plans/2026-10-26-gdoc-v2-m30-the-fixes.md`.
+
+## 2026-10-26. The fourth look: every document on the panel opens on a click, a mark only for a failed run, names that survive, buttons that say what happened, a panel that stays open, a bounded hub.
+
+Nail, 2026-10-26, on the panel of v2.20.0: every document the menu bar app
+shows must open on a click, and the live row could not be opened. On the
+DOCUMENTS list, a grey dot and a green check sat before rows and nothing said
+why; he asked for the difference made clear to a person, or dropped. He also
+said of the panel "feel free, tune it, adjust". The lead put five questions on
+the night plan page, and Nail answered: "I'm ok with night plan and proposed
+recommendations". Serves principles 4 and 1.
+
+**Every document on the panel opens on a click.** A NOW row that names a
+document opens it on a click of the row, the live row included, the way a
+DOCUMENTS row's first icon opens its own. Stop stays its own control, as it
+is today with no confirm, so a click on the row never stops a review. The
+whole row is the target, not an extra icon: the lead's call. A DOCUMENTS row
+keeps its icon and gains no row click.
+
+**A mark only for a failed run.** The grey dot and the green check go,
+because the row's second line already says what the last run was. A row
+carries a mark only when the last run on its document failed, and a failed
+run never looks like a stopped one: it says "reply failed Tue", not "stopped".
+Every other glyph in the column goes too, the hold, live and running ones
+included, because NOW already shows what is happening. The column stays, so
+every title starts at one edge. Nail chose this over dropping the column.
+
+**Names survive, and the buttons say what happened.** A verb in front of a
+row keeps enough of the document's name to tell documents apart, and a
+publish that stopped names its document. An update button that did nothing
+says why on its row, in one fixed sentence with the time. A publish that
+stopped in the render names its note through the cover title, which is the
+one change to gdoc itself: `title` on the end line may now be that cover
+title, and the record gains no field.
+
+**The panel stays open, and the hub has a bound.** A held press opens the
+system menu the right-click opens, so no second window takes the panel's
+place. The folder picker that closed the panel went with the third look, so
+its backlog item closes with no code. The walk of a `hubPath` override stops
+at 20,000 entries and lets Spotlight answer, and a new walk stops the old
+one. The flaky test of the override before Spotlight was a real race in the
+app: Spotlight now waits for the override's walk.
+
+The six argv lists, the one signal and the three things the app reads hold
+unchanged. Out: an app run by an AI skill, the logo on the panel, the skills
+and extension versions on the panel, and the app in the nightly zips.
+
+Trust guardian, 2026-10-26: signed. `title` on a publish's end may be the
+note's cover title, the same word its step lines already carry, from one
+caller held by go/boundary; no field, reader, URL, argv or system call is
+added, and the hub walk only narrows what the app reads.
+
+The plan is `docs/plans/2026-10-26-gdoc-v2-m31-the-fourth-look.md`.

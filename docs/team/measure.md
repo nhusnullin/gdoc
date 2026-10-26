@@ -132,6 +132,30 @@ pilot's own table under this section when the run ends, beside the baseline
 row, and adds two numbers the meter cannot read: the lead session's own context
 at the end of the day, and the number of messages Nail had to send.
 
+### The pilot: M29, the archive, on codex
+
+Measured 2026-10-26 by the lead. The run went on codex (`CODEX=1`), so
+`meter.py` finds no Claude transcript for `../gdoc-m29`. The codex numbers are
+summed from `~/.codex/sessions`, every session whose `cwd` is the worktree,
+each at its last `total_token_usage`. The run's window was 07:33 to 08:32 UTC.
+
+| Run | Task iterations | Tasks, total | Per task iteration | Biggest iteration | Review rounds | Review, total | Per review round | Whole worktree | Sessions |
+|---|---|---|---|---|---|---|---|---|---|
+| M29, the archive (codex) | 6 | 9.8M | 1.6M | 2.5M | 2 | 7.3M | 3.7M | 17.1M | 15 |
+| M29, Claude tokens | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+Against the bars: 1.6M per task iteration is under 4.9M, and 3.7M per review
+round is under 6.6M. Two cautions. The codex tokens are OpenAI's, billed on a
+separate plan, so they do not compare one to one with Claude's. And 16.0M of
+the 17.1M were cached input, which costs less than fresh input on either
+side. M29 was docs and tests only, so M30 on codex is the first fair test on
+code.
+
+Nail sent one message about M29, the go to merge it without a tag. The
+review ended with its fixes committed in `1a465e0`. Nothing was reverted on
+the day it merged. The lead's own context at the end of the day was not
+read.
+
 ## Nail's confirmation
 
 The method and the baseline above are the lead's reading. They are not settled
