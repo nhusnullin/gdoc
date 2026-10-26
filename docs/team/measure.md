@@ -135,7 +135,7 @@ at the end of the day, and the number of messages Nail had to send.
 ### The pilot: M29, the archive, on codex
 
 Measured 2026-10-26 by the lead. The run went on codex (`CODEX=1`), so
-`meter.py` finds no Claude transcript for `../gdoc-m29`. The codex numbers are
+`meter.py` finds no Claude transcript for M29's worktree. The codex numbers are
 summed from `~/.codex/sessions`, every session whose `cwd` is the worktree,
 each at its last `total_token_usage`. The run's window was 07:33 to 08:32 UTC.
 
