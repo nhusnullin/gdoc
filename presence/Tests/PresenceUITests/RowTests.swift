@@ -64,6 +64,84 @@ final class RowTests: XCTestCase {
     XCTAssertEqual(MiddleTitle.fitted(narrowTail).tail, " it")
   }
 
+  // A verb in front of a name takes its own room, and the floor counts the
+  // name.
+  //
+  // Scene r9's watch was drawn `Live stopped by you · Ch 5.… v0.1`, the same
+  // document DOCUMENTS showed as `Ch 5. Commerc… v0.1`: the floor was
+  // measured on the verb and the name together, so it passed at 27
+  // characters while the name inside it was cut to five. The verb and the
+  // dot after it are one piece now, drawn whole, and the name is measured in
+  // what is left of the row.
+  func testAPrefixTakesItsRoomAndTheFloorCountsTheName() throws {
+    let name = "Ch 5. Commercial Model v0.1"
+    let verb = "Live stopped"
+
+    // The verb is drawn whole, separator and all, and the two pieces put
+    // back together are the line a reader sees.
+    XCTAssertEqual(MiddleTitle.lede(verb), "Live stopped · ")
+    XCTAssertEqual(
+      MiddleTitle.whole(prefix: verb, name: name), "Live stopped · Ch 5. Commercial Model v0.1")
+    XCTAssertEqual(MiddleTitle.whole(prefix: nil, name: name), name, "a name is a line of its own")
+
+    // A NOW row's own room: the panel's 320 less its 8 either side, the
+    // row's 12 either side, the 16 pt glyph, the two 8 pt gaps and the one
+    // 24 pt action, that action's 4 pt of overhang given back.
+    XCTAssertEqual(MiddleTitle.nowColumn, 228)
+    let row = LiveRow(model: LiveRowModel(prefix: verb, name: name, sub: "since 13:10"))
+    let inPanel = Grid.panelWidth - 2 * Grid.unit
+    XCTAssertEqual(
+      try probes(row, scheme: .dark, width: inPanel)["row.title"]?.width,
+      MiddleTitle.nowColumn,
+      "the row drew a title column other than the one the name is measured in")
+
+    // The name keeps its last word and at least the floor's characters of
+    // its head, which is what DOCUMENTS gives it.
+    XCTAssertEqual(
+      MiddleTitle.fitted(name, prefix: verb, column: MiddleTitle.nowColumn).tail, " v0.1",
+      "the name lost the one word that tells it from the draft beside it")
+    let shown = MiddleTitle.headCharacters(name, prefix: verb, column: MiddleTitle.nowColumn)
+    XCTAssertGreaterThanOrEqual(
+      shown, Titles.headFloor, "the name shows only \(shown) characters of head")
+
+    // The verb takes room and nothing hides that: the same name shows more
+    // of itself with no verb in front of it, in the same column.
+    XCTAssertGreaterThan(
+      MiddleTitle.headCharacters(name, column: MiddleTitle.nowColumn), shown,
+      "the verb was measured as though it took no room")
+
+    // And it is why a row that opens with a verb is measured in its own
+    // room rather than the document row's 112: there, the verb leaves the
+    // name under the floor.
+    XCTAssertLessThan(
+      MiddleTitle.headCharacters(name, prefix: verb), Titles.headFloor,
+      "the document row's column has room for the verb after all")
+
+    // The job card is the same rule at the card's own width and weight, so
+    // a publish's name is cut in the middle like every other name in the
+    // panel and not at its tail: 320 less the panel's 8 either side, the
+    // card's 12 either side, the 28 pt ring and the 12 pt gap after it.
+    XCTAssertEqual(JobCard.titleColumn, 240)
+    let card = JobCardModel(prefix: "Publishing", name: name, sub: "started 09:03")
+    XCTAssertEqual(card.title, "Publishing · Ch 5. Commercial Model v0.1")
+    let job = MiddleTitle.fitted(
+      name, prefix: "Publishing", role: Typography.titleEmphasis, column: JobCard.titleColumn)
+    XCTAssertEqual(job.tail, " v0.1", "the card cut the name at its tail")
+    let onCard = MiddleTitle.headCharacters(
+      name, prefix: "Publishing", role: Typography.titleEmphasis, column: JobCard.titleColumn)
+    XCTAssertGreaterThanOrEqual(
+      onCard, Titles.headFloor, "the card shows only \(onCard) characters of head")
+    XCTAssertNotNil(
+      try probes(JobCard(model: card), scheme: .dark, width: inPanel)["job.title"],
+      "the card draws its title somewhere other than through MiddleTitle")
+
+    // A name with no verb measures as it did: the document row's column,
+    // the counted split, and the head the ellipsis leaves room for.
+    XCTAssertEqual(MiddleTitle.fitted(name).tail, " v0.1")
+    XCTAssertEqual(MiddleTitle.fitted(name).head, "Ch 5. Commercial Model")
+    XCTAssertEqual(MiddleTitle.headCharacters(name), 10)
+  }
+
   // `.row{min-height:32px}`, `.row.two{min-height:44px}`,
   // `.row.compact{min-height:28px}`, and the document row is a two-line row.
   func testRowHeightsAreTheGrid() throws {

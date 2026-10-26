@@ -293,21 +293,21 @@ branch.
   `presence/Tests/PresenceUITests/RowTests.swift`, `CardTests.swift`
 - Delete: `docs/backlog/a-verb-prefix-eats-the-document-name-in-a-row.md`
 
-- [ ] the item's first shape: a title is handed over as two pieces, the
+- [x] the item's first shape: a title is handed over as two pieces, the
       prefix ("Live", "Live stopped", "Publishing") and the name. The prefix
       and its separator are drawn whole, and the eight-character floor and
       the middle cut are measured on the name alone, in the room the prefix
       leaves. A title with no prefix draws exactly as today
-- [ ] `LiveRowModel` and `JobCardModel` carry the two pieces; the live row
+- [x] `LiveRowModel` and `JobCardModel` carry the two pieces; the live row
       and the job card draw through `MiddleTitle`, so the job card's name
       is cut in the middle like every other name and not at its tail
-- [ ] tests with literals: "Live stopped" in front of
+- [x] tests with literals: "Live stopped" in front of
       "Ch 5. Commercial Model v0.1" shows at least eight characters of the
       name's head and keeps " v0.1"; the job card with the same name does
       the same; a name with no prefix measures as it did
       (`testAPrefixTakesItsRoomAndTheFloorCountsTheName`)
-- [ ] `git rm` the backlog file
-- [ ] `make app-lint`, `make app-test`
+- [x] `git rm` the backlog file
+- [x] `make app-lint`, `make app-test`
 
 ### Task 4: the mark means one thing, a run that failed
 

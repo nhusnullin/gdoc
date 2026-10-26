@@ -15,7 +15,8 @@
 // Nothing here predicts a time. A ring without a fraction turns and says
 // nothing about how long.
 //
-// CardTests states the two cases and the ring's two sizes.
+// CardTests states the two cases and the ring's two sizes, and RowTests
+// holds that the title's verb takes its own room.
 
 import SwiftUI
 
@@ -45,9 +46,13 @@ public struct JobStep: Equatable, Sendable {
 
 /// What a job card draws.
 public struct JobCardModel: Equatable, Sendable {
-  /// `Publishing · Chapter 4`, or `Publishing` alone where the record names
-  /// no document.
-  public let title: String
+  /// The verb in front of the name, `Publishing`, drawn whole. Nothing
+  /// where the record names no document: then the verb is the whole title
+  /// and there is no name to keep room for.
+  public let prefix: String?
+  /// The document's own name, `Chapter 4`, or the verb alone where the
+  /// record names no document.
+  public let name: String
   /// `step 2 of 4 · started 09:03 · Falcon / Drafts`, or nothing.
   public let sub: String?
   /// How far along, where that is known. Nothing is an indeterminate ring.
@@ -55,12 +60,19 @@ public struct JobCardModel: Equatable, Sendable {
   /// The steps, or none at all.
   public let steps: [JobStep]
 
-  public init(title: String, sub: String? = nil, progress: Double? = nil, steps: [JobStep] = []) {
-    self.title = title
+  public init(
+    prefix: String? = nil, name: String, sub: String? = nil, progress: Double? = nil,
+    steps: [JobStep] = []
+  ) {
+    self.prefix = prefix
+    self.name = name
     self.sub = sub
     self.progress = progress
     self.steps = steps
   }
+
+  /// `Publishing · Chapter 4`: the line a reader sees.
+  public var title: String { MiddleTitle.whole(prefix: prefix, name: name) }
 }
 
 /// One running job.
@@ -69,6 +81,12 @@ public struct JobCard: View {
   public static let columnGap: CGFloat = 12
   public static let topPadding: CGFloat = 4
   public static let bottomPadding: CGFloat = Grid.unit
+
+  /// The room the job's title has: 320 less the panel's 8 either side, the
+  /// card's 12 either side, the 28 pt ring and the 12 pt gap after it.
+  /// 240 pt.
+  public static let titleColumn: CGFloat =
+    Grid.panelWidth - 2 * Grid.unit - 2 * Grid.rowInset - Grid.ringLarge - columnGap
 
   public let model: JobCardModel
 
@@ -95,10 +113,15 @@ public struct JobCard: View {
         RingView(progress: Self.ringProgress(model), size: .large)
           .metricProbe("job.ring")
         VStack(alignment: .leading, spacing: 2) {
-          Text(model.title)
-            .font(Typography.titleEmphasis.font)
-            .lineLimit(1)
-            .foregroundStyle(palette.text.color)
+          // The name is cut in the middle like every other name in the
+          // panel. Left to the drawing it was cut at its tail, so a publish
+          // of "Ch 5. Commercial Model v0.1" lost the one word that tells
+          // it from the draft beside it.
+          MiddleTitle(
+            model.name, prefix: model.prefix, role: Typography.titleEmphasis,
+            column: Self.titleColumn
+          )
+          .metricProbe("job.title")
           if let sub = model.sub {
             Text(sub)
               .font(Typography.caption.font)

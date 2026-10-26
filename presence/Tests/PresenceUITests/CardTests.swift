@@ -409,7 +409,7 @@ final class CardTests: XCTestCase {
   // of them the card is the ring and the two lines, and never four grey rows
   // the app invented.
   func testTheJobCardShowsStepRowsOnlyWhenStepsAreKnown() throws {
-    let blind = JobCardModel(title: "Publishing", sub: nil, progress: nil, steps: [])
+    let blind = JobCardModel(name: "Publishing", sub: nil, progress: nil, steps: [])
     XCTAssertFalse(JobCard.showsSteps(blind))
     let measured = try probes(JobCard(model: blind), scheme: .dark, width: cardWidth)
     XCTAssertNotNil(measured["job.card"])

@@ -105,6 +105,14 @@ public enum RowShape: String, Sendable, CaseIterable {
 public struct RowView<Leading: View, Trailing: View>: View {
   public let shape: RowShape
   public let title: String
+  /// The verb in front of the title, where the row has one: NOW's watch
+  /// says "Live stopped" over the name it is watching. It is drawn whole
+  /// and the name is measured in what it leaves.
+  public let titlePrefix: String?
+  /// The room the title is measured in. `nil` is the narrowest column in
+  /// the panel, the document row's, so one name reads the same in every
+  /// section; a row that opens with a verb hands its own.
+  public let titleColumn: CGFloat?
   public let value: String?
   public let sub: String?
   /// The title's colour, where the row is not drawn on the panel's own
@@ -123,6 +131,8 @@ public struct RowView<Leading: View, Trailing: View>: View {
   public init(
     _ shape: RowShape = .plain,
     title: String,
+    titlePrefix: String? = nil,
+    titleColumn: CGFloat? = nil,
     value: String? = nil,
     sub: String? = nil,
     titleInk: Swatch? = nil,
@@ -134,6 +144,8 @@ public struct RowView<Leading: View, Trailing: View>: View {
   ) {
     self.shape = shape
     self.title = title
+    self.titlePrefix = titlePrefix
+    self.titleColumn = titleColumn
     self.value = value
     self.sub = sub
     self.titleInk = titleInk
@@ -161,7 +173,9 @@ public struct RowView<Leading: View, Trailing: View>: View {
       VStack(alignment: .leading, spacing: 0) {
         HStack(alignment: .firstTextBaseline, spacing: Grid.columnGap) {
           MiddleTitle(
-            title, role: shape.titleRole, gone: gone, quietInk: titleInk)
+            title, prefix: titlePrefix, role: shape.titleRole,
+            column: titleColumn ?? MiddleTitle.narrowestColumn,
+            gone: gone, quietInk: titleInk)
           Spacer(minLength: 0)
           if let value {
             Text(value)
@@ -172,6 +186,7 @@ public struct RowView<Leading: View, Trailing: View>: View {
           }
         }
         .frame(minHeight: Typography.rowTitle.lineHeight)
+        .metricProbe("row.title")
 
         if let sub {
           Text(sub)
@@ -227,13 +242,16 @@ extension RowView where Leading == StatusGlyph, Trailing == EmptyView {
     glyph: GlyphKind = .blank,
     tone: GlyphTone = .quiet,
     title: String,
+    titlePrefix: String? = nil,
+    titleColumn: CGFloat? = nil,
     value: String? = nil,
     sub: String? = nil,
     gone: Bool = false,
     hovering: Bool = false
   ) {
     self.init(
-      shape, title: title, value: value, sub: sub, gone: gone, hovering: hovering,
+      shape, title: title, titlePrefix: titlePrefix, titleColumn: titleColumn, value: value,
+      sub: sub, gone: gone, hovering: hovering,
       leading: { StatusGlyph(glyph, tone: tone) }, trailing: { EmptyView() })
   }
 }
@@ -246,6 +264,8 @@ extension RowView where Leading == StatusGlyph {
     glyph: GlyphKind = .blank,
     tone: GlyphTone = .quiet,
     title: String,
+    titlePrefix: String? = nil,
+    titleColumn: CGFloat? = nil,
     value: String? = nil,
     sub: String? = nil,
     titleInk: Swatch? = nil,
@@ -255,7 +275,8 @@ extension RowView where Leading == StatusGlyph {
     @ViewBuilder trailing: () -> Trailing
   ) {
     self.init(
-      shape, title: title, value: value, sub: sub, titleInk: titleInk, gone: gone,
+      shape, title: title, titlePrefix: titlePrefix, titleColumn: titleColumn, value: value,
+      sub: sub, titleInk: titleInk, gone: gone,
       hovering: hovering, busy: busy,
       leading: { StatusGlyph(glyph, tone: tone) }, trailing: trailing)
   }

@@ -236,8 +236,10 @@ struct Phrases {
   /// place in the list, which is a position and not a forecast.
   func jobCard(_ run: NowRun) -> JobCardModel {
     let place = run.index.flatMap { index in run.count.map { "step \(index) of \($0)" } }
+    let title = titled(Words.running(run.command) ?? run.command, run.title)
     return JobCardModel(
-      title: sentence([Words.running(run.command) ?? run.command, run.title]),
+      prefix: title.prefix,
+      name: title.name,
       sub: sentence([place, "started \(clock(run.started))", Words.via(run.via)]),
       progress: run.progress,
       steps: steps(run))
@@ -298,8 +300,11 @@ struct Phrases {
     // DOCUMENTS uses for it. The row kept opening with "Live" over a
     // sub-line that said the watch had stopped:
     // testE9SaysTheWatchIsStoppedInEverySectionAndDrawsNoStop.
+    let title = titled(
+      session.isOpen ? "Live" : "Live stopped", session.title ?? session.doc)
     return LiveRowModel(
-      title: sentence([session.isOpen ? "Live" : "Live stopped", session.title ?? session.doc]),
+      prefix: title.prefix,
+      name: title.name,
       sub: sentence(parts),
       stopped: !session.isOpen)
   }
@@ -364,5 +369,17 @@ struct Phrases {
 
   func sentence(_ parts: [String?]) -> String {
     parts.compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: Sentences.separator)
+  }
+
+  /// A row's title as the two pieces it is drawn in: the verb in front, and
+  /// the document's name.
+  ///
+  /// The verb is drawn whole and the name is measured on its own, so a verb
+  /// as long as "Live stopped" does not eat the name behind it. Where the
+  /// record names no document the verb is the whole title and there is no
+  /// prefix: a line of one word is measured as any other line of one word.
+  func titled(_ verb: String, _ name: String?) -> (prefix: String?, name: String) {
+    guard let name, !name.isEmpty else { return (nil, verb) }
+    return (verb, name)
   }
 }
