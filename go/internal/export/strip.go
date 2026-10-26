@@ -327,13 +327,13 @@ func stripHeadingNumbers(md string) (string, []Piece) {
 	lines := strings.Split(md, "\n")
 	var out []Piece
 	moved := map[string]string{}
-	for i, line := range lines {
-		m := numberedHeading.FindStringSubmatch(line)
+	for _, heading := range view.HeadingLines(md) {
+		m := numberedHeading.FindStringSubmatch(lines[heading.Line])
 		if m == nil {
 			continue
 		}
 		numbered, words := m[2]+headingNumberSeparator+m[3], m[3]
-		lines[i] = m[1] + words
+		lines[heading.Line] = m[1] + words
 		out = append(out, Piece{Kind: PieceHeadingNumber, Text: numbered})
 		if from, to := view.Anchor(numbered), view.Anchor(words); from != to {
 			moved[from] = to

@@ -588,7 +588,7 @@ literals in the tests: `Цели проекта` is `цели-проекта`; `
   `go/internal/export/strip.go`, `go/internal/export/project_test.go`,
   `go/internal/export/doc.go`, `go/internal/view/doc.go`
 
-- [ ] test first:
+- [x] test first:
   - `export`: `TestAHeadingNumberInsideAFenceStays`. Input to
     `stripHeadingNumbers`: `# 1-Scope`, a blank line, a ```` ```sh ```` fence
     holding `# 1-Install the tool`, and a `~~~` fence holding
@@ -601,15 +601,15 @@ literals in the tests: `Цели проекта` is `цели-проекта`; `
     four spaces, and a heading inside a footnote definition,
     `HeadingLines` lists the first two only, with their zero-based line
     numbers and words
-- [ ] run them: red
-- [ ] `view.HeadingLines` as in Technical Details, with goldmark's default ids
+- [x] run them: red
+- [x] `view.HeadingLines` as in Technical Details, with goldmark's default ids
       for now; `stripHeadingNumbers` applies `numberedHeading` only to the
       lines `HeadingLines` names
-- [ ] `export/doc.go`, "A heading gives its house number back": one sentence
+- [x] `export/doc.go`, "A heading gives its house number back": one sentence
       that a heading is what goldmark parses as one, so a line inside a code
       block keeps its digits, naming the two export tests. `view/doc.go`:
       `HeadingLines` and its test, in the link section
-- [ ] `make test` green
+- [x] `make test` green
 
 ### Task 6: a heading id keeps its letters, and an old id still resolves
 

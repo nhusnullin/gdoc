@@ -341,6 +341,11 @@
 // TestALinkPrintsItsTarget, links.golden and
 // TestTheAnchorViewWritesIsTheIDBodyCollects are the pins.
 //
+// HeadingLines asks the same parser which source lines are headings, carrying
+// each line's words and generated id. Code and footnote definitions do not
+// enter the document outline just because a line inside them starts with "#";
+// TestHeadingLinesFindsWhatGoldmarkFinds is the pin.
+//
 // The anchor is taken from the heading's projected line and not from its text
 // runs, because goldmark takes its id from the whole line: a heading holding a
 // hyperlink is "[words](url)" in the file and goldmark reads the address into

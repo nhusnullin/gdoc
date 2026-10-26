@@ -90,6 +90,9 @@
 // view.Anchor, which is goldmark's own heading id rule and so is the rule the
 // note's links will be resolved by. One pass over the targets moves them, not
 // one pass per heading: TestRepointDoesNotChainRewrites.
+// A heading is only what goldmark parses as one, so a heading-shaped line in a
+// code block keeps its digits; TestAHeadingNumberInsideAFenceStays and
+// TestKeptNumbersNamesNoLineInsideAFence are the two sides of that rule.
 // TestAHeadingLosesItsHouseNumberAndKeepsItsLinks and
 // TestTheHeadingNumberIsTheHouseSeparator are the pins, the second stating
 // house.yaml's own format as a literal.

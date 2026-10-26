@@ -5,6 +5,7 @@
 package view
 
 import (
+	"bytes"
 	"fmt"
 	"regexp"
 	"slices"
@@ -13,8 +14,12 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
+	"github.com/yuin/goldmark/extension"
+	east "github.com/yuin/goldmark/extension/ast"
 	"github.com/yuin/goldmark/parser"
+	goldtext "github.com/yuin/goldmark/text"
 
 	"gdoc/internal/docs"
 	"gdoc/internal/markers"
@@ -1071,6 +1076,52 @@ func headingWords(d *docs.Document) map[string]string {
 	for _, t := range d.Tabs {
 		walk(t.Body)
 	}
+	return out
+}
+
+// HeadingLine is one heading goldmark found in a markdown file: its zero-based
+// source line, its plain text and the id goldmark assigned it.
+type HeadingLine struct {
+	Line int
+	Text string
+	ID   string
+}
+
+// HeadingLines parses md with the extensions a note uses and lists its
+// headings in source order. A heading inside a footnote definition belongs to
+// the note at the bottom of the page rather than to the document outline, so
+// it is left out.
+func HeadingLines(md string) []HeadingLine {
+	source := []byte(md)
+	markdown := goldmark.New(
+		goldmark.WithExtensions(extension.GFM, extension.Footnote),
+		goldmark.WithParserOptions(parser.WithAutoHeadingID()),
+	)
+	doc := markdown.Parser().Parse(goldtext.NewReader(source))
+	var out []HeadingLine
+	_ = ast.Walk(doc, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+		if _, ok := node.(*east.FootnoteList); ok {
+			return ast.WalkSkipChildren, nil
+		}
+		heading, ok := node.(*ast.Heading)
+		if !ok || heading.Lines().Len() == 0 {
+			return ast.WalkContinue, nil
+		}
+		id, ok := heading.AttributeString("id")
+		if !ok {
+			return ast.WalkContinue, nil
+		}
+		segment := heading.Lines().At(0)
+		out = append(out, HeadingLine{
+			Line: bytes.Count(source[:segment.Start], []byte{'\n'}),
+			Text: string(heading.Text(source)),
+			ID:   string(id.([]byte)),
+		})
+		return ast.WalkContinue, nil
+	})
 	return out
 }
 

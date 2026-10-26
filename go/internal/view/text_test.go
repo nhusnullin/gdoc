@@ -853,3 +853,25 @@ func TestReadNamesNothingTheNextBuildWouldRead(t *testing.T) {
 		}
 	}
 }
+
+// TestHeadingLinesFindsWhatGoldmarkFinds keeps markdown structure, rather than
+// the shape of a source line, as the definition of a heading. Code and a
+// footnote may hold the same characters without adding a heading to the note.
+func TestHeadingLinesFindsWhatGoldmarkFinds(t *testing.T) {
+	md := "# ATX heading\n\nSetext heading\n--------------\n\n```sh\n# fenced code\n```\n\n    # indented code\n\nA note.[^note]\n\n[^note]:\n    # footnote heading\n"
+
+	got := HeadingLines(md)
+	want := []HeadingLine{
+		{Line: 0, Text: "ATX heading", ID: "atx-heading"},
+		{Line: 2, Text: "Setext heading", ID: "setext-heading"},
+	}
+
+	if len(got) != len(want) {
+		t.Fatalf("HeadingLines() = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("HeadingLines()[%d] = %+v, want %+v", i, got[i], want[i])
+		}
+	}
+}

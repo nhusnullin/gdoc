@@ -240,6 +240,43 @@ func TestRepointDoesNotChainRewrites(t *testing.T) {
 	}
 }
 
+// TestAHeadingNumberInsideAFenceStays makes the heading question goldmark's:
+// a line shaped like a numbered heading is still code while it stands inside
+// either spelling of a fenced code block.
+func TestAHeadingNumberInsideAFenceStays(t *testing.T) {
+	md := "# 1-Scope\n\n```sh\n# 1-Install the tool\n```\n\n~~~\n## 2.1-Not a heading\n~~~\n"
+	want := "# Scope\n\n```sh\n# 1-Install the tool\n```\n\n~~~\n## 2.1-Not a heading\n~~~\n"
+
+	got, pieces := stripHeadingNumbers(md)
+
+	if got != want {
+		t.Errorf("stripHeadingNumbers() =\n%s\nwant\n%s", got, want)
+	}
+	if len(pieces) != 1 || pieces[0].Kind != PieceHeadingNumber || pieces[0].Text != "1-Scope" {
+		t.Errorf("pieces = %v, want the one heading number 1-Scope", pieces)
+	}
+}
+
+// TestKeptNumbersNamesNoLineInsideAFence asks the warning side of the same
+// rule: code that resembles a numbered heading is not a heading it names.
+func TestKeptNumbersNamesNoLineInsideAFence(t *testing.T) {
+	md := "# 1-Scope\n\n```sh\n# 1-Install the tool\n```\n\n~~~\n## 2.1-Not a heading\n~~~\n"
+
+	warnings := keptNumbers("t.0", md)
+
+	if len(warnings) != 1 {
+		t.Fatalf("warnings = %v, want one", warnings)
+	}
+	if !strings.Contains(warnings[0], "1-Scope") {
+		t.Errorf("warning does not name the heading: %s", warnings[0])
+	}
+	for _, code := range []string{"1-Install the tool", "2.1-Not a heading"} {
+		if strings.Contains(warnings[0], code) {
+			t.Errorf("warning names code %q as a heading: %s", code, warnings[0])
+		}
+	}
+}
+
 // TestAHeadingLosesItsHouseNumberAndKeepsItsLinks is the number publish wrote
 // into the heading itself, taken back out with the links that pointed at it.
 func TestAHeadingLosesItsHouseNumberAndKeepsItsLinks(t *testing.T) {
