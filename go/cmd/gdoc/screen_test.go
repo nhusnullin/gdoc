@@ -174,6 +174,7 @@ func TestTheHintIsTheLastLineOnlyWhenTheObjectWasDropped(t *testing.T) {
 	t.Run("stdout a terminal, colour on", func(t *testing.T) {
 		t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 		t.Setenv("NO_COLOR", "")
+		t.Setenv("TERM", "xterm-256color")
 		t.Setenv("COLORTERM", "truecolor")
 
 		_, stderr, _ := screenRun(t, "help")

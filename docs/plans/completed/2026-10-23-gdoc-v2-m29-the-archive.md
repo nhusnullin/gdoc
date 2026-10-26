@@ -259,21 +259,21 @@ survives this move and the next one.
 - Modify: `docs/v2/DECISIONS.md` (the register and the two paragraphs under
   it), `docs/v2/MEASURED.md` (the new index), `go/boundary/doc.go`
 
-- [ ] test first: `TestEveryRegisterRowNamesTheFileThatHoldsIt`,
+- [x] test first: `TestEveryRegisterRowNamesTheFileThatHoldsIt`,
       `TestEveryDecisionEntryHasItsRegisterRow` and
       `TestEveryMeasurementIsIndexed` as in Technical Details. The first and
       the third are red before the columns exist; the second is green from
       the start, and it is what guards Task 2
-- [ ] the register gains the `Entry` column, every row saying
+- [x] the register gains the `Entry` column, every row saying
       `DECISIONS.md` or `MEASURED.md`, which is where every entry is today;
       the four measured rows take the status `measured`
-- [ ] the paragraphs under the register say what the statuses are now and
+- [x] the paragraphs under the register say what the statuses are now and
       what the `Entry` column is for; the never-edited sentence is untouched
-- [ ] MEASURED.md gains its index, 27 rows, every `Entry` saying
+- [x] MEASURED.md gains its index, 28 rows, every `Entry` saying
       `MEASURED.md` today, and the three sentences under it
-- [ ] `go/boundary/doc.go`: four guards over the docs become five, with the
+- [x] `go/boundary/doc.go`: four guards over the docs become five, with the
       reason an index is guarded
-- [ ] `make test` green with not one entry moved yet
+- [x] `make test` green with not one entry moved yet
 
 ### Task 2: the decisions before 2026-10-16 move
 
@@ -281,19 +281,19 @@ survives this move and the next one.
 - Create: `docs/v2/DECISIONS-archive.md`
 - Modify: `docs/v2/DECISIONS.md`
 
-- [ ] the 73 entries before line 4449, ``## 2026-10-16. `---` is a page
+- [x] the 73 entries before line 4449, ``## 2026-10-16. `---` is a page
       break.``, move to the archive in the order they stand, byte for byte,
       no word of any entry edited
-- [ ] the archive's header: what it holds, frozen, the index in
+- [x] the archive's header: what it holds, frozen, the index in
       DECISIONS.md is the way in, no new entry is written here
-- [ ] DECISIONS.md keeps its own header, the whole register and the 13
+- [x] DECISIONS.md keeps its own header, the whole register and the 13
       entries from 2026-10-16 on
-- [ ] every moved row's `Entry` column says `DECISIONS-archive.md`
-- [ ] completeness: the archive's entry half and DECISIONS.md's entry half,
+- [x] every moved row's `Entry` column says `DECISIONS-archive.md`
+- [x] completeness: the archive's entry half and DECISIONS.md's entry half,
       concatenated in that order, are byte for byte the entry half of the
       file before the task, checked with `git show HEAD:docs/v2/DECISIONS.md`
       and `diff`
-- [ ] `make test` green
+- [x] `make test` green
 
 ### Task 3: the measurements before 2026-10-16 move
 
@@ -302,7 +302,7 @@ survives this move and the next one.
 - Modify: `docs/v2/MEASURED.md`, `docs/v2/DECISIONS.md` (the measured rows),
   `docs/v2/SPEC.md` (two lines), `docs/v2/PLAN.md` (one line)
 
-- [ ] these twelve sections move, in the order they stand, byte for byte:
+- [x] these twelve sections move, in the order they stand, byte for byte:
       Which styling requests land in place; In-place styling preserves
       anchors and pending suggestions; A named range over a suggested
       insertion; A table takes one index of its own at the end; A proposal
@@ -312,17 +312,17 @@ survives this move and the next one.
       team and a clean install; Drive's import of a Word footnote; Drive's
       import of run shading and text colour; Footnotes and the marks,
       published by gdoc
-- [ ] the archive's header, as in Technical Details
-- [ ] the index's `Entry` column says `MEASURED-archive.md` for those
+- [x] the archive's header, as in Technical Details
+- [x] the index's `Entry` column says `MEASURED-archive.md` for those
       twelve, and the four register rows whose entry moved say the same
-- [ ] "Not measured yet" names the two sections it leans on instead of
+- [x] "Not measured yet" names the two sections it leans on instead of
       "the section above", and keeps the table numbers it cites
-- [ ] the two lines of `docs/v2/SPEC.md` and the one of `docs/v2/PLAN.md`
+- [x] the two lines of `docs/v2/SPEC.md` and the one of `docs/v2/PLAN.md`
       that name a moved measurement by title say which file holds it now;
       nothing else in either file changes
-- [ ] completeness: the two measured files concatenated are the file that
+- [x] completeness: the two measured files concatenated are the file that
       went in, checked the same way as Task 2
-- [ ] `make test` green
+- [x] `make test` green
 
 ### Task 4: the command's reasons keep the rules and lose the walkthrough
 
@@ -331,46 +331,46 @@ survives this move and the next one.
   Technical Details, `go/boundary/probe_test.go`,
   `go/cmd/gdoc/update_test.go`
 
-- [ ] the sections listed as staying stay in `doc.go`, unedited
-- [ ] every other section moves to the file the table names, as a file
+- [x] the sections listed as staying stay in `doc.go`, unedited
+- [x] every other section moves to the file the table names, as a file
       comment with a blank line before the `package` clause, joining the
       paragraph that file already carries, keeping its `// # ` heading
-- [ ] a comment that sends a reader to `doc.go` for prose that moved points
+- [x] a comment that sends a reader to `doc.go` for prose that moved points
       at its new home: `update_test.go:558` and anything `grep -rn "doc.go"
       go/cmd/gdoc` finds like it
-- [ ] `probeClaimScanned` names the directory `go/cmd/gdoc` in place of
+- [x] `probeClaimScanned` names the directory `go/cmd/gdoc` in place of
       `go/cmd/gdoc/doc.go`
-- [ ] completeness: `grep -c '^// # ' go/cmd/gdoc/*.go` sums to 30, and
+- [x] completeness: `grep -c '^// # ' go/cmd/gdoc/*.go` sums to 30, and
       `doc.go` is under 500 lines
-- [ ] `go doc ./cmd/gdoc` prints the package comment and nothing from a
+- [x] `go doc ./cmd/gdoc` prints the package comment and nothing from a
       moved section
-- [ ] `TestOnlyThePackageCommentReachesGoDoc`,
+- [x] `TestOnlyThePackageCommentReachesGoDoc`,
       `TestEveryPackageHasExactlyOnePackageComment`,
       `TestNoDocumentSaysAProposalRunsTheProbe` and
       `TestTheProbeClaimScanFindsAPlantedSentence` green
-- [ ] `make vet` and `make test` green
+- [x] `make vet` and `make test` green
 
 ### Task 5: Verify acceptance criteria
 
-- [ ] every citation still resolves. For each `DECISIONS.md, <date>` and
+- [x] every citation still resolves. For each `DECISIONS.md, <date>` and
       `<date> entry in docs/v2/DECISIONS.md` under `go/`, `docs/` and in
       `CLAUDE.md`, the register has that date and its `Entry` column names
       a file holding the entry. For each `MEASURED.md` citation, by title
       or by number, the measured index has the section and names the file
-- [ ] `CLAUDE.md` is unchanged and `docs/v2/SPEC.md` changed in two lines
+- [x] `CLAUDE.md` is unchanged and `docs/v2/SPEC.md` changed in two lines
       only: `git diff --name-only main...HEAD` and `git diff main...HEAD --
       docs/v2/SPEC.md`
-- [ ] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
+- [x] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
       `make platform-test`, `make team-check`
 
 ### Task 6: [Final] Update documentation
 
-- [ ] `docs/v2/DECISIONS.md`'s opening paragraph says the file holds the
+- [x] `docs/v2/DECISIONS.md`'s opening paragraph says the file holds the
       register and the entries from 2026-10-16, and names the archive;
       `docs/v2/MEASURED.md`'s preamble does the same for its index
-- [ ] `go/boundary/doc.go` reads as the five guards it now holds
-- [ ] CLAUDE.md untouched, and its task map still names files that exist
-- [ ] move this plan to `docs/plans/completed/`
+- [x] `go/boundary/doc.go` reads as the five guards it now holds
+- [x] CLAUDE.md untouched, and its task map still names files that exist
+- [x] move this plan to `docs/plans/completed/`
 
 ## Post-Completion
 

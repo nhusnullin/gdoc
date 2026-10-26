@@ -104,9 +104,33 @@ holds "the review phase" "$out" "nohup ralphex --external-only"
 # and the status file keeps saying the review is running.
 holds "the review carries the idle timeout" "$out" \
     "--external-only --branch gdoc-v2-m29-the-archive --idle-timeout=20m"
-lacks "a go review keeps the config" "$out" "--max-external-iterations"
-lacks "a go review keeps the roster" "$out" "REVMUX_LENSES"
+# Nail, 2026-10-24: both sizes review with revmux's focused profile and one
+# round. M28's review cost 106M of its 130M, and 100M of that was ralphex's own
+# claude loop after the round, capped at max(3, max_iterations/10): five passes
+# at the default of 50. --max-iterations=10 holds it at the floor of three.
+holds "a go review is one round" "$out" "--max-external-iterations=1"
+holds "a go review caps the patience" "$out" "--review-patience=1"
+holds "a go review caps the claude loop at three" "$out" \
+    "--external-only --branch gdoc-v2-m29-the-archive --idle-timeout=20m --max-iterations=10"
+holds "a go review names the focused profile" "$out" "REVMUX_PROFILE=focused"
+lacks "a go review sets no lens set" "$out" "REVMUX_LENSES"
 holds "the status file" "$out" "status: phase: done | next: make release BRANCH=gdoc-v2-m29-the-archive"
+rm -rf "$t"
+
+# --- the codex executor ----------------------------------------------------
+# Nail, 2026-10-23: the pilot runs on the codex CLI and the OpenAI plan, so no
+# claude session is spent. --codex skips ralphex's external review, so the
+# review phase is --review (first pass and the critical/major loop, both on
+# codex) rather than --external-only, which would review nothing.
+
+t=$(a_repo)
+out=$(cd "$t/repo" && HOME="$t/home" .ralphex/board/milestone.sh \
+    --plan docs/plans/2026-10-23-gdoc-v2-m29-the-archive.md --review go --codex --dry 2>&1)
+holds "codex runs the tasks" "$out" "nohup ralphex --tasks-only --codex --branch gdoc-v2-m29-the-archive"
+holds "codex runs the full review" "$out" "nohup ralphex --review --codex --branch gdoc-v2-m29-the-archive"
+lacks "codex runs no external review" "$out" "--external-only"
+lacks "codex names no revmux profile" "$out" "REVMUX_PROFILE"
+holds "codex review caps its loop at three" "$out" "--max-iterations=10"
 rm -rf "$t"
 
 # --- a ui-sized review ------------------------------------------------------
@@ -116,7 +140,8 @@ out=$(cd "$t/repo" && HOME="$t/home" .ralphex/board/milestone.sh \
     --plan docs/plans/2026-10-23-gdoc-v2-m29-the-archive.md --review ui --dry 2>&1)
 holds "a ui review caps the loop" "$out" "--max-external-iterations=1"
 holds "a ui review caps the patience" "$out" "--review-patience=1"
-holds "a ui review names the smaller lens set" "$out" "REVMUX_LENSES=bugs,impl,adversarial"
+holds "a ui review names the focused profile" "$out" "REVMUX_PROFILE=focused"
+holds "a ui review caps the claude loop at three" "$out" "--max-iterations=10"
 holds "a ui review still runs the task phase" "$out" "ralphex --tasks-only"
 holds "a ui review carries the idle timeout" "$out" \
     "--external-only --branch gdoc-v2-m29-the-archive --idle-timeout=20m"
@@ -475,7 +500,7 @@ rm -rf "$t"
 # script passes without running a review.
 
 stub_round() {
-    local lenses=${1:-}
+    local lenses=${1:-} profile=${2:-}
     local tmp
     tmp=$(mktemp -d)
     mkdir -p "$tmp/bin" "$tmp/repo"
@@ -500,6 +525,7 @@ STUB
         git commit -q --allow-empty -m init >/dev/null 2>&1
         git checkout -q -b gdoc-v2-m29-the-archive
         if [[ -n "$lenses" ]]; then export REVMUX_LENSES="$lenses"; fi
+        if [[ -n "$profile" ]]; then export REVMUX_PROFILE="$profile"; fi
         PATH="$tmp/bin:$PATH" "$REPO/.ralphex/scripts/revmux-review.sh" "$tmp/prompt.txt"
     ) >/dev/null 2>&1
     cat "$tmp/args" 2>/dev/null
@@ -510,6 +536,9 @@ args=$(stub_round "bugs,impl,adversarial")
 holds "REVMUX_LENSES becomes --lenses" "$args" "--lenses bugs,impl,adversarial"
 args=$(stub_round)
 lacks "no variable, no --lenses" "$args" "--lenses"
+lacks "no variable, no --profile" "$args" "--profile"
+args=$(stub_round "" focused)
+holds "REVMUX_PROFILE becomes --profile" "$args" "--profile focused"
 holds "the round still runs" "$args" "--no-tui"
 
 # --- the one relaunch -------------------------------------------------------

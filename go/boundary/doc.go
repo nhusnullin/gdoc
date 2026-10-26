@@ -201,12 +201,13 @@
 // TestRequiredModulesReadsBothSpellings asks the same of the go.mod parser,
 // which has to read a single require line and a require block alike.
 //
-// # Four guards over the docs' shape
+// # Five guards over the docs' shape
 //
-// docs_test.go asks the same kind of question about the documentation, and it
-// is here for the same reason the wire checks are: a prose rule nobody measures
-// is one that decays quietly. That is how CLAUDE.md grew to thousands of lines
-// of per-package essay no reader asked for and every session paid for.
+// docs_test.go and register_test.go ask the same kind of question about the
+// documentation, and they are here for the same reason the wire checks are: a
+// prose rule nobody measures is one that decays quietly. That is how CLAUDE.md
+// grew to thousands of lines of per-package essay no reader asked for and every
+// session paid for.
 //
 // TestCLAUDEmdIsUnderTheCeiling is a ceiling on the file every session loads.
 // The number is claudeCeiling, and raising it is a decision somebody explains
@@ -237,6 +238,14 @@
 // every path in it. A missing heading is a failure rather than an empty pass: a
 // map that is not there is the same silence as a map full of dead rows, and the
 // map is the one thing in that file a reader uses to decide where to go next.
+//
+// The fifth guard holds the decision register and the measured index in both
+// directions: every row names the one file that holds its entry, and every
+// entry has a row, with the same date. It holds the register statuses, keeps
+// each live file's preamble pointing at its archive and naming the cutoff, and
+// pins the frozen archive entries by their SHA-256. An index is guarded because
+// every citation in the tree resolves through it, and it is the one part of
+// either file that is read rather than searched.
 //
 // # No document says a proposal runs the capability probe
 //

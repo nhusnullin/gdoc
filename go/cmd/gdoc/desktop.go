@@ -20,6 +20,150 @@
 // The extension has no settings. What differs from one machine to the next is
 // the binary's path and the release, which is why the template travels in the
 // release and is filled here rather than being a file a person edits.
+//
+// # --desktop writes the Claude Desktop extension, and is the one program gdoc runs
+//
+// Claude Desktop is chat rather than a terminal, so it does not type `gdoc`. It
+// starts a command named in an extension, which is a zip holding one
+// manifest.json, and every release from v2.9.0 on carries that manifest as a
+// template with two placeholders. `gdoc update --desktop` fills them with the
+// path the binary sits at and the release that was installed, writes
+// `gdoc.mcpb` beside the binary, and hands that file to Claude Desktop:
+// TestDesktopWritesTheMcpbFromTheZipsTemplate. Decision 18 of the M14
+// specification, Nail's call of 2026-10-03.
+//
+// The template is read between the check and the replacement, and the extension
+// is written after the read-back, so the steps on stderr are in the order the
+// run takes them: TestADesktopRunDrawsTheTwoExtensionStepsAndSaysQuitAndOpenAgain.
+//
+// Handing it over is the one place anything under go/ starts another program:
+// /usr/bin/open by its full path, with the file as its only argument, on macOS
+// alone. go/boundary's TestOnlyDesktopRunsAProgram reads desktop.go's syntax
+// tree and holds all three of those: os/exec is imported by that one file, it
+// holds one exec.Command call, and that call names the opener and one argument.
+// Off macOS the file is written and nothing is started, because there is
+// nothing there to hand it to: TestDesktopCallsTheRunnerWithOpenAndThePathOnly
+// and TestDesktopOffMacOSWritesAndRunsNothing.
+//
+// The template comes out of the zip this run verified, through
+// update.FileFrom, so it is always the template of the release that is
+// installed and never a second download. It is read before the binary is
+// replaced: a release carrying no template is refused with the gdoc on this
+// machine exactly where it was, because a person who asked for Claude Desktop
+// and got a new binary and a warning they scrolled past is left wondering why
+// their chat has no gdoc in it:
+// TestAZipWithoutTheTemplateIsRefusedBeforeTheBinaryIsReplaced.
+//
+// The extension follows the release rather than the binary, so a machine
+// already running the newest gdoc still downloads that release's zip for the
+// template and still gets the extension refreshed:
+// TestDesktopWhenAlreadyNewestStillRefreshesTheExtension. A run that found a
+// release it did not install, which is a major it declined, writes nothing and
+// says so: the template would name a version this machine does not run, and
+// not knowing never resolves to overwrite.
+//
+// --desktop is refused beside --rollback, which puts an earlier binary back,
+// and beside --check, which writes nothing at all. Each pair names two runs:
+// TestDesktopIsRefusedWithRollbackOrCheck. A path carrying a quote or a
+// backslash is refused by name rather than written into a manifest Claude
+// Desktop cannot read: TestAPathThatWouldBreakTheManifestIsRefusedByName.
+//
+// Past the point where the file is written, everything is reported rather than
+// raised. The binary has already been replaced, or there was never one to
+// replace, so a write that failed or an open that refused is a warning naming
+// the file, which is the house rule that nothing raises over a write that
+// happened.
+//
+// Plain `gdoc update` is the run it has always been: it writes no extension and
+// starts no program, and Claude Desktop runs the new binary after a person
+// quits it and opens it again: TestPlainUpdateWritesNoExtensionAndRunsNothing.
+// It ends with one line when the release's template, filled for this machine,
+// differs from the extension already beside the binary, and that line names
+// `gdoc update --desktop`. The comparison leaves the version field out of both
+// sides, so a release that changed its number and nothing else asks nobody to
+// do anything, and a machine with no extension beside its binary is told
+// nothing at all: TestPlainUpdateHintsWhenTheTemplateChanged and
+// TestPlainUpdateIsSilentWithNoMcpbOrNoChange.
+//
+// The extension has no settings, which TestTheManifestDeclaresNoSettings
+// holds, and it passes neither setting flag: its line is the word mcp alone,
+// which TestTheManifestTemplateParses holds. What
+// differs from one machine to the next is the binary's path and the release,
+// which is why the template travels in the release and is filled here rather
+// than being a file somebody edits. A colleague who wants another mark in a
+// chat sets it in settings.yaml, which the session reads at its start like any
+// other run.
+//
+// # The presence app is installed beside the binary, and opened
+//
+// With the presence on, `gdoc update` installs the menu bar app too, out of
+// the same verified zip the binary came from: the darwin zips carry it at
+// presence/GdocPresence.app and it lands at ~/Applications/GdocPresence.app,
+// with the app that was there kept as GdocPresence.app.previous. The paths are
+// behind two variables for the reason executable is, so no test touches the
+// ~/Applications of the machine it runs on. The whole of the extraction is
+// internal/update's ApplyBundle, and the rules it refuses by are its doc.go's.
+//
+// Off the flag nothing of this happens. The object a caller reads is the
+// object it always was, the steps on stderr are the steps they always were,
+// and no app is installed, refreshed or uninstalled:
+// TestWithThePresenceOffAnUpdateIsTodaysUpdate, which also states the two
+// step lists the recorded screens are drawn from as literals.
+//
+// Every app failure is a warning naming both paths, never a refusal. The
+// binary has landed by the time the app is touched, and gdoc does not take a
+// binary back because a folder beside it did not arrive, so the two may sit
+// at different versions until a later run and the app is what says so:
+// TestAPresenceFailureIsAWarningNamingBothPathsAndTheBinaryIsUpdated. That
+// holds for a run that came only for the app too, where the release itself
+// could not be read: nobody typed anything about an app on that line and the
+// binary here needed nothing, so the run answers with a warning naming both
+// paths: TestAnAppOnlyRefreshThatCannotReadTheReleaseIsAWarning. With
+// --desktop the extension is what the person asked for, so a release that
+// cannot be read is still a refusal. The four fields it reports, `presence`,
+// `presence_version`, `presence_sha256` and `presence_previous`, are all
+// omitempty, so a run that reached no app says nothing about one.
+//
+// A run with nothing newer still installs the app, out of the release the
+// binary here came from, where the app is missing or at another version. It is
+// how a person who has just turned the flag on gets the app without waiting
+// for the next release, and it costs one download rather than a second one:
+// TestAnUpToDateRunWithThePresenceOnInstallsItFromTheReleaseHere. --check
+// installs nothing, the app included: TestCheckNeverInstallsTheApp. A platform
+// with no app gets one warning naming itself:
+// TestThePresenceOffMacOSWritesNothingAndNamesThePlatform.
+//
+// --rollback swaps the app after the binary, each swap its own involution, and
+// a machine with no earlier app keeps the one it has and is told so:
+// TestRollbackWithThePresenceOnSwapsBoth and
+// TestRollbackWithNoPreviousAppWarnsAndKeepsIt.
+//
+// An install is a running app, and so is the next command after one. Under
+// the flag, on macOS, a command whose run is recorded opens the installed app
+// where that app is not already running: dispatch calls desktop.go's
+// openPresenceApp right after the record's start line and only where the run
+// is recorded. Every command but `update`, which is the one command that
+// moves the bundle: it calls the same opener itself, once, after it placed or
+// rolled the app back, because an open at the start line would have started
+// the bundle the run then renamed away. So no step line asks a person to go
+// and open anything.
+// TestACommandUnderTheFlagOpensTheAppOnceAndNothingWhenItIsRunning,
+// TestTheOpenerAsksThreeThingsAndRunsOpenGOnce,
+// TestAFirstInstallOpensTheAppAndTellsNobodyToOpenIt and
+// TestAnUpdateOpensTheAppItPlacedAndNotTheOneItReplaces.
+//
+// Whether the app is running is one lock and never a byte. The app holds
+// flock on presence/app.lock in the config directory for its whole life, and
+// the opener asks LOCK_EX | LOCK_NB on that file and lets go at once: it
+// creates nothing, reads nothing, and a file that is not there is an app that
+// never ran. Everything else is silence, so the flag on is the same object
+// the flag off prints: TestTheFlagChangesNoByteOfTheObject, with go/boundary's
+// TestTheLockNameIsOneWordInTwoLanguages over the one name Go and Swift share.
+// The seam the one program goes through has those two callers and no third,
+// which go/boundary's TestTheOneProgramOpensOnlyTheExtensionAndTheApp holds by
+// reading the syntax tree. Decided 2026-10-18, DECISIONS.md, "The app opens
+// itself".
+//
 
 package main
 

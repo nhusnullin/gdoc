@@ -9,11 +9,11 @@
 # every turn. The script owns the run instead, and writes one status file of
 # three lines. The lead reads the status file, never the log.
 #
-#   .ralphex/board/milestone.sh --plan docs/plans/<file>.md --review go|ui
+#   .ralphex/board/milestone.sh --plan docs/plans/<file>.md --review go|ui [--codex]
 #
 # or through the Makefile:
 #
-#   make milestone PLAN=docs/plans/<file>.md REVIEW=go [DRY=1]
+#   make milestone PLAN=docs/plans/<file>.md REVIEW=go [CODEX=1] [DRY=1]
 #
 # DRY=1 prints every command and runs none, which is what the tests in
 # tests/test_milestone.sh assert.
@@ -28,6 +28,9 @@ REVIEW=""
 DRY=""
 IDLE="${IDLE:-20m}"
 TASKS=""
+# CODEX runs the whole pipeline on the codex CLI and the OpenAI plan, the way
+# the M29 pilot is measured. Empty runs it on claude.
+CODEX=""
 
 # How often the loop looks at the log, and how often it refreshes the board.
 # Cut 7 of the retrospective: the board every 30 minutes or on a phase change,
@@ -36,10 +39,15 @@ TASKS=""
 POLL="${POLL:-30}"
 BOARD_EVERY="${BOARD_EVERY:-1800}"
 
-# The lens set a UI milestone reviews with. Cut 2 of the retrospective: the full
-# roster of eight lenses only where go/ changed; for presence/ the passes after
-# the third moved commas. These three are revmux's own "final" profile.
-UI_LENSES="${UI_LENSES:-bugs,impl,adversarial}"
+# The revmux profile every review runs, go and ui alike: one bugs agent and
+# the codex peer. Nail, 2026-10-24, after M28's meter: its review cost 106M of
+# the run's 130M. He revisits when a review needs comprehensive in a month.
+REVIEW_PROFILE="${REVIEW_PROFILE:-focused}"
+
+# ralphex follows a round with findings by its own claude review loop, capped
+# at max(3, max_iterations / 10). At the default of 50 that is five passes, and
+# on M28 those five were 100M tokens. Ten holds the loop at its floor of three.
+REVIEW_MAX_ITERATIONS=10
 
 # The variables ralphex must not inherit. The four CLAUDE_* ones make the Claude
 # CLI refuse to start inside another session. The two GDOC_LIVE ones were set in
@@ -78,6 +86,7 @@ parse_args() {
             --review) REVIEW="${2:-}"; shift 2 ;;
             --idle) IDLE="${2:-}"; shift 2 ;;
             --tasks) TASKS="${2:-}"; shift 2 ;;
+            --codex) CODEX=1; shift ;;
             --dry) DRY=1; shift ;;
             *) fail "$1 is not an argument this script takes." ;;
         esac
@@ -349,7 +358,7 @@ review_done() {
 run_task_phase() {
     local attempt=1
     while :; do
-        launch "$TASK_LOG" "" --tasks-only --branch "$BRANCH" \
+        launch "$TASK_LOG" "" --tasks-only ${CODEX:+--codex} --branch "$BRANCH" \
             "--max-iterations=$((TASKS + 2))" "--idle-timeout=$IDLE" "$PLAN"
         write_status "tasks, attempt $attempt of 2" "wait: the tasks are running"
         [[ -n "$DRY" ]] && return 0
@@ -372,12 +381,19 @@ run_review_phase() {
     # rounds between the external rounds are claude sessions, and watch_phase
     # has no ceiling of its own. Without it a silent worker leaves the status
     # file saying the review is running until somebody looks at the log.
-    local prefix="" args=(--external-only --branch "$BRANCH" "--idle-timeout=$IDLE")
-    if [[ "$REVIEW" == "ui" ]]; then
-        # Cut 2: one round over a smaller lens set. A panel's review is the
-        # reviewer who draws nothing, not the fifth pass over the diff.
-        prefix="REVMUX_LENSES=$UI_LENSES"
-        args+=(--max-external-iterations=1 --review-patience=1)
+    # One round, one profile, for both sizes. REVIEW still names the size,
+    # because a ui run is followed by the design reviewer and a go run is not.
+    local prefix="REVMUX_PROFILE=$REVIEW_PROFILE"
+    local args=(--external-only --branch "$BRANCH" "--idle-timeout=$IDLE"
+        "--max-iterations=$REVIEW_MAX_ITERATIONS"
+        --max-external-iterations=1 --review-patience=1)
+    if [[ -n "$CODEX" ]]; then
+        # --codex skips the external review, so --external-only would review
+        # nothing. --review runs the first pass and the critical/major loop,
+        # both on codex, and revmux is not called.
+        prefix=""
+        args=(--review --codex --branch "$BRANCH" "--idle-timeout=$IDLE"
+            "--max-iterations=$REVIEW_MAX_ITERATIONS")
     fi
     launch "$REVIEW_LOG" "$prefix" "${args[@]}"
     write_status "review ($REVIEW)" "wait: the review is running"

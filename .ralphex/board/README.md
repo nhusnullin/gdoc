@@ -33,12 +33,17 @@ board folder `~/gdoc-m29-board`, which is the naming every run since M20 has
 used by hand.
 
 `REVIEW` is `go` or `ui`, and the plan's own `Review:` line answers it when the
-command line does not. `go` keeps the configured review: three external
-iterations, patience two, revmux's full roster. `ui` is one iteration, patience
-one and three lenses, because on M26 and M27 the passes after the third moved
-commas. The plan's `Tasks:` line becomes the iteration cap.
+command line does not. Both review the same way since 2026-10-24: one revmux
+round under its `focused` profile, one bugs agent and the codex peer, patience
+one, and `--max-iterations=10`, which holds ralphex's own claude loop after a
+round with findings at its floor of three passes. On M28 that loop ran five
+passes at the default cap and cost 100M of the run's 130M. The size still says
+whether the design reviewer follows the run. The plan's `Tasks:` line becomes
+the task phase's iteration cap.
 
-`DRY=1` prints every command and runs none. `IDLE` overrides the worker's idle
+`CODEX=1` runs both phases on the codex CLI: `--tasks-only --codex`, then
+`--review --codex`, since `--codex` skips the external review and revmux with
+it. `DRY=1` prints every command and runs none. `IDLE` overrides the worker's idle
 timeout, twenty minutes by default.
 
 The script strips the four `CLAUDE_*` variables, which make the Claude CLI

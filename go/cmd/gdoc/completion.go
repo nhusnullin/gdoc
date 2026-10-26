@@ -3,11 +3,77 @@
 // The script is a rendering of the same table help prints, so a Tab offers
 // what the parser takes and cannot drift from it. It goes into a file and
 // never onto stdout, because stdout carries one JSON object and this command
-// is not the exception: see the doc.go section that says so.
+// is not the exception: see the section below that says so.
 //
 // Two shells today, zsh and bash. They group the table the same way, because
 // both complete the way a person types, and they differ only in the language
 // each says it in.
+//
+// # Completion is a file, and the reason is the output contract
+//
+// gdoc completion <shell> --out <path> renders the command table as a script
+// for that shell, writes it through internal/atomicfile, and prints one object
+// saying the shell, the absolute path it wrote and the line to add. That last
+// key names the file the line goes in, add_to_zshrc or add_to_bashrc, so a
+// bash user is never handed a line about .zshrc. The script itself never
+// reaches stdout. A script there would make this the one command
+// whose stdout is not an object, and the contract is worth more than a file
+// that has to be written again after an upgrade. install.sh writes it again on
+// every run, or warns saying why it could not, and it never edits .zshrc: it
+// prints the line and a person adds it.
+//
+// The script is a rendering of the table help prints, so a Tab offers a word
+// or a flag the table holds and nothing else. A flag whose kind is a file
+// offers file names, and every other kind offers nothing, because nothing on
+// this machine knows a Drive folder id, a cursor, a wait length or a quotation
+// out of somebody's document, and neither does anything know a document URL.
+// TestTheZshScriptNamesEveryCommandAndEveryFlag and
+// TestTheBashScriptNamesEveryCommandAndEveryFlag are the pins, and each asks
+// the table rather than a list of its own, so a command added without a line
+// in the script fails there. TestATextFlagIsOpaqueToBothScripts is the pin for
+// the text kind, which annotate carries as --quote.
+//
+// The bash script sets complete -o filenames for the whole command, so a
+// directory offered for a file flag gets a trailing slash and no trailing
+// space, and a space in a path is escaped as it is inserted. Scoping the option
+// to the one arm that offers file names needs compopt, and macOS ships bash
+// 3.2, which has none, so it is set for all of them. The cost is the one place
+// a Tab offers what the parser refuses: a command word matching a directory in
+// the caller's current folder gets a slash too, so in a folder holding build/,
+// gdoc bu<Tab> completes to gdoc build/ and the binary refuses it by name. One
+// visible character on a rare word against every directory a file flag ever
+// descends into. zsh has neither problem, because _files does the work there.
+// TestTheBashScriptNamesEveryCommandAndEveryFlag pins the registration line
+// the option lives on.
+//
+// Both shells group the table the same way, through byFirstWord, because both
+// complete the way a person types: one word, then a second word or a flag.
+// They differ in the language each says it in. zsh reads a description beside
+// every word and a spec per flag; bash has neither, so a flag is a word in a
+// compgen -W list and what follows it is a case over the word before the
+// cursor.
+//
+// --out is build's rule and build's own check: a file already there is refused
+// without --force, a directory is refused whatever the flag says, and a
+// refused run writes nothing.
+// TestCompletionRefusesAnExistingOutUnlessForced is the pin, with
+// TestCompletionWritesTheFileAndReportsTheLineToAdd over what the object says
+// and TestCompletionArgumentsAreStrict over the four refusals.
+//
+// completion counts its own word rather than leaving it to the parser, which
+// is why its table entry says anyWords. The parser's refusal for one missing
+// word names a document, and what is missing here is a shell.
+//
+// zsh and bash today, PowerShell at M9 with the Windows smoke test. Each is a
+// row in shells(), which is what a refusal reads the known shells out of:
+// TestCompletionArgumentsAreStrict, with
+// TestCompletionBashWritesTheFileAndNamesBashrc over the second row's report.
+//
+// No test sources the script in a real shell, because the one program anything
+// under go/ runs is the opener below, and TestNothingRunsAnExternalProgram holds
+// that over the test files too. The script is checked structurally here, and a
+// person types Tab at it once per milestone.
+//
 
 package main
 

@@ -555,7 +555,7 @@ func TestTheUpdateRunReachesTheReleasesAndNothingElse(t *testing.T) {
 // end up at GitHub. notice.go is the daily check help makes, and its own tests
 // hold what it may cost and what it may reach.
 //
-// It reads the syntax rather than the text, because doc.go says all this in
+// It reads the syntax rather than the text, because update.go says all this in
 // prose and a prose sentence naming the updater is not a call to it.
 func TestNothingChecksForUpdatesUnasked(t *testing.T) {
 	files, err := filepath.Glob("*.go")

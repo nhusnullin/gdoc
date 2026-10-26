@@ -9,6 +9,168 @@
 // command reaches anything here. Nothing on disk moves before the bytes have
 // matched the published checksum. And the binary it replaced is kept beside
 // the new one, so `gdoc update --rollback` is one command away.
+//
+// # The update runs when it is typed; help and mcp ask once a day
+//
+// `gdoc update` is the one command that writes over the binary a person is
+// running, and that is why nothing starts it but a person typing it. Nothing
+// installs unasked, ever.
+//
+// Asking what is published is a smaller thing than installing it, and `gdoc
+// help` does it by itself, at most once in 24 hours. Help is the first call of
+// every skill session, it already carries the version, and no document is open
+// in front of it. A colleague who never reads the releases page hears about a
+// release from the tool itself, in the session they already opened.
+//
+// `gdoc mcp` is the second command that asks unasked, and the last. A chat has
+// no help in it: the session is started by Claude Desktop and the person never
+// types a command at all, so the first tool answer of the process carries the
+// line instead, once, and no answer after it does. It is the same stamp, the
+// same 24 hours, the same two-second ceiling and the same grant, so a chat and
+// a terminal cost one request a day between them. The words differ: a chat is
+// told to run `gdoc update` in a terminal and then quit Claude Desktop and
+// open it again, because a new binary only reaches the session started after
+// it: TestAStaleStampAsksOnceAndTheFirstAnswerCarriesTheLine,
+// TestAFreshStampShowingANewerReleaseStillGivesTheLineOncePerProcess,
+// TestACheckoutBuildNeverAsksFromMcp, TestTheMcpCheckIsBoundedByTwoSeconds,
+// TestTheMcpCheckOpensThePolicyTheUpdateOpens and
+// TestTheLineSaysQuitAndOpenAgainNeverToggle.
+//
+// What keeps that bounded is that nothing moves. The check reads one listing,
+// writes one file of gdoc's own, replaces no binary and touches no document.
+// It runs under a two-second ceiling instead of the listing's five, and a
+// failed check is written down too, so a network that refuses GitHub costs two
+// seconds a day and not two seconds a run: TestTheCheckIsBoundedByTwoSeconds
+// and TestAnUnreachableGitHubIsStampedAndHelpStillAnswers. A stamp younger
+// than a day is the answer on its own, with no request at all:
+// TestAFreshStampMakesNoRequest. A build from a checkout names no release, so
+// it has nothing to compare and never asks: TestACheckoutBuildNeverChecks. A
+// word that names no command is refused before any of it happens, so a
+// mistyped help costs nothing at all:
+// TestAnUnknownHelpWordIsRefusedBeforeTheCheck.
+//
+// No other command checks. There is no check before a build and none on the
+// way to reading somebody's document from the terminal. A build is a person
+// waiting for a docx, which reaches Drive for the house logo and for nothing
+// else, and a review session is somebody's document open in front of them; a background fetch in either is a second thing happening that
+// nobody asked for, and on a slow connection it is the command taking longer
+// for a reason the person cannot see. The rule is held by reading this package
+// rather than by trusting it: TestNothingChecksForUpdatesUnasked says one
+// entry in the table names cmdUpdate, and that update.go and notice.go are the
+// only two files here that reach internal/update at all.
+// TestReadNeverReachesTheCheck runs a read with a month-old stamp and a reach
+// that fails the test if it is called, and TestNoSkillRunsUpdateOnItsOwn says
+// no skill runs the updater either. A skill may say there is a newer gdoc,
+// because saying is not running. It hands the person the command alone in a
+// bash block for them to run, which go/boundary's
+// TestEverySkillGivesTheUpdateAsARunnableBlock holds across the five skills.
+//
+// The check judges nothing. The object under `update` carries `installed`,
+// `latest_stable`, `latest_nightly`, `checked_at` and `error`, and the one
+// line for a person goes to stderr where the help prose already goes, so
+// stdout is still exactly one JSON object.
+//
+// What either of them may reach is the fifth grant, AllowUpdateFrom, and
+// nothing else: the releases listing of one repository, the download under it,
+// and the asset host the download redirects to, all GET, all without a
+// credential. TestTheUpdateRunReachesTheReleasesAndNothingElse judges the
+// policy the command opens and TestTheHelpCheckOpensThePolicyTheUpdateOpens
+// judges the policy the check opens, so a document id cannot come along for
+// the ride on either.
+//
+// GitHub not answering is an answer. A listing that times out, refuses the
+// connection, answers 5xx or answers the rate limit is ok: true with
+// action: unreachable and a warning naming the cause, because the person asked
+// a question and the honest answer is that today gdoc cannot say. Nothing on
+// disk is touched: TestAnUnreachableGitHubIsAnAnswerAndNotAFailure.
+//
+// The flags name one run each. --rollback is a file move on this machine and
+// --check, --major and --nightly are about which release to fetch, so typing
+// one of each is refused naming both: TestUpdateRefusesWhatMeansTwoThings. The
+// rest of the policy is internal/update's, and its table is a test over
+// literals there rather than a test over a wire here.
+//
+// Two refusals belong to this layer. A symlinked binary is a checkout install,
+// and replacing it would drop a release over the link and leave `make build`
+// writing to a file nobody runs: TestASymlinkedBinaryIsRefusedByName. And a
+// run that fails part way carries no action at all, because every word in that
+// field is something that finished, and "updated" beside ok: false would be
+// the object contradicting itself:
+// TestAZipThatDoesNotMatchTheChecksumReplacesNothing.
+//
+// The object says two things about the file it left behind. sha256 is the hash
+// of what is at the path now, after an update and after a rollback alike.
+// verified says that hash came out of bytes the release published a checksum
+// for, which a rollback cannot say about a binary it only put back:
+// TestTheUpdateObjectIsWhatTheSkillsRead and
+// TestRollbackPutsTheEarlierBinaryBack.
+//
+// # The update draws its steps on stderr
+//
+// A person who types `gdoc update` sees what it is doing while it does it: a
+// list of steps on stderr, one line each, and one line of result under them.
+// Stdout is untouched and still carries the one object:
+// TestAnUpdateNarratesItsStepsOnStderr.
+//
+// When stderr is not a terminal, which is every run a skill starts, each step
+// prints once as a plain line when it ends, with no colour and no escape code:
+// TestAPipedRunPrintsOneLinePerFinishedStep. What a terminal is comes from
+// internal/tty and is asked here through one variable, so a pipe, a file, a
+// buffer and /dev/null all get the plain lines, /dev/null included because the
+// question is the terminal driver's answer and not the character-device bit the
+// old check read: TestOnlyATerminalDriverMakesATerminal. Every escape code and
+// the colour of every glyph come from internal/tty too, which boundary's
+// TestNoEscapeLiteralOutsideTTY holds. On a terminal the list is
+// drawn in advance and redrawn in place, with a spinner on the running step
+// and colour unless NO_COLOR is set: TestATerminalRunRedrawsInPlaceAndColours
+// and TestNoColorKeepsTheRedrawAndDropsTheColour. A window under fifty columns
+// is the plain band of internal/panel's width rule here as everywhere, so it
+// reads the plain lines rather than a box whose detail cell is one column
+// wide: TestANarrowWindowGetsThePlainStepLines. Auto-wrap is off while the
+// list moves and back on when it settles, because a wrapped line would make
+// the redraw move up too few rows in a narrow terminal; a plain list writes
+// neither code: TestALiveListTurnsWrapOffAndBackOn. The list settles on every
+// way out of the run, a panic included, so no redraw lands on the crash text
+// and no result line claims a run that did not finish:
+// TestAPanicInAnUpdateStopsTheSpinner.
+//
+// The terminal list is a box internal/panel draws, titled update and labelled
+// with the gdoc that is running and the one the run is taking once it has
+// chosen one: TestTheUpdateScreensAreTheirRecordedBytes records the six ways
+// a run ends, TestTheTopBorderNamesTheVersionsOfTheRun the words the label is
+// made of, and TestTheBorderOfARunCarriesTheVersionsTheRunChose the two calls
+// in update.go that hand them over, which it holds by reading the top border
+// alone, because the versions are in the choose row too. A step name sits in
+// the left cell behind its mark, and what is known about it in the right one. The marks are the palette's roles, with a muted ring for a
+// step nothing has reached yet: TestTheStepMarksAreTheirRolesOnATerminal,
+// and the ring is the terminal's alone, because a plain line is written when
+// its step ends: TestThePendingRingIsTheTerminalsAlone. Anything too wide for
+// its cell is wrapped into lines that fit, a word with no space in it cut
+// where the line ends and nothing shortened:
+// TestALongReasonWrapsInsideTheBoxAndIsNeverShortened. Under the box a
+// terminal reads the run and, where one was written, the Claude Desktop
+// extension on a line of its own, and a pipe reads the one line it always
+// read: TestTheExtensionIsItsOwnLineOnATerminalAndOneLineOnAPipe, with
+// TestAFailedRunHasNoLineUnderTheBox on the run that says nothing.
+//
+// Only what happened is drawn. A failed step carries its reason on the next
+// plain line, and in the cell its detail was in on a terminal, and the steps
+// after it are not drawn at all:
+// TestAFailedStepIsMarkedAndTheRestAreNotDrawn and
+// TestAFailedDownloadMarksItsStepAndDrawsNoLaterOne. The download and the
+// steps after it are planned only when the decision is to install:
+// TestAnUpToDateRunDrawsNoDownload. GitHub not answering is drawn as a failed
+// read with its cause, under an ok object:
+// TestAnUnreachableGitHubIsMarkedOnTheReadStep.
+//
+// The narration is by step and not by byte. The download line's size is the
+// asset's size in the listing, because gapi reads a body whole and a byte count
+// would need a reader in the one room that builds a request. A rollback is a
+// local file move and draws nothing.
+//
+// The writer lives in progress.go, beside the one command that uses it. It
+// moves to internal/emit when a second command wants it.
+//
 
 package main
 

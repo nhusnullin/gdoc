@@ -5,6 +5,35 @@
 // session on the guard's client, and hand what came back to a pure reader
 // package. The readers decide nothing, and neither does anything here: the
 // commands print facts and the skill reading the JSON judges.
+//
+// # Only the wait traps a signal
+//
+// cmdComments installs signal.NotifyContext on SIGINT and SIGTERM around the
+// wait itself and takes it off on the way out. Ctrl-C during a wait prints
+// ok: true with no threads, the cursor handed in and waited.interrupted: true,
+// and exits 0. The output contract has to hold under the one signal a live
+// session sends every time it ends.
+//
+// It is not in main, and that is the decision. signal.Notify takes the default
+// kill away from the whole process for as long as it is installed, and
+// NotifyContext never puts it back on its own. Trapped in main, Ctrl-C stops
+// being an answer for every command that does not read the context: auth login
+// would hold the terminal for its three minute login timeout, and a propose in
+// the middle of writing into somebody's document could not be stopped at all.
+//
+// Two halves follow from that, and both are the same rule. The trap comes off
+// the moment the wait returns, because what runs after a wait is the --witness
+// export, and a Ctrl-C there has to kill the run the way it kills every other
+// command. And the wait's context is derived from the caller's rather than
+// shadowing it, so what runs after the wait cannot be quietly cancelled by the
+// signal that ended the wait.
+//
+// TestOnlyTheWaitTrapsTheSignal is the pin, and it states the rule in both
+// directions: os/signal is named in read.go and in no other production file
+// here. TestAnInterruptedWaitIsAnAnswerAndNotAFailure covers the answer.
+// dispatch still takes a context, because a test hands a wait one that is
+// already done.
+//
 
 package main
 

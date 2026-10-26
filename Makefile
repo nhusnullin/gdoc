@@ -116,7 +116,7 @@ tag:
 # prints every command and runs none, which is what the tests assert. IDLE
 # overrides the worker's idle timeout, 20 minutes by default.
 milestone:
-	@.ralphex/board/milestone.sh --plan "$(PLAN)"$(if $(REVIEW), --review $(REVIEW))$(if $(IDLE), --idle $(IDLE))$(if $(DRY), --dry)
+	@.ralphex/board/milestone.sh --plan "$(PLAN)"$(if $(REVIEW), --review $(REVIEW))$(if $(IDLE), --idle $(IDLE))$(if $(CODEX), --codex)$(if $(DRY), --dry)
 
 # `make release BRANCH=<branch>` takes a finished branch to a green pull request
 # and stops there. The merge, the tag and the read-back of the published zip

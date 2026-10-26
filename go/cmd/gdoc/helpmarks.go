@@ -14,6 +14,62 @@
 // The object and the words a person reads walk the same rows, as the command
 // help does, so what a skill parses and what a colleague reads cannot
 // disagree.
+//
+// # help marks is a topic, and the only one
+//
+// `gdoc help marks` prints the seven authoring marks: what an author writes
+// for each, how it reaches the document, the colour it lands as, and whether
+// the build and publish envelopes count it. It is not a command. A mark
+// belongs to no one command, because build and publish write them, export
+// reads them back, and the palette itself is house.yaml's, so there would be
+// nothing for a table entry to run.
+//
+// So cmdHelp branches on the word before the table is walked. helpMatches
+// would find nothing for it and the question would be refused the way a typo
+// is. Both completion scripts offer the word, from the topics field of the
+// help entry, because a word that is not in the table is the one word nobody
+// can guess is there: TestHelpMarksPrintsTheSevenFromTheBinary and
+// TestBothCompletionScriptsListTheMarksTopic.
+//
+// The seven come out of house.Load every time, so a colour changed in
+// house.yaml is the colour this prints, and the skills read the topic rather
+// than carrying a copy of the palette. The topic asks GitHub nothing: the
+// daily check belongs to the help of the tool, and this is a page about the
+// house style.
+//
+// It is the one page that draws no box. Six of the seven marks are written
+// with a colour emoji, internal/tty measures a column as a rune, and an emoji
+// takes two columns on a terminal, so a box holding one draws its right
+// border a column out. The table is the same bytes on every stream, and the
+// object is still dropped where both streams are a terminal, as any screen is.
+//
+// A help screen reads no token. There is no line saying whether anyone is
+// signed in, because then every help would be a read of the token file, and
+// help is a question about the tool rather than about an account. auth status is
+// the command that answers that one. TestHelpNeverReadsTheToken reads the
+// syntax tree of help.go, helpscreen.go and notice.go and finds no reference to
+// internal/auth.
+//
+// Everything that is not a terminal reads today's text, byte for byte: a pipe,
+// a file, a run with --json, and every platform but darwin, which answers that
+// no stream is a terminal. The goldens in testdata/pipe hold it, through
+// TestHelpOnAPipeIsTodaysTextByteForByte,
+// TestBareGdocOnAPipeIsTodaysTextByteForByte and
+// TestAnUnknownCommandOnAPipeIsTodaysTextByteForByte, and
+// TestNoEscapeByteReachesAPipe runs every command in the table through run with
+// buffers and finds no escape byte on either stream.
+//
+// A window under fifty columns, which is the plain band of internal/panel's
+// width rule, reads that same text with three things over or under it, because
+// there a person is reading rather than a skill: the warnings, the words bare
+// gdoc refuses with, and the hint line. The goldens in testdata/screens hold
+// what a person reads at forty-four columns. The first two go wherever stderr
+// is a terminal that narrow. The hint is the line that takes the object's
+// place, so it is written where the object is dropped, and the object is
+// dropped only when both streams are a terminal: a run whose words went into a
+// redirected stderr still prints it:
+// TestAScreenWhoseWordsWentToAFileKeepsItsObject.
+//
 
 package main
 
