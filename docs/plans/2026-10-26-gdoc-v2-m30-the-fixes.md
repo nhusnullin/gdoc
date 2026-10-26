@@ -737,21 +737,21 @@ literals in the tests: `Цели проекта` is `цели-проекта`; `
 
 ### Task 8: Verify acceptance criteria
 
-- [ ] each of the seven fixes has its red-first test green: Tasks 1 to 7
-- [ ] `git diff --name-only main...HEAD` lists none of `CLAUDE.md`,
+- [x] each of the seven fixes has its red-first test green: Tasks 1 to 7
+- [x] `git diff --name-only main...HEAD` lists none of `CLAUDE.md`,
       `docs/v2/DECISIONS.md`, `docs/v2/SPEC.md`, `docs/v2/MEASURED.md`, and
       nothing under `presence/`
-- [ ] the two backlog items are gone and
+- [x] the two backlog items are gone and
       `docs/backlog/small-defects-from-the-outside-bug-report.md` is unchanged
-- [ ] `git log --format=%h main..HEAD -- go/internal/body/testdata/golden/heading-ids.txt`
+- [x] `git log --format=%h main..HEAD -- go/internal/body/testdata/golden/heading-ids.txt`
       names exactly one commit, Task 6's, and `grep -n "update-heading-ids"
       go/internal/body/*_test.go` shows the pin's own flag, so no later
       `-update` of the body goldens could have rewritten it
-- [ ] the goldens that moved are the ones the tasks named and no other:
+- [x] the goldens that moved are the ones the tasks named and no other:
       `header2.xml`, `styles.xml`, `05-edge-cases.xml`
-- [ ] no guard test lost an assertion: `git diff main...HEAD --
+- [x] no guard test lost an assertion: `git diff main...HEAD --
       go/internal/guard/*_test.go` adds lines and removes none
-- [ ] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
+- [x] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
       `make platform-test`, `make team-check`
 
 ### Task 9: [Final] Update documentation
