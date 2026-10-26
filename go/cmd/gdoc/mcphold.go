@@ -25,6 +25,35 @@
 // that reaches the document another way takes its card with it, so nobody
 // presses a card for a reply that is already posted:
 // TestAHoldGoesWhenTheWriteItHeldLands.
+//
+// # A hold dies with the sign-in it was held under
+//
+// A held chat write waits up to thirty minutes for a person, and in that time
+// somebody may sign out and sign in as somebody else. Releasing the held call
+// then would post it under the next account, which nobody in that chat asked
+// for. So mcpHolds keeps auth.SignInMark beside the hold, a domain-prefixed
+// SHA-256 of the refresh token and no credential, and compares it at the
+// release and in the sweep. Another mark or no token at all drops the hold,
+// removes its confirm tool, writes the record's dropped line and answers that
+// the sign-in changed and nothing was sent; a token that cannot be read keeps
+// the hold and sends nothing, because not knowing may not become a release:
+// TestAHoldRemembersTheSignInItWasHeldUnder,
+// TestAReleaseAfterTheSignInChangedSendsNothingAndDropsTheHold,
+// TestTheSweepDropsAHoldWhoseSignInChanged and
+// TestAnUnreadableTokenAtReleaseKeepsTheHoldAndSendsNothing.
+//
+// The mark is read and never shown. It is in no answer, no tool schema and no
+// line of the record, and no email is compared anywhere: a dropped hold says
+// the sign-in is a different one and never whose it is, which is the identity
+// invariant in this one place:
+// TestTheSignInMarkReachesNoAnswerNoToolAndNoLine.
+//
+// One strain, accepted and written down. This process's own refresh of the
+// refresh token is a new mark too, although internal/gapi does not count it
+// as a newer sign-in, so a hold raised before such a rotation is dropped and
+// the person is asked again. It fails towards nothing being sent, which is
+// the side to fail on: TestARotatedRefreshTokenRefusesTheRelease.
+//
 
 package main
 

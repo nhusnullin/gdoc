@@ -331,24 +331,24 @@ survives this move and the next one.
   Technical Details, `go/boundary/probe_test.go`,
   `go/cmd/gdoc/update_test.go`
 
-- [ ] the sections listed as staying stay in `doc.go`, unedited
-- [ ] every other section moves to the file the table names, as a file
+- [x] the sections listed as staying stay in `doc.go`, unedited
+- [x] every other section moves to the file the table names, as a file
       comment with a blank line before the `package` clause, joining the
       paragraph that file already carries, keeping its `// # ` heading
-- [ ] a comment that sends a reader to `doc.go` for prose that moved points
+- [x] a comment that sends a reader to `doc.go` for prose that moved points
       at its new home: `update_test.go:558` and anything `grep -rn "doc.go"
       go/cmd/gdoc` finds like it
-- [ ] `probeClaimScanned` names the directory `go/cmd/gdoc` in place of
+- [x] `probeClaimScanned` names the directory `go/cmd/gdoc` in place of
       `go/cmd/gdoc/doc.go`
-- [ ] completeness: `grep -c '^// # ' go/cmd/gdoc/*.go` sums to 30, and
+- [x] completeness: `grep -c '^// # ' go/cmd/gdoc/*.go` sums to 30, and
       `doc.go` is under 500 lines
-- [ ] `go doc ./cmd/gdoc` prints the package comment and nothing from a
+- [x] `go doc ./cmd/gdoc` prints the package comment and nothing from a
       moved section
-- [ ] `TestOnlyThePackageCommentReachesGoDoc`,
+- [x] `TestOnlyThePackageCommentReachesGoDoc`,
       `TestEveryPackageHasExactlyOnePackageComment`,
       `TestNoDocumentSaysAProposalRunsTheProbe` and
       `TestTheProbeClaimScanFindsAPlantedSentence` green
-- [ ] `make vet` and `make test` green
+- [x] `make vet` and `make test` green
 
 ### Task 5: Verify acceptance criteria
 

@@ -43,7 +43,7 @@ var probeClaimScanned = []string{
 	"README.md",
 	"docs/guide",
 	"docs/v2/BLOCKED-BY-API.md",
-	"go/cmd/gdoc/doc.go",
+	"go/cmd/gdoc",
 	"go/internal/propose/doc.go",
 	"go/internal/guard/doc.go",
 	"go/internal/prelude/doc.go",

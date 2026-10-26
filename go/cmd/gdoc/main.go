@@ -3,6 +3,197 @@
 // The package comment is in doc.go. This file holds the one rule the three
 // pieces here share: whatever happens, the caller reads one JSON object on
 // stdout and an exit code that agrees with it.
+//
+// # auth status is a report, and being signed out is an answer
+//
+// Status carries auth_mode, token_path, client_source and token_present, plus
+// expired, scopes and missing_scopes once a token is there. No token is
+// ok: true with token_present: false, not a failure: a person asking whether
+// they are signed in has been answered. TestAuthStatusWithNoTokenIsStillAReport
+// and TestAuthStatusReportsAPresentToken are the pins.
+//
+// The shape is auth.StatusReport, a struct with json tags, never a map. The
+// command reads its fields in Go, so a field renamed in auth cannot silently
+// drop a warning here.
+//
+// Three things about those fields:
+//
+//   - auth_mode is the constant "oauth". gdoc has one credential and no service
+//     account, so the field is a statement rather than a resolution.
+//   - client_source is always "bundled". Login does not read an
+//     oauth-client.json in the config dir yet, so when one is there status adds
+//     client_file_ignored: true and a warning, rather than claiming an override
+//     that is not wired up.
+//   - missing_scopes names what gdoc asks for that the token does not carry. A
+//     partial grant is reported, never refused: the login worked, and this is
+//     the one place that can say why the Docs calls will 403 before they do.
+//     What counts as missing is auth.MissingScopes, and the doc comment on the
+//     coveredBy it rests on says why a scope that covers another is not
+//     reported.
+//     TestAuthStatusWarnsAboutAScopeTheTokenDoesNotCarry is the pin.
+//
+// A token file that exists and cannot be read is a failure, not
+// token_present: false. It comes back ok: false with the path still in data and
+// with the warnings it would have carried on the way out. Reported as signed
+// out, somebody runs auth login, overwrites the file, and never learns what was
+// wrong with it. Only an absent file means signed out.
+// TestAuthStatusFailsOnAnUnreadableToken and
+// TestAFailingStatusStillCarriesItsWarnings are the pins.
+//
+// # auth status names the account, and nothing else reads it
+//
+// The report also carries account and account_name, read live through
+// accountOf, the one room that grants guard.AllowAccountRead. That makes
+// `gdoc auth status` the grant's second caller and the binary's whole widening
+// in M15: no new grant, no new host and no new request kind.
+// TestAuthStatusNamesTheAccountItReadsLive is the pin, and
+// TestOnlyAccountOfCallsAllowAccountRead with TestAccountOfHasTwoCallers in
+// go/boundary hold that the callers are two.
+//
+// Three reports ask nothing. No report, no token, and a token missing a scope
+// gdoc asks for: the read would be refused by the scope that is missing, and
+// the warning that already says to sign in again is the answer.
+// TestNoTokenMakesNoAccountRequest and TestAMissingScopeMakesNoAccountRequest.
+//
+// The read is bounded by accountCeiling, five seconds, because a person typed
+// the command and is waiting at a prompt. A read that fails or never comes back
+// is a warning and never a failure: the token is the fact, and whose it is was
+// what could not be read. TestTheAccountCeilingIsFiveSeconds,
+// TestAuthStatusOfflineStillAnswersWithoutTheAccount and
+// TestAnAccountReadThatHangsStopsAtTheCeiling.
+//
+// The read's own warnings go out with the report. It goes through an ordinary
+// session, which refreshes an expired access token and saves it before the
+// request leaves, and the warning is what says it did. A read that failed
+// carries them too, because the refresh had already happened.
+// TestTheAccountReadsWarningsReachTheObject,
+// TestAFailedAccountReadStillCarriesTheSessionsWarnings and
+// TestTheLoginToolCarriesTheAccountReadsWarnings for the chat's own answer.
+//
+// After a read that answered, the token file is read again, so `expired` says
+// what the file says now and never contradicts that warning; after one that
+// failed, the first reading stands: TestExpiredIsWhatTheFileSaysAfterTheAccountRead
+// and TestAFailedAccountReadLeavesExpiredAsRead. The panel's account row names
+// the person beside the address when Google said who it is:
+// TestThePanelNamesThePersonBesideTheAddress.
+//
+// auth login does not ask. It just made a browser trip, and the object a skill
+// reads after a login is the object it read before:
+// TestAuthLoginCarriesNoAccount.
+//
+// On a terminal the same facts are a panel on stderr: the state in words,
+// signed in, signed out or scopes missing, then the account, the file, the
+// scopes, what is missing, the client and the mode. No minutes, because when a
+// token expires is a field for a program. The object stays on stdout, because
+// for this command the object is the answer, and a pipe reads no screen at all.
+// TestTheStatusScreenSaysTheStateAndTheAccount and
+// TestAuthStatusOnAPipeWritesNoStderr.
+//
+// # auth logout removes one file, and tells Google nothing
+//
+// The answer is token_path and removed, and nobody signed in is
+// ok: true with removed: false, for the reason auth status is an answer when
+// there is no token: the question has been answered.
+// TestTheLogoutCommandAnswersWhatItRemoved is the pin.
+//
+// cmdAuthLogout takes no context and opens no session. internal/auth's Logout
+// removes the file and reads its absence back, and its doc comment holds the
+// four refusals; the report goes out beside a refusal as well, so a caller
+// that was refused still reads which file was left alone. What this layer
+// decides is one thing: the sentence a reader meets says the grant stays at
+// Google until they take it away in their account settings, because a command
+// called logout that leaves the grant standing has to say so where somebody
+// reads it. TestTheLogoutSummarySaysTheGrantStaysAtGoogle is the pin, and
+// TestLogoutMakesNoRequest in internal/auth is the other half.
+//
+// It is no chat tool, and that is the one entry of the table with a reason for
+// being out of mcpTools that is not about documents: a model that could sign
+// the person out could stop every tool of its own session working, and nobody
+// in the chat asked it to. TestLogoutIsNoChatTool and
+// TestNothingInTheChatSignsAnybodyOut in go/boundary.
+//
+// # auth login prints the URL to stderr, and waits on one line
+//
+// The login is the browser trip in its two halves, auth.StartLogin and
+// Pending.Wait, which is what the MCP login tool already called: the listener
+// and the code exchange belong to internal/auth, and the stream a person reads
+// belongs here. The link goes to stderr, the browser is waited for, the token
+// is saved, and the run then reports what auth status would. The URL is a
+// human word and human words have one place to go, and it is not stdout.
+// TestLoginPrintsTheURLToStderrNotStdout is the pin,
+// TestAFailedLoginIsOneFailingEnvelope is the other half, because a login that
+// did not happen is still one object, and TestTheLoginClosesItsListenerEitherWay
+// holds the port freed whichever way the wait ended. A build with no client
+// secret is refused before the link line, with nothing on stderr at all:
+// TestLoginRefusesABuildWithNoClientSecret runs the real login, unstubbed.
+//
+// On a pipe, on a file and in a window with no room for a box, the two lines
+// are auth.LinkLine's own, byte for byte, because a skill and a log read them:
+// TestThePipeLoginLineIsTodays and TestANarrowWindowGetsTheLoginLineAndNoBox.
+//
+// On a terminal the sentence sits in a box labelled with the host the link
+// goes to, the link is one line of its own under the box so that a copy gets
+// all of it, and the wait is one line that rewrites itself and ends as a tick
+// and "signed in" or as a cross and the error the object carries:
+// TestTheLoginScreensAreTheirRecordedBytes. Nothing moves the cursor and
+// nothing turns auto-wrap off, because a login traps no signal: a Ctrl-C can
+// land anywhere in those three minutes and has to leave the terminal as it
+// found it. TestTheLoginSpinnerMovesNoCursorButCarriageReturn reads the bytes
+// for both.
+//
+// # Five facts of the record are filled in here
+//
+// internal/presence is a file and a clock: it reads no environment, knows
+// nothing of a Drive id and nothing of a typed error. So five of the things a
+// line says are decided in this package, and the record keeps each as it was
+// handed it and judges none of them.
+//
+// via: code is one environment variable, read once in dispatch. CLAUDECODE is
+// what Claude Code's own Bash tool hands a child, measured on 2026-10-17 and
+// written down in docs/v2/MEASURED.md, and any value of it counts rather than
+// the literal 1, because the variable is Claude Code's and a release that
+// writes true in it is still Claude Code. viaOfEnv marks the context and
+// leaves a context somebody else marked alone, so a tool call of gdoc mcp
+// stays chat whatever started the process: TestViaIsCodeUnderClaudeCode and
+// TestViaChatWinsOverCodeInTheMcpSession.
+//
+// interrupted is lifted out of the waited object `gdoc comments --wait`
+// prints, which is the one place in the binary that knows a wait ended early,
+// and a wait nobody stopped writes nothing rather than a false:
+// TestAStoppedWaitsEndSaysSo.
+//
+// made is the document a publish created. presenceMade names the one command
+// it is true of and puts the id through documentID, the resolver the first
+// word of a line goes through, so a path or a sentence under that key reaches
+// no file that lasts; a publish that took its document back names nothing:
+// TestAPublishEndNamesTheDocumentItCreated,
+// TestARolledBackPublishNamesNoDocument and TestOnlyPublishCarriesMade.
+//
+// stop and line are stop.go, this package's one reader of the typed failures
+// the other packages raise: a picture the house style cannot carry with the
+// line of the note it sits on, Drive's status, the guard's refusal, a missing
+// token, more than one tab, a wire that failed, and other for everything
+// else. Nothing there reads a sentence, so a milestone that rewords a refusal
+// moves no code: TestAStopIsOneOfTheSevenCodesAndNeverASentence,
+// TestTheSVGRefusalCarriesItsLine, TestANotFoundIsNotFound,
+// TestAnAuthRefusalIsAuth, TestAGuardRefusalIsRefused and
+// TestAHandshakeTimeoutIsNetwork. The word is filled in by dispatch's own
+// deferred hook where the command that failed named none, because an absent
+// stop beside ok: false reads as a run that failed for no reason at all:
+// TestAnUnknownFailureIsOther. Both travel on emit.Result in fields the
+// printed object does not carry, the way Screen does, so none of this changes
+// a byte a skill reads.
+//
+// step is the four parts of a publish, and the one of the five this package
+// does not hand over: dispatch puts the run on the context and publish calls
+// presence.Step beside the work, so no room between here and the work is
+// handed a run. The names are internal/presence's own and the line is written
+// immediately before the part begins, which for the two network parts means
+// the line is on disk before the request leaves:
+// TestAPublishStepsAreTheFixedNamesInOrder, TestTheFirstStepsEndCarriesTheTitle
+// and TestAPanicAfterAStepStillWritesTheEnd, with go/boundary's
+// TestStepHasOnlyPublishAsCaller over the one room that calls it.
+//
 
 package main
 
