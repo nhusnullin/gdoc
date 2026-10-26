@@ -464,6 +464,32 @@ final class CardTests: XCTestCase {
     XCTAssertEqual(Timing.menuHold, 0.5, "half a second, which is what the guide promises")
   }
 
+  /// A render draws no anchor, so a row with a menu is the same picture as
+  /// the row without one.
+  ///
+  /// The anchor is an `NSView`, and `ImageRenderer` cannot draw AppKit: it
+  /// puts its yellow "cannot draw this" box where the view is. The first
+  /// renders of the fourth look had that box over the title of every row
+  /// with a menu, so the reviewer could not read the rows the look changed.
+  func testARenderDrawsNoMenuAnchor() throws {
+    let actions = PanelActions { _, _ in }
+    let present = MenuPresenter { _, _ in }
+    let items = [
+      MenuItemModel(.hideDoc, word: "Hide from the list", target: SceneDocuments.chapter4)
+    ]
+    func row() -> some View {
+      RowView(.doc, glyph: .blank, title: "Ch 4. Pricing", trailing: { EmptyView() })
+        .frame(width: 320, height: 44)
+    }
+    for scheme in [ColorScheme.dark, .light] {
+      let withMenu = try png(
+        row().rowMenu(RowMenu(items: items, actions: actions, present: present)).rendering(),
+        scheme: scheme)
+      let without = try png(row().rendering(), scheme: scheme)
+      XCTAssertEqual(withMenu, without, "a render of a row with a menu draws no anchor, \(scheme)")
+    }
+  }
+
   // `.stuck .acts` holds Open md, Continue with Claude and the bare cross,
   // in that order: the one that closes the card is the last, so a pointer
   // moving right never crosses it on the way to something else. Scene e9's

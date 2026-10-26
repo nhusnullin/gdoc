@@ -298,6 +298,9 @@ struct RowMenu: ViewModifier {
   let present: MenuPresenter
   /// Where the system's menu is measured from, filled in by the tree.
   let anchor = MenuAnchorBox()
+  /// A render has no menu to open, and `ImageRenderer` cannot draw the
+  /// anchor's `NSView`: testARenderDrawsNoMenuAnchor.
+  @Environment(\.renderMode) private var mode
 
   init(
     items: [MenuItemModel], actions: PanelActions, present: MenuPresenter = .system()
@@ -319,9 +322,11 @@ struct RowMenu: ViewModifier {
         .background {
           // Behind the title area, which is the row less its icon column:
           // the menu opens under the words the press was held on.
-          MenuAnchor(box: anchor)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding(.trailing, Grid.actionColumn)
+          if mode == .live {
+            MenuAnchor(box: anchor)
+              .frame(maxWidth: .infinity, maxHeight: .infinity)
+              .padding(.trailing, Grid.actionColumn)
+          }
         }
     }
   }
