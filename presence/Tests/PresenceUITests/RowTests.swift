@@ -686,10 +686,12 @@ final class RowTests: XCTestCase {
     XCTAssertTrue(states.running.versionWaiting, "the ring while the child is up")
     XCTAssertNil(states.running.update, "and nothing to press beside it")
 
-    // The published version is the available header's own line and nobody
-    // else's: a machine told of nothing newer has nothing to say under the
-    // header.
-    XCTAssertEqual(available.quiet, ["v2.15.0 is published"])
+    // The available header's own line, and nobody else's: a machine told of
+    // nothing newer has nothing to say under the header. On r8 that line is
+    // the press of 17:04 rather than the number published, because since
+    // the fourth look a run that installed nothing takes it; the number is
+    // still the line of r9, where nobody pressed anything.
+    XCTAssertEqual(available.quiet, ["GitHub did not answer at 17:04. Nothing changed."])
     XCTAssertEqual(states.quiet.quiet, [])
     XCTAssertEqual(states.checked.quiet, [])
     XCTAssertEqual(states.running.quiet, [])

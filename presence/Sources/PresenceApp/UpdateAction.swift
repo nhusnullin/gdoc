@@ -19,7 +19,9 @@
 //
 // Install extension is the second list, `update --desktop`. It is not a new
 // gdoc, so it moves no version: the standing stays idle and the row's number
-// is the one `help --json` read.
+// is the one `help --json` read. It hands back a standing of its own all the
+// same, because since the fourth look a run that handed Claude Desktop
+// nothing says so on the row's quiet line.
 //
 // It does take the same slot, though, and while either child is up both rows
 // wait. `update --desktop` installs the release it writes the extension of,
@@ -49,6 +51,50 @@ public enum UpdateStanding: Sendable, Equatable {
   }
   /// Nothing was installed and the reason is the envelope's own.
   case failed(String)
+
+  /// What the header's quiet line says about this run, or nothing where the
+  /// run needs no sentence: a machine already on the newest release has the
+  /// check for a second, and one that installed something has the version.
+  ///
+  /// The reading is `ok` and the action word, and nothing else. `checked`
+  /// and `rolled_back` are the two words the app never asks for, because
+  /// neither flag is ever passed, so a run that printed one of them is not
+  /// the run this button started: it falls to the general sentence with
+  /// every other word this version has no case for.
+  public var miss: UpdateMiss? {
+    switch self {
+    case .idle, .running, .installed: nil
+    case .unchanged(let action):
+      switch action {
+      case UpdateReport.upToDate: nil
+      case UpdateReport.majorAvailable: .major
+      case UpdateReport.unreachable: .unreachable
+      default: .stopped
+      }
+    case .failed: .stopped
+    }
+  }
+}
+
+/// Where a run of Install extension ended. It is the extension's own
+/// standing and not the update's: no version moves either way.
+public enum ExtensionStanding: Sendable, Equatable {
+  /// gdoc wrote the extension and Claude Desktop was handed it.
+  case handedOver
+  /// The run ended `ok: true` and handed nothing over, carrying the word it
+  /// printed.
+  case unchanged(String)
+  /// It refused, or answered something gdoc would not print.
+  case stopped
+
+  /// What the Claude Desktop row's quiet line says about it.
+  public var miss: ExtensionMiss? {
+    switch self {
+    case .handedOver: nil
+    case .unchanged(let action): action == UpdateReport.majorAvailable ? .major : .handedNothing
+    case .stopped: .stopped
+    }
+  }
 }
 
 /// The two runs the panel offers: the update in the header, and the
@@ -92,16 +138,19 @@ public actor UpdateAction {
   /// is what the panel keeps instead:
   /// testTheExtensionRunSaysWhetherDesktopWasHandedIt.
   ///
-  /// The one answer is also the whole answer: a run that wrote nothing
-  /// leaves the row and its button where they were, and the reason it wrote
-  /// nothing is not a sentence this panel has anywhere to put. Saying it
-  /// would be a word on a row, which is a decision and not a refactor:
-  /// docs/backlog/neither-update-button-says-anything-when-the-run-did-nothing.md.
-  public func installExtension() async -> Bool {
-    guard let outcome = try? await answer(.updateDesktop), outcome.envelope.ok,
-      let data = outcome.envelope.data, let report = try? UpdateReport.decode(data)
-    else { return false }
-    return report.extensionOpened
+  /// A run that handed nothing over says why on the row's quiet line since
+  /// the fourth look, and the three cases are told apart by `ok` and the
+  /// action word alone: a declined major, a refusal, and every other run
+  /// that ended with `extension_opened` absent. The child's own warning is
+  /// never the sentence.
+  public func installExtension() async -> ExtensionStanding {
+    guard let outcome = try? await answer(.updateDesktop), outcome.envelope.ok else {
+      return .stopped
+    }
+    guard let data = outcome.envelope.data, let report = try? UpdateReport.decode(data) else {
+      return .stopped
+    }
+    return report.extensionOpened ? .handedOver : .unchanged(report.action ?? "")
   }
 
   /// The panel's facts with the run written into them: the ring while the
@@ -137,7 +186,9 @@ public actor UpdateAction {
       // the session raises it on the press, for the extension's run as well,
       // and this raises it again while the child of a plain update is up.
       updating: facts.updating || standing == .running,
-      updateChecked: facts.updateChecked)
+      updateChecked: facts.updateChecked,
+      updateRun: facts.updateRun,
+      extensionRun: facts.extensionRun)
   }
 
   /// The version this app installed, while it is newer than the reading
@@ -158,13 +209,10 @@ public actor UpdateAction {
 
   /// One child, and what its one object says about what it did.
   ///
-  /// The reading is whole and the saying is not: `.failed` and `.unchanged`
-  /// carry their sentence and no row has anywhere to put it, so a press that
-  /// installed nothing leaves the version where `help --json` drew it and
-  /// says nothing about why. The word belongs on the same quiet line the
-  /// extension's half of
-  /// docs/backlog/neither-update-button-says-anything-when-the-run-did-nothing.md
-  /// asks for, which is a decision about the panel's words.
+  /// `.failed` and `.unchanged` carry the word the run printed, and `miss`
+  /// above turns it into one of the three the header has a sentence for.
+  /// The version stays where `help --json` drew it either way: a run that
+  /// installed nothing moved nothing.
   private func ran(_ call: Call) async -> UpdateStanding {
     guard let outcome = try? await answer(call) else {
       return .failed(UpdateWords.didNotRun)
@@ -196,6 +244,13 @@ struct UpdateReport: Equatable {
   /// `update.UpToDate` in the Go, printed by a run that reached GitHub and
   /// found this machine already on the newest release.
   static let upToDate = "up_to_date"
+  /// A newer release across a major boundary, which gdoc names and never
+  /// takes without `--major`, and the app passes no flag at all.
+  static let majorAvailable = "major_available"
+  /// GitHub did not answer. gdoc raises nothing for it, by its own rule
+  /// that a person on a train is owed an answer: the binary they have is
+  /// still the binary they have.
+  static let unreachable = "unreachable"
 
   let action: String?
   let to: String?

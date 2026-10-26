@@ -194,11 +194,23 @@ public enum Words {
       ).day ?? 0
 
     switch days {
-    case ..<1: return written("HH:mm", moment, calendar)
+    case ..<1: return clock(moment, calendar: calendar)
     case 1: return "Yesterday"
     case 2...weekdayHorizon: return written("EEE", moment, calendar)
     default: return written("d MMM", moment, calendar)
     }
+  }
+
+  /// One moment as the clock alone, whatever day it is on.
+  ///
+  /// `time` above says Yesterday and a weekday, because a row names a moment
+  /// that may be a week back. The two sentences the update buttons write are
+  /// about a run somebody started, and a sentence that stays until the next
+  /// press would read "GitHub did not answer at Yesterday" on a panel nobody
+  /// pressed anything on since midnight:
+  /// WordsTests.testTheClockIsTheClockOnEveryDay.
+  public static func clock(_ moment: Date, calendar: Calendar) -> String {
+    written("HH:mm", moment, calendar)
   }
 
   /// One stretch of time: minutes under an hour, then hours, with the minutes

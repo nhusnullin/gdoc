@@ -435,9 +435,10 @@ extension PanelModel {
     let items = nowItems(nowFold, sessions: sessions, facts: facts, ui: ui, words: words)
     let documents = documentsSection(
       docs, facts: facts, ui: ui, words: words, busy: !items.isEmpty)
-    let settings = settingsRows(facts: facts)
+    let settings = settingsRows(facts: facts, calendar: calendar)
     let header = self.header(
-      facts: facts, ui: ui, now: now, stopping: stopping(nowFold, sessions: sessions))
+      facts: facts, ui: ui, now: now, calendar: calendar,
+      stopping: stopping(nowFold, sessions: sessions))
 
     // SETTINGS is last, where a person looks for it, except on the two
     // screens where the group is the whole of what the panel is for: a

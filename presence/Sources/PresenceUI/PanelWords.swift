@@ -99,6 +99,40 @@ public enum Sentences {
   /// third look, and there is no hub to name.
   public static let noNoteYet = "no note"
 
+  /// What the header's quiet line says about an update that installed
+  /// nothing, and what the Claude Desktop row says about an install that
+  /// handed nothing over.
+  ///
+  /// Each is a fixed string with the clock of the run in it, and none of
+  /// them carries a word the child wrote: the command's own warning is a
+  /// paragraph about this machine, and the one thing a person can do with
+  /// it is read it in a terminal, which is what two of these say.
+  /// StateTests.testEachRunThatInstalledNothingSaysWhyInAFixedSentence.
+  public static func updateMiss(_ run: UpdateRun, calendar: Calendar) -> String {
+    let clock = Words.clock(run.at, calendar: calendar)
+    switch run.miss {
+    case .major:
+      return "Only a major version is newer. gdoc update --major installs it."
+    case .unreachable:
+      return "GitHub did not answer at \(clock). Nothing changed."
+    case .stopped:
+      return "The update stopped at \(clock). gdoc update in a terminal says why."
+    }
+  }
+
+  /// The same for Install extension.
+  public static func extensionMiss(_ run: ExtensionRun, calendar: Calendar) -> String {
+    let clock = Words.clock(run.at, calendar: calendar)
+    switch run.miss {
+    case .major:
+      return "Update gdoc with --major first, then install the extension."
+    case .stopped:
+      return "The install stopped at \(clock). gdoc update --desktop in a terminal says why."
+    case .handedNothing:
+      return "Claude Desktop was not handed the extension at \(clock)."
+    }
+  }
+
   /// A path as a row writes it: with the home directory as a tilde, or
   /// whole where it is somewhere else.
   ///

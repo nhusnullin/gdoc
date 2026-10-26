@@ -163,6 +163,13 @@ public final class Session {
   /// to Claude Desktop. True until a run says otherwise, because the file
   /// beside the binary is what answers before any run of this app's.
   var extensionHandedOver = true
+  /// The last run of either button that installed nothing, as the quiet
+  /// line it writes. Each stays until the next press of either button, and
+  /// neither is written down: a run is about the minute it happened in, so
+  /// a launch starts with nothing to say:
+  /// testASentenceAboutARunStaysUntilTheNextPress.
+  var updateRun: UpdateRun?
+  var extensionRun: ExtensionRun?
 
   /// The menu bar's check, and whether what the tail has delivered so far is
   /// the file as it stood at launch. Every line in it is a replay, and a
@@ -464,7 +471,9 @@ public final class Session {
       // The press and not the actor's standing, so the extension's own run
       // closes both buttons too: the actor moves no version for that one.
       updating: installing,
-      updateChecked: updateChecked)
+      updateChecked: updateChecked,
+      updateRun: updateRun,
+      extensionRun: extensionRun)
   }
 
   /// Whether gdoc has ever written the Claude Desktop extension here. The

@@ -164,6 +164,54 @@ final class SessionTests: XCTestCase {
     XCTAssertTrue(try argv().contains("update --desktop"), "one run, and the flag it was for")
   }
 
+  /// A run that installed nothing says why, and the sentence stays until
+  /// somebody presses one of the two buttons again.
+  ///
+  /// The fake gdoc here writes the extension and prints no
+  /// `extension_opened`, which is the real one's answer when Claude Desktop
+  /// refused the open: the row keeps its button and gains the one line that
+  /// says what happened. Nothing writes the sentence down, so a launch
+  /// starts with none, and a press of either button takes whichever is
+  /// there off: a line about a run of five minutes ago under a run that is
+  /// starting now reads as a line about this one.
+  func testASentenceAboutARunStaysUntilTheNextPress() throws {
+    try writeTheRecord([])
+    let session = made()
+    answered(session)
+    XCTAssertNil(session.facts.extensionRun, "a launch starts with nothing to say")
+    XCTAssertNil(session.facts.updateRun)
+
+    let saidWhy = expectation(description: "the extension run reached the panel")
+    saidWhy.assertForOverFulfill = false
+    session.start { [weak session] in
+      guard let session, session.facts.extensionRun != nil else { return }
+      saidWhy.fulfill()
+    }
+    session.perform(.installExtension, "desktop")
+    wait(for: [saidWhy], timeout: 20)
+
+    XCTAssertEqual(session.facts.extensionRun?.miss, .handedNothing)
+    let said = try XCTUnwrap(session.model.settings.first { $0.kind == .desktop })
+    XCTAssertEqual(
+      said.actions.map(\.kind), [.installExtension], "the button is still the one thing to do")
+    XCTAssertNotNil(said.quiet, "and the row says what the run did")
+
+    let pressedAgain = expectation(description: "the update run reached the panel")
+    pressedAgain.assertForOverFulfill = false
+    session.start { [weak session] in
+      guard let session, session.updateChecked != nil else { return }
+      pressedAgain.fulfill()
+    }
+    session.perform(.update, "gdoc")
+    wait(for: [pressedAgain], timeout: 20)
+
+    XCTAssertNil(session.facts.extensionRun, "the next press took the sentence off")
+    XCTAssertNil(
+      session.facts.updateRun, "and this run is already on the newest release")
+    let quiet = try XCTUnwrap(session.model.settings.first { $0.kind == .desktop })
+    XCTAssertNil(quiet.quiet, "so the row is back to what it was")
+  }
+
   /// Update and Install extension take one slot. Both argv lists are `gdoc
   /// update` and `--desktop` installs the release it writes the extension
   /// of, so two children at once are two processes staging and renaming one

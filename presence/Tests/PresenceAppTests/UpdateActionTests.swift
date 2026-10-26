@@ -61,8 +61,69 @@ final class UpdateActionTests: XCTestCase {
     let handedOver = await opened.installExtension()
     let notHandedOver = await refused.installExtension()
 
-    XCTAssertTrue(handedOver, "Desktop was handed it")
-    XCTAssertFalse(notHandedOver, "the file is there and Desktop was offered nothing")
+    XCTAssertEqual(handedOver, .handedOver, "Desktop was handed it")
+    XCTAssertEqual(
+      notHandedOver, .unchanged(""),
+      "the file is there and Desktop was offered nothing")
+    XCTAssertNil(handedOver.miss, "so the row has nothing to say")
+    XCTAssertEqual(notHandedOver.miss, .handedNothing)
+  }
+
+  /// Each run of either button is read by `ok` and the action word alone,
+  /// and what comes out is one of the cases the panel has a sentence for.
+  /// The child's own sentence reaches neither: the warning gdoc writes
+  /// about a declined major is a paragraph about this machine, and the
+  /// refusal's error is the terminal's.
+  func testTheRunIsReadByOkAndTheActionWordAlone() async {
+    let declined = UpdateAction(
+      answer: FakeUpdater(
+        data: #"{"installed":"v2.14.0","action":"major_available","to":"v3.0.0"}"#,
+        warning: "--desktop writes the extension of the gdoc that is installed"
+      ).answer)
+    let unreachable = UpdateAction(
+      answer: FakeUpdater(data: #"{"installed":"v2.14.0","action":"unreachable"}"#).answer)
+    let refused = UpdateAction(answer: FakeUpdater(ok: false, error: "the zip is short").answer)
+    let unreadable = UpdateAction(answer: FakeUpdater(data: #"{"action":42}"#).answer)
+    let rehearsed = UpdateAction(
+      answer: FakeUpdater(data: #"{"installed":"v2.14.0","action":"checked"}"#).answer)
+
+    let declinedUpdate = await declined.update().miss
+    let unreachableUpdate = await unreachable.update().miss
+    let refusedUpdate = await refused.update().miss
+    let unreadableUpdate = await unreadable.update().miss
+    let rehearsedUpdate = await rehearsed.update().miss
+    XCTAssertEqual(declinedUpdate, .major)
+    XCTAssertEqual(unreachableUpdate, .unreachable)
+    XCTAssertEqual(refusedUpdate, .stopped)
+    XCTAssertEqual(unreadableUpdate, .stopped, "an answer gdoc would not print")
+    XCTAssertEqual(
+      rehearsedUpdate, .stopped,
+      "the app passes no --check, so a run that printed one is not this button's")
+
+    let declinedExtension = await declined.installExtension().miss
+    let unreachableExtension = await unreachable.installExtension().miss
+    let refusedExtension = await refused.installExtension().miss
+    let unreadableExtension = await unreadable.installExtension().miss
+    XCTAssertEqual(declinedExtension, .major)
+    XCTAssertEqual(
+      unreachableExtension, .handedNothing,
+      "the extension is written from a release, and this run read none")
+    XCTAssertEqual(refusedExtension, .stopped)
+    XCTAssertEqual(unreadableExtension, .stopped)
+  }
+
+  /// A machine already on the newest release and a run that installed
+  /// something both have their own answer on the screen, so neither writes
+  /// a sentence.
+  func testARunThatDidSomethingWritesNoSentence() async {
+    let newest = UpdateAction(
+      answer: FakeUpdater(data: #"{"installed":"v2.14.0","action":"up_to_date"}"#).answer)
+    let installed = UpdateAction(answer: FakeUpdater().answer)
+
+    let onTheNewest = await newest.update().miss
+    let replaced = await installed.update().miss
+    XCTAssertNil(onTheNewest, "the check for a second is the answer")
+    XCTAssertNil(replaced, "and the new version is")
   }
 
   func testTheGdocRowShowsTheRingUntilTheEndThenTheNewVersion() async {
@@ -175,13 +236,22 @@ private actor FakeUpdater {
   private(set) var calls: [Call] = []
   private let gate: Gate?
   private let data: String
+  private let ok: Bool
+  private let error: String?
+  private let warning: String?
 
   init(
     gate: Gate? = nil,
-    data: String = #"{"installed":"v2.14.0","action":"updated","to":"v2.15.0","verified":true}"#
+    data: String = #"{"installed":"v2.14.0","action":"updated","to":"v2.15.0","verified":true}"#,
+    ok: Bool = true,
+    error: String? = nil,
+    warning: String? = nil
   ) {
     self.gate = gate
     self.data = data
+    self.ok = ok
+    self.error = error
+    self.warning = warning
   }
 
   nonisolated var answer: @Sendable (Call) async throws -> Outcome {
@@ -192,7 +262,10 @@ private actor FakeUpdater {
     calls.append(call)
     await gate?.enter()
     return Outcome(
-      call: call, envelope: Envelope(ok: true, data: Data(data.utf8), version: "v2.15.0"),
+      call: call,
+      envelope: Envelope(
+        ok: ok, data: Data(data.utf8), error: error, warnings: [warning].compactMap { $0 },
+        version: "v2.15.0"),
       standardError: "", status: 0)
   }
 }

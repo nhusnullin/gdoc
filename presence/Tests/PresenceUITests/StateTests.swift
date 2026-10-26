@@ -9,6 +9,7 @@
 
 import Foundation
 import PresenceCore
+import SwiftUI
 import XCTest
 
 @testable import PresenceUI
@@ -192,6 +193,84 @@ final class StateTests: XCTestCase {
       [], at: "2026-10-17T09:00:02Z", facts: Scenes.machine(updateChecked: answered))
     XCTAssertEqual(after.header.update?.state, .live, "a second later it is quiet again")
     XCTAssertEqual(after.header.update?.tip, "Check for a new version")
+  }
+
+  /// Every run of either button that installed nothing says why, in a
+  /// sentence this file holds as a literal.
+  ///
+  /// Three cases each, told apart by `ok` and the action word alone. The
+  /// clock in the sentence is the moment the run ended, because a sentence
+  /// stays until the next press and a person reading it later is owed to
+  /// know which press it is about. Two of them name the command to type:
+  /// the child's own warning is a paragraph about this machine, and a quiet
+  /// line in a menu bar is not where anybody reads one.
+  func testEachRunThatInstalledNothingSaysWhyInAFixedSentence() throws {
+    let ended = try at("2026-10-17T14:02:00Z")
+    let later = "2026-10-17T14:05:00Z"
+
+    let update: [(UpdateMiss, String)] = [
+      (.major, "Only a major version is newer. gdoc update --major installs it."),
+      (.unreachable, "GitHub did not answer at 14:02. Nothing changed."),
+      (.stopped, "The update stopped at 14:02. gdoc update in a terminal says why."),
+    ]
+    XCTAssertEqual(update.count, UpdateMiss.allCases.count, "every case has its sentence")
+    for (miss, sentence) in update {
+      let panel = try drawn(
+        [], at: later,
+        facts: Scenes.machine(
+          latestStable: "v3.0.0", updateRun: UpdateRun(miss: miss, at: ended)))
+      XCTAssertEqual(
+        panel.header.quiet, [sentence],
+        "the answer to the press takes the quiet line under the version")
+      XCTAssertEqual(
+        panel.header.update?.state, .live, "and the glyph is there to press again")
+    }
+
+    let desktop: [(ExtensionMiss, String)] = [
+      (.major, "Update gdoc with --major first, then install the extension."),
+      (
+        .stopped,
+        "The install stopped at 14:02. gdoc update --desktop in a terminal says why."
+      ),
+      (.handedNothing, "Claude Desktop was not handed the extension at 14:02."),
+    ]
+    XCTAssertEqual(desktop.count, ExtensionMiss.allCases.count)
+    for (miss, sentence) in desktop {
+      let panel = try drawn(
+        [], at: later,
+        facts: Scenes.machine(
+          extensionState: .notInstalled, extensionRun: ExtensionRun(miss: miss, at: ended)))
+      let row = try XCTUnwrap(panel.settings.first { $0.kind == .desktop })
+      XCTAssertEqual(row.quiet, sentence)
+      XCTAssertEqual(row.value, "not installed", "the row itself says what it always said")
+      XCTAssertEqual(
+        row.actions.map(\.kind), [.installExtension], "and the button stays where it was")
+    }
+
+    // Each of them fits two lines in the room the panel has, which is its
+    // 320 less the 8 either side.
+    let room = Grid.panelWidth - Grid.unit * 2
+    let one = try XCTUnwrap(probes(QuietLine("one line"), scheme: .dark, width: room))
+    let line = try XCTUnwrap(one["quiet.text"]).height
+    for sentence in update.map(\.1) + desktop.map(\.1) {
+      let measured = try XCTUnwrap(
+        probes(QuietLine(sentence), scheme: .dark, width: room)["quiet.text"])
+      XCTAssertLessThanOrEqual(measured.height, line * 2, "\(sentence) runs past two lines")
+    }
+  }
+
+  /// A run that did something says nothing: the version that moved and the
+  /// check for a second are the answers to those two presses, and a
+  /// sentence beside either would be the panel saying it twice.
+  func testARunThatDidSomethingLeavesThePublishedLineWhereItWas() throws {
+    let panel = try drawn(
+      [], at: "2026-10-17T14:05:00Z", facts: Scenes.machine(latestStable: "v2.15.0"))
+    XCTAssertEqual(panel.header.quiet, ["v2.15.0 is published"])
+
+    let handedOver = try drawn(
+      [], at: "2026-10-17T14:05:00Z", facts: Scenes.machine(extensionState: .notInstalled))
+    let row = try XCTUnwrap(handedOver.settings.first { $0.kind == .desktop })
+    XCTAssertNil(row.quiet, "a row nobody has pressed has nothing to say")
   }
 
   /// A machine with no gdoc on it has nothing to update, so there is no

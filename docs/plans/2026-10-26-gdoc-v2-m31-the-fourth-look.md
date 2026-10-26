@@ -406,35 +406,35 @@ branch.
   (their captions)
 - Delete: `docs/backlog/neither-update-button-says-anything-when-the-run-did-nothing.md`
 
-- [ ] read `go/cmd/gdoc/update.go` and `go/internal/update/policy.go` first
+- [x] read `go/cmd/gdoc/update.go` and `go/internal/update/policy.go` first
       and confirm the `action` word each case prints, including the
       `--desktop` run whose newer release is a major one. The panel tells
       cases apart by `ok` and `action` alone and never by a warning or an
       error sentence. A case that cannot be told apart that way falls to
       the general sentence, and the commit says which
-- [ ] `installExtension` hands back a standing like `update` does, and
+- [x] `installExtension` hands back a standing like `update` does, and
       `Facts` carries the last run of each button with its moment
-- [ ] the header's quiet line under the version says, for the update:
+- [x] the header's quiet line under the version says, for the update:
       `major_available`, "Only a major version is newer. gdoc update --major
       installs it."; `unreachable`, "GitHub did not answer at 14:02. Nothing
       changed."; `ok: false` or an answer the app cannot read, "The update
       stopped at 14:02. gdoc update in a terminal says why." `up_to_date`
       keeps the one-second check and adds no line; `updated` relaunches as
       today
-- [ ] the Claude Desktop row's quiet line says, for the extension: the major
+- [x] the Claude Desktop row's quiet line says, for the extension: the major
       case, "Update gdoc with --major first, then install the extension.";
       `ok: false`, "The install stopped at 14:02. gdoc update --desktop in a
       terminal says why."; any other run that handed nothing over, "Claude
       Desktop was not handed the extension at 14:02."
-- [ ] every sentence is a fixed string with the clock in it, none carries
+- [x] every sentence is a fixed string with the clock in it, none carries
       the child's own words, and each fits two lines at 320 pt; a sentence
       stays until the next press of either button or the next launch of
       the app. A table test over every case and both rows
       (`testEachRunThatInstalledNothingSaysWhyInAFixedSentence`)
-- [ ] r8 carries the unreachable update and e6 the extension's major case;
+- [x] r8 carries the unreachable update and e6 the extension's major case;
       their captions say so
-- [ ] `git rm` the backlog file
-- [ ] `make app-lint`, `make app-test`
+- [x] `git rm` the backlog file
+- [x] `make app-lint`, `make app-test`
 
 ### Task 8: the renders, once
 

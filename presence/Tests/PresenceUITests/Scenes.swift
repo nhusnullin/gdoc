@@ -222,7 +222,9 @@ enum Scenes {
     signedInAt: Date? = nil,
     pairing: [String: String] = SceneDocuments.pairing,
     updateChecked: Date? = nil,
-    updating: Bool = false
+    updating: Bool = false,
+    updateRun: UpdateRun? = nil,
+    extensionRun: ExtensionRun? = nil
   ) -> Facts {
     Facts(
       account: account,
@@ -240,7 +242,9 @@ enum Scenes {
       pairing: pairing,
       signedInAt: signedInAt,
       updating: updating,
-      updateChecked: updateChecked)
+      updateChecked: updateChecked,
+      updateRun: updateRun,
+      extensionRun: extensionRun)
   }
 
   /// Every scene, in the order the screens file tells the day.
@@ -320,14 +324,16 @@ enum Scenes {
         "The last poll failed, and the record says what kind of trouble it was in one "
         + "word. The row says the moment and that word, and SETTINGS says the same thing "
         + "about the machine: the app opens no connection, so Google not answering is "
-        + "only ever something gdoc wrote down. The header changed at 17:05 as well: the "
-        + "check found v2.15.0, so the update glyph is in the accent ink with a dot and "
-        + "the published version is the quiet line under the line. It stays that way for "
-        + "the rest of the day.",
+        + "only ever something gdoc wrote down. The check of 17:05 found v2.15.0, so the "
+        + "update glyph is in the accent ink with a dot. The quiet line under the version "
+        + "is the press of 17:04 instead of that number: GitHub did not answer it either, "
+        + "and a button pressed is owed what the run did. It stays there until the next "
+        + "press of Update or of Install extension.",
       fixture: "r8", moment: "2026-10-17T17:05:00Z", alive: [],
       facts: machine(
         latestStable: "v2.15.0",
-        network: NetworkFact(reachable: false)),
+        network: NetworkFact(reachable: false),
+        updateRun: UpdateRun(miss: .unreachable, at: Date(timeIntervalSince1970: 1_792_256_640))),
       ui: UIState(), appearance: nil),
     Scene(
       id: "r9", title: "You stopped the watch",
@@ -413,9 +419,14 @@ enum Scenes {
       caption:
         "An unpaired document greys its note icon and says why. The strip of five labels "
         + "is shown once under the first row. A document in the trash keeps its row: no "
-        + "field says it is gone, so it is not struck through.",
+        + "field says it is gone, so it is not struck through. The Claude Desktop row "
+        + "carries the other half of the fourth look: Install extension was pressed at "
+        + "10:58, the release gdoc found was a major one it declines without the flag, "
+        + "so nothing was written and the row says which command takes it.",
       fixture: "e6", moment: "2026-10-17T11:00:00Z", alive: [],
-      facts: machine(),
+      facts: machine(
+        extensionState: .notInstalled,
+        extensionRun: ExtensionRun(miss: .major, at: Date(timeIntervalSince1970: 1_792_234_680))),
       ui: UIState(
         forcedTooltip: "\(SceneDocuments.northwind)|openNote", stripSeen: false),
       appearance: nil),
