@@ -26,13 +26,26 @@ func (b *builder) headerPart(region house.Region, logo bool, name string) []byte
 func (b *builder) footerPart(region house.Region, name string) []byte {
 	doc, root := newPart("w:ftr")
 	for _, spec := range region.Paragraphs {
+		align := spec.Align
+		if align == "" {
+			align = region.Align
+		}
 		p := b.para(paraOpts{
+			Align:       align,
 			Before:      spec.SpaceBeforePt,
 			After:       spec.SpaceAfterPt,
 			Line:        lineOr(spec.LineSpacing, region.LineSpacing),
 			IndentStart: region.IndentStartPt,
 			Mark:        regionMark(spec),
 		})
+		if spec.Logo {
+			b.fail("the logo is anchored in a footer, and only the first page's header may carry it")
+		}
+		if spec.Rule != nil {
+			b.ruleRun(p, *spec.Rule)
+			root.AddChild(p)
+			continue
+		}
 		b.regionRuns(p, spec)
 		root.AddChild(p)
 	}

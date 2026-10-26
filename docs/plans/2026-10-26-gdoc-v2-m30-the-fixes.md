@@ -432,7 +432,7 @@ literals in the tests: `Цели проекта` is `цели-проекта`; `
   `go/internal/render/front_test.go`, `go/internal/render/headfoot_test.go`,
   `go/internal/render/doc.go`
 
-- [ ] test first, each on `config(t)` with one field set, built with
+- [x] test first, each on `config(t)` with one field set, built with
       `houseLogo(t)` and `fields()`:
   - `TestACoverLineCarriesItsOwnLook`: the first cover line ("Altery Group ")
     gets `Align: "right"`, `Italic: true`, `Color: "#123456"`,
@@ -465,14 +465,14 @@ literals in the tests: `Цели проекта` is `цели-проекта`; `
   - `TestALabelKeepsWithTheBlockBehindIt`: `Labels["version_control"]` gets
     `KeepWithNext: true`. Its paragraph carries `w:keepNext w:val="1"`. The
     contents label, untouched, carries none
-- [ ] run them: all red but the default-header logo test
-- [ ] `cover()`, `footerPart()` and `label()` as in Technical Details
-- [ ] `TestTheGoldenPartsAreWhatTheHouseStyleRendersTo` green with no
+- [x] run them: all red but the default-header logo test
+- [x] `cover()`, `footerPart()` and `label()` as in Technical Details
+- [x] `TestTheGoldenPartsAreWhatTheHouseStyleRendersTo` green with no
       `-update`: the embedded house states none of these fields, so no part
       moves
-- [ ] `render/doc.go`: a short section "A block's own look reaches the page",
+- [x] `render/doc.go`: a short section "A block's own look reaches the page",
       naming the eight tests above, and the footer logo beside the header one
-- [ ] `make test` green
+- [x] `make test` green
 
 ### Task 3: a logo of any size fits by width
 

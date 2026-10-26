@@ -45,6 +45,108 @@ func TestTheCoverOpensWithFiveBlanksAndTheHouseName(t *testing.T) {
 	}
 }
 
+func TestACoverLineCarriesItsOwnLook(t *testing.T) {
+	cfg := config(t)
+	line := &cfg.Cover.Lines[0]
+	line.Align = "right"
+	line.Italic = true
+	line.Color = "#123456"
+	spacing := 1.5
+	line.LineSpacing = &spacing
+
+	pkg, err := Build(cfg, houseLogo(t), fields(), nil, nil, nil, 0)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	blocks := bodyBlocks(t, pkg)
+	first := blocks[5]
+	if got := first.FindElement("w:pPr/w:jc").SelectAttrValue("w:val", ""); got != "right" {
+		t.Errorf("the cover line alignment is %q, want right", got)
+	}
+	spacingElement := first.FindElement("w:pPr/w:spacing")
+	if got := spacingElement.SelectAttrValue("w:line", ""); got != "360" {
+		t.Errorf("the cover line spacing is %q, want 360 (1.5)", got)
+	}
+	if got := spacingElement.SelectAttrValue("w:lineRule", ""); got != "auto" {
+		t.Errorf("the cover line spacing rule is %q, want auto", got)
+	}
+	rPr := first.FindElement("w:r/w:rPr")
+	if got := rPr.FindElement("w:i").SelectAttrValue("w:val", ""); got != "1" {
+		t.Errorf("the cover line italic value is %q, want 1", got)
+	}
+	if got := rPr.FindElement("w:color").SelectAttrValue("w:val", ""); got != "123456" {
+		t.Errorf("the cover line colour is %q, want 123456", got)
+	}
+	if got := blocks[6].FindElement("w:pPr/w:jc").SelectAttrValue("w:val", ""); got != "center" {
+		t.Errorf("the untouched second line alignment is %q, want center", got)
+	}
+}
+
+func TestARunLineTakesTheLinesColourWhereTheRunStatesNone(t *testing.T) {
+	cfg := config(t)
+	cfg.Cover.Lines[2].Color = "#123456"
+	cfg.Cover.Lines[5].Color = "#123456"
+
+	pkg, err := Build(cfg, houseLogo(t), cover.Fields{}, nil, nil, nil, 0)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	doc := parse(t, part(t, pkg, "word/document.xml"))
+	var title, version *etree.Element
+	for _, p := range doc.FindElements("//w:body/w:p") {
+		switch firstLabel(p) {
+		case "(Name of) Framework/Policy":
+			title = p
+		case "Version: 1.0":
+			version = p
+		}
+	}
+	if title == nil || version == nil {
+		t.Fatalf("cover title = %v, version = %v; want both template lines", title != nil, version != nil)
+	}
+	if got := version.FindElements("w:r")[0].FindElement("w:rPr/w:color").SelectAttrValue("w:val", ""); got != "123456" {
+		t.Errorf("the Version label colour is %q, want 123456", got)
+	}
+	titleRuns := title.FindElements("w:r")
+	if got := titleRuns[0].FindElement("w:rPr/w:color").SelectAttrValue("w:val", ""); got != "123456" {
+		t.Errorf("the (Name of) run colour is %q, want 123456", got)
+	}
+	if got := titleRuns[2].FindElement("w:rPr/w:color").SelectAttrValue("w:val", ""); got != "ff0000" {
+		t.Errorf("the Framework/Policy run colour is %q, want ff0000", got)
+	}
+}
+
+func TestAFilledLineKeepsTheLinesColour(t *testing.T) {
+	cfg := config(t)
+	cfg.Cover.Lines[2].Color = "#123456"
+
+	pkg, err := Build(cfg, houseLogo(t), fields(), nil, nil, nil, 0)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	doc := parse(t, part(t, pkg, "word/document.xml"))
+	var title *etree.Element
+	for _, p := range doc.FindElements("//w:body/w:p") {
+		if firstLabel(p) == fields().Title {
+			title = p
+			break
+		}
+	}
+	if title == nil {
+		t.Fatal("the cover carries no filled title line")
+	}
+	runs := title.FindElements("w:r")
+	if len(runs) != 1 {
+		t.Fatalf("the filled title has %d runs, want one", len(runs))
+	}
+	if got := runs[0].FindElement("w:rPr/w:color").SelectAttrValue("w:val", ""); got != "123456" {
+		t.Errorf("the filled title colour is %q, want 123456", got)
+	}
+	if runs[0].FindElement("w:rPr/w:highlight") != nil {
+		t.Error("the filled title keeps the template's highlight")
+	}
+}
+
 func TestTheNotesTitleVersionAndDateReplaceThePlaceholders(t *testing.T) {
 	pkg := build(t)
 	var texts []string
@@ -227,6 +329,37 @@ func TestTheVersionControlLabelIsNavyAndBold(t *testing.T) {
 	}
 	if got := label.FindElement("w:pPr/w:spacing").SelectAttrValue("w:before", ""); got != "360" {
 		t.Errorf("the label space before is %q, want 360 twips (18pt)", got)
+	}
+}
+
+func TestALabelKeepsWithTheBlockBehindIt(t *testing.T) {
+	cfg := config(t)
+	label := cfg.Labels["version_control"]
+	label.KeepWithNext = true
+	cfg.Labels["version_control"] = label
+
+	pkg, err := Build(cfg, houseLogo(t), fields(), nil, nil, nil, 0)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	doc := parse(t, part(t, pkg, "word/document.xml"))
+	var version, contents *etree.Element
+	for _, p := range doc.FindElements("//w:body/w:p") {
+		switch firstLabel(p) {
+		case "Version Control":
+			version = p
+		case "Contents":
+			contents = p
+		}
+	}
+	if version == nil || contents == nil {
+		t.Fatalf("version label = %v, contents label = %v; want both", version != nil, contents != nil)
+	}
+	if got := version.FindElement("w:pPr/w:keepNext").SelectAttrValue("w:val", ""); got != "1" {
+		t.Errorf("the version label keep-next value is %q, want 1", got)
+	}
+	if contents.FindElement("w:pPr/w:keepNext") != nil {
+		t.Error("the untouched contents label carries keep-next")
 	}
 }
 
