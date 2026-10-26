@@ -349,10 +349,15 @@ enum Scenes {
         + "be one of the five the list leaves out. The pin is the fifth icon of every "
         + "row: the filled tack on the pinned one, the outline on the five under it, "
         + "and pressing it is how a document is pinned or let go. Hide is the row's "
-        + "own menu, which no still can show.",
+        + "own menu, which no still can show. One row carries a mark: the reply on "
+        + "Chapter 5 failed at 11:40, and a run that failed is the one thing the mark "
+        + "means since 2026-10-26. The five rows around it say what their last run was "
+        + "and draw nothing in front of it. NOW is empty because the person dismissed "
+        + "that failure's card, and a dismissal hides a card and changes no row.",
       fixture: "e1", moment: "2026-10-17T18:10:00Z", alive: [],
       facts: machine(),
       ui: UIState(
+        dismissed: ["3000000000000003|1"],
         pinned: [
           DocumentChoice(
             doc: SceneDocuments.wallet, at: Date(timeIntervalSince1970: 1_792_141_200),

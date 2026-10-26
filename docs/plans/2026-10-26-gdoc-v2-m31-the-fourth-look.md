@@ -319,21 +319,21 @@ branch.
   caption that names the check or the dot on a DOCUMENTS row)
 - Delete: `docs/backlog/the-documents-mark-says-nothing-a-person-can-read.md`
 
-- [ ] a DOCUMENTS row draws the red exclamation when its last run ended
+- [x] a DOCUMENTS row draws the red exclamation when its last run ended
       `ok: false`, and the blank glyph in every other state: done, live
       stopped, live, hold, running, unknown and pinned only. The column
       stays, so every title starts at one edge. A table test over the eight
       states (`testADocumentRowIsMarkedOnlyWhenItsLastRunFailed`)
-- [ ] a failed run's sub-line names the command and says failed, "reply
+- [x] a failed run's sub-line names the command and says failed, "reply
       failed Tue", where it said "stopped Tue"; a stopped watch keeps "live
       stopped 12:26"; a test states both lines and that neither contains
       the other's word (`testAFailedRunDoesNotReadAsAStoppedOne`)
-- [ ] `verified: false` stays a run that worked: no mark, and the word it
+- [x] `verified: false` stays a run that worked: no mark, and the word it
       has today
-- [ ] e1's last five carry one failed reply, so a render shows the one mark
+- [x] e1's last five carry one failed reply, so a render shows the one mark
       the list can have; the caption says what the mark means
-- [ ] `git rm` the backlog file
-- [ ] `make app-lint`, `make app-test`
+- [x] `git rm` the backlog file
+- [x] `make app-lint`, `make app-test`
 
 ### Task 5: a press on a row opens the document
 

@@ -209,8 +209,8 @@ final class FieldsTests: XCTestCase {
       ], at: "2026-10-17T14:00:00Z")
     XCTAssertEqual(failed.reasons, ["The terminal that ran it has the reason."])
     XCTAssertEqual(
-      failed.documents?.rows.first?.sub, "stopped 12:01 · ~/hub/falcon/chapters/05.md",
-      "the document's row is what carries the moment")
+      failed.documents?.rows.first?.sub, "restyle failed 12:01 · ~/hub/falcon/chapters/05.md",
+      "the document's row is what carries the moment, and the write that failed")
   }
 
   // Scene r3: `via: code` is gdoc under Claude Code, which is where most of

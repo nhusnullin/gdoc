@@ -134,6 +134,24 @@ public enum Words {
     return found
   }
 
+  /// What a row says about a run that ended `ok: false`: the write's own
+  /// name, and the one word for how it went.
+  ///
+  /// A failed run read as "stopped" until the fourth look, which is the
+  /// word a live watch somebody stopped carries, and the two drew marks
+  /// nobody could tell apart. The mark means a failure and nothing else
+  /// now, so the sentence beside it names the write: "reply failed" against
+  /// "live stopped". The name is the heading a stuck card opens with, in
+  /// the lower case a sentence inside a row is written in.
+  ///
+  /// A command this version has no word for is "failed" alone, by the
+  /// file's own rule: the name for it would be invented.
+  /// StateTests.testAFailedRunDoesNotReadAsAStoppedOne.
+  public static func failure(_ command: String?) -> String {
+    guard let word = verb(command)?.heading else { return "failed" }
+    return "\(word.lowercased()) failed"
+  }
+
   /// What a command that is still running is called, or none where the
   /// command is not a write.
   public static func running(_ command: String?) -> String? {

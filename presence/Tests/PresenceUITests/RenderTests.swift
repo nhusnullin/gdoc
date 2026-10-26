@@ -454,7 +454,10 @@ final class RenderTests: XCTestCase {
     XCTAssertEqual(
       watched.sub, "live stopped 15:29 · ~/hub/falcon/chapters/05.md",
       "DOCUMENTS said live while NOW said stopped")
-    XCTAssertEqual(watched.tone, .dim, "and drew the live dot for a watch that is over")
+    XCTAssertEqual(
+      watched.glyph, .blank,
+      "the row's words carry the state: the mark is a failed run and nothing else since "
+        + "the fourth look")
 
     XCTAssertEqual(
       model.now.compactMap { item -> String? in

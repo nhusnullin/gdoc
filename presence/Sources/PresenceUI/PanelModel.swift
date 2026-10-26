@@ -663,20 +663,21 @@ extension PanelModel {
       target: row.doc)
   }
 
+  /// The one mark a document row carries: its last run failed.
+  ///
+  /// The column drew five marks until the fourth look (docs/v2/DECISIONS.md,
+  /// 2026-10-26): a green check for a run that worked, a dot for a live
+  /// watch, a dim dot for one that stopped, a pause for a hold, and the
+  /// exclamation. Nail read a list of grey dots and green checks and
+  /// nothing on the panel said which was which, and the row's second line
+  /// already says what the last run was. So the mark means one thing a
+  /// person can name, and every other state draws nothing.
+  ///
+  /// Blank and not absent: the column stays, so every title in the list
+  /// starts on the one left edge.
+  /// testADocumentRowIsMarkedOnlyWhenItsLastRunFailed.
   private static func glyph(for state: DocumentState) -> (kind: GlyphKind, tone: GlyphTone) {
-    switch state {
-    case .hold: return (.pause, .hold)
-    case .running: return (.empty, .quiet)
-    case .live: return (.dot, .live)
-    case .liveStopped: return (.dot, .dim)
-    case .done: return (.check, .ok)
-    case .failed: return (.exclamation, .bad)
-    case .unknown: return (.empty, .quiet)
-    // Nothing at all, and the column still there: the record says nothing
-    // about this document, and a glyph would be the panel inventing a state
-    // for a row that is here because somebody pinned it.
-    case .pinnedOnly: return (.blank, .quiet)
-    }
+    state == .failed ? (.exclamation, .bad) : (.blank, .quiet)
   }
 
   // MARK: the one line about the app itself

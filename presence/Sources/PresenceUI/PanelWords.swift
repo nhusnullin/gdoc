@@ -344,7 +344,7 @@ struct Phrases {
     case .liveStopped: return "live stopped \(clockInSentence(row.at))"
     case .done:
       return "\(Words.verb(row.command)?.past ?? row.command) \(clockInSentence(row.at))"
-    case .failed: return "stopped \(clockInSentence(row.at))"
+    case .failed: return "\(Words.failure(row.command)) \(clockInSentence(row.at))"
     case .unknown: return "outcome unknown · \(clockInSentence(row.at))"
     case .pinnedOnly: return nil
     }
