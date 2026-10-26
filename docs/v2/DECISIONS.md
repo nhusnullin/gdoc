@@ -4,7 +4,9 @@ Dated, replaceable. Each names the principle it serves, or says it is a domain
 choice with none above it. Same convention as [PRINCIPLES.md](../../PRINCIPLES.md).
 
 v2 is a rewrite in Go. The three principles carry over unchanged. What changes is
-which decisions implement them, and this file is where those start.
+which decisions implement them. This file holds their whole register and the
+entries dated 2026-10-16 and later; earlier entries are frozen in
+[DECISIONS-archive.md](DECISIONS-archive.md).
 
 ## The register
 

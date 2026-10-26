@@ -245,3 +245,32 @@ func TestEveryMeasurementIsIndexed(t *testing.T) {
 		}
 	}
 }
+
+func TestLiveIndexPreamblesNameTheirArchives(t *testing.T) {
+	tests := []struct {
+		live    string
+		archive string
+		end     string
+	}{
+		{live: "DECISIONS.md", archive: "DECISIONS-archive.md", end: "## The register"},
+		{live: "MEASURED.md", archive: "MEASURED-archive.md", end: "| Measured | Section | Entry |"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.live, func(t *testing.T) {
+			b, err := os.ReadFile(v2File(tt.live))
+			if err != nil {
+				t.Fatal(err)
+			}
+			preamble, _, ok := strings.Cut(string(b), tt.end)
+			if !ok {
+				t.Fatalf("docs/v2/%s has no %q after its preamble", tt.live, tt.end)
+			}
+			if !strings.Contains(preamble, "2026-10-16") {
+				t.Errorf("docs/v2/%s preamble does not name the live-entry cutoff", tt.live)
+			}
+			if !strings.Contains(preamble, "]("+tt.archive+")") {
+				t.Errorf("docs/v2/%s preamble does not link to %s", tt.live, tt.archive)
+			}
+		})
+	}
+}

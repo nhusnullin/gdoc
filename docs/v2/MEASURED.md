@@ -7,7 +7,9 @@ which holds what Google refuses. This file holds what it allows, and what shape
 the answer comes back in.
 
 Every section carries the date, the test that made the measurement, the verbatim
-answer where there is one, and a line saying when to ask again.
+answer where there is one, and a line saying when to ask again. This file holds
+the whole index, "Not measured yet" and the sections dated 2026-10-16 and later;
+earlier sections are frozen in [MEASURED-archive.md](MEASURED-archive.md).
 
 | Measured | Section | Entry |
 |---|---|---|

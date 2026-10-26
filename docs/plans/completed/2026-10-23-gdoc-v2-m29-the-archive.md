@@ -365,12 +365,12 @@ survives this move and the next one.
 
 ### Task 6: [Final] Update documentation
 
-- [ ] `docs/v2/DECISIONS.md`'s opening paragraph says the file holds the
+- [x] `docs/v2/DECISIONS.md`'s opening paragraph says the file holds the
       register and the entries from 2026-10-16, and names the archive;
       `docs/v2/MEASURED.md`'s preamble does the same for its index
-- [ ] `go/boundary/doc.go` reads as the five guards it now holds
-- [ ] CLAUDE.md untouched, and its task map still names files that exist
-- [ ] move this plan to `docs/plans/completed/`
+- [x] `go/boundary/doc.go` reads as the five guards it now holds
+- [x] CLAUDE.md untouched, and its task map still names files that exist
+- [x] move this plan to `docs/plans/completed/`
 
 ## Post-Completion
 
