@@ -478,20 +478,20 @@ branch.
 - Modify: `docs/guide/presence.md`,
   `docs/design/2026-10-17-presence-design-principles.md`; move this plan
 
-- [ ] the guide: "### Now", every row that names a document opens it on a
+- [x] the guide: "### Now", every row that names a document opens it on a
       click, and Stop is its own control; "### Documents", the mark is a
       failed last run and nothing else, the right-click and the held press
       open one menu; "### Settings" and "### Update, and Install extension",
       the sentences a run that installed nothing leaves; "## The note
       beside the document", the override's ceiling and what happens over it;
       "## The file, and what is never in it", the title on a publish's end
-- [ ] the principles file gains "Amendments, 2026-10-26, the fourth look":
+- [x] the principles file gains "Amendments, 2026-10-26, the fourth look":
       the mark means a failed run; the eight-character floor counts the
       name and not the verb in front of it; the held press is the system
       menu and never a second window
-- [ ] `CLAUDE.md` untouched
-- [ ] move this plan to `docs/plans/completed/`
-- [ ] `make app-lint`, `make app-test`
+- [x] `CLAUDE.md` untouched
+- [x] move this plan to `docs/plans/completed/`
+- [x] `make app-lint`, `make app-test`
 
 ## Acceptance
 

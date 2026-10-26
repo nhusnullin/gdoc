@@ -136,6 +136,19 @@ A section with nothing in it is left out rather than labelled.
   holds. It is the one card in Now that comes from the machine and not from
   the record, and it says how many watches that sign-in stopped.
 
+Every one of these is about one document, so a click anywhere on the card or
+the row opens that document in your browser. It is the same press as a
+Documents row's first icon, and the id is the one the record named: an id
+Drive could not have written opens nothing, and neither does a publish that
+has made no document yet. Until the fourth look only a stuck card could be
+opened, and a live row could not be opened at all.
+
+The controls keep their own press. Stop stops the watch and opens nothing,
+and it has no confirm: a hand reaching for Stop never opens a browser tab
+instead. The hold card's two buttons are the hold's, and while that card is
+asking whether to dismiss it, a click on it opens nothing at all: a press
+there that went to a browser would be an answer you did not give.
+
 ### Documents
 
 The pinned documents and the last five, and nothing else. Pinned documents
@@ -152,6 +165,16 @@ document. Each row says what the last action was, when, and where the note
 paired with it is, or "no note". A document leaves the list fourteen days
 after its last action, unless it is pinned.
 
+One mark can stand before a title, a red exclamation, and it means one thing:
+the last run on that document failed. Every other state draws nothing there,
+and the blank keeps the column, so every title starts on the same left edge.
+The row drew five marks until the fourth look, a green check for a run that
+worked, a dot for a live watch, a dim one for a watch that stopped and a
+pause for a hold, and nothing on the panel said which was which. The second
+line was already saying it, and it says it in words you can read: "reply
+failed Tue" against "live stopped 12:26". A write whose read-back did not
+confirm is a run that worked, so it has no mark and keeps the word it had.
+
 A pin holds a document in the list. The pin is the row's fifth icon, at the
 end of the strip: an outline while the document is not pinned, filled while
 it is, and the words on it are "Pin" and "Unpin". It was a menu word until
@@ -161,7 +184,12 @@ see the lines about them, the row is still there with the title it had and
 its icons still work, because the pin keeps the name and the id.
 
 "Hide from the list" is what the row's menu is for, and it is the one word
-in it. Right-click a row, or hold a press on it for half a second. It takes
+in it. Right-click a row, or hold a press on it for half a second. Both ways
+open one menu, the system's own, drawn from behind the row's title, and the
+panel stays open the whole time it is up: there is no second window for the
+panel to lose to. The held press is the title's and not the whole row's, so
+a slow click on one of the five icons does the icon's work and opens no
+menu. It takes
 the document out of Documents, and rewrites nothing: the record is the
 record. There is no "Unhide". The next thing gdoc finishes on that document
 brings the row back, which is the one way back. The pin is the louder
@@ -250,7 +278,8 @@ extension. A file that is there says nothing about what Desktop loaded, so the
 row goes and the panel claims nothing. The one exception is a run of Install
 extension that wrote the file and could not hand it over, which is a machine
 with no Claude Desktop on it: the row and its button stay for as long as the
-app is running.
+app is running, and the row's own quiet line says what happened, which the
+next section lists.
 
 ## The actions, one by one
 
@@ -355,6 +384,34 @@ Desktop extension and hands it to Desktop. Whether Desktop then loads it is
 not something the app is told; whether the handing over happened is, and that
 is what keeps the row.
 
+A press that installed nothing says why. Until the fourth look both buttons
+said nothing at all, and a press that did nothing looked like a press that
+did not land. The update's sentence sits under the version in the header,
+and there are three of them:
+
+| What the run said | The line under the version |
+|---|---|
+| only a major version is newer | Only a major version is newer. gdoc update --major installs it. |
+| GitHub did not answer | GitHub did not answer at 14:12. Nothing changed. |
+| it stopped, for any other reason | The update stopped at 14:12. gdoc update in a terminal says why. |
+
+Install extension has its own three, on the Claude Desktop row:
+
+| What the run said | The line on the row |
+|---|---|
+| gdoc itself needs the major update first | Update gdoc with --major first, then install the extension. |
+| it stopped | The install stopped at 14:12. gdoc update --desktop in a terminal says why. |
+| the file was written, Desktop was not handed it | Claude Desktop was not handed the extension at 14:12. |
+
+Each is a fixed sentence of the app's own with the clock of the run in it,
+and none of them carries a word the command wrote: gdoc's warning about a
+major release is a paragraph about this machine, and a terminal is where you
+read it, which is what two of these say. A sentence stays until the next
+press of either button, and nothing writes one down. A machine already on
+the newest release leaves the check and "This is the newest release" as
+before, and a run that installed something needs no sentence, because the
+version on the line is the answer.
+
 ## What the app runs, and what it never does
 
 The app runs six command lines and no seventh:
@@ -453,6 +510,19 @@ defaults write com.altery.gdoc.presence hubPath -string ~/path/to/hub
 It takes effect when the app is opened again. There is no row that sets it and
 most machines have none.
 
+That folder is walked rather than queried, so the walk has a ceiling and only
+one of them runs at a time. The ceiling is 20,000 entries outside dot folders,
+about fourteen times the hub this app was written for. A folder over it is not
+the folder you meant: a hub is a path typed into a terminal, where one slip is
+your home folder or a mounted volume, and a menu bar app may not walk one of
+those every time a file changes. So the walk stops there, the app sets that
+folder aside and stops watching it, and Spotlight answers every document as it
+does on a machine with no override at all. A walk the app asks for again, which
+a vault syncing a hundred files does, makes the one before it let go between
+two entries rather than finish. While the first walk of the folder is still
+out, Spotlight is asked nothing: you named a folder, so the folder is the
+answer, and the walk landing is what asks about whatever it did not pair.
+
 A note is opened through `obsidian://open?path=`, after the app has proved the
 file is a regular `.md` at that absolute path. A symlink is not the note: what
 is at the end of it is somewhere else. No line number is promised, because gdoc
@@ -545,6 +615,14 @@ write, an error sentence, a file path, your account, anything about the token,
 and nothing that judges anything. The title is the one document word, cut at
 200 characters, and it is there so the panel can name a row without running a
 second gdoc to read the document again.
+
+On a publish the title is usually the document's, as Drive read it back. A
+publish that stopped inside the render made no document, so there was nothing
+to read back and the end line carried no title at all: the panel drew "Publish
+stopped" with nothing after it, and you could not tell which publish. gdoc
+writes the note's own cover title there instead, which it had already read.
+Same field, same 200 characters, and it is the one place a title on a line is
+the note's rather than the document's.
 
 One more file sits in that folder and holds no record: `presence/app.lock`.
 The app takes a lock on it as its first act and holds it until it exits,

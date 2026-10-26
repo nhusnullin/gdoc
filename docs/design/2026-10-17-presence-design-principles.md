@@ -631,3 +631,53 @@ strip inside each panel's right edge for a vertical run and finding only
 card tints, the panel's own edge and ordinary text. The heights are the
 other half of it: the panels come out between 321 and 1088 pt, so the cap is
 gone rather than merely unreached.
+
+## Amendments, 2026-10-26, the fourth look
+
+Nail read the panel of v2.20.0 and sent the sentences nine backlog items
+held. Three of them change a rule written above.
+
+- **The mark before a document means one thing, a run that failed.**
+  Principle 1 is about the menu bar, and the document row's own 16 px glyph
+  grew to five marks under it: a green check for a run that worked, a dot
+  for a live watch, a dim dot for one that stopped, a pause for a hold, the
+  red exclamation for a failure. Nail read the five on the panel and could
+  name none of them, and the row's second line was already saying the same
+  thing in words. So the exclamation stays and every other state draws the
+  blank glyph, which keeps the column and the one left edge every title
+  starts on. The words follow the mark: a failed run said "stopped Tue",
+  which is what a watch somebody stopped says, and it names the write now,
+  "reply failed Tue" against "live stopped 12:26":
+  `StateTests.testADocumentRowIsMarkedOnlyWhenItsLastRunFailed` and
+  `testAFailedRunDoesNotReadAsAStoppedOne`.
+- **The eight-character head floor counts the name and not the verb in
+  front of it.** This reverses the M25 amendment above, which kept the floor
+  on the verb and the name together and sent the row to the backlog. A title
+  is handed over as two pieces now, so `MiddleTitle` draws the verb and its
+  dot whole and measures the floor and the middle cut on the name alone, in
+  the room the verb leaves. `Live stopped by you · Ch 5.… v0.1` passed the
+  floor at 27 characters while the name inside it was cut to five, which is
+  four characters and a full stop to tell a document by. A title with no
+  verb in front of it measures exactly as it did:
+  `RowTests.testAPrefixTakesItsRoomAndTheFloorCountsTheName`.
+- **A held press opens the system's own menu, never a second window.**
+  Principle 10 says right-click opens the same dropdown; it did not say what
+  draws it. A SwiftUI popover is a window of its own, and the panel is a
+  borderless key panel whose delegate closes it the moment it loses key, so
+  the one menu the panel has was drawn by the one thing that could close the
+  panel under it. The 2026-10-18 probe never got the app active and never
+  reached the question. Both ways in pop up a real `NSMenu` from an anchor
+  behind the row's title, over the same `MenuItemModel` list, and no view
+  under `Sources` opens a window at all:
+  `SourceRulesTests.testNoViewOpensASecondWindow` and
+  `CardTests.testTheHeldPressOpensTheSystemMenuWithTheRowsOwnWords`.
+
+And the thing that is not a drawing: **every row in NOW is a press that
+opens its document**, which is principle 3 read the other way round. An
+action is an icon, and a row that is about one document is a link to it. A
+hold, a write that stopped, a job and a watch each carry the id they open,
+held to the shape Drive writes, and the controls on them keep their own
+press: Stop stops and opens nothing, and a hold asking its question opens
+nothing while it asks. The gesture itself is Nail's hand check, since no
+test sends a real click: `StateTests.testEveryNowRowThatNamesADocumentOpensIt`
+and `CardTests.testTheRowOpensAndOnlyStopStops`.
