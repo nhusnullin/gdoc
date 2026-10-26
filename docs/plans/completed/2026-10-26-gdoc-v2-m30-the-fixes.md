@@ -756,14 +756,14 @@ literals in the tests: `Цели проекта` is `цели-проекта`; `
 
 ### Task 9: [Final] Update documentation
 
-- [ ] every `doc.go` touched names a test for every rule it states, or
+- [x] every `doc.go` touched names a test for every rule it states, or
       `TODO(test)`: `guard`, `render`, `house`, `asset`, `body`, `view`,
       `export`
-- [ ] `go doc` over each touched package prints its package comment and
+- [x] `go doc` over each touched package prints its package comment and
       nothing a file comment meant for itself
       (`TestOnlyThePackageCommentReachesGoDoc` green)
-- [ ] `CLAUDE.md` untouched, and its task map still names files that exist
-- [ ] move this plan to `docs/plans/completed/`
+- [x] `CLAUDE.md` untouched, and its task map still names files that exist
+- [x] move this plan to `docs/plans/completed/`
 
 ## Post-Completion
 

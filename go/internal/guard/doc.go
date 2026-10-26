@@ -138,10 +138,12 @@
 //     out of house.yaml rather than out of anything Drive said, the answer is a
 //     PNG, and a PNG carries no id to learn. What
 //     bounds the read is what the run then does with the bytes, which is
-//     internal/asset holding them to the house file's own mime and pixels
-//     before they reach a document. Every other shape on that id is not judged
-//     by this rule at all, so it falls through to the refusal an id nobody
-//     handed in has always had. The pins are in asset_test.go:
+//     internal/asset holding them to the stated mime, the byte ceiling and its
+//     own side ceiling before they reach a document. TestTheReadIsBounded,
+//     TestTheSideCeilingIs4096 and TestASideOverTheCeilingIsRefusedBeforeDecoding
+//     pin those bounds. Every other shape on that id is not judged by this rule
+//     at all, so it falls through to the refusal an id nobody handed in has
+//     always had. The grant pins are in asset_test.go:
 //     TestTheAssetGrantAdmitsOneMediaReadAndNothingElse,
 //     TestWithoutTheAssetGrantTheReadIsRefused,
 //     TestTheAssetGrantAdmitsNoDocument,
