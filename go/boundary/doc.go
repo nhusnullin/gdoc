@@ -241,10 +241,11 @@
 //
 // The fifth guard holds the decision register and the measured index in both
 // directions: every row names the one file that holds its entry, and every
-// entry has a row. It also keeps each live file's preamble pointing at its
-// archive and naming the cutoff. An index is guarded because every citation in
-// the tree resolves through it, and it is the one part of either file that is
-// read rather than searched.
+// entry has a row, with the same date. It holds the register statuses, keeps
+// each live file's preamble pointing at its archive and naming the cutoff, and
+// pins the frozen archive entries by their SHA-256. An index is guarded because
+// every citation in the tree resolves through it, and it is the one part of
+// either file that is read rather than searched.
 //
 // # No document says a proposal runs the capability probe
 //

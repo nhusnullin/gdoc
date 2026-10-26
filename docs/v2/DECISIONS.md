@@ -113,8 +113,9 @@ status says what replaced it. That is what makes a status worth reading: it says
 the entry below was looked at, rather than that nobody has been back to it.
 
 The `Entry` column names the file that holds the entry. A row whose status is
-`measured` has its text in [MEASURED.md](MEASURED.md), under a heading of the
-same name, because a measurement is what Google does, not a choice gdoc made.
+`measured` has its text in the measured file that column names, under a heading
+of the same name, because a measurement is what Google does, not a choice gdoc
+made. [MEASURED.md](MEASURED.md) holds the index over both measured files.
 
 ## 2026-10-16. `---` is a page break.
 

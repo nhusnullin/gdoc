@@ -6,16 +6,20 @@
 package boundary
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 type indexRow struct {
-	date  string
-	title string
-	entry string
+	date   string
+	title  string
+	status string
+	entry  string
 }
 
 type indexedEntry struct {
@@ -61,7 +65,7 @@ func markdownRows(t *testing.T, file, header string, columns int) []indexRow {
 			parts[i] = strings.TrimSpace(parts[i])
 		}
 		if columns == 4 {
-			rows = append(rows, indexRow{date: parts[0], title: parts[1], entry: parts[3]})
+			rows = append(rows, indexRow{date: parts[0], title: parts[1], status: parts[2], entry: parts[3]})
 		} else {
 			rows = append(rows, indexRow{date: parts[0], title: parts[1], entry: parts[2]})
 		}
@@ -91,7 +95,7 @@ func headings(t *testing.T, files []string, dated bool) []indexedEntry {
 			title := strings.TrimPrefix(line, "## ")
 			if dated {
 				date, rest, ok := strings.Cut(title, ". ")
-				if !ok || len(date) != len("2026-10-16") {
+				if !ok || !validDate(date) {
 					continue
 				}
 				entries = append(entries, indexedEntry{date: date, title: rest, file: file})
@@ -117,18 +121,15 @@ func openingDate(line string) string {
 		return ""
 	}
 	date := line[:len("2026-10-16")]
-	for i, want := range "0000-00-00" {
-		if want == '-' {
-			if date[i] != '-' {
-				return ""
-			}
-			continue
-		}
-		if date[i] < '0' || date[i] > '9' {
-			return ""
-		}
+	if !validDate(date) {
+		return ""
 	}
 	return date
+}
+
+func validDate(date string) bool {
+	parsed, err := time.Parse("2006-01-02", date)
+	return err == nil && parsed.Format("2006-01-02") == date
 }
 
 func sameTitle(a, b string) bool {
@@ -174,7 +175,7 @@ func sameTitle(a, b string) bool {
 func matchingEntries(row indexRow, entries []indexedEntry) []indexedEntry {
 	var matches []indexedEntry
 	for _, entry := range entries {
-		if row.date != "" && entry.date != "" && row.date != entry.date {
+		if row.date != entry.date {
 			continue
 		}
 		if sameTitle(row.title, entry.title) {
@@ -182,6 +183,23 @@ func matchingEntries(row indexRow, entries []indexedEntry) []indexedEntry {
 		}
 	}
 	return matches
+}
+
+func TestIndexMatchingRequiresTheSameValidDate(t *testing.T) {
+	entries := []indexedEntry{{date: "2026-10-16", title: "same title"}}
+	for _, date := range []string{"", "2026-10-17"} {
+		if got := matchingEntries(indexRow{date: date, title: "same title"}, entries); len(got) != 0 {
+			t.Errorf("date %q matched an entry dated 2026-10-16", date)
+		}
+	}
+	if got := matchingEntries(indexRow{date: "2026-10-16", title: "same title"}, entries); len(got) != 1 {
+		t.Errorf("the same valid date matched %d entries, want one", len(got))
+	}
+	for _, opening := range []string{"Measured 2026-13-01 by hand", "Measured 2026-10-1 by hand", "Not dated"} {
+		if got := openingDate(opening); got != "" {
+			t.Errorf("openingDate(%q) = %q, want no date", opening, got)
+		}
+	}
 }
 
 func TestEveryRegisterRowNamesTheFileThatHoldsIt(t *testing.T) {
@@ -200,19 +218,34 @@ func TestEveryRegisterRowNamesTheFileThatHoldsIt(t *testing.T) {
 }
 
 func TestEveryDecisionEntryHasItsRegisterRow(t *testing.T) {
-	b, err := os.ReadFile(v2File("DECISIONS.md"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	header, columns := "| Date | Decision | Status |", 3
-	if strings.Contains(string(b), "| Date | Decision | Status | Entry |") {
-		header, columns = "| Date | Decision | Status | Entry |", 4
-	}
-	rows := markdownRows(t, "DECISIONS.md", header, columns)
+	rows := markdownRows(t, "DECISIONS.md", "| Date | Decision | Status | Entry |", 4)
 	for _, entry := range headings(t, decisionFiles, true) {
 		matches := matchingEntries(indexRow{date: entry.date, title: entry.title}, rowsAsEntries(rows))
 		if len(matches) != 1 {
 			t.Errorf("%s entry %s %q matches %d register rows, want exactly one", entry.file, entry.date, entry.title, len(matches))
+		}
+	}
+}
+
+func TestDecisionRegisterStatusesDescribeTheirEntries(t *testing.T) {
+	rows := markdownRows(t, "DECISIONS.md", "| Date | Decision | Status | Entry |", 4)
+	for _, row := range rows {
+		if !validDate(row.date) {
+			t.Errorf("register row %q has invalid date %q", row.title, row.date)
+		}
+		valid := row.status == "holds" || row.status == "rejected" || row.status == "measured"
+		if rest, ok := strings.CutPrefix(row.status, "superseded "); ok && len(rest) >= len("2026-10-16") {
+			valid = validDate(rest[:len("2026-10-16")])
+		}
+		if !valid {
+			t.Errorf("register row %s %q has invalid status %q", row.date, row.title, row.status)
+		}
+		measured := row.entry == "MEASURED.md" || row.entry == "MEASURED-archive.md"
+		if measured && row.status != "measured" {
+			t.Errorf("register row %s %q names %s but has status %q, want measured", row.date, row.title, row.entry, row.status)
+		}
+		if !measured && row.status == "measured" {
+			t.Errorf("register row %s %q has status measured but names %s", row.date, row.title, row.entry)
 		}
 	}
 }
@@ -229,6 +262,13 @@ func TestEveryMeasurementIsIndexed(t *testing.T) {
 	rows := markdownRows(t, "MEASURED.md", "| Measured | Section | Entry |", 3)
 	entries := headings(t, measuredFiles, false)
 	for _, row := range rows {
+		if row.title == "Not measured yet" {
+			if row.date != "" {
+				t.Errorf("measured index row %q has date %q, want none", row.title, row.date)
+			}
+		} else if !validDate(row.date) {
+			t.Errorf("measured index row %q has invalid date %q", row.title, row.date)
+		}
 		matches := matchingEntries(row, entries)
 		if len(matches) != 1 {
 			t.Errorf("measured index row %q matches %d sections, want exactly one", row.title, len(matches))
@@ -239,9 +279,37 @@ func TestEveryMeasurementIsIndexed(t *testing.T) {
 		}
 	}
 	for _, entry := range entries {
-		matches := matchingEntries(indexRow{title: entry.title}, rowsAsEntries(rows))
+		if entry.title == "Not measured yet" {
+			if entry.date != "" {
+				t.Errorf("%s section %q has date %q, want none", entry.file, entry.title, entry.date)
+			}
+		} else if !validDate(entry.date) {
+			t.Errorf("%s section %q has invalid opening date %q", entry.file, entry.title, entry.date)
+		}
+		matches := matchingEntries(indexRow{date: entry.date, title: entry.title}, rowsAsEntries(rows))
 		if len(matches) != 1 {
 			t.Errorf("%s section %q matches %d index rows, want exactly one", entry.file, entry.title, len(matches))
+		}
+	}
+}
+
+func TestArchivedEntriesStayFrozen(t *testing.T) {
+	want := map[string]string{
+		"DECISIONS-archive.md": "cd9b401b39b06e39039c9034f72c692ec994169b6c31711c789efa7ea38c918e",
+		"MEASURED-archive.md":  "5625e9729341930ab7a07cdfb65d13ed516381d1b73f9817a11ded5f70d880b0",
+	}
+	for file, wantSum := range want {
+		b, err := os.ReadFile(v2File(file))
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, entries, ok := strings.Cut(string(b), "\n## ")
+		if !ok {
+			t.Fatalf("docs/v2/%s has no archived entries", file)
+		}
+		got := fmt.Sprintf("%x", sha256.Sum256([]byte("## "+entries)))
+		if got != wantSum {
+			t.Errorf("docs/v2/%s entries changed: SHA-256 is %s, want %s", file, got, wantSum)
 		}
 	}
 }

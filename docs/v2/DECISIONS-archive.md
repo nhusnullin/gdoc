@@ -161,7 +161,7 @@ real accept/reject suggestions.
 Measured live on 2026-08-29, not reasoned about:
 
 | | replace the body | in place |
-|---|---|---|---|
+|---|---|---|
 | comment anchors | **100% destroyed** | **100% preserved**, 355 of 355 characters across three anchors |
 | pending suggestions | destroyed and recreated with new ids | byte-identical ids across 22 batches |
 | smart chips | flattened; a date chip loses its date and keeps the string | untouched |
@@ -270,7 +270,7 @@ way.
 highlighted.**
 
 | | `foregroundColor` | also |
-|---|---|---|---|
+|---|---|---|
 | proposed insertion | `rgb(0.18, 0.60, 0.35)` | nothing. No underline, no background |
 | proposed deletion | `rgb(0.80, 0.25, 0.22)` | `strikethrough: true` |
 
@@ -811,7 +811,7 @@ first-page header, a Word TOC field imports as a live refreshable contents list,
 and a PAGE field gives footer numbers. All three verified.
 
 | | born from gdoc's docx | already exists |
-|---|---|---|---|
+|---|---|---|
 | first-page header with positioned logo | **free** | no |
 | live contents list | **free** | no |
 | footer page numbers | **free** | no |
@@ -846,7 +846,7 @@ All three verified. There is no reason to build a new document any other way.
 *Superseded 2026-09-11: the `--new` column is not built. See that entry.*
 
 | | **in place** (default) | **as a new document** (`--new`) |
-|---|---|---|---|
+|---|---|---|
 | how | `batchUpdate` on the original | render its content to a .docx, upload as new |
 | house style | approximate | **exact** |
 | comment threads, with real authors and anchors | **kept** | lost |
@@ -1557,7 +1557,7 @@ versioning table or other content might be added in suggested mode, isn't it?"
 per case, each on a document nobody had suggested anything in:
 
 | Request kind | Asked in SUGGEST mode | What Docs recorded |
-|---|---|---|---|
+|---|---|---|
 | `insertText` | accepted | `suggestedInsertionIds` |
 | `insertPageBreak` | accepted | `suggestedInsertionIds` |
 | `insertTable` | accepted | `suggestedInsertionIds`, 12 marks for one 2x2 table |
@@ -2036,7 +2036,7 @@ never counts against another's. A poll is one Docs read and one Drive listing,
 and Drive is metered in units that a listing barely touches.
 
 | Interval | Docs reads a minute, one user | Users in live review the project pool holds |
-|---|---|---|---|
+|---|---|---|
 | 10s | 6 | 500 |
 | 5s | 12 | 250 |
 | 2s | 30 | 100 |
