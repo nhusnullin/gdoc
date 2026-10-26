@@ -302,7 +302,7 @@ survives this move and the next one.
 - Modify: `docs/v2/MEASURED.md`, `docs/v2/DECISIONS.md` (the measured rows),
   `docs/v2/SPEC.md` (two lines), `docs/v2/PLAN.md` (one line)
 
-- [ ] these twelve sections move, in the order they stand, byte for byte:
+- [x] these twelve sections move, in the order they stand, byte for byte:
       Which styling requests land in place; In-place styling preserves
       anchors and pending suggestions; A named range over a suggested
       insertion; A table takes one index of its own at the end; A proposal
@@ -312,17 +312,17 @@ survives this move and the next one.
       team and a clean install; Drive's import of a Word footnote; Drive's
       import of run shading and text colour; Footnotes and the marks,
       published by gdoc
-- [ ] the archive's header, as in Technical Details
-- [ ] the index's `Entry` column says `MEASURED-archive.md` for those
+- [x] the archive's header, as in Technical Details
+- [x] the index's `Entry` column says `MEASURED-archive.md` for those
       twelve, and the four register rows whose entry moved say the same
-- [ ] "Not measured yet" names the two sections it leans on instead of
+- [x] "Not measured yet" names the two sections it leans on instead of
       "the section above", and keeps the table numbers it cites
-- [ ] the two lines of `docs/v2/SPEC.md` and the one of `docs/v2/PLAN.md`
+- [x] the two lines of `docs/v2/SPEC.md` and the one of `docs/v2/PLAN.md`
       that name a moved measurement by title say which file holds it now;
       nothing else in either file changes
-- [ ] completeness: the two measured files concatenated are the file that
+- [x] completeness: the two measured files concatenated are the file that
       went in, checked the same way as Task 2
-- [ ] `make test` green
+- [x] `make test` green
 
 ### Task 4: the command's reasons keep the rules and lose the walkthrough
 

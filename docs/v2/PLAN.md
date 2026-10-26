@@ -72,7 +72,7 @@ Built. The release waits on the two by-hand gates below. In flight since
 2026-10-03. gdoc becomes a local MCP server inside the same
 binary, so a person reviews a Google Doc from Claude Desktop chat, typed or
 dictated, not only from a Claude Code terminal. Live voice mode does not reach a
-local extension (MEASURED.md, "Claude Desktop, the first run"; DECISIONS.md,
+local extension (MEASURED-archive.md, "Claude Desktop, the first run"; DECISIONS.md,
 2026-10-03), so it is not promised here. The specification is
 `docs/plans/completed/2026-10-02-gdoc-v2-m14-chat.md`, with the nineteen
 decisions Nail took on 2026-10-02 and 2026-10-03 and the seventeen scenarios

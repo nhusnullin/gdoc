@@ -50,15 +50,15 @@ replaced it)`, or `measured`. Nothing else.
 | 2026-08-29 | Live review is a session, not a service | holds | DECISIONS-archive.md |
 | 2026-09-07 | A replace proposal cannot be fully withdrawn by a delete | holds | DECISIONS-archive.md |
 | 2026-09-08 | v1's `gdoc: <id>` stays refused. Publish is the only writer of the block | superseded 2026-09-19 (the one-writer clause only: `export` writes the block too, and the block is a list of documents; the v1 refusal holds) | DECISIONS-archive.md |
-| 2026-09-09 | Which styling requests land in place | measured | MEASURED.md |
+| 2026-09-09 | Which styling requests land in place | measured | MEASURED-archive.md |
 | 2026-09-09 | The guard carries `files.copy`, for one source | holds | DECISIONS-archive.md |
 | 2026-09-09 | Seven paragraph elements were dropped at decode | holds | DECISIONS-archive.md |
 | 2026-09-09 | M7 splits. The survey ships without the write | holds | DECISIONS-archive.md |
 | 2026-09-09 | What an in-place restyle changes, and what it deliberately does not write | holds | DECISIONS-archive.md |
-| 2026-09-10 | In-place styling preserves anchors and pending suggestions | measured | MEASURED.md |
+| 2026-09-10 | In-place styling preserves anchors and pending suggestions | measured | MEASURED-archive.md |
 | 2026-09-10 | The house template reaches a document as a suggestion | holds | DECISIONS-archive.md |
-| 2026-09-10 | A named range over a suggested insertion | measured | MEASURED.md |
-| 2026-09-10 | A table takes one index of its own at the end | measured | MEASURED.md |
+| 2026-09-10 | A named range over a suggested insertion | measured | MEASURED-archive.md |
+| 2026-09-10 | A table takes one index of its own at the end | measured | MEASURED-archive.md |
 | 2026-09-11 | `restyle --new` is not built | holds | DECISIONS-archive.md |
 | 2026-09-16 | Help is an answer, completion is a written file, and two skills learn the tool from the tool | superseded 2026-10-03 (its "what was rejected: an MCP server inside the binary" paragraph only; everything else in the entry holds) | DECISIONS-archive.md |
 | 2026-09-16 | M8 is deferred to the backlog, and the release goes next | holds | DECISIONS-archive.md |

@@ -966,7 +966,7 @@ at ten. Liveness ends with the session. Changed 2026-09-07, DECISIONS.md.
 Serves principle 1. A colleague who has the binary and Claude Desktop reviews a
 document by asking for it in their own words in a Claude Desktop chat, typed or
 dictated, with no terminal open. Live voice mode does not reach a local
-extension (MEASURED.md, "gdoc mcp in Claude Desktop, the first run"). `gdoc mcp` is this binary as a local MCP server: JSON-RPC 2.0,
+extension (MEASURED-archive.md, "gdoc mcp in Claude Desktop, the first run"). `gdoc mcp` is this binary as a local MCP server: JSON-RPC 2.0,
 one message per line, over stdin and stdout, written by hand in `internal/mcp`
 so there is no fourth module. `main()` routes `mcp` before `run()`, because
 `run()` prints one envelope after every command and a table entry's `run` sees
@@ -1091,7 +1091,7 @@ directory, so the binary carries a committed copy and a test fails when the copy
 and `skills/` differ by a byte.
 
 The twelve measurements this section rests on are in
-[MEASURED.md](MEASURED.md), under "Claude Desktop and a local MCP server".
+[MEASURED-archive.md](MEASURED-archive.md), under "Claude Desktop and a local MCP server".
 
 ## Never
 
