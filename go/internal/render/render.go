@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"gdoc/internal/asset"
 	"gdoc/internal/cover"
 	"gdoc/internal/house"
 	"github.com/beevik/etree"
@@ -125,6 +126,9 @@ func Build(cfg *house.Config, logo []byte, f cover.Fields, body []*etree.Element
 	}
 	if len(logo) == 0 {
 		return nil, fmt.Errorf("render: no logo bytes, and the first page's header carries the mark")
+	}
+	if err := asset.Validate(logo, asset.Want{Mime: cfg.Logo.Mime}); err != nil {
+		return nil, fmt.Errorf("render: the logo is invalid: %w", err)
 	}
 	logoImage, err := png.DecodeConfig(bytes.NewReader(logo))
 	if err != nil {

@@ -143,10 +143,10 @@ func Fetch(ctx context.Context, client Drive, id string, want Want) (Bytes, erro
 	return got, nil
 }
 
-// hold is the whole check this room makes on bytes it did not write: a PNG
-// that decodes within the side ceiling. It runs on what Drive answered
-// and on what the cache holds, because a file gdoc half understands must not
-// reach a document by either route.
+// Validate is the whole check gdoc makes on logo bytes: the stated mime is one
+// it understands, the encoded file fits within the byte ceiling, and the PNG
+// decodes within the side ceiling. It is shared by Drive, cache, house-file
+// and render paths so none of them can admit bytes another path refuses.
 //
 // The header is read first and the size is judged on it, because Go's decoder
 // allocates the whole picture from what the header states before it reads one
@@ -160,7 +160,13 @@ func Fetch(ctx context.Context, client Drive, id string, want Want) (Bytes, erro
 // says what the picture would be rather than that it is there: a file cut off
 // after its IHDR chunk reads as the stated size and carries no picture.
 // TestAHalfPNGIsRefusedByBothRoutes is the pin for that half.
-func hold(raw []byte, want Want) error {
+func Validate(raw []byte, want Want) error {
+	if err := want.check(); err != nil {
+		return err
+	}
+	if len(raw) > MaxBytes {
+		return fmt.Errorf("the file is %d bytes, and may not exceed %d", len(raw), MaxBytes)
+	}
 	cfg, err := png.DecodeConfig(bytes.NewReader(raw))
 	if err != nil {
 		return fmt.Errorf("it is not a PNG: %w", err)
@@ -173,3 +179,6 @@ func hold(raw []byte, want Want) error {
 	}
 	return nil
 }
+
+// hold keeps the private name used by this package's cache and boundary tests.
+func hold(raw []byte, want Want) error { return Validate(raw, want) }

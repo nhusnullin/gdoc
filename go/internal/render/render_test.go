@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"gdoc/internal/asset"
 	"gdoc/internal/cover"
 	"gdoc/internal/house"
 	"github.com/beevik/etree"
@@ -77,6 +78,29 @@ func TestBuildRefusesALogoThatIsNotAPNG(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "PNG") {
 		t.Errorf("error %q does not name PNG", err)
+	}
+}
+
+func TestBuildRefusesALogoOutsideTheAssetBounds(t *testing.T) {
+	whole := logoPNG(t, 1, 1)
+	for _, c := range []struct {
+		name string
+		raw  []byte
+		want string
+	}{
+		{name: "byte ceiling", raw: append(append([]byte{}, whole...), make([]byte, asset.MaxBytes)...), want: "may not exceed"},
+		{name: "side ceiling", raw: logoPNG(t, asset.MaxSide+1, 1), want: "4097x1"},
+		{name: "complete decode", raw: append([]byte{}, whole[:33]...), want: "not a PNG"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			_, err := Build(config(t), c.raw, fields(), nil, nil, nil, 0)
+			if err == nil {
+				t.Fatal("Build accepted an out-of-bounds logo")
+			}
+			if !strings.Contains(err.Error(), c.want) {
+				t.Errorf("error %q does not contain %q", err, c.want)
+			}
+		})
 	}
 }
 

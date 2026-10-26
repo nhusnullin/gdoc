@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"gdoc/internal/asset"
 )
 
 // Every value in this file is written as a literal on purpose. A test that
@@ -525,6 +527,39 @@ func TestALogoThatIsNotAPNGIsRefused(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "logo") {
 		t.Errorf("error %q does not name the logo", err)
+	}
+}
+
+func TestABase64LogoObeysTheAssetBounds(t *testing.T) {
+	pngBytes := func(width, height int) []byte {
+		t.Helper()
+		var buf bytes.Buffer
+		if err := png.Encode(&buf, image.NewRGBA(image.Rect(0, 0, width, height))); err != nil {
+			t.Fatalf("encode %dx%d PNG: %v", width, height, err)
+		}
+		return buf.Bytes()
+	}
+	whole := pngBytes(1, 1)
+	for _, c := range []struct {
+		name string
+		raw  []byte
+		want string
+	}{
+		{name: "byte ceiling", raw: append(append([]byte{}, whole...), make([]byte, asset.MaxBytes)...), want: "may not exceed"},
+		{name: "side ceiling", raw: pngBytes(asset.MaxSide+1, 1), want: "4097x1"},
+		{name: "complete decode", raw: append([]byte{}, whole[:33]...), want: "not a PNG"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			encoded := base64.StdEncoding.EncodeToString(c.raw)
+			src := houseWithLogo(t, logoBlock+"  base64: "+encoded+"\n")
+			_, err := LoadFile(write(t, src))
+			if err == nil {
+				t.Fatal("an out-of-bounds base64 logo was accepted")
+			}
+			if !strings.Contains(err.Error(), "logo") || !strings.Contains(err.Error(), c.want) {
+				t.Errorf("error %q does not name the logo and %q", err, c.want)
+			}
+		})
 	}
 }
 

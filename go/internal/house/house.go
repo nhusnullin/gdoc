@@ -120,15 +120,15 @@
 package house
 
 import (
-	"bytes"
 	_ "embed"
 	"encoding/base64"
 	"fmt"
-	"image/png"
 	"os"
 	"regexp"
 	"sort"
 	"strings"
+
+	"gdoc/internal/asset"
 
 	"github.com/goccy/go-yaml"
 )
@@ -1052,19 +1052,15 @@ func (c *Config) validateLogoPlacement() error {
 	return nil
 }
 
-// validateLogoPNG decodes the header of the bytes in logo.base64 and requires
-// a real PNG size. Render reads that same ratio when it draws the mark.
+// validateLogoPNG holds bytes in logo.base64 to the same mime, byte, side and
+// complete-decode checks as a logo read from Drive or cache.
 func (c *Config) validateLogoPNG() error {
 	raw, err := c.LogoBytes()
 	if err != nil {
 		return err
 	}
-	img, err := png.DecodeConfig(bytes.NewReader(raw))
-	if err != nil {
-		return fmt.Errorf("logo: not a PNG: %w", err)
-	}
-	if img.Width <= 0 || img.Height <= 0 {
-		return fmt.Errorf("logo: the PNG is %dx%d, and both sides must be positive", img.Width, img.Height)
+	if err := asset.Validate(raw, asset.Want{Mime: c.Logo.Mime}); err != nil {
+		return fmt.Errorf("logo: %w", err)
 	}
 	return nil
 }
