@@ -227,7 +227,7 @@ final class StateTests: XCTestCase {
     }
 
     let desktop: [(ExtensionMiss, String)] = [
-      (.major, "Update gdoc with --major first, then install the extension."),
+      (.major, "Nothing was installed at 14:02. It needs gdoc update --major first."),
       (
         .stopped,
         "The install stopped at 14:02. gdoc update --desktop in a terminal says why."

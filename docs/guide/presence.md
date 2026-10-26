@@ -399,7 +399,7 @@ Install extension has its own three, on the Claude Desktop row:
 
 | What the run said | The line on the row |
 |---|---|
-| gdoc itself needs the major update first | Update gdoc with --major first, then install the extension. |
+| gdoc itself needs the major update first | Nothing was installed at 14:12. It needs gdoc update --major first. |
 | it stopped | The install stopped at 14:12. gdoc update --desktop in a terminal says why. |
 | the file was written, Desktop was not handed it | Claude Desktop was not handed the extension at 14:12. |
 

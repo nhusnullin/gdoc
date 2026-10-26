@@ -125,7 +125,7 @@ public enum Sentences {
     let clock = Words.clock(run.at, calendar: calendar)
     switch run.miss {
     case .major:
-      return "Update gdoc with --major first, then install the extension."
+      return "Nothing was installed at \(clock). It needs gdoc update --major first."
     case .stopped:
       return "The install stopped at \(clock). gdoc update --desktop in a terminal says why."
     case .handedNothing:
