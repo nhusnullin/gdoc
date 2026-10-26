@@ -281,19 +281,19 @@ survives this move and the next one.
 - Create: `docs/v2/DECISIONS-archive.md`
 - Modify: `docs/v2/DECISIONS.md`
 
-- [ ] the 73 entries before line 4449, ``## 2026-10-16. `---` is a page
+- [x] the 73 entries before line 4449, ``## 2026-10-16. `---` is a page
       break.``, move to the archive in the order they stand, byte for byte,
       no word of any entry edited
-- [ ] the archive's header: what it holds, frozen, the index in
+- [x] the archive's header: what it holds, frozen, the index in
       DECISIONS.md is the way in, no new entry is written here
-- [ ] DECISIONS.md keeps its own header, the whole register and the 13
+- [x] DECISIONS.md keeps its own header, the whole register and the 13
       entries from 2026-10-16 on
-- [ ] every moved row's `Entry` column says `DECISIONS-archive.md`
-- [ ] completeness: the archive's entry half and DECISIONS.md's entry half,
+- [x] every moved row's `Entry` column says `DECISIONS-archive.md`
+- [x] completeness: the archive's entry half and DECISIONS.md's entry half,
       concatenated in that order, are byte for byte the entry half of the
       file before the task, checked with `git show HEAD:docs/v2/DECISIONS.md`
       and `diff`
-- [ ] `make test` green
+- [x] `make test` green
 
 ### Task 3: the measurements before 2026-10-16 move
 
