@@ -97,6 +97,11 @@ type Row struct {
 // house.yaml states. One unit of blue in 255 is not a colour anybody can see,
 // and the live gate reads them as the same value.
 var Known = map[string]string{
+	// The firm replaced the logo in Drive on 2026-10-26 with a 509 by 185 px
+	// picture, and the house draws it 146.25 pt wide with its own ratio. The
+	// master still carries the old 195 by 97 mark at 72.75 pt high.
+	"logo height (pt)": "the logo in Drive is the 2026-10-26 picture, drawn at its own ratio; the master carries the old mark",
+
 	// The master declares the heading colour on the style and overrides it to
 	// the house navy on every heading paragraph.
 	"HEADING_1 colour": "the master's style declares #06436E and every heading paragraph overrides it to the house navy; house.yaml states the effective one",
