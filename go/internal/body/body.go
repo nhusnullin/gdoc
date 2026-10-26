@@ -26,6 +26,7 @@ import (
 	"gdoc/internal/house"
 	"gdoc/internal/markers"
 	"gdoc/internal/render"
+	"gdoc/internal/view"
 )
 
 // Media is one relationship the body needs, a picture or a link. It is
@@ -120,7 +121,7 @@ type renderer struct {
 	// link naming no heading is named on the envelope. Every heading in it
 	// carries its bookmark, whether anything links to it or not. bookmarkID is
 	// the w:id the next pair takes, counting from 0 across the document.
-	anchors    map[string]bool
+	anchors    map[string]string
 	bookmarkID int
 
 	// deadAnchors is every line and destination already named on the
@@ -187,7 +188,7 @@ func Render(cfg *house.Config, markdown []byte, base string, numbering bool) (Re
 	// The parse carries a context of Render's own, because readDefinitions
 	// leaves its snapshot of the footnote definitions there and footnote.go
 	// holds why the parse is the only place one of them can be seen.
-	pc := parser.NewContext()
+	pc := parser.NewContext(parser.WithIDs(view.NewHeadingIDs()))
 	root := parse().Parser().Parse(text.NewReader(source), parser.WithContext(pc))
 	// The footnotes, the grey mark's old spelling and a comment opener nothing
 	// closes are refused before a block is built, all three off the source
@@ -205,10 +206,14 @@ func Render(cfg *house.Config, markdown []byte, base string, numbering bool) (Re
 		return Result{}, err
 	}
 	order, numbers := footnoteNumbers(root)
+	anchors, err := headingAnchors(root, source)
+	if err != nil {
+		return Result{}, err
+	}
 
 	r := &renderer{
 		cfg: cfg, base: base, source: source, marks: newMarkTable(cfg),
-		anchors:     headingAnchors(root, source),
+		anchors:     anchors,
 		deadAnchors: map[string]bool{}, curLine: 1,
 		relID: render.FirstMediaRelID, linkIDs: map[string]string{},
 		firstHeading:   true,
@@ -501,13 +506,12 @@ const (
 	bookmarkHashDigits = 7
 )
 
-// bookmarkName turns goldmark's auto heading id into a name Word accepts.
+// bookmarkName turns a heading id into a name Word accepts.
 //
-// The id arrives as goldmark's generator made it, which is lower-case letters,
-// digits and hyphens, unique across the file. Word takes no hyphen, so every
-// character outside [A-Za-z0-9_] becomes an underscore: the rule is
-// deliberately wider than what goldmark emits, because the ids are the
-// document's and a generator that widens is not this package's to notice.
+// An ASCII id without an underscore keeps the old readable rewrite: Word takes
+// no hyphen or punctuation, so every character outside [A-Za-z0-9_] becomes
+// an underscore. A non-ASCII id, or one with an underscore, takes a short hash
+// instead, so GitHub ids that differ only by '_' and '-' remain distinct.
 //
 // The leading "_h_" is what Drive's import reads: it mints a heading id for a
 // heading paragraph only when the paragraph carries a bookmark whose name
@@ -516,12 +520,14 @@ const (
 // it keeps a heading called "1.1 Purpose" from naming itself with a digit
 // first, which Word refuses once the underscore is stripped.
 //
-// A name over the ceiling keeps its first characters, which is what makes it
-// readable in Word's bookmark list, and takes the hash of the whole id, which
-// is what keeps two long headings sharing a prefix apart. The hash is of the
-// id as it arrived rather than of the underscored name, so two ids that differ
-// only in a character both rewrites drop still get two names.
+// A readable name over the ceiling keeps its first characters and takes the
+// hash of the whole id, which keeps two long headings sharing a prefix apart.
 func bookmarkName(id string) string {
+	if strings.Contains(id, "_") || !isASCII(id) {
+		sum := fnv.New32a()
+		_, _ = sum.Write([]byte(id))
+		return bookmarkPrefix + fmt.Sprintf("%08x", sum.Sum32())[:bookmarkHashDigits]
+	}
 	safe := []rune(bookmarkPrefix + id)
 	for i, c := range safe {
 		switch {
@@ -539,35 +545,82 @@ func bookmarkName(id string) string {
 	return string(safe[:bookmarkStem]) + "_" + digest[:bookmarkHashDigits]
 }
 
-// headingAnchors is every goldmark heading id that will carry a bookmark, read
-// before the blocks are walked so that a link to a heading further down the
-// note resolves. A figure-only heading is left out: it emits no paragraph, so
-// there is nothing for a jump to land on. So is a heading inside a footnote
-// definition, which the footnote walk warns about and leaves out.
-func headingAnchors(root ast.Node, source []byte) map[string]bool {
-	ids := map[string]bool{}
+func isASCII(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] >= 0x80 {
+			return false
+		}
+	}
+	return true
+}
+
+// headingAnchors maps every current heading id and every legacy goldmark id to
+// the bookmark the heading carries. Current ids are installed first, so an
+// alias can never shadow a current heading. Dropped headings advance both id
+// generators but receive no mapping because no bookmark is emitted for them.
+func headingAnchors(root ast.Node, source []byte) (map[string]string, error) {
+	type headingAnchor struct {
+		id, legacy, bookmark, words string
+		included                    bool
+	}
+	legacy := parser.NewContext().IDs()
+	var headings []headingAnchor
 	_ = ast.Walk(root, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
 		if !entering {
 			return ast.WalkContinue, nil
-		}
-		if _, dropped := node.(*east.FootnoteList); dropped {
-			return ast.WalkSkipChildren, nil
 		}
 		heading, ok := node.(*ast.Heading)
 		if !ok {
 			return ast.WalkContinue, nil
 		}
-		if isFigureOnly(heading, source) {
-			return ast.WalkSkipChildren, nil
+		var line []byte
+		if heading.Lines().Len() > 0 {
+			segment := heading.Lines().At(heading.Lines().Len() - 1)
+			line = segment.Value(source)
 		}
+		record := headingAnchor{legacy: string(legacy.Generate(line, ast.KindHeading))}
 		if id, ok := heading.AttributeString("id"); ok {
 			if raw, ok := id.([]byte); ok {
-				ids[string(raw)] = true
+				record.id = string(raw)
 			}
 		}
+		record.bookmark = bookmarkName(record.id)
+		record.words = strings.TrimSpace(string(heading.Text(source)))
+		record.included = !insideFootnote(heading) && !isFigureOnly(heading, source)
+		headings = append(headings, record)
 		return ast.WalkContinue, nil
 	})
-	return ids
+
+	ids := map[string]string{}
+	owners := map[string]string{}
+	for _, heading := range headings {
+		if !heading.included {
+			continue
+		}
+		if first, exists := owners[heading.bookmark]; exists {
+			return nil, fmt.Errorf("headings %q and %q share the bookmark %q", first, heading.words, heading.bookmark)
+		}
+		owners[heading.bookmark] = heading.words
+		ids[heading.id] = heading.bookmark
+	}
+	for _, heading := range headings {
+		if !heading.included {
+			continue
+		}
+		if _, current := ids[heading.legacy]; !current {
+			ids[heading.legacy] = heading.bookmark
+		}
+	}
+	return ids, nil
+}
+
+func insideFootnote(node ast.Node) bool {
+	for parent := node.Parent(); parent != nil; parent = parent.Parent() {
+		if _, ok := parent.(*east.FootnoteList); ok {
+			return true
+		}
+	}
+	return false
 }
 
 // isFigureOnly is a heading that holds a picture and no words of its own,

@@ -1097,7 +1097,8 @@ func HeadingLines(md string) []HeadingLine {
 		goldmark.WithExtensions(extension.GFM, extension.Footnote),
 		goldmark.WithParserOptions(parser.WithAutoHeadingID()),
 	)
-	doc := markdown.Parser().Parse(goldtext.NewReader(source))
+	pc := parser.NewContext(parser.WithIDs(NewHeadingIDs()))
+	doc := markdown.Parser().Parse(goldtext.NewReader(source), parser.WithContext(pc))
 	var out []HeadingLine
 	_ = ast.Walk(doc, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
 		if !entering {
@@ -1125,26 +1126,61 @@ func HeadingLines(md string) []HeadingLine {
 	return out
 }
 
-// Anchor is a heading's words as the id a link to it names. It is goldmark's
-// own heading id rule, asked of goldmark rather than written out again here,
-// because the ids internal/body collects are the ids goldmark made: a second
-// copy of the rule is the copy that drifts, and a link whose target is one
-// character off is a link `publish` prints as plain text.
-//
-// The rule is not Slug's. goldmark keeps ASCII letters and digits, turns each
-// space, hyphen and underscore into one hyphen, and drops everything else,
-// accented letters included. So "Risk & Control" is "risk--control" and
-// "Résumé" is "rsum". Two rules that look alike and are not is why this one is
-// asked rather than copied. TestTheAnchorViewWritesIsTheIDBodyCollects, which
-// asks goldmark for the answer rather than stating one, is the pin, and
-// TestAHeadingLinkRoundTripsToItsSlug is the same rule seen from the file.
-//
-// A fresh generator each call, so the answer is these words' own id and never
-// carries the "-1" goldmark adds to a heading it has already seen. Two headings
-// with the same words share an anchor and a link to the second lands on the
-// first, which is what markdown itself does with them.
+// headingIDs is the one heading-id rule shared by the projected markdown and
+// the body parser. It follows GitHub: Unicode letters, numbers and marks stay,
+// as do '-' and '_'; each space becomes '-', and other punctuation is dropped.
+type headingIDs struct {
+	used map[string]bool
+}
+
+// NewHeadingIDs returns an empty heading-id collection for one markdown file.
+// A heading made entirely of punctuation takes "heading", the one deliberate
+// exception to GitHub's empty answer, so every heading still has a target.
+func NewHeadingIDs() parser.IDs {
+	return &headingIDs{used: map[string]bool{}}
+}
+
+func (ids *headingIDs) Generate(value []byte, kind ast.NodeKind) []byte {
+	var b strings.Builder
+	for _, r := range strings.TrimSpace(string(value)) {
+		r = unicode.ToLower(r)
+		switch {
+		case unicode.IsLetter(r), unicode.IsNumber(r), unicode.IsMark(r), r == '-', r == '_':
+			b.WriteRune(r)
+		case unicode.IsSpace(r):
+			b.WriteByte('-')
+		}
+	}
+	base := b.String()
+	if base == "" {
+		if kind == ast.KindHeading {
+			base = "heading"
+		} else {
+			base = "id"
+		}
+	}
+	if !ids.used[base] {
+		ids.used[base] = true
+		return []byte(base)
+	}
+	for suffix := 1; ; suffix++ {
+		candidate := fmt.Sprintf("%s-%d", base, suffix)
+		if !ids.used[candidate] {
+			ids.used[candidate] = true
+			return []byte(candidate)
+		}
+	}
+}
+
+func (ids *headingIDs) Put(value []byte) {
+	ids.used[string(value)] = true
+}
+
+// Anchor is a heading's words as the id a link to it names. It asks a fresh
+// NewHeadingIDs once, so a caller naming one heading gets the shared rule
+// without carrying repetition state from another heading.
 func Anchor(s string) string {
-	return string(parser.NewContext().IDs().Generate([]byte(s), ast.KindHeading))
+	return string(NewHeadingIDs().Generate([]byte(s), ast.KindHeading))
 }
 
 // Slug is a heading's words as a file name: lower case, every run of
@@ -1156,8 +1192,8 @@ func Anchor(s string) string {
 // title and a second copy of the rule there would be the one that drifted.
 // TestTabSlugsCollide is the pin.
 //
-// It is not the rule a heading id follows. That rule is goldmark's, and it is
-// Anchor.
+// It is not the rule a heading id follows. That rule is NewHeadingIDs, and a
+// single heading's answer is Anchor.
 func Slug(s string) string {
 	var b strings.Builder
 	gap := false

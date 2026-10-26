@@ -348,12 +348,13 @@ func (r *renderer) addRuns(parent *etree.Element, runs []Run, base runOpts) {
 			continue
 		}
 		if anchor, ok := strings.CutPrefix(run.Link, "#"); ok {
-			if !r.anchors[anchor] {
+			bookmark, found := r.anchors[anchor]
+			if !found {
 				r.warnDeadAnchor(anchor)
 				textRun(parent, run.Text, o)
 				continue
 			}
-			wrapper := sub(parent, "w:hyperlink", "w:anchor", bookmarkName(anchor))
+			wrapper := sub(parent, "w:hyperlink", "w:anchor", bookmark)
 			o.Color = linkColor
 			o.Underline = true
 			textRun(wrapper, run.Text, o)

@@ -333,13 +333,15 @@
 //
 // The words are the document's own and the target is where they point: the
 // address for a link out of the document, and "#" with an anchor for a link to
-// a heading inside it. The anchor rule is goldmark's, asked of goldmark in
-// Anchor rather than written out again, because the ids internal/body resolves
-// a note's links against are the ids goldmark made: a link read out of a
-// document and the link a note wrote are then the same string, which is what
-// lets a session compare the two without translating either.
-// TestALinkPrintsItsTarget, links.golden and
-// TestTheAnchorViewWritesIsTheIDBodyCollects are the pins.
+// a heading inside it. NewHeadingIDs is GitHub's rule: it keeps Unicode
+// letters, numbers and marks, '-' and '_', turns each space into '-', and
+// drops other punctuation. A heading with nothing left takes "heading", the
+// deliberate exception to GitHub's empty answer. Anchor asks a fresh generator
+// once, HeadingLines uses one across the file, and internal/body hands the same
+// generator to goldmark, so a projected link and the parsed heading stay one
+// string. TestAnAnchorKeepsEveryLetter, TestARepeatedIDTakesTheNextSuffix,
+// TestALinkPrintsItsTarget and TestTheAnchorViewWritesIsTheIDBodyCollects are
+// the pins.
 //
 // HeadingLines asks the same parser which source lines are headings, carrying
 // each line's words and generated id. Code and footnote definitions do not

@@ -621,7 +621,7 @@ literals in the tests: `Цели проекта` is `цели-проекта`; `
   `go/internal/export/project_test.go`
 - Create: `go/internal/body/testdata/golden/heading-ids.txt`
 
-- [ ] test first, the pin on today's ids, before any rule changes:
+- [x] test first, the pin on today's ids, before any rule changes:
   - `body`: `TestTodaysHeadingIDsStillResolve`. For each
     `testdata/docs/*.md`, and for the three headings of the live probe note
     stated as literals in the test (`where-a-heading-id-comes-from`,
@@ -637,7 +637,7 @@ literals in the tests: `Цели проекта` is `цели-проекта`; `
   - write the golden with `go test ./internal/body -run
     TestTodaysHeadingIDsStillResolve -update-heading-ids` now, on today's
     code, and run it without the flag: green
-- [ ] test first, the new rule:
+- [x] test first, the new rule:
   - `view`: `TestAnAnchorKeepsEveryLetter`: the seven literal examples in
     Technical Details
   - `view`: `TestARepeatedIDTakesTheNextSuffix`: one `NewHeadingIDs()` asked
@@ -673,31 +673,31 @@ literals in the tests: `Цели проекта` is `цели-проекта`; `
   - `body`: `TestTheAnchorViewWritesIsTheIDBodyCollects` parses through the
     same context `Render` builds rather than through `parse()` alone, and adds
     `Цели проекта` and `1.1-Цели проекта` to its headings
-- [ ] run them: red
-- [ ] `view.NewHeadingIDs` and `view.Anchor` as in Technical Details;
+- [x] run them: red
+- [x] `view.NewHeadingIDs` and `view.Anchor` as in Technical Details;
       `view.HeadingLines` uses the new ids
-- [ ] `body`: the parse context, `headingAnchors` as a map to bookmark names
+- [x] `body`: the parse context, `headingAnchors` as a map to bookmark names
       with legacy aliases, `bookmarkName`, the
       collision refusal, and `build.go` reading the map
-- [ ] once `view.NewHeadingIDs` exists, `TestTodaysHeadingIDsStillResolve`
+- [x] once `view.NewHeadingIDs` exists, `TestTodaysHeadingIDsStillResolve`
       gains its third assertion: for every heading that is ASCII and has no
       `_`, the new id equals the golden id, so export writes the same link it
       wrote yesterday
-- [ ] `TestTodaysHeadingIDsStillResolve` green, and
+- [x] `TestTodaysHeadingIDsStillResolve` green, and
       `git diff -- go/internal/body/testdata/golden/heading-ids.txt` is empty
       after its first write: the file is never regenerated after that
-- [ ] `go test ./internal/body -run TestTheSixDocumentsRenderToTheirGoldens
+- [x] `go test ./internal/body -run TestTheSixDocumentsRenderToTheirGoldens
       -update` for the body goldens: only
       `05-edge-cases.xml` moves, at the Résumé heading's bookmark name and
       any jump into it; the commit message names it
-- [ ] `body/doc.go`, "Every heading carries a hidden bookmark": the id rule is
+- [x] `body/doc.go`, "Every heading carries a hidden bookmark": the id rule is
       `view`'s and GitHub's, the one exception (`heading`), the legacy alias
       and why, the hashed name for a non-ASCII id with the measurement of
       2026-10-26 named, the collision refusal, each with its test.
       `view/doc.go`, the link section: the rule is no longer goldmark's
       default but `NewHeadingIDs`, which `body` hands to goldmark, with its
       tests
-- [ ] `make test` green
+- [x] `make test` green
 
 ### Task 7: a link to a repeated heading names that heading
 

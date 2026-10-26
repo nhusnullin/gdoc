@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/yuin/goldmark/ast"
+
 	"gdoc/internal/docs"
 )
 
@@ -872,6 +874,39 @@ func TestHeadingLinesFindsWhatGoldmarkFinds(t *testing.T) {
 	for i := range want {
 		if got[i] != want[i] {
 			t.Errorf("HeadingLines()[%d] = %+v, want %+v", i, got[i], want[i])
+		}
+	}
+}
+
+// TestAnAnchorKeepsEveryLetter pins the shared GitHub heading-id rule. It
+// keeps Unicode letters, numbers and marks, keeps underscores, turns each
+// space into one hyphen, and drops punctuation without closing the gaps.
+func TestAnAnchorKeepsEveryLetter(t *testing.T) {
+	for _, c := range []struct{ heading, want string }{
+		{"Цели проекта", "цели-проекта"},
+		{"1.1-Цели проекта", "11-цели-проекта"},
+		{"Ёлка", "ёлка"},
+		{"under_score and space", "under_score-and-space"},
+		{"Risk & Control", "risk--control"},
+		{"+++", "heading"},
+		{"Résumé of Änderungen: naïve café", "résumé-of-änderungen-naïve-café"},
+	} {
+		if got := Anchor(c.heading); got != c.want {
+			t.Errorf("Anchor(%q) = %q, want %q", c.heading, got, c.want)
+		}
+	}
+}
+
+func TestARepeatedIDTakesTheNextSuffix(t *testing.T) {
+	ids := NewHeadingIDs()
+	for i, c := range []struct{ heading, want string }{
+		{"Итоги", "итоги"},
+		{"Итоги", "итоги-1"},
+		{"Итоги-1", "итоги-1-1"},
+		{"Итоги", "итоги-2"},
+	} {
+		if got := string(ids.Generate([]byte(c.heading), ast.KindHeading)); got != c.want {
+			t.Errorf("id %d for %q = %q, want %q", i, c.heading, got, c.want)
 		}
 	}
 }

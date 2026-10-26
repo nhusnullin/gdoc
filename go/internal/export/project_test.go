@@ -202,17 +202,16 @@ func TestAnEditedPreludeStaysAndWarns(t *testing.T) {
 
 // TestAHeadingLinkRoundTripsToItsSlug is the link into the document as the
 // note writes one. The two headings are the shapes 05-edge-cases.md holds: an
-// ampersand between two spaces, and accents. Both are goldmark's answer and
-// not the file-name slug's: goldmark writes one hyphen per space and drops a
-// letter it does not call ASCII, so these two are the headings that tell the
-// rules apart. TestTheAnchorViewWritesIsTheIDBodyCollects is the other half,
-// which asks goldmark itself rather than a literal.
+// ampersand between two spaces, and accents. Both use GitHub's heading rule
+// through view.NewHeadingIDs: punctuation is dropped without closing spaces,
+// while accented letters are kept. TestTheAnchorViewWritesIsTheIDBodyCollects
+// is the other half, which asks the shared generator rather than a literal.
 func TestAHeadingLinkRoundTripsToItsSlug(t *testing.T) {
 	files, _, _, _ := Project(fixture(t, "headings.json"), nil, nil)
 
 	for _, want := range []string{
 		"[Risk & Control <ampersands>](#risk--control-ampersands)",
-		"[the changes](#rsum-of-nderungen-nave-caf)",
+		"[the changes](#résumé-of-änderungen-naïve-café)",
 	} {
 		if !strings.Contains(files[0].Body, want) {
 			t.Errorf("%s is not in the file:\n%s", want, files[0].Body)
