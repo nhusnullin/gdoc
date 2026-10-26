@@ -1613,7 +1613,8 @@ func checkMaskIsSet(kind string, fields map[string]json.RawMessage, named []stri
 func walkMaskPath(kind, styleKey string, styleRaw json.RawMessage, path string) error {
 	at := styleKey
 	raw := styleRaw
-	for _, seg := range strings.Split(path, ".") {
+	segments := strings.Split(path, ".")
+	for i, seg := range segments {
 		seg = strings.TrimSpace(seg)
 		var obj map[string]json.RawMessage
 		if err := json.Unmarshal(raw, &obj); err != nil {
@@ -1627,6 +1628,9 @@ func walkMaskPath(kind, styleKey string, styleRaw json.RawMessage, path string) 
 				}
 			}
 			return refuse("the fields mask of %q names %q, and %q does not set %q. A field named in the mask and left unset is that property reset to its default, permanently, with every character intact", kind, path, at, seg)
+		}
+		if i == len(segments)-1 && bytes.Equal(bytes.TrimSpace(next), []byte("null")) {
+			return refuse("the fields mask of %q names %q, and %q holds it as null, which the server reads as unset: the property is reset to its default", kind, path, at)
 		}
 		at = seg
 		raw = next

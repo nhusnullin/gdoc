@@ -399,7 +399,7 @@ literals in the tests: `Цели проекта` is `цели-проекта`; `
 - Modify: `go/internal/guard/policy.go`, `go/internal/guard/inplace_test.go`,
   `go/internal/guard/doc.go`
 
-- [ ] test first: `TestAMaskNamingANullFieldIsRefused` in `inplace_test.go`,
+- [x] test first: `TestAMaskNamingANullFieldIsRefused` in `inplace_test.go`,
       table-driven like `TestAMaskMayNameOnlyWhatTheRequestSets`, using
       `granted(t)`, `batch(kind, inner)` and `inPlaceURL`. Cases, each refused
       with an error naming `null` and the path:
@@ -415,15 +415,15 @@ literals in the tests: `Цели проекта` is `цели-проекта`; `
       and a `null` style object (`{"textStyle":null,"fields":"bold"}`). These
       two assert the refusal and that it names the path, and not the word
       `null`, because today's refusal for them is the missing-segment one
-- [ ] run it: the five `null` leaf cases are red, the two parent cases green
-- [ ] `walkMaskPath` refuses a segment whose raw value is `null`, as in
+- [x] run it: the five `null` leaf cases are red, the two parent cases green
+- [x] `walkMaskPath` refuses a segment whose raw value is `null`, as in
       Technical Details
-- [ ] `TestAMaskNamingExactlyWhatItSetsCarries` and `TestAnOrdinaryMaskCarries`
+- [x] `TestAMaskNamingExactlyWhatItSetsCarries` and `TestAnOrdinaryMaskCarries`
       still green, untouched; no other guard test edited
-- [ ] `guard/doc.go`, the paragraph "A mask may name only what the request
+- [x] `guard/doc.go`, the paragraph "A mask may name only what the request
       sets": one sentence that a field held as `null` is a field left unset,
       naming `TestAMaskNamingANullFieldIsRefused`
-- [ ] `make test` green
+- [x] `make test` green
 
 ### Task 2: render writes a cover line's, a footer's and a label's own look
 

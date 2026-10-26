@@ -397,6 +397,78 @@ func TestAMaskMayNameOnlyWhatTheRequestSets(t *testing.T) {
 	}
 }
 
+func TestAMaskNamingANullFieldIsRefused(t *testing.T) {
+	cases := []struct {
+		name, kind, inner, path string
+		wantNull                bool
+	}{
+		{
+			"a null text style leaf",
+			"updateTextStyle",
+			`{"textStyle":{"bold":null},"fields":"bold"}`,
+			"bold",
+			true,
+		},
+		{
+			"a null paragraph style leaf",
+			"updateParagraphStyle",
+			`{"paragraphStyle":{"spaceBelow":null},"fields":"spaceBelow"}`,
+			"spaceBelow",
+			true,
+		},
+		{
+			"a null document style leaf",
+			"updateDocumentStyle",
+			`{"documentStyle":{"pageSize":{"width":{"magnitude":595,"unit":"PT"},"height":null}},"fields":"pageSize.height"}`,
+			"pageSize.height",
+			true,
+		},
+		{
+			"a null cell style leaf",
+			"updateTableCellStyle",
+			`{"tableCellStyle":{"backgroundColor":null},"fields":"backgroundColor"}`,
+			"backgroundColor",
+			true,
+		},
+		{
+			"a null leaf beside a set field",
+			"updateTextStyle",
+			`{"textStyle":{"bold":true,"italic":null},"fields":"bold,italic"}`,
+			"italic",
+			true,
+		},
+		{
+			"a null parent",
+			"updateTextStyle",
+			`{"textStyle":{"foregroundColor":null},"fields":"foregroundColor.color"}`,
+			"foregroundColor.color",
+			false,
+		},
+		{
+			"a null style object",
+			"updateTextStyle",
+			`{"textStyle":null,"fields":"bold"}`,
+			"bold",
+			false,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			p := granted(t)
+			err := p.Judge("POST", mustURL(t, inPlaceURL), batch(c.kind, c.inner))
+			if err == nil {
+				t.Fatalf("a mask naming %s must be refused when the request holds it as null", c.path)
+			}
+			if !strings.Contains(err.Error(), c.path) {
+				t.Errorf("the refusal must name path %q; got %v", c.path, err)
+			}
+			if strings.Contains(err.Error(), "null") != c.wantNull {
+				t.Errorf("the refusal's null wording = %t, want %t: %v", strings.Contains(err.Error(), "null"), c.wantNull, err)
+			}
+		})
+	}
+}
+
 // The other direction. A request that sets everything its mask names is
 // ordinary work at this level, and it is what every builder in internal/restyle
 // writes: TestEveryMaskNamesExactlyWhatItSets is the same property asked of the
