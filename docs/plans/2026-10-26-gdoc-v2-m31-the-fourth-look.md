@@ -458,18 +458,18 @@ branch.
 **Files:**
 - Modify: this plan
 
-- [ ] every row of the Acceptance table at the foot of this plan names a
+- [x] every row of the Acceptance table at the foot of this plan names a
       test that exists and passes; a test a task named differently is
       renamed here, not in the code
-- [ ] `git diff --name-only main...HEAD`: nothing under `go/` outside
+- [x] `git diff --name-only main...HEAD`: nothing under `go/` outside
       `go/internal/presence/`, `go/cmd/gdoc/` (publish, `build.go`'s
       `renderNote` and their tests) and `go/boundary/presence_test.go`,
       `CLAUDE.md` and `docs/v2/` not in the list, and the nine backlog files
       of this plan deleted
-- [ ] `grep -rn "popover(" presence/Sources` prints nothing;
+- [x] `grep -rn "popover(" presence/Sources` prints nothing;
       `grep -rn "NSWorkspace\|NSPasteboard" presence/Sources` names
       `Opener.swift` and `Relauncher.swift` only
-- [ ] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
+- [x] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
       `make app-lint`, `make app-test`, `make app`
 
 ### Task 10: [Final] Update documentation
@@ -506,10 +506,10 @@ row's test is the one that fails if its answer is taken away.
 | a failed run must not look like a stopped one | "reply failed Tue" against "live stopped 12:26" | `StateTests.testAFailedRunDoesNotReadAsAStoppedOne` |
 | names survive a verb | the floor and the cut are measured on the name | `RowTests.testAPrefixTakesItsRoomAndTheFloorCountsTheName` |
 | names survive a publish that stopped in the render | the end carries the note's cover title | `TestAPublishThatStoppedInTheRenderNamesTheNote`, `TestANamedTitleIsWrittenOnlyWhereTheAnswerCarriesNone`, `TestNamedHasOnlyPublishAsCaller` |
-| the update buttons say what happened | one fixed sentence with its moment per case, on the row of the button | `StateTests.testEachRunThatInstalledNothingSaysWhyInAFixedSentence`, `UpdateActionTests` over the standings |
-| menus keep the panel open | the held press is the system menu from the row's own view; no popover in the source | `SourceRulesTests` popover rule, the menu presenter test |
+| the update buttons say what happened | one fixed sentence with its moment per case, on the row of the button | `StateTests.testEachRunThatInstalledNothingSaysWhyInAFixedSentence`, `UpdateActionTests.testTheRunIsReadByOkAndTheActionWordAlone`, `UpdateActionTests.testARunThatDidSomethingWritesNoSentence` |
+| menus keep the panel open | the held press is the system menu from the row's own view; no popover in the source | `SourceRulesTests.testNoViewOpensASecondWindow`, `CardTests.testTheHeldPressOpensTheSystemMenuWithTheRowsOwnWords` |
 | the folder picker keeps the panel open | there is no picker since the third look | `SourceRulesTests.testTheSystemIsAskedOnlyThroughTheOpenerAndTheRelauncher` |
-| a large hub folder cannot slow the Mac | 20,000 entries at most, one walk at a time, Spotlight over the ceiling | `HubIndexTests` ceiling test, `SessionTests` cancel and over-ceiling tests |
+| a large hub folder cannot slow the Mac | 20,000 entries at most, one walk at a time, Spotlight over the ceiling | `HubIndexTests.testAHubOverTheCeilingIsWalkedNoFurther`, `SessionTests.testOnlyOneWalkOfTheHubRunsAtATime`, `SessionTests.testAHubOverTheCeilingIsSetAsideAndSpotlightAnswers` |
 | the flaky panel test is fixed | Spotlight waits for the override's scan | `SessionTests.testSpotlightWaitsWhileTheOverrideIsBeingRead` |
 
 ## Post-Completion
