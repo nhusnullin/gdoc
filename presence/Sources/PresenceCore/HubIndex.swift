@@ -18,6 +18,12 @@
 // same synchronous scan a first open runs, so nothing about the pairing
 // depends on an event's own words, and a debounce means a vault syncing a
 // hundred files rescans once.
+//
+// The walk has a ceiling and lets go when a newer walk is asked for. The hub
+// is a path somebody typed into `defaults write`, so one typo is a home
+// folder, and a menu bar app may not walk one of those on every file event.
+// Over the ceiling the walk stops and says so, and the session sets the
+// override aside for that folder.
 
 import CoreServices
 import Foundation
@@ -41,18 +47,35 @@ public enum NoteFault: String, Error, Sendable, Equatable {
   case notMarkdown
 }
 
+/// Why a walk of the hub stopped before it had seen the whole tree. Neither
+/// is a judgement about somebody's folder: one says a newer walk was asked
+/// for, the other says the folder is larger than this app reads.
+public enum HubStop: String, Sendable, Equatable {
+  /// A newer walk was asked for, so this one let go between two entries.
+  /// Its answer is nobody's: testOnlyOneWalkOfTheHubRunsAtATime.
+  case cancelled
+  /// The walk had visited its ceiling of entries and the tree went on, so
+  /// it stopped and carries no notes:
+  /// testAHubOverTheCeilingIsWalkedNoFurther.
+  case overTheCeiling
+}
+
 /// Every document the hub's notes name, and the note that names it.
 public struct HubIndex: Sendable, Equatable {
   /// The folder the person chose, resolved.
   public let hub: String
   /// A document id to the note's path relative to the hub.
   public let notes: [String: String]
+  /// Why the walk that built this stopped early, where it did. Nothing on a
+  /// walk that saw the whole tree.
+  public let stop: HubStop?
 
   public static let empty = HubIndex(hub: "", notes: [:])
 
-  public init(hub: String, notes: [String: String]) {
+  public init(hub: String, notes: [String: String], stop: HubStop? = nil) {
     self.hub = hub
     self.notes = notes
+    self.stop = stop
   }
 
   /// The note paired with a document, as a path inside the hub.
@@ -72,11 +95,33 @@ public struct HubIndex: Sendable, Equatable {
   /// pasted a book into is not read into memory.
   public static let frontMatterBytes = 64 * 1024
 
+  /// How many entries one walk may visit before it gives up on the folder,
+  /// dot folders and what is under them not counted.
+  ///
+  /// The hub is a `defaults write` nobody is offered, so `~`, `/` or a
+  /// mounted volume is one typo away, and a menu bar app may not walk one of
+  /// those on every file event. Nail's own hub, the Altery-Platform-Hub, is
+  /// 1,376 entries outside dot folders, measured 2026-10-26, so this is
+  /// about fourteen times the folder the app was written for, and a home
+  /// folder is far over it: testAHubOverTheCeilingIsWalkedNoFurther.
+  public static let entryCeiling = 20_000
+
   /// Every `.md` file under the hub, read for its `gdoc:` block.
   ///
   /// Two notes naming one document is somebody's own mistake rather than a
   /// refusal: the first by path wins, so the same note wins every scan.
-  public static func scan(hub: String, fileManager: FileManager = .default) -> HubIndex {
+  ///
+  /// Two things stop it short, and both answer an index with no notes rather
+  /// than half a pairing: the ceiling, because a folder over it is not the
+  /// folder this app was pointed at, and a cancellation, because a newer
+  /// walk of the same folder is already out. The ceiling and the question
+  /// are handed in so a test states a small number and a tree it built.
+  public static func scan(
+    hub: String,
+    fileManager: FileManager = .default,
+    ceiling: Int = entryCeiling,
+    isCancelled: () -> Bool = { Task.isCancelled }
+  ) -> HubIndex {
     let root = URL(fileURLWithPath: hub)
     // By path and not by URL: the enumerator over paths hands back the path
     // relative to the root it was given, which is the thing the index holds.
@@ -88,7 +133,11 @@ public struct HubIndex: Sendable, Equatable {
     }
 
     var found: [String: String] = [:]
+    var visited = 0
     for case let relative as String in walker {
+      // Between two entries and not inside one: the read of a note is a
+      // handful of kilobytes, and the walk is what takes the time.
+      if isCancelled() { return HubIndex(hub: root.path, notes: [:], stop: .cancelled) }
       // A dot folder is somebody's own machinery: .obsidian, .git, .trash.
       // The whole folder goes, and only a folder: skipDescendants on a plain
       // file abandons the rest of the folder the file is in, and Finder
@@ -99,6 +148,10 @@ public struct HubIndex: Sendable, Equatable {
           walker.skipDescendants()
         }
         continue
+      }
+      visited += 1
+      if visited > ceiling {
+        return HubIndex(hub: root.path, notes: [:], stop: .overTheCeiling)
       }
       guard relative.lowercased().hasSuffix(".md") else { continue }
       let url = root.appendingPathComponent(relative)

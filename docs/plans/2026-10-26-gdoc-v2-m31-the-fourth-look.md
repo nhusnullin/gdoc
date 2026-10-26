@@ -209,9 +209,9 @@ branch.
 - Delete: `docs/backlog/the-override-before-spotlight-test-is-flaky.md`,
   `docs/backlog/a-chosen-hub-is-walked-with-no-bound.md`
 
-- [ ] the scan is injected into `Session` (a closure from hub path to
+- [x] the scan is injected into `Session` (a closure from hub path to
       `HubIndex`, `HubIndex.scan` by default), so a test can hold it
-- [ ] while the override's scan for the current hub has not landed,
+- [x] while the override's scan for the current hub has not landed,
       `lookUpTheNotes` asks Spotlight about nothing; the landing scan's
       recompose asks for what the override did not pair. Test
       `testSpotlightWaitsWhileTheOverrideIsBeingRead`: the scan held on a
@@ -222,7 +222,7 @@ branch.
       Spotlight back again (`testOnlyTheFirstScanHoldsSpotlight`).
       `testTheOverrideIsAskedBeforeSpotlight` passes 50 runs in a row
       (`swift test --filter` in a loop, once, not kept as a test)
-- [ ] `HubIndex.scan` visits at most 20,000 entries, dot folders not
+- [x] `HubIndex.scan` visits at most 20,000 entries, dot folders not
       counted. Over it the walk stops and answers an index marked over the
       ceiling, with no notes; the session then sets the override aside for
       that hub, stops its watcher and lets the finder answer. The number is
@@ -230,12 +230,12 @@ branch.
       Tests over a fixture tree built with a small ceiling handed in:
       under it every note is found, over it nothing is and the index says
       so, and the session asks Spotlight and holds no watcher
-- [ ] one walk at a time: `rescanTheHub` cancels the walk before it, and
+- [x] one walk at a time: `rescanTheHub` cancels the walk before it, and
       `scan` checks for cancellation between entries; a test holds the
       first scan, starts a second, and reads that the first stopped and its
       answer was never taken
-- [ ] `git rm` both backlog files
-- [ ] `make app-lint`, `make app-test`
+- [x] `git rm` both backlog files
+- [x] `make app-lint`, `make app-test`
 
 ### Task 2: a publish that stopped in the render keeps the note's name
 

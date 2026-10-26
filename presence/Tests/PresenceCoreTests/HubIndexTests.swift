@@ -171,6 +171,69 @@ final class HubIndexTests: XCTestCase {
     XCTAssertNil(index.notes[Self.treasury], "a note inside a dot folder is not the hub's")
   }
 
+  /// A folder with more entries than the walk reads is walked no further,
+  /// and the index says why rather than carrying half a pairing.
+  ///
+  /// Half a pairing would be the worse answer: the notes under the first
+  /// few hundred entries would pair, every note past them would not, and
+  /// nothing on the screen would say which half a grey icon was in. The
+  /// number here is three, so the tree is one a reader can count; the one
+  /// the app runs with is `HubIndex.entryCeiling`.
+  func testAHubOverTheCeilingIsWalkedNoFurther() throws {
+    let hub = try temporaryHub()
+    try note(in: hub, at: "a.md", id: Self.supplier)
+    try note(in: hub, at: "b.md", id: Self.treasury)
+    try note(in: hub, at: "c.md", id: Self.archived)
+
+    XCTAssertEqual(HubIndex.entryCeiling, 20_000, "the number the app walks with")
+
+    let under = HubIndex.scan(hub: hub, ceiling: 3)
+    XCTAssertEqual(under.notes.count, 3, "three entries under a ceiling of three, all read")
+    XCTAssertNil(under.stop, "and the walk saw the whole tree")
+
+    let over = HubIndex.scan(hub: hub, ceiling: 2)
+    XCTAssertEqual(over.stop, .overTheCeiling, "the third entry is one too many")
+    XCTAssertEqual(over.notes, [:], "so there is no pairing at all, not the first two")
+    XCTAssertEqual(over.hub, hub, "and the folder it stopped in is named")
+  }
+
+  /// A dot folder's own entries are not counted against the ceiling: they
+  /// are not walked at all, so a vault with a large `.obsidian` cache is
+  /// the folder the person keeps notes in and nothing else.
+  func testADotFolderCostsTheCeilingNothing() throws {
+    let hub = try temporaryHub()
+    try note(in: hub, at: "a.md", id: Self.supplier)
+    for which in 0..<5 {
+      try note(in: hub, at: ".obsidian/cache-\(which).md", id: Self.treasury)
+    }
+
+    let index = HubIndex.scan(hub: hub, ceiling: 2)
+    XCTAssertNil(index.stop, "one note and one dot folder is two entries")
+    XCTAssertEqual(index.notes[Self.supplier], "a.md")
+  }
+
+  /// A walk that is asked to let go lets go between two entries, and
+  /// carries no pairing: whoever asked it to stop wanted a newer one.
+  func testAWalkThatIsCancelledCarriesNoPairing() throws {
+    let hub = try temporaryHub()
+    try note(in: hub, at: "a.md", id: Self.supplier)
+    try note(in: hub, at: "b.md", id: Self.treasury)
+
+    let index = HubIndex.scan(hub: hub, isCancelled: { true })
+    XCTAssertEqual(index.stop, .cancelled, "it let go before the first entry")
+    XCTAssertEqual(index.notes, [:], "and read nothing")
+
+    var entries = 0
+    let partway = HubIndex.scan(
+      hub: hub,
+      isCancelled: {
+        entries += 1
+        return entries > 1
+      })
+    XCTAssertEqual(partway.stop, .cancelled, "and in the middle of a tree the same")
+    XCTAssertEqual(partway.notes, [:])
+  }
+
   /// The watcher is handed to a C stream that calls back on a queue of its
   /// own, so the stream holds it up: a callback already in flight never
   /// lands on memory the owner freed.
