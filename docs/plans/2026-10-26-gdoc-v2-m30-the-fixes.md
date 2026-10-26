@@ -169,8 +169,9 @@ lines carry, and Task 7 makes the links follow the ids by position.
   `heading`, because GitHub's answer there is no id at all. Every heading also
   keeps its old goldmark id as an alias that a `#` link resolves through, so a
   note written before today builds exactly as it did. A new id always wins
-  over another heading's alias. `export` writes the new id. ASCII ids keep
-  their bookmark names byte for byte, so the body goldens change only at the
+  over another heading's alias. `export` writes the new id. ASCII ids with no `_`
+  keep their bookmark names byte for byte, and no heading in
+  `body/testdata/docs/` holds a `_`, so the body goldens change only at the
   Résumé heading.
 - **The bookmark.** `body.bookmarkName` turns an id into `_h_` plus the id
   with every character outside `[A-Za-z0-9_]` as `_`, capped at 40 characters
@@ -316,7 +317,10 @@ literals in the tests: `Цели проекта` is `цели-проекта`; `
 
 **The build side** (`body`):
 
-- `Walk` parses with `parser.NewContext(parser.WithIDs(view.NewHeadingIDs()))`.
+- `Render` already builds one parser context, `pc` (`body.go`, about line
+  190), which carries the footnote snapshot. That same `pc` gains the ids:
+  `parser.NewContext(parser.WithIDs(view.NewHeadingIDs()))`. No second,
+  fresh context is made.
 - `headingAnchors` returns `map[string]string`, a link target to the bookmark
   name of the heading it lands on. It holds every heading's new id. Then, in a
   second pass over the same headings in the same order, it adds each
@@ -327,12 +331,20 @@ literals in the tests: `Цели проекта` is `цели-проекта`; `
   them.
 - A `#` target is looked up as written. A percent-encoded target is not
   decoded: the trust guardian's skeptic found nothing that asks for it.
-- `bookmarkName(id)`: an id that is all ASCII keeps today's name, byte for
-  byte. An id with any other character is `_h_` plus the first seven hex
-  digits of the FNV-1a 32 sum of the id's UTF-8 bytes.
+- `bookmarkName(id)`: an id that is all ASCII and holds no `_` keeps today's
+  name, byte for byte. An id with any other character, or with a `_`, is
+  `_h_` plus the first seven hex digits of the FNV-1a 32 sum of the id's UTF-8
+  bytes. The lead's call: under GitHub's rule `a_b` and `a-b` are two ids, and
+  today's rewrite would give both the name `_h_a_b`, so a note with both
+  headings would trip the collision refusal below and stop building. Hashed,
+  they get two names, and a note that built yesterday still builds. A
+  bookmark name lives only inside the docx, and every `#` link resolves to it
+  at build time, so changing the name for a `_` id breaks no link.
 - Two different headings that would carry one bookmark name fail the build,
-  naming both headings' words. It is cheap, and a link that lands on the wrong
-  heading is the failure the bookmark exists to prevent.
+  naming both headings' words. **This refusal is an addition beyond the
+  decision, accepted by the lead**: two ids that hash to one bookmark would
+  send a link to the wrong heading, which is the failure the bookmark exists
+  to prevent, and the check is cheap.
 
 **The read side** (`view`):
 
@@ -342,14 +354,17 @@ literals in the tests: `Цели проекта` is `цели-проекта`; `
   shared ids, and lists every ATX or setext heading goldmark found, in order,
   except a heading inside a footnote definition. A `#` line inside a fenced
   code block is not a heading to goldmark, so it is not one here.
-- `headingWords` becomes `headingAnchors(d)`, a Docs heading id to its
-  anchor. One `NewHeadingIDs()` runs over the document's headings in reading
-  order, so a repeat gets its suffix. The headings it counts are exactly the
-  ones the projection writes as a `#` line. A heading inside a table cell is
-  not one of them, because a cell cannot hold a markdown heading, so it keeps a
-  fresh `Anchor` of its words, as today. `target()` reads this map.
-- The fixpoint walk over projected lines stays. The positional anchors are
-  taken from the projected lines of the last walk.
+- The emitter keeps an ordered slice of the `#` heading lines it writes, in
+  output order: the Docs heading id and the projected line, appended as each
+  line is written. It does not read the `e.lines` map for this, because a map
+  has no order. Once the fixpoint walk has settled, one `NewHeadingIDs()` runs
+  over that slice in order, so a repeat gets its suffix, and the result maps
+  each Docs heading id to its anchor. `target()` reads that map.
+- Only the headings the tab file itself writes are counted. A prelude heading
+  that export strips, a heading in another tab, and a heading inside a table
+  cell are never appended to the slice, so they take no number in the
+  sequence. A link to a heading outside the slice keeps today's answer: a
+  fresh `Anchor` of its words, or its id.
 
 **The export side** (`export/strip.go`):
 
@@ -397,7 +412,9 @@ literals in the tests: `Цели проекта` is `цели-проекта`; `
       `{"textStyle":{"bold":true,"italic":null},"fields":"bold,italic"}`,
       which names `italic`. Two cases that are refused today stay refused: a
       `null` parent (`{"textStyle":{"foregroundColor":null},"fields":"foregroundColor.color"}`)
-      and a `null` style object (`{"textStyle":null,"fields":"bold"}`)
+      and a `null` style object (`{"textStyle":null,"fields":"bold"}`). These
+      two assert the refusal and that it names the path, and not the word
+      `null`, because today's refusal for them is the missing-segment one
 - [ ] run it: the five `null` leaf cases are red, the two parent cases green
 - [ ] `walkMaskPath` refuses a segment whose raw value is `null`, as in
       Technical Details
@@ -454,7 +471,7 @@ literals in the tests: `Цели проекта` is `цели-проекта`; `
       `-update`: the embedded house states none of these fields, so no part
       moves
 - [ ] `render/doc.go`: a short section "A block's own look reaches the page",
-      naming the seven tests above, and the footer logo beside the header one
+      naming the eight tests above, and the footer logo beside the header one
 - [ ] `make test` green
 
 ### Task 3: a logo of any size fits by width
@@ -507,6 +524,12 @@ literals in the tests: `Цели проекта` is `цели-проекта`; `
       Details. `house.yaml` and `testdata/house-base64.yaml` lose `px` and
       `height_pt`. Every other `Want{...Width, Height}` in the asset and
       `cmd/gdoc` tests drops the two sizes
+- [ ] `go/internal/live/houselogo_test.go`: the two places that read
+      `cfg.Logo.Px` (about line 96, and `liveHouseLogo` about line 240) build
+      `asset.Want{Mime: cfg.Logo.Mime}`. Where the first one logged the stated
+      size, the test logs the size `png.DecodeConfig` reads off the bytes it
+      got instead. `go vet ./internal/live` compiles it with no live variable
+      set
 - [ ] `drift/compare.go`: the `Known` comment says the house draws the mark
       `width_pt` wide at the picture's own ratio, and the master carries the
       old mark at 72.75 pt
@@ -594,7 +617,8 @@ literals in the tests: `Цели проекта` is `цели-проекта`; `
 - Modify: `go/internal/view/text.go`, `go/internal/view/text_test.go`,
   `go/internal/view/doc.go`, `go/internal/body/body.go`,
   `go/internal/body/build.go`, `go/internal/body/anchors_test.go`,
-  `go/internal/body/doc.go`, `go/internal/body/testdata/golden/05-edge-cases.xml`
+  `go/internal/body/doc.go`, `go/internal/body/testdata/golden/05-edge-cases.xml`,
+  `go/internal/export/project_test.go`
 - Create: `go/internal/body/testdata/golden/heading-ids.txt`
 
 - [ ] test first, the pin on today's ids, before any rule changes:
@@ -603,13 +627,16 @@ literals in the tests: `Цели проекта` is `цели-проекта`; `
     stated as literals in the test (`where-a-heading-id-comes-from`,
     `who-decides`, `what-the-reader-gets`), it holds the golden
     `testdata/golden/heading-ids.txt`, one line per heading:
-    `<file>\t<id>`. It asserts three things. Each golden id equals what
-    goldmark's default generator (`parser.NewContext().IDs()`) gives that
+    `<file>\t<id>`. Written now, it asserts two things. Each golden id equals
+    what goldmark's default generator (`parser.NewContext().IDs()`) gives that
     heading, so the golden cannot drift onto the new rule. Each golden id, as
-    a `#` link in that file, resolves to that same heading's bookmark. For
-    every heading that is ASCII and has no `_`, the new id equals the golden
-    id, so export writes the same link it wrote yesterday
-  - write the golden with `-update` now, on today's code, and run it: green
+    a `#` link in that file, resolves to that same heading's bookmark
+  - the pin has its own flag, `-update-heading-ids`, declared beside the test,
+    and not the shared `-update` of `body_test.go:22`, so regenerating the
+    body goldens can never rewrite it
+  - write the golden with `go test ./internal/body -run
+    TestTodaysHeadingIDsStillResolve -update-heading-ids` now, on today's
+    code, and run it without the flag: green
 - [ ] test first, the new rule:
   - `view`: `TestAnAnchorKeepsEveryLetter`: the seven literal examples in
     Technical Details
@@ -631,10 +658,20 @@ literals in the tests: `Цели проекта` is `цели-проекта`; `
     `я1`, `я2`, ... for two ids whose seven-digit hashes match (a few tens of
     thousands of tries, deterministic), builds a note with those two
     headings, and wants the build refused naming both
-  - `body`: `TestBookmarkNameIsWordSafe` keeps its four ASCII cases unchanged
-    and adds one: `bookmarkName("цели-проекта")` matches `^_h_[0-9a-f]{7}$`
+  - `body`: `TestBookmarkNameIsWordSafe` keeps its ASCII cases that hold no
+    `_` unchanged and adds two: `bookmarkName("цели-проекта")` matches
+    `^_h_[0-9a-f]{7}$`, and so does `bookmarkName("a_b")`
+  - `body`: `TestAnUnderscoreAndAHyphenAreTwoBookmarks`: a note holding
+    `# a_b` and `# a-b`, each linked as `#a_b` and `#a-b`, builds with no
+    refusal, and the two links land on two different bookmarks
+  - `export`: `TestAHeadingLinkRoundTripsToItsSlug` in `project_test.go`
+    (about line 215) wants `[the changes](#résumé-of-änderungen-naïve-café)`
+    in place of `#rsum-of-nderungen-nave-caf`. The ampersand case stays
+    `#risk--control-ampersands`, which both rules give. Its comment says the
+    rule is GitHub's through `view.NewHeadingIDs`, which keeps an accented
+    letter, rather than goldmark's default, which dropped it
   - `body`: `TestTheAnchorViewWritesIsTheIDBodyCollects` parses through the
-    same context `Walk` uses rather than through `parse()` alone, and adds
+    same context `Render` builds rather than through `parse()` alone, and adds
     `Цели проекта` and `1.1-Цели проекта` to its headings
 - [ ] run them: red
 - [ ] `view.NewHeadingIDs` and `view.Anchor` as in Technical Details;
@@ -642,9 +679,15 @@ literals in the tests: `Цели проекта` is `цели-проекта`; `
 - [ ] `body`: the parse context, `headingAnchors` as a map to bookmark names
       with legacy aliases, `bookmarkName`, the
       collision refusal, and `build.go` reading the map
-- [ ] `TestTodaysHeadingIDsStillResolve` green with the golden untouched since
-      its first write in this task
-- [ ] `go test ./internal/body -update` for the body goldens: only
+- [ ] once `view.NewHeadingIDs` exists, `TestTodaysHeadingIDsStillResolve`
+      gains its third assertion: for every heading that is ASCII and has no
+      `_`, the new id equals the golden id, so export writes the same link it
+      wrote yesterday
+- [ ] `TestTodaysHeadingIDsStillResolve` green, and
+      `git diff -- go/internal/body/testdata/golden/heading-ids.txt` is empty
+      after its first write: the file is never regenerated after that
+- [ ] `go test ./internal/body -run TestTheSixDocumentsRenderToTheirGoldens
+      -update` for the body goldens: only
       `05-edge-cases.xml` moves, at the Résumé heading's bookmark name and
       any jump into it; the commit message names it
 - [ ] `body/doc.go`, "Every heading carries a hidden bookmark": the id rule is
@@ -681,8 +724,9 @@ literals in the tests: `Цели проекта` is `цели-проекта`; `
   - `TestRepointDoesNotChainRewrites` and
     `TestAHeadingLosesItsHouseNumberAndKeepsItsLinks` stay green, unchanged
 - [ ] run them: red
-- [ ] `view`: `headingAnchors(d)` by position and `target()` reading it, as in
-      Technical Details
+- [ ] `view`: the ordered slice of the `#` heading lines the tab file writes,
+      the generator run over it in output order once the walk settles, and
+      `target()` reading the result, as in Technical Details
 - [ ] `export`: `repoint` by position through `HeadingLines`, skipping lines
       inside a fence
 - [ ] `view/text.go`: the comment above `Anchor` no longer says two headings
@@ -700,7 +744,9 @@ literals in the tests: `Цели проекта` is `цели-проекта`; `
 - [ ] the two backlog items are gone and
       `docs/backlog/small-defects-from-the-outside-bug-report.md` is unchanged
 - [ ] `git log --format=%h main..HEAD -- go/internal/body/testdata/golden/heading-ids.txt`
-      names exactly one commit
+      names exactly one commit, Task 6's, and `grep -n "update-heading-ids"
+      go/internal/body/*_test.go` shows the pin's own flag, so no later
+      `-update` of the body goldens could have rewritten it
 - [ ] the goldens that moved are the ones the tasks named and no other:
       `header2.xml`, `styles.xml`, `05-edge-cases.xml`
 - [ ] no guard test lost an assertion: `git diff main...HEAD --
