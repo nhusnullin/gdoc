@@ -352,15 +352,15 @@ survives this move and the next one.
 
 ### Task 5: Verify acceptance criteria
 
-- [ ] every citation still resolves. For each `DECISIONS.md, <date>` and
+- [x] every citation still resolves. For each `DECISIONS.md, <date>` and
       `<date> entry in docs/v2/DECISIONS.md` under `go/`, `docs/` and in
       `CLAUDE.md`, the register has that date and its `Entry` column names
       a file holding the entry. For each `MEASURED.md` citation, by title
       or by number, the measured index has the section and names the file
-- [ ] `CLAUDE.md` is unchanged and `docs/v2/SPEC.md` changed in two lines
+- [x] `CLAUDE.md` is unchanged and `docs/v2/SPEC.md` changed in two lines
       only: `git diff --name-only main...HEAD` and `git diff main...HEAD --
       docs/v2/SPEC.md`
-- [ ] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
+- [x] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
       `make platform-test`, `make team-check`
 
 ### Task 6: [Final] Update documentation
