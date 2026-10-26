@@ -104,6 +104,13 @@ func cmdPublish(ctx context.Context, a *args) emit.Result {
 	// TestTheFirstStepsEndCarriesTheTitle.
 	presence.Step(ctx, "build", "")
 	doc, err := renderNote(ctx, source, md, a)
+	// The name the run now knows, kept for an end whose answer carries none.
+	// A publish that stopped in the render prints no title, because the title
+	// is a field of a document that was never made, and the cover was read
+	// before whatever stopped it. Empty where the cover could not be read, and
+	// the record writes nothing then: TestAPublishThatStoppedInTheRenderNamesTheNote
+	// and TestAPublishWhoseCoverCannotBeReadWritesNoTitle.
+	presence.Named(ctx, doc.Title)
 	if err != nil {
 		return withStop(emit.Result{OK: false, Error: err.Error(), Warnings: doc.Warnings,
 			Data: publishData{FolderID: folder, House: doc.House, Logo: doc.Logo}}, err)

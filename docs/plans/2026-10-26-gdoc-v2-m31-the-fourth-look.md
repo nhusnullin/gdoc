@@ -250,13 +250,13 @@ branch.
   `stillYourCall`), `presence/Tests/PresenceUITests/RenderTests.swift`
 - Delete: `docs/backlog/a-publish-that-stopped-in-the-render-has-no-name.md`
 
-- [ ] Go, test first: `presence.Named(ctx, title)` keeps a title on the run
+- [x] Go, test first: `presence.Named(ctx, title)` keeps a title on the run
       that is on the context, safe on a nil run and a context with no run,
       capped at the same 200 runes. `End` writes it only where `lift` found
       no title in the answer: `TestANamedTitleIsWrittenOnlyWhereTheAnswerCarriesNone`
       and `TestANamedTitleOutsideARunWritesNothing`. No new field:
       `TestTheEventCarriesOnlyItsListedFields` is unchanged and green
-- [ ] `cmdPublish` calls it once, after the render has read the cover and
+- [x] `cmdPublish` calls it once, after the render has read the cover and
       before it returns, with the note's cover title. If `renderNote`
       returns no cover title on a failure past `cover.Read`, it sets the
       title as soon as `cover.Read` succeeds and nothing else in its
@@ -264,24 +264,24 @@ branch.
       note with an `svg` picture, the r2 case, reads `title` on the end
       line. `TestAPublishWhoseCoverCannotBeReadWritesNoTitle` holds the other
       side
-- [ ] the one caller is held in `go/boundary/presence_test.go` as
+- [x] the one caller is held in `go/boundary/presence_test.go` as
       `TestNamedHasOnlyPublishAsCaller`, using `callsOf` the way
       `TestStepHasOnlyPublishAsCaller` does (the trust guardian's condition 1)
-- [ ] `renderNote` sets `doc.Title` right after `cover.Read`, and the failure
+- [x] `renderNote` sets `doc.Title` right after `cover.Read`, and the failure
       envelopes of `build` and `publish` stay byte for byte as today
       (`buildFailed`, `publish.go`). `TestAFailedBuildStillPrintsTheLogoBlock`
       stays green and unedited (the trust guardian's condition 2)
-- [ ] `go/internal/presence/doc.go`'s paragraph on the one document word
+- [x] `go/internal/presence/doc.go`'s paragraph on the one document word
       says the end's title is the answer's, or the name the run was given
       where the answer has none, and names the two tests
-- [ ] Swift: r2's fixture puts the title on the end line, as gdoc now writes
+- [x] Swift: r2's fixture puts the title on the end line, as gdoc now writes
       it, and the card reads "Publish stopped · Chapter 4"; the caption says
       so; the last line of `stillYourCall` goes.
       `testTheIndexOpensWithWhatIsStillYourCall` changes in two places: the
       count, 8 today, as a new literal, and the subject "nameless", which it
       no longer asserts
-- [ ] `git rm` the backlog file
-- [ ] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make vet`,
+- [x] `git rm` the backlog file
+- [x] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make vet`,
       `make app-lint`, `make app-test`
 
 ### Task 3: the name keeps its room behind a verb

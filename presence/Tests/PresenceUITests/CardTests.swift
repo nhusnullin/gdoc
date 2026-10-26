@@ -304,6 +304,21 @@ final class CardTests: XCTestCase {
     XCTAssertNil(short["stuck.title.second"], "a title that fits draws one line")
   }
 
+  /// A publish that stopped in the render still names the note it was
+  /// building.
+  ///
+  /// The envelope of such a run carries no title: the title is a field of a
+  /// document that was never made. Since 2026-10-26 gdoc keeps the note's
+  /// cover title on the run and writes it on the end, so the card reads the
+  /// name the mockup draws instead of "Publish stopped" alone. Scene r2's
+  /// fixture is that end line.
+  func testThePublishThatStoppedInTheRenderNamesTheNote() throws {
+    let stopped = try SheetPieces.stuck()
+    XCTAssertEqual(
+      stopped.card.title, "Publish stopped \u{00B7} Chapter 4",
+      "the card of a publish that stopped in the render is nameless")
+  }
+
   /// Principle 4's second sentence: a card never carries an icon that would
   /// do nothing.
   ///

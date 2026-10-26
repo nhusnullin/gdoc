@@ -600,7 +600,7 @@ final class RenderTests: XCTestCase {
   /// third look closed the DOCUMENTS header count, which Nail settled on
   /// 2026-10-18 by asking for the label alone.
   func testTheIndexOpensWithWhatIsStillYourCall() throws {
-    XCTAssertEqual(Scenes.stillYourCall.count, 8, "the pass left eight choices to Nail")
+    XCTAssertEqual(Scenes.stillYourCall.count, 7, "the pass left seven choices to Nail")
 
     let page = html(["<section>a screen</section>"])
     let heading = try XCTUnwrap(page.range(of: "Still your call"), "the page does not open with it")
@@ -616,7 +616,7 @@ final class RenderTests: XCTestCase {
     // failure rather than a shorter page.
     let subjects = [
       "decision 32", "decision 10", "trash",
-      "decision 39", "nameless", "faintest control",
+      "decision 39", "faintest control",
       "pinned above DOCUMENTS", "tooltip's plate in light",
     ]
     for subject in subjects {
@@ -637,6 +637,13 @@ final class RenderTests: XCTestCase {
         Scenes.stillYourCall.contains { $0.contains(settled) },
         "the DOCUMENTS header count is settled and not a choice left open: \(settled)")
     }
+
+    // Nor is the nameless publish, which the fourth look answered: gdoc
+    // writes the note's cover title on the end of a run that stopped in the
+    // render, and r2's card reads it.
+    XCTAssertFalse(
+      Scenes.stillYourCall.contains { $0.contains("nameless") },
+      "the publish that stopped in the render has a name now and no choice is left")
   }
 
   /// The bright idle mark is said once, as a decision and not a choice.

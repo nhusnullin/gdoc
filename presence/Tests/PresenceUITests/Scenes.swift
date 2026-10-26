@@ -89,6 +89,11 @@ enum Scenes {
   /// off the one about the DOCUMENTS header count, which asked which form
   /// of "N today" and "14 days · N" was right: the answer of 2026-10-18 is
   /// the label on its own, so no render draws a count and no choice is left.
+  ///
+  /// The fourth look took off the one about the nameless publish: the answer
+  /// of 2026-10-26 is that gdoc keeps the note's cover title on a run that
+  /// stopped in the render and writes it on the end, which r2's card now
+  /// reads.
   static let stillYourCall: [String] = [
     "Launch at login is off until you turn it on, which is product decision 32. The "
       + "2026-10-18 decision withdrew the registration M24 made on the first run. A gdoc "
@@ -117,11 +122,6 @@ enum Scenes {
       + "with a one-pixel rgb(208,208,209) edge and its shadow for the rest. In dark it is "
       + "44 on 28. It is the second-faintest surface the light panel draws, after the off "
       + "switch, and it is the mockup's own `[data-tip]::after`.",
-    "The publish that stopped in the render is nameless, in r2's card and in every row "
-      + "after it, where the mockup draws \"Publish stopped · Chapter 4\". gdoc writes no "
-      + "title on a start and none on the end of a publish that created nothing, so the "
-      + "note's name is in no line of that run: naming it is a new fact in the record, "
-      + "which docs/backlog/a-publish-that-stopped-in-the-render-has-no-name.md holds.",
   ]
 
   /// The mark at rest, said once on the index page as a decision rather
@@ -259,9 +259,11 @@ enum Scenes {
       caption:
         "The write failed. The reason is the cause with its place first and the state of "
         + "the world second, two short sentences under eighty characters, out of the "
-        + "record's own stop code and the line it names. The card carries the two icons "
-        + "something can be done with: a publish that created nothing has no document to "
-        + "open and no link to copy.",
+        + "record's own stop code and the line it names. The card names the note, "
+        + "\"Publish stopped \u{00B7} Chapter 4\": since 2026-10-26 a publish that stopped in "
+        + "the render writes the note's cover title on its end, so the card is no longer "
+        + "nameless. It carries the two icons something can be done with: a publish that "
+        + "created nothing has no document to open and no link to copy.",
       fixture: "r2", moment: "2026-10-17T09:05:30Z", alive: [],
       facts: machine(), ui: UIState(), appearance: nil),
     Scene(
