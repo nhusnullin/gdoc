@@ -10,109 +10,109 @@ which decisions implement them, and this file is where those start.
 
 Every decision in this file, in date order, with its status stated rather than
 inferred. Status is one of `holds`, `rejected`, `superseded YYYY-MM-DD (what
-replaced it)`, or `MEASURED.md`. Nothing else.
+replaced it)`, or `measured`. Nothing else.
 
-| Date | Decision | Status |
-|---|---|---|
-| 2026-08-13 | The markdown is the source, the Google Doc is a rendering | superseded 2026-09-19 (no side is the source by rule; the person decides per run) |
-| 2026-08-14 | Skills are symlinked into `~/.claude/skills/`, never copied | holds |
-| 2026-08-15 | The client reaches only the files it was given | holds |
-| 2026-08-18 | The OAuth client is shipped in git, and the client stays Internal | superseded 2026-09-16 (the secret is injected at build time; the client stays Internal) |
-| 2026-08-18 | Nothing runs git, and the agent never commits | holds |
-| 2026-08-29 | The next version of gdoc is written in Go | holds |
-| 2026-08-29 | gdoc never replaces the body of a document that already exists | holds |
-| 2026-08-29 | Never trust a success. Verify with a second, independent probe | holds |
-| 2026-08-29 | gdoc marks its own changes by colour, never by highlight | superseded 2026-08-29 (the colour scheme is retired) |
-| 2026-08-29 | A comment is a prompt. `align` is a separate question | holds |
-| 2026-08-29 | The marker is the trigger. Always | holds |
-| 2026-08-29 | gdoc judges whether to ask, rather than always asking | holds |
-| 2026-08-29 | There is no `release` command, and gdoc does not export PDFs | holds |
-| 2026-08-29 | Anchors are not banked | rejected |
-| 2026-08-29 | The Developer Preview arrived, and a third of this file retires | holds |
-| 2026-08-29 | gdoc proposes. It never accepts and never rejects | holds |
-| 2026-08-29 | MCP does not replace the REST client | holds |
-| 2026-08-29 | Tabs are out of scope, and gdoc defends against them | superseded 2026-09-19 (the reader half only: `export` writes one file per tab; every writer still refuses a document with more than one) |
-| 2026-08-29 | Amendments from reading the documentation | holds |
-| 2026-08-29 | gdoc can retract its own proposal, and must check that it landed | holds |
-| 2026-08-29 | The house style is a config file. The .docx becomes provenance | holds |
-| 2026-08-29 | The finishing checklist is for `restyle` only | superseded 2026-09-09 (what an in-place restyle changes: the list is reported, not written) |
-| 2026-08-29 | `publish` builds a file. `restyle` has two modes | superseded 2026-09-11 (`restyle --new` is not built) |
-| 2026-08-29 | A comment is answered with the hub open | holds |
-| 2026-08-29 | Emoji reactions: still no API, preview or not | holds |
-| 2026-08-29 | The colour scheme is retired, not forgotten. Its "no named ranges" bullet is superseded 2026-09-10 (the house template reaches a document as a suggestion), which gives gdoc one named range as its own marker | holds |
-| 2026-08-29 | Alignment runs both ways, and it is not a command | holds |
-| 2026-08-29 | The product is three things, and it matters which does what | holds |
-| 2026-08-29 | Everything gdoc writes opens with 🤖 | superseded 2026-10-04 (the mark is a setting, ⁘ by default and possibly empty, and 🤖 stays a known mark; why a marker is needed holds) |
-| 2026-08-29 | gdoc reads back what it proposed, before saying it worked | holds |
-| 2026-08-29 | The preview may vanish, and the risk is accepted. Loudly | superseded 2026-10-02 (suggestions are generally available; a silent edit is still loud, through the read-back and the stop) |
-| 2026-08-29 | The guard owns the transport, and every id carries a write level. Widened 2026-09-09 (M7 splits) by a third level, `LevelInPlace`, and 2026-10-17 by a third door, one asset that is not a document | holds |
-| 2026-08-29 | Publish runs once. Everything after travels as suggestions | superseded 2026-09-19 (a note may be published more than once, and each publish is a new document) |
-| 2026-08-29 | Live review is a session, not a service | holds |
-| 2026-09-07 | A replace proposal cannot be fully withdrawn by a delete | holds |
-| 2026-09-08 | v1's `gdoc: <id>` stays refused. Publish is the only writer of the block | superseded 2026-09-19 (the one-writer clause only: `export` writes the block too, and the block is a list of documents; the v1 refusal holds) |
-| 2026-09-09 | Which styling requests land in place | MEASURED.md |
-| 2026-09-09 | The guard carries `files.copy`, for one source | holds |
-| 2026-09-09 | Seven paragraph elements were dropped at decode | holds |
-| 2026-09-09 | M7 splits. The survey ships without the write | holds |
-| 2026-09-09 | What an in-place restyle changes, and what it deliberately does not write | holds |
-| 2026-09-10 | In-place styling preserves anchors and pending suggestions | MEASURED.md |
-| 2026-09-10 | The house template reaches a document as a suggestion | holds |
-| 2026-09-10 | A named range over a suggested insertion | MEASURED.md |
-| 2026-09-10 | A table takes one index of its own at the end | MEASURED.md |
-| 2026-09-11 | `restyle --new` is not built | holds |
-| 2026-09-16 | Help is an answer, completion is a written file, and two skills learn the tool from the tool | superseded 2026-10-03 (its "what was rejected: an MCP server inside the binary" paragraph only; everything else in the entry holds) |
-| 2026-09-16 | M8 is deferred to the backlog, and the release goes next | holds |
-| 2026-09-16 | The release: `x.y.z` with a nightly, an updater on demand with one read-only guard door, skills as a Claude Code plugin | superseded 2026-09-18 (the "no check, no stamp file" clause only: `help` checks once a day) and 2026-10-17 (the assessment that the Altery logo is public: the tree carries none from then on); everything else in the entry holds |
-| 2026-09-16 | The source repository is public, and the client secret is injected at build time | holds |
-| 2026-09-16 | What the update door actually reaches: two asset hosts, one bigger page, and a version that is only ever a tag | holds |
-| 2026-09-17 | There is no rc. The nightly is the pre-release channel | holds |
-| 2026-09-17 | The plugin is named `altery`, and the marketplace stays `gdoc` | holds |
-| 2026-09-18 | The wait polls every two seconds | holds |
-| 2026-09-18 | The binary notices a release by itself, once a day from `help`, and the plugin carries the stable number | superseded 2026-10-03 (the one-command clause only: `gdoc mcp` asks unasked too, under the same grant, stamp and ceiling; everything else in the entry holds) |
-| 2026-09-18 | annotate: a comment on quoted words, and nothing else | holds |
-| 2026-09-18 | Five backlog items closed, and what each decided | superseded 2026-09-27 (the bookmark on every heading only: a heading carries one when a link names it; everything else in the entry holds) |
-| 2026-09-19 | Export, and the `gdoc:` block as a list of documents | holds |
-| 2026-09-19 | A heading link is goldmark's id. A file name is gdoc's own slug | holds |
-| 2026-09-19 | The projection is measured against goldmark: a sub-list's indent and a heading's anchor | holds |
-| 2026-09-27 | The skills keep to the Agent Skills specification: `needs` under `metadata`, a compatibility line, and a body budget | holds |
-| 2026-09-27 | A heading carries a bookmark only when a link names it, and a link to another note is its words | superseded 2026-10-16 (the bookmark half only; a relative link is its words holds) |
-| 2026-09-27 | `publish` marks its own cover, and a restyle never styles a marked span | holds |
-| 2026-09-28 | `propose` gains a second kind, a block of whole paragraphs | holds |
-| 2026-09-28 | A block refuses a renumbered list and a paragraph an object floats beside | holds |
-| 2026-10-02 | propose without the probe, and no company domain in the repository | holds |
-| 2026-10-03 | `gdoc mcp`: gdoc in Claude Desktop chat, as measured | superseded 2026-10-03 in two paragraphs and one clause only (the link hold and the trusted email domains, both dropped after the first run in Claude Desktop; and "No CLI command gains it" of `AllowAccountRead`, since `auth status` is the grant's second caller); and on 2026-10-04 the `robot_not_ours` fact, removed |
-| 2026-10-03 | What the first run in Claude Desktop changed: no link hold, no trusted domains, a hold is not an error, an absent author domain, and no voice mode | holds |
-| 2026-10-03 | A change the person approved is not a payload that landed | holds |
-| 2026-10-03 | On a terminal, a help screen is for the person: Panels on stderr and nothing on stdout, and `--json` always prints the object | holds |
-| 2026-10-04 | Settings and the mark in effect | superseded 2026-10-13 (the list of what a mark may not be, and what counts as a text opening with one, only; everything else in the entry holds) |
-| 2026-10-04 | The token in the macOS Keychain, and releases signed on Nail's Mac (built in M17) | holds |
-| 2026-10-13 | A blank mark is refused, and a word-like mark is read as a word | holds |
-| 2026-10-14 | The body breathes: 12pt under a paragraph and under a list, 5pt around a cell | holds |
-| 2026-10-14 | A footnote is carried on every route | holds |
-| 2026-10-14 | The marks: Obsidian's six colours and one grey | superseded 2026-10-16 (the pencil's spelling, the span refusals and the "an HTML span for pencil" clause only; everything else in the entry holds) |
-| 2026-10-15 | What the M18 review closed: a label defined twice, a heading no line scan sees, a mark inside a footnote, and the two questions the parse answers rather than the line | superseded 2026-10-16 (the span paragraphs only: the attribute counted against the spans the parse formed, and the words a span cannot hold; everything else in the entry holds) |
-| 2026-10-16 | `---` is a page break | holds |
-| 2026-10-16 | Pencil is a comment: `<!-- words -->` or `%% words %%`, and the span goes | holds |
-| 2026-10-16 | What the M20 review closed: a comment with words after it on one line, two comments on one line, a comment the editor wrapped, the line a pencil's refusal names, an empty comment in a quote, and the four comments that are gdoc's own | holds |
-| 2026-10-16 | Every heading carries one hidden bookmark, because Drive's import makes it the heading id | holds |
-| 2026-10-17 | What the second M20 review closed: a comment the editor wrapped in Obsidian's spelling, a comment the note never closes, and the old span on the way home | holds |
-| 2026-10-17 | What the third M20 review closed: an opener with no closer inside a sentence, and the refusal that blamed an export the author never made | holds |
-| 2026-10-17 | What the fourth M20 review closed: an escaped opener refused as a comment the line never closes | holds |
-| 2026-10-17 | The logo lives in Drive, not in the tree | holds |
-| 2026-10-17 | The presence: gdoc appends one fact line per run to a file it never reads, and a separate menu bar app reads it | holds |
-| 2026-10-17 | The panel: the presence as the screens draw it, the app runs six argv lists, a hold dies with the sign-in it was held under | holds |
-| 2026-10-18 | The app opens itself: gdoc opens the installed app when it is not running, and launch at login is the person's switch | holds |
-| 2026-10-18 | The second morning: the account in the header, the middle scrolls, DOCUMENTS by what was just made and by use, pins, a bright mark, the session a run came from | holds |
-| 2026-10-18 | The third look: nothing scrolls, DOCUMENTS is the pinned and the last five, the note is found and not configured, the update glyph has three states | holds |
+| Date | Decision | Status | Entry |
+|---|---|---|---|
+| 2026-08-13 | The markdown is the source, the Google Doc is a rendering | superseded 2026-09-19 (no side is the source by rule; the person decides per run) | DECISIONS.md |
+| 2026-08-14 | Skills are symlinked into `~/.claude/skills/`, never copied | holds | DECISIONS.md |
+| 2026-08-15 | The client reaches only the files it was given | holds | DECISIONS.md |
+| 2026-08-18 | The OAuth client is shipped in git, and the client stays Internal | superseded 2026-09-16 (the secret is injected at build time; the client stays Internal) | DECISIONS.md |
+| 2026-08-18 | Nothing runs git, and the agent never commits | holds | DECISIONS.md |
+| 2026-08-29 | The next version of gdoc is written in Go | holds | DECISIONS.md |
+| 2026-08-29 | gdoc never replaces the body of a document that already exists | holds | DECISIONS.md |
+| 2026-08-29 | Never trust a success. Verify with a second, independent probe | holds | DECISIONS.md |
+| 2026-08-29 | gdoc marks its own changes by colour, never by highlight | superseded 2026-08-29 (the colour scheme is retired) | DECISIONS.md |
+| 2026-08-29 | A comment is a prompt. `align` is a separate question | holds | DECISIONS.md |
+| 2026-08-29 | The marker is the trigger. Always | holds | DECISIONS.md |
+| 2026-08-29 | gdoc judges whether to ask, rather than always asking | holds | DECISIONS.md |
+| 2026-08-29 | There is no `release` command, and gdoc does not export PDFs | holds | DECISIONS.md |
+| 2026-08-29 | Anchors are not banked | rejected | DECISIONS.md |
+| 2026-08-29 | The Developer Preview arrived, and a third of this file retires | holds | DECISIONS.md |
+| 2026-08-29 | gdoc proposes. It never accepts and never rejects | holds | DECISIONS.md |
+| 2026-08-29 | MCP does not replace the REST client | holds | DECISIONS.md |
+| 2026-08-29 | Tabs are out of scope, and gdoc defends against them | superseded 2026-09-19 (the reader half only: `export` writes one file per tab; every writer still refuses a document with more than one) | DECISIONS.md |
+| 2026-08-29 | Amendments from reading the documentation | holds | DECISIONS.md |
+| 2026-08-29 | gdoc can retract its own proposal, and must check that it landed | holds | DECISIONS.md |
+| 2026-08-29 | The house style is a config file. The .docx becomes provenance | holds | DECISIONS.md |
+| 2026-08-29 | The finishing checklist is for `restyle` only | superseded 2026-09-09 (what an in-place restyle changes: the list is reported, not written) | DECISIONS.md |
+| 2026-08-29 | `publish` builds a file. `restyle` has two modes | superseded 2026-09-11 (`restyle --new` is not built) | DECISIONS.md |
+| 2026-08-29 | A comment is answered with the hub open | holds | DECISIONS.md |
+| 2026-08-29 | Emoji reactions: still no API, preview or not | holds | DECISIONS.md |
+| 2026-08-29 | The colour scheme is retired, not forgotten. Its "no named ranges" bullet is superseded 2026-09-10 (the house template reaches a document as a suggestion), which gives gdoc one named range as its own marker | holds | DECISIONS.md |
+| 2026-08-29 | Alignment runs both ways, and it is not a command | holds | DECISIONS.md |
+| 2026-08-29 | The product is three things, and it matters which does what | holds | DECISIONS.md |
+| 2026-08-29 | Everything gdoc writes opens with 🤖 | superseded 2026-10-04 (the mark is a setting, ⁘ by default and possibly empty, and 🤖 stays a known mark; why a marker is needed holds) | DECISIONS.md |
+| 2026-08-29 | gdoc reads back what it proposed, before saying it worked | holds | DECISIONS.md |
+| 2026-08-29 | The preview may vanish, and the risk is accepted. Loudly | superseded 2026-10-02 (suggestions are generally available; a silent edit is still loud, through the read-back and the stop) | DECISIONS.md |
+| 2026-08-29 | The guard owns the transport, and every id carries a write level. Widened 2026-09-09 (M7 splits) by a third level, `LevelInPlace`, and 2026-10-17 by a third door, one asset that is not a document | holds | DECISIONS.md |
+| 2026-08-29 | Publish runs once. Everything after travels as suggestions | superseded 2026-09-19 (a note may be published more than once, and each publish is a new document) | DECISIONS.md |
+| 2026-08-29 | Live review is a session, not a service | holds | DECISIONS.md |
+| 2026-09-07 | A replace proposal cannot be fully withdrawn by a delete | holds | DECISIONS.md |
+| 2026-09-08 | v1's `gdoc: <id>` stays refused. Publish is the only writer of the block | superseded 2026-09-19 (the one-writer clause only: `export` writes the block too, and the block is a list of documents; the v1 refusal holds) | DECISIONS.md |
+| 2026-09-09 | Which styling requests land in place | measured | MEASURED.md |
+| 2026-09-09 | The guard carries `files.copy`, for one source | holds | DECISIONS.md |
+| 2026-09-09 | Seven paragraph elements were dropped at decode | holds | DECISIONS.md |
+| 2026-09-09 | M7 splits. The survey ships without the write | holds | DECISIONS.md |
+| 2026-09-09 | What an in-place restyle changes, and what it deliberately does not write | holds | DECISIONS.md |
+| 2026-09-10 | In-place styling preserves anchors and pending suggestions | measured | MEASURED.md |
+| 2026-09-10 | The house template reaches a document as a suggestion | holds | DECISIONS.md |
+| 2026-09-10 | A named range over a suggested insertion | measured | MEASURED.md |
+| 2026-09-10 | A table takes one index of its own at the end | measured | MEASURED.md |
+| 2026-09-11 | `restyle --new` is not built | holds | DECISIONS.md |
+| 2026-09-16 | Help is an answer, completion is a written file, and two skills learn the tool from the tool | superseded 2026-10-03 (its "what was rejected: an MCP server inside the binary" paragraph only; everything else in the entry holds) | DECISIONS.md |
+| 2026-09-16 | M8 is deferred to the backlog, and the release goes next | holds | DECISIONS.md |
+| 2026-09-16 | The release: `x.y.z` with a nightly, an updater on demand with one read-only guard door, skills as a Claude Code plugin | superseded 2026-09-18 (the "no check, no stamp file" clause only: `help` checks once a day) and 2026-10-17 (the assessment that the Altery logo is public: the tree carries none from then on); everything else in the entry holds | DECISIONS.md |
+| 2026-09-16 | The source repository is public, and the client secret is injected at build time | holds | DECISIONS.md |
+| 2026-09-16 | What the update door actually reaches: two asset hosts, one bigger page, and a version that is only ever a tag | holds | DECISIONS.md |
+| 2026-09-17 | There is no rc. The nightly is the pre-release channel | holds | DECISIONS.md |
+| 2026-09-17 | The plugin is named `altery`, and the marketplace stays `gdoc` | holds | DECISIONS.md |
+| 2026-09-18 | The wait polls every two seconds | holds | DECISIONS.md |
+| 2026-09-18 | The binary notices a release by itself, once a day from `help`, and the plugin carries the stable number | superseded 2026-10-03 (the one-command clause only: `gdoc mcp` asks unasked too, under the same grant, stamp and ceiling; everything else in the entry holds) | DECISIONS.md |
+| 2026-09-18 | annotate: a comment on quoted words, and nothing else | holds | DECISIONS.md |
+| 2026-09-18 | Five backlog items closed, and what each decided | superseded 2026-09-27 (the bookmark on every heading only: a heading carries one when a link names it; everything else in the entry holds) | DECISIONS.md |
+| 2026-09-19 | Export, and the `gdoc:` block as a list of documents | holds | DECISIONS.md |
+| 2026-09-19 | A heading link is goldmark's id. A file name is gdoc's own slug | holds | DECISIONS.md |
+| 2026-09-19 | The projection is measured against goldmark: a sub-list's indent and a heading's anchor | holds | DECISIONS.md |
+| 2026-09-27 | The skills keep to the Agent Skills specification: `needs` under `metadata`, a compatibility line, and a body budget | holds | DECISIONS.md |
+| 2026-09-27 | A heading carries a bookmark only when a link names it, and a link to another note is its words | superseded 2026-10-16 (the bookmark half only; a relative link is its words holds) | DECISIONS.md |
+| 2026-09-27 | `publish` marks its own cover, and a restyle never styles a marked span | holds | DECISIONS.md |
+| 2026-09-28 | `propose` gains a second kind, a block of whole paragraphs | holds | DECISIONS.md |
+| 2026-09-28 | A block refuses a renumbered list and a paragraph an object floats beside | holds | DECISIONS.md |
+| 2026-10-02 | propose without the probe, and no company domain in the repository | holds | DECISIONS.md |
+| 2026-10-03 | `gdoc mcp`: gdoc in Claude Desktop chat, as measured | superseded 2026-10-03 in two paragraphs and one clause only (the link hold and the trusted email domains, both dropped after the first run in Claude Desktop; and "No CLI command gains it" of `AllowAccountRead`, since `auth status` is the grant's second caller); and on 2026-10-04 the `robot_not_ours` fact, removed | DECISIONS.md |
+| 2026-10-03 | What the first run in Claude Desktop changed: no link hold, no trusted domains, a hold is not an error, an absent author domain, and no voice mode | holds | DECISIONS.md |
+| 2026-10-03 | A change the person approved is not a payload that landed | holds | DECISIONS.md |
+| 2026-10-03 | On a terminal, a help screen is for the person: Panels on stderr and nothing on stdout, and `--json` always prints the object | holds | DECISIONS.md |
+| 2026-10-04 | Settings and the mark in effect | superseded 2026-10-13 (the list of what a mark may not be, and what counts as a text opening with one, only; everything else in the entry holds) | DECISIONS.md |
+| 2026-10-04 | The token in the macOS Keychain, and releases signed on Nail's Mac (built in M17) | holds | DECISIONS.md |
+| 2026-10-13 | A blank mark is refused, and a word-like mark is read as a word | holds | DECISIONS.md |
+| 2026-10-14 | The body breathes: 12pt under a paragraph and under a list, 5pt around a cell | holds | DECISIONS.md |
+| 2026-10-14 | A footnote is carried on every route | holds | DECISIONS.md |
+| 2026-10-14 | The marks: Obsidian's six colours and one grey | superseded 2026-10-16 (the pencil's spelling, the span refusals and the "an HTML span for pencil" clause only; everything else in the entry holds) | DECISIONS.md |
+| 2026-10-15 | What the M18 review closed: a label defined twice, a heading no line scan sees, a mark inside a footnote, and the two questions the parse answers rather than the line | superseded 2026-10-16 (the span paragraphs only: the attribute counted against the spans the parse formed, and the words a span cannot hold; everything else in the entry holds) | DECISIONS.md |
+| 2026-10-16 | `---` is a page break | holds | DECISIONS.md |
+| 2026-10-16 | Pencil is a comment: `<!-- words -->` or `%% words %%`, and the span goes | holds | DECISIONS.md |
+| 2026-10-16 | What the M20 review closed: a comment with words after it on one line, two comments on one line, a comment the editor wrapped, the line a pencil's refusal names, an empty comment in a quote, and the four comments that are gdoc's own | holds | DECISIONS.md |
+| 2026-10-16 | Every heading carries one hidden bookmark, because Drive's import makes it the heading id | holds | DECISIONS.md |
+| 2026-10-17 | What the second M20 review closed: a comment the editor wrapped in Obsidian's spelling, a comment the note never closes, and the old span on the way home | holds | DECISIONS.md |
+| 2026-10-17 | What the third M20 review closed: an opener with no closer inside a sentence, and the refusal that blamed an export the author never made | holds | DECISIONS.md |
+| 2026-10-17 | What the fourth M20 review closed: an escaped opener refused as a comment the line never closes | holds | DECISIONS.md |
+| 2026-10-17 | The logo lives in Drive, not in the tree | holds | DECISIONS.md |
+| 2026-10-17 | The presence: gdoc appends one fact line per run to a file it never reads, and a separate menu bar app reads it | holds | DECISIONS.md |
+| 2026-10-17 | The panel: the presence as the screens draw it, the app runs six argv lists, a hold dies with the sign-in it was held under | holds | DECISIONS.md |
+| 2026-10-18 | The app opens itself: gdoc opens the installed app when it is not running, and launch at login is the person's switch | holds | DECISIONS.md |
+| 2026-10-18 | The second morning: the account in the header, the middle scrolls, DOCUMENTS by what was just made and by use, pins, a bright mark, the session a run came from | holds | DECISIONS.md |
+| 2026-10-18 | The third look: nothing scrolls, DOCUMENTS is the pinned and the last five, the note is found and not configured, the update glyph has three states | holds | DECISIONS.md |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
 status says what replaced it. That is what makes a status worth reading: it says
 the entry below was looked at, rather than that nobody has been back to it.
 
-A row whose status is `MEASURED.md` has its text in
-[MEASURED.md](MEASURED.md), under a heading of the same name. It moved because a
-measurement is what Google does, not a choice gdoc made.
+The `Entry` column names the file that holds the entry. A row whose status is
+`measured` has its text in [MEASURED.md](MEASURED.md), under a heading of the
+same name, because a measurement is what Google does, not a choice gdoc made.
 
 ## 2026-08-13. The markdown is the source, the Google Doc is a rendering.
 
@@ -270,7 +270,7 @@ real accept/reject suggestions.
 Measured live on 2026-08-29, not reasoned about:
 
 | | replace the body | in place |
-|---|---|---|
+|---|---|---|---|
 | comment anchors | **100% destroyed** | **100% preserved**, 355 of 355 characters across three anchors |
 | pending suggestions | destroyed and recreated with new ids | byte-identical ids across 22 batches |
 | smart chips | flattened; a date chip loses its date and keeps the string | untouched |
@@ -379,7 +379,7 @@ way.
 highlighted.**
 
 | | `foregroundColor` | also |
-|---|---|---|
+|---|---|---|---|
 | proposed insertion | `rgb(0.18, 0.60, 0.35)` | nothing. No underline, no background |
 | proposed deletion | `rgb(0.80, 0.25, 0.22)` | `strikethrough: true` |
 
@@ -920,7 +920,7 @@ first-page header, a Word TOC field imports as a live refreshable contents list,
 and a PAGE field gives footer numbers. All three verified.
 
 | | born from gdoc's docx | already exists |
-|---|---|---|
+|---|---|---|---|
 | first-page header with positioned logo | **free** | no |
 | live contents list | **free** | no |
 | footer page numbers | **free** | no |
@@ -955,7 +955,7 @@ All three verified. There is no reason to build a new document any other way.
 *Superseded 2026-09-11: the `--new` column is not built. See that entry.*
 
 | | **in place** (default) | **as a new document** (`--new`) |
-|---|---|---|
+|---|---|---|---|
 | how | `batchUpdate` on the original | render its content to a .docx, upload as new |
 | house style | approximate | **exact** |
 | comment threads, with real authors and anchors | **kept** | lost |
@@ -1666,7 +1666,7 @@ versioning table or other content might be added in suggested mode, isn't it?"
 per case, each on a document nobody had suggested anything in:
 
 | Request kind | Asked in SUGGEST mode | What Docs recorded |
-|---|---|---|
+|---|---|---|---|
 | `insertText` | accepted | `suggestedInsertionIds` |
 | `insertPageBreak` | accepted | `suggestedInsertionIds` |
 | `insertTable` | accepted | `suggestedInsertionIds`, 12 marks for one 2x2 table |
@@ -2145,7 +2145,7 @@ never counts against another's. A poll is one Docs read and one Drive listing,
 and Drive is metered in units that a listing barely touches.
 
 | Interval | Docs reads a minute, one user | Users in live review the project pool holds |
-|---|---|---|
+|---|---|---|---|
 | 10s | 6 | 500 |
 | 5s | 12 | 250 |
 | 2s | 30 | 100 |

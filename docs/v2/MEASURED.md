@@ -7,9 +7,51 @@ which holds what Google refuses. This file holds what it allows, and what shape
 the answer comes back in.
 
 Every section carries the date, the test that made the measurement, the verbatim
-answer where there is one, and a line saying when to ask again. A measurement is
-never edited to match a later reading. A different answer is a new section with
-its own date, and the old one keeps its words.
+answer where there is one, and a line saying when to ask again.
+
+| Measured | Section | Entry |
+|---|---|---|
+| 2026-09-09 | Which styling requests land in place | MEASURED.md |
+| 2026-09-10 | In-place styling preserves anchors and pending suggestions | MEASURED.md |
+| 2026-09-10 | A named range over a suggested insertion | MEASURED.md |
+| 2026-09-10 | A table takes one index of its own at the end | MEASURED.md |
+| 2026-09-18 | A proposal into a table cell lands | MEASURED.md |
+| 2026-09-27 | A block of new paragraphs, proposed in one SUGGEST batch | MEASURED.md |
+| 2026-10-03 | Claude Desktop and a local MCP server | MEASURED.md |
+| 2026-10-03 | gdoc mcp in Claude Desktop, the first run | MEASURED.md |
+| 2026-10-03 | gdoc mcp in Claude Desktop, the red team and a clean install | MEASURED.md |
+| 2026-10-14 | Drive's import of a Word footnote | MEASURED.md |
+| 2026-10-14 | Drive's import of run shading and text colour | MEASURED.md |
+| 2026-10-15 | Footnotes and the marks, published by gdoc | MEASURED.md |
+| 2026-10-16 | How read prints the two kinds of page break | MEASURED.md |
+| 2026-10-17 | The presence app built, rendered and unzipped, the prototype's three numbers | MEASURED.md |
+| 2026-10-17 | What Gatekeeper says about a bundle gdoc's own code unzipped | MEASURED.md |
+| 2026-10-17 | Twenty thousand presence lines from two binaries into one file | MEASURED.md |
+| 2026-10-17 | The bundle swapped under a process running out of it | MEASURED.md |
+| 2026-10-16 | Drive's import of a heading's bookmark | MEASURED.md |
+| 2026-10-17 | What Claude Code puts in a child's environment | MEASURED.md |
+| 2026-10-17 | What ImageRenderer draws for a SwiftUI ScrollView | MEASURED.md |
+| 2026-10-17 | What LaunchServices says about a `claude://` handler | MEASURED.md |
+| 2026-10-17 | What proc_pidpath says after the binary is renamed | MEASURED.md |
+| 2026-10-18 | The lock, `open -g`, and a command whose opener cannot start anything | MEASURED.md |
+|  | Not measured yet | MEASURED.md |
+| 2026-10-18 | What `claude://code/continue` does from outside the app | MEASURED.md |
+| 2026-10-18 | Where the screen cuts a panel as tall as its content | MEASURED.md |
+| 2026-10-18 | What Spotlight answers for a document id | MEASURED.md |
+| 2026-10-18 | What the header line holds, and what a second version costs it | MEASURED.md |
+
+A measurement is never edited to match a later reading; a different answer is a
+new section in this file rather than a change in the archive, and the old one
+keeps its words.
+
+A citation of the form "measurement N" or "MEASURED N" is a row of the numbered
+table in "Claude Desktop and a local MCP server", and one of the form "row N" is
+a row of the table in "A block of new paragraphs, proposed in one SUGGEST
+batch". The numbers inside those tables are unchanged by the move, and this
+index says which file each section is in.
+
+"Not measured yet" names the two sections it leans on rather than saying "the
+section above", because the section above it may be in the archive.
 
 ## Which styling requests land in place
 

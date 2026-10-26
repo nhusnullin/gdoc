@@ -259,21 +259,21 @@ survives this move and the next one.
 - Modify: `docs/v2/DECISIONS.md` (the register and the two paragraphs under
   it), `docs/v2/MEASURED.md` (the new index), `go/boundary/doc.go`
 
-- [ ] test first: `TestEveryRegisterRowNamesTheFileThatHoldsIt`,
+- [x] test first: `TestEveryRegisterRowNamesTheFileThatHoldsIt`,
       `TestEveryDecisionEntryHasItsRegisterRow` and
       `TestEveryMeasurementIsIndexed` as in Technical Details. The first and
       the third are red before the columns exist; the second is green from
       the start, and it is what guards Task 2
-- [ ] the register gains the `Entry` column, every row saying
+- [x] the register gains the `Entry` column, every row saying
       `DECISIONS.md` or `MEASURED.md`, which is where every entry is today;
       the four measured rows take the status `measured`
-- [ ] the paragraphs under the register say what the statuses are now and
+- [x] the paragraphs under the register say what the statuses are now and
       what the `Entry` column is for; the never-edited sentence is untouched
-- [ ] MEASURED.md gains its index, 27 rows, every `Entry` saying
+- [x] MEASURED.md gains its index, 28 rows, every `Entry` saying
       `MEASURED.md` today, and the three sentences under it
-- [ ] `go/boundary/doc.go`: four guards over the docs become five, with the
+- [x] `go/boundary/doc.go`: four guards over the docs become five, with the
       reason an index is guarded
-- [ ] `make test` green with not one entry moved yet
+- [x] `make test` green with not one entry moved yet
 
 ### Task 2: the decisions before 2026-10-16 move
 
