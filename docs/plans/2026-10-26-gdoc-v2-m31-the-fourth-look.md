@@ -442,15 +442,15 @@ branch.
 - Modify: `presence/Tests/PresenceUITests/Scenes.swift` (captions only, if
   the check below finds one stale)
 
-- [ ] read every caption in `Scenes.swift` as text against Tasks 2 to 7,
+- [x] read every caption in `Scenes.swift` as text against Tasks 2 to 7,
       and fix any caption that describes a drawing this plan changed. The
       eighteen scenes stay eighteen
-- [ ] `rm -rf "$HOME/gdoc-m31-board/shots"`, then
+- [x] `rm -rf "$HOME/gdoc-m31-board/shots"`, then
       `PRESENCE_SHOTS="$HOME/gdoc-m31-board/shots" make app-test`, once
-- [ ] check with `ls` and nothing else: each of the 18 scene ids has its
+- [x] check with `ls` and nothing else: each of the 18 scene ids has its
       `<id>-dark.png`, and `index.html` is there. The folder also holds the
       `-bar-` images and the sheet pages, which are not counted. Open no PNG. The design reviewer reads them after the run
-- [ ] the commit message names the folder as an absolute path, which the
+- [x] the commit message names the folder as an absolute path, which the
       lead hands to `gdoc-design-reviewer`
 
 ### Task 9: Verify acceptance criteria

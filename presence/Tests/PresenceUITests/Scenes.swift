@@ -170,8 +170,9 @@ enum Scenes {
     (
       "rows",
       "The header with the version, the account and Sign out, drawn four times for the "
-        + "four ways the update glyph is: a release to take, with the published "
-        + "version under the line; nothing newer known; the second after a press that "
+        + "four ways the update glyph is: a release to take, which is r8's own header, so "
+        + "the line under it is that screen's press of Update and not the version "
+        + "published; nothing newer known; the second after a press that "
         + "installed nothing; and the ring while the child is up. Then the four row "
         + "shapes, the quiet line, and the two labels as pieces."
     ),
@@ -395,7 +396,7 @@ enum Scenes {
         "Holds first, then what is stuck, then running jobs, then watches, oldest first "
         + "inside each class. What is stuck here is an export, so the publish running "
         + "under it clears nothing: a stuck card leaves when the next run of its own "
-        + "command starts. It is a failed publish that names no document, and that is "
+        + "command starts. It is a failed publish that created no document, and that is "
         + "why any later publish clears one of those.",
       fixture: "e3", moment: "2026-10-17T17:20:00Z", alive: [7200, 7210, 7103],
       facts: machine(), ui: UIState(), appearance: nil),
