@@ -649,14 +649,15 @@ person supplies the context a paired note would have given.
 header and footer, the three tables cell by cell, the contents field, heading
 numbering, and the logo. The generator reads it plus markdown and emits a docx.
 
-**The logo is named, not carried.** `logo:` holds the sizes and the anchor and
-exactly one of `drive`, the id of one PNG in the firm's Shared Drive, and
-`base64`, the bytes. The embedded file names the firm's file by id, so the
-tree, the releases and the binary carry no logo, and a boundary test holding
-the PNG's hash fails on any tracked file or docx member that does. `build` and
-`publish` fetch the bytes under `AllowAsset`, check them as a PNG within the byte
-ceiling and with no side over 4096 pixels, draw the picture `width_pt` wide with its height following its own
-ratio, so a logo of any size fits, and keep them in `assets/<id>` beside the token with a stamp: one
+**The logo is named, not carried.** `logo:` holds `mime`, `width_pt` and the
+anchor and exactly one of `drive`, the id of one PNG in the firm's Shared
+Drive, and `base64`, the bytes. The embedded file names the firm's file by id,
+so the tree, the releases and the binary carry no logo, and a boundary test
+holding the PNG's hash fails on any tracked file or docx member that does.
+`build` and `publish` fetch the bytes under `AllowAsset`, check them as a PNG
+within the byte ceiling and with no side over 4096 pixels, draw the picture
+`width_pt` wide with its height following its own ratio, so a logo of any size
+fits, and keep them in `assets/<id>` beside the token with a stamp: one
 request a day, the cache on any other day and whenever Drive cannot be
 reached, with the envelope's `logo` block saying `drive`, `cache` or `file`
 and why. No cache and no access refuses the run, and so does a file in Drive

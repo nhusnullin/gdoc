@@ -915,6 +915,7 @@ func TestAnAnchorKeepsEveryLetter(t *testing.T) {
 		{"Risk & Control", "risk--control"},
 		{"+++", "heading"},
 		{"Résumé of Änderungen: naïve café", "résumé-of-änderungen-naïve-café"},
+		{"Re\u0301sume\u0301", "re\u0301sume\u0301"},
 	} {
 		if got := Anchor(c.heading); got != c.want {
 			t.Errorf("Anchor(%q) = %q, want %q", c.heading, got, c.want)

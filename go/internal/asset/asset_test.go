@@ -500,14 +500,41 @@ func TestAHugeStatedSizeIsRefusedWithoutDecoding(t *testing.T) {
 }
 
 func TestASideOverTheCeilingIsRefusedBeforeDecoding(t *testing.T) {
-	configDir(t)
-	raw := pngHeaderOf(t, 4097, 1)
-	got, err := Fetch(context.Background(), &fake{raw: raw}, theID, housePNG)
-	if err == nil {
-		t.Fatalf("Fetch() = %+v, want a refusal", got)
+	for _, c := range []struct {
+		name string
+		w, h int
+	}{
+		{name: "width", w: 4097, h: 1},
+		{name: "height", w: 1, h: 4097},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			configDir(t)
+			raw := pngHeaderOf(t, c.w, c.h)
+			got, err := Fetch(context.Background(), &fake{raw: raw}, theID, housePNG)
+			if err == nil {
+				t.Fatalf("Fetch() = %+v, want a refusal", got)
+			}
+			want := fmt.Sprintf("%dx%d", c.w, c.h)
+			if !strings.Contains(err.Error(), want) {
+				t.Errorf("the refusal is %q, want %s named in it", err, want)
+			}
+		})
 	}
-	if !strings.Contains(err.Error(), "4097x1") {
-		t.Errorf("the refusal is %q, want 4097x1 named in it", err)
+}
+
+func TestASideAtTheCeilingCarries(t *testing.T) {
+	for _, c := range []struct {
+		name string
+		w, h int
+	}{
+		{name: "width", w: 4096, h: 1},
+		{name: "height", w: 1, h: 4096},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			if err := hold(pngOf(t, c.w, c.h), housePNG); err != nil {
+				t.Errorf("hold(%dx%d) = %v, want the boundary accepted", c.w, c.h, err)
+			}
+		})
 	}
 }
 

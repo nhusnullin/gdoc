@@ -34,6 +34,12 @@ missing. The `logo` block on the output says where the bytes came from:
 `drive`, `cache` with its age and the reason Drive was not used, or `file` for
 a style carrying its own bytes.
 
+The `logo` entry in a house file is strict: it states `mime`, `width_pt`, the
+anchor, and exactly one of `drive` or `base64`. An older custom house file must
+remove `px` and `height_pt`; the rendered height now follows the PNG's own
+aspect ratio. The file is still bounded: neither image side may exceed 4096
+pixels.
+
 `--out` will not overwrite a file that is already there. Add `--force` when you
 mean to replace it. `--force` is consent to replace a document, not a folder and
 not something the run reads: an `--out` naming a directory, the note, the
@@ -98,19 +104,21 @@ your note against, because the difference is invisible in the file.
 A link whose destination opens with `#` is a jump inside the document rather
 than a link out of it. It lands on the heading it names, so `[see below](#scope)`
 jumps to the `Scope` heading. The name is built from the heading's own words:
-lower case, every space, hyphen and underscore becomes a hyphen, and anything
-that is not an ASCII letter or digit is dropped. So `## Data Protection (GDPR)`
-is `#data-protection-gdpr` and `# KYC_AML checks` is `#kyc-aml-checks`. A heading
-with accents or in another alphabet loses those letters, so `## Café` is `#caf`,
-and a heading with no ASCII letter or digit in it at all is `#heading`, the next
-such heading `#heading-1`. Two headings with the same words give the second one
-`-1` too. A `#` link that names no heading in the note is printed as the words
-you wrote, with a warning naming the line and the destination you asked for. A
-heading that is nothing but a picture is a figure rather than a heading, so it
-is nothing to jump to and a link naming it warns the same way. Every heading
-carries the jump's landing mark, whether a link names it or not. The mark is
-hidden: its name opens with an underscore, so Word keeps it out of its bookmark
-list and Google Docs shows no flag beside the heading. It is there because
+lower case; Unicode letters, numbers and marks, `-` and `_` stay; every space
+becomes a hyphen; and other punctuation is dropped. So `## Data Protection
+(GDPR)` is `#data-protection-gdpr`, `# KYC_AML checks` is
+`#kyc_aml-checks`, `## Café` is `#café`, and `## Цели проекта` is
+`#цели-проекта`. A heading reduced to nothing after punctuation is removed
+takes `#heading`, the next such heading `#heading-1`. Two headings with the
+same words give the second one `-1` too. Links written with the older
+ASCII-only name still resolve as legacy aliases unless that name belongs to a
+current heading. A `#` link that names no heading in the note is printed as the
+words you wrote, with a warning naming the line and the destination you asked
+for. A heading that is nothing but a picture is a figure rather than a heading,
+so it is nothing to jump to and a link naming it warns the same way. Every
+heading carries the jump's landing mark, whether a link names it or not. The
+mark is hidden: its name opens with an underscore, so Word keeps it out of its
+bookmark list and Google Docs shows no flag beside the heading. It is there because
 Drive's import turns it into the heading's own id, which is what a contents
 entry needs to open that heading.
 

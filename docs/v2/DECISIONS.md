@@ -1245,7 +1245,7 @@ path held as null, and `TestAMaskMayNameOnlyWhatTheRequestSets` and
 check, its 1 MiB byte ceiling and, in place of the pixel pin, a 4096-pixel side
 ceiling judged on the header before any decode.
 
-The plan is `docs/plans/2026-10-26-gdoc-v2-m30-the-fixes.md`.
+The plan is `docs/plans/completed/2026-10-26-gdoc-v2-m30-the-fixes.md`.
 
 ## 2026-10-26. The fourth look: every document on the panel opens on a click, a mark only for a failed run, names that survive, buttons that say what happened, a panel that stays open, a bounded hub.
 

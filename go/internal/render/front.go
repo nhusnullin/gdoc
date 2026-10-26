@@ -106,13 +106,9 @@ func (b *builder) cover() []*etree.Element {
 			})
 		case len(line.Runs) > 0:
 			for _, r := range line.Runs {
-				color := r.Color
-				if color == "" {
-					color = line.Color
-				}
 				text, o := b.runText(r, runOpts{
 					SizePt: line.SizePt, Bold: line.Bold, Italic: line.Italic,
-					Color: color, Highlight: r.Highlight,
+					Color: r.Color, Highlight: r.Highlight,
 				})
 				if o.Color == "" {
 					o.Color = line.Color

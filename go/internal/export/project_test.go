@@ -263,6 +263,31 @@ func TestALinkInsideAFenceIsNotRepointed(t *testing.T) {
 	}
 }
 
+// TestLinkShapedCodeIsNotRepointed asks goldmark, rather than a second fence
+// scanner, what is code. A container can quote or indent a fence, and indented
+// and inline code have no fence line at all.
+func TestLinkShapedCodeIsNotRepointed(t *testing.T) {
+	md := "# 1-Scope\n\n> ```md\n> [quoted](#1-scope)\n> ```\n\n- example:\n\n  ```md\n  [listed](#1-scope)\n  ```\n\nIndented:\n\n    [indented](#1-scope)\n\n`[inline](#1-scope)` and [outside](#1-scope)\n"
+	want := "# Scope\n\n> ```md\n> [quoted](#1-scope)\n> ```\n\n- example:\n\n  ```md\n  [listed](#1-scope)\n  ```\n\nIndented:\n\n    [indented](#1-scope)\n\n`[inline](#1-scope)` and [outside](#scope)\n"
+
+	got, _ := stripHeadingNumbers(md)
+	if got != want {
+		t.Errorf("stripHeadingNumbers() =\n%s\nwant\n%s", got, want)
+	}
+}
+
+// TestABacktickInTheInfoStringDoesNotOpenAFence pins CommonMark's rule for a
+// backtick fence. The invalid opener must not hide the real link behind it.
+func TestABacktickInTheInfoStringDoesNotOpenAFence(t *testing.T) {
+	md := "# 1-Scope\n\n``` bad`info\n\n[a](#1-scope)\n"
+	want := "# Scope\n\n``` bad`info\n\n[a](#scope)\n"
+
+	got, _ := stripHeadingNumbers(md)
+	if got != want {
+		t.Errorf("stripHeadingNumbers() =\n%s\nwant\n%s", got, want)
+	}
+}
+
 // TestAHeadingNumberInsideAFenceStays makes the heading question goldmark's:
 // a line shaped like a numbered heading is still code while it stands inside
 // either spelling of a fenced code block.
