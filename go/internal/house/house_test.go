@@ -236,11 +236,11 @@ func TestTheLogoDecodesAsAPNGOfTheStatedSize(t *testing.T) {
 	if cfg.Logo.Mime != "image/png" {
 		t.Errorf("logo.mime = %q, want image/png", cfg.Logo.Mime)
 	}
-	if len(cfg.Logo.Px) != 2 || cfg.Logo.Px[0] != 195 || cfg.Logo.Px[1] != 97 {
-		t.Errorf("logo.px = %v, want [195 97]", cfg.Logo.Px)
+	if len(cfg.Logo.Px) != 2 || cfg.Logo.Px[0] != 509 || cfg.Logo.Px[1] != 185 {
+		t.Errorf("logo.px = %v, want [509 185]", cfg.Logo.Px)
 	}
-	if cfg.Logo.WidthPt != 146.25 || cfg.Logo.HeightPt != 72.75 {
-		t.Errorf("logo size = %v by %v pt, want 146.25 by 72.75", cfg.Logo.WidthPt, cfg.Logo.HeightPt)
+	if cfg.Logo.WidthPt != 146.25 || cfg.Logo.HeightPt != 53.16 {
+		t.Errorf("logo size = %v by %v pt, want 146.25 by 53.16", cfg.Logo.WidthPt, cfg.Logo.HeightPt)
 	}
 	raw, err := cfg.LogoBytes()
 	if err != nil {
@@ -250,8 +250,8 @@ func TestTheLogoDecodesAsAPNGOfTheStatedSize(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the logo is not a PNG: %v", err)
 	}
-	if img.Width != 195 || img.Height != 97 {
-		t.Errorf("logo is %dx%d px, want 195x97", img.Width, img.Height)
+	if img.Width != 509 || img.Height != 185 {
+		t.Errorf("logo is %dx%d px, want 509x185", img.Width, img.Height)
 	}
 	if cfg.Logo.Anchor.OffsetXPt != 404.25 || cfg.Logo.Anchor.OffsetYPt != -5.15 {
 		t.Errorf("logo anchor offsets = %v, %v, want 404.25, -5.15",
@@ -748,8 +748,8 @@ func TestThePlaceholderIsAPNGOfTheHouseSize(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the placeholder is not a PNG: %v", err)
 	}
-	if img.Width != 195 || img.Height != 97 {
-		t.Errorf("the placeholder is %dx%d px, want 195x97", img.Width, img.Height)
+	if img.Width != 509 || img.Height != 185 {
+		t.Errorf("the placeholder is %dx%d px, want 509x185", img.Width, img.Height)
 	}
 }
 

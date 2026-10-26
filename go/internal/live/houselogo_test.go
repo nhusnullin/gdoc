@@ -3,7 +3,7 @@
 //
 // Every other logo assertion in this package reads geometry, and geometry
 // cannot tell the house logo from the placeholder beside it, which is the same
-// 195 by 97 pixels on purpose. This is the one run that reads the bytes, so it
+// 509 by 185 pixels on purpose. This is the one run that reads the bytes, so it
 // is the one run that can say the tree carrying no logo did not cost the
 // documents their mark.
 //

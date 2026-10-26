@@ -28,8 +28,8 @@ func TestTheFirstPageHeaderCarriesTheLogoWhereTheHouseAnchorsIt(t *testing.T) {
 	if got := extent.SelectAttrValue("cx", ""); got != "1857375" {
 		t.Errorf("logo cx = %q, want 1857375 EMU (146.25pt)", got)
 	}
-	if got := extent.SelectAttrValue("cy", ""); got != "923925" {
-		t.Errorf("logo cy = %q, want 923925 EMU (72.75pt)", got)
+	if got := extent.SelectAttrValue("cy", ""); got != "675132" {
+		t.Errorf("logo cy = %q, want 675132 EMU (53.16pt)", got)
 	}
 	h := anchor.SelectElement("wp:positionH")
 	if got := h.SelectAttrValue("relativeFrom", ""); got != "column" {

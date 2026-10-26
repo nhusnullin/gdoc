@@ -1148,10 +1148,10 @@ heading_numbering:
 logo:
   mime: image/png
   px:
-  - 195
-  - 97
+  - 509
+  - 185
   width_pt: 146.25
-  height_pt: 72.75
+  height_pt: 53.16
   anchor:
     in: first_page_header
     relative_h: column
