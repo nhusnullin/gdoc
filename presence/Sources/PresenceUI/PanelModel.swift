@@ -113,17 +113,33 @@ public struct PanelActions {
 
 /// One row of NOW, in the four shapes it has.
 public enum NowItem: Sendable, Equatable, Identifiable {
-  case hold(id: String, card: HoldCardModel, asking: Bool)
-  case stuck(id: String, card: StuckCardModel, actions: [ActionModel])
-  case job(id: String, card: JobCardModel)
-  case live(id: String, row: LiveRowModel, stop: ActionModel?, pending: Bool)
+  case hold(id: String, card: HoldCardModel, asking: Bool, opens: String?)
+  case stuck(id: String, card: StuckCardModel, actions: [ActionModel], opens: String?)
+  case job(id: String, card: JobCardModel, opens: String?)
+  case live(id: String, row: LiveRowModel, stop: ActionModel?, pending: Bool, opens: String?)
 
   public var id: String {
     switch self {
-    case .hold(let id, _, _): return "hold|\(id)"
-    case .stuck(let id, _, _): return "stuck|\(id)"
-    case .job(let id, _): return "job|\(id)"
-    case .live(let id, _, _, _): return "live|\(id)"
+    case .hold(let id, _, _, _): return "hold|\(id)"
+    case .stuck(let id, _, _, _): return "stuck|\(id)"
+    case .job(let id, _, _): return "job|\(id)"
+    case .live(let id, _, _, _, _): return "live|\(id)"
+    }
+  }
+
+  /// The document a press on this row opens, where it names one.
+  ///
+  /// It is not the row's `id`: a hold is keyed by the hold, a stuck write
+  /// and a job by the run and the call, and only a watch is keyed by the
+  /// document itself. And it is nothing where the record named no document
+  /// or named one Drive could not have written, because a line of the
+  /// record is forgeable and a press that came out of one must have
+  /// nowhere else to go: testEveryNowRowThatNamesADocumentOpensIt.
+  public var opens: String? {
+    switch self {
+    case .hold(_, _, _, let opens), .stuck(_, _, _, let opens), .job(_, _, let opens),
+      .live(_, _, _, _, let opens):
+      return opens
     }
   }
 }
@@ -375,7 +391,7 @@ public struct PanelModel: Sendable, Equatable {
   /// hold to the stuck card's eighty characters.
   public var reasons: [String] {
     now.compactMap {
-      if case .stuck(_, let card, _) = $0 { return card.reason } else { return nil }
+      if case .stuck(_, let card, _, _) = $0 { return card.reason } else { return nil }
     }
   }
 }
@@ -467,14 +483,16 @@ extension PanelModel {
         items.append(
           .hold(
             id: hold.id, card: words.holdCard(hold),
-            asking: ui.isAsking(.dismissHold(hold.id), now: words.now)))
+            asking: ui.isAsking(.dismissHold(hold.id), now: words.now),
+            opens: opens(hold.doc)))
       case .stuck(let write):
         items.append(
           .stuck(
             id: write.key, card: words.stuckCard(write),
-            actions: stuckActions(write, facts: facts, ui: ui, now: words.now)))
+            actions: stuckActions(write, facts: facts, ui: ui, now: words.now),
+            opens: opens(write.doc)))
       case .job(let run):
-        items.append(.job(id: run.key, card: words.jobCard(run)))
+        items.append(.job(id: run.key, card: words.jobCard(run), opens: opens(run.doc)))
       case .watch:
         // A watch is drawn from its session rather than from its one poll,
         // because what a person calls a live watch is the whole stretch.
@@ -492,9 +510,21 @@ extension PanelModel {
         .live(
           id: session.doc, row: words.liveRow(session),
           stop: stopAction(session, facts: facts, ui: ui),
-          pending: ui.pendingStop.contains(session.doc)))
+          pending: ui.pendingStop.contains(session.doc),
+          opens: opens(session.doc)))
     }
     return items
+  }
+
+  /// The document a NOW row opens, out of the one the record named.
+  ///
+  /// It is the DOCUMENTS row's own rule, in the one place NOW needs it: an
+  /// id Drive could not have written opens nothing, because `Opener` would
+  /// refuse to build a URL out of it anyway and a row that offers a press
+  /// doing nothing is worse than a row that offers none.
+  private static func opens(_ doc: String?) -> String? {
+    guard let doc, LinkLine.isDocumentID(doc) else { return nil }
+    return doc
   }
 
   /// The watches NOW draws: the open ones, and the ones a sign-in that
@@ -550,7 +580,10 @@ extension PanelModel {
       card: StuckCardModel(title: auth.rawValue, reason: reason),
       actions: [
         ActionModel(.signIn, icon: .signin, tip: Tips.signIn, target: "auth")
-      ])
+      ],
+      // The card about the machine names no document, so a press on it
+      // opens none: it is the one card in NOW that came from the machine.
+      opens: nil)
   }
 
   private static func stuckActions(

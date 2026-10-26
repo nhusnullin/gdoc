@@ -171,14 +171,14 @@ final class StopperTests: XCTestCase {
 
     // The panel's own reading of the fact the stopper hands it.
     let greyed = try panel(events, at: at, unstoppable: refuses.unstoppable(in: events))
-    guard case .live(_, _, let stop, let pending) = try first(of: greyed) else {
+    guard case .live(_, _, let stop, let pending, _) = try first(of: greyed) else {
       return XCTFail("an open watch draws a live row")
     }
     XCTAssertEqual(stop?.state, .off(Tips.cannotStop), "the icon is off, with the one sentence")
     XCTAssertFalse(pending, "nothing was signalled, so there is no ring")
 
     let live = try panel(events, at: at, unstoppable: [])
-    guard case .live(_, _, let offered, _) = try first(of: live) else {
+    guard case .live(_, _, let offered, _, _) = try first(of: live) else {
       return XCTFail("an open watch draws a live row")
     }
     XCTAssertEqual(offered?.state, .live, "the check holds, so Stop can be pressed")
@@ -198,7 +198,7 @@ final class StopperTests: XCTestCase {
 
     let ringing = try panel(
       events, at: at.addingTimeInterval(2), pendingStop: stopper.pendingDocs(in: events))
-    guard case .live(_, _, let stop, let pending) = try first(of: ringing) else {
+    guard case .live(_, _, let stop, let pending, _) = try first(of: ringing) else {
       return XCTFail("an open watch draws a live row")
     }
     XCTAssertTrue(pending, "a ring, until the end arrives")
@@ -214,7 +214,7 @@ final class StopperTests: XCTestCase {
 
     let after = try panel(
       ended, at: at.addingTimeInterval(7), pendingStop: stopper.pendingDocs(in: ended))
-    guard case .live(_, _, let stopAfter, let pendingAfter) = try first(of: after) else {
+    guard case .live(_, _, let stopAfter, let pendingAfter, _) = try first(of: after) else {
       return XCTFail("the watch is still open between two polls")
     }
     XCTAssertFalse(pendingAfter, "no ring once the end is in the record")

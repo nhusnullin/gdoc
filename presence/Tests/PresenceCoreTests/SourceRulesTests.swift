@@ -219,6 +219,11 @@ final class SourceRulesTests: XCTestCase {
   /// The folder panel was the fifth verb until the third look. The note is
   /// found rather than configured now, so this app opens no window of the
   /// system's at all, and `NSOpenPanel` is named in neither file.
+  /// The chooser in the scan is the one the third look took out. The Hub
+  /// row and `SystemDesk.chooseFolder` went with it, so the modal that
+  /// closed the panel it was pressed in cannot come back without this test
+  /// going red first: docs/backlog/the-hub-pickers-modal-closes-the-panel.md,
+  /// closed at the fourth look with no code of its own.
   func testTheSystemIsAskedOnlyThroughTheOpenerAndTheRelauncher() throws {
     let workspace = "NSWork" + "space"
     let board = "NSPaste" + "board"

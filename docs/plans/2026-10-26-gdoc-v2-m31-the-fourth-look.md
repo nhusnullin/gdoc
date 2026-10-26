@@ -346,30 +346,30 @@ branch.
 - Delete: `docs/backlog/a-live-row-has-no-link-to-its-document.md`,
   `docs/backlog/the-hub-pickers-modal-closes-the-panel.md`
 
-- [ ] every `NowItem` carries the document it opens: the hold's, the stuck
+- [x] every `NowItem` carries the document it opens: the hold's, the stuck
       write's, the job's and the watch's id, and nothing where the id is
       missing or not Drive-shaped (`LinkLine.isDocumentID`). A publish
       still running has none. A table test over the four shapes with and
       without an id (`testEveryNowRowThatNamesADocumentOpensIt`)
-- [ ] the whole row or card is the click target, as the lead decided, and
+- [x] the whole row or card is the click target, as the lead decided, and
       the press leaves as `PanelActions.perform(.openDoc, id)`, the kind a
       DOCUMENTS row's first icon sends, so `Session.perform` reaches
       `Opener.openDocument` and nothing new asks the system. The title area
       carries the Google Docs icon's tooltip. A hold card that is asking
       its question opens nothing
-- [ ] the controls on a row keep their own press: Stop sends `.stopLive`
+- [x] the controls on a row keep their own press: Stop sends `.stopLive`
       alone and the row sends `.openDoc` alone. A test reads the two
       closures the view is built with through a recording `PanelActions`
       (`testTheRowOpensAndOnlyStopStops`). No offscreen click test: that
       test and Nail's hand check after the run hold the behaviour.
       Stop's state, ring and process check are unchanged and it gains no
       confirm
-- [ ] `docs/backlog/the-hub-pickers-modal-closes-the-panel.md` is closed with
+- [x] `docs/backlog/the-hub-pickers-modal-closes-the-panel.md` is closed with
       no code: the picker went at the third look and
       `testTheSystemIsAskedOnlyThroughTheOpenerAndTheRelauncher` refuses
       `NSOpenPanel`. The commit message names that test
-- [ ] `git rm` the two backlog files
-- [ ] `make app-lint`, `make app-test`
+- [x] `git rm` the two backlog files
+- [x] `make app-lint`, `make app-test`
 
 ### Task 6: the held press opens the system menu, and the panel stays
 

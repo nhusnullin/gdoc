@@ -276,7 +276,7 @@ enum SheetPieces {
   /// Scene r6: the hold in the chat over the watch.
   static func hold() throws -> HoldCardModel {
     let cards = try scene("r6").model().now.compactMap { item -> HoldCardModel? in
-      if case .hold(_, let card, _) = item { return card }
+      if case .hold(_, let card, _, _) = item { return card }
       return nil
     }
     return try XCTUnwrap(cards.first, "scene r6 drew no hold card")
@@ -286,17 +286,26 @@ enum SheetPieces {
   static func stuck() throws -> (card: StuckCardModel, actions: [ActionModel]) {
     let found = try scene("r2").model().now.compactMap {
       item -> (StuckCardModel, [ActionModel])? in
-      if case .stuck(_, let card, let actions) = item { return (card, actions) }
+      if case .stuck(_, let card, let actions, _) = item { return (card, actions) }
       return nil
     }
     let first = try XCTUnwrap(found.first, "scene r2 drew no stuck card")
     return (first.0, first.1)
   }
 
+  /// Scene r4's watch as the row NOW draws, which is the row with what it
+  /// opens and what its Stop is about.
+  static func liveItem() throws -> NowItem {
+    let items = try scene("r4").model().now.filter {
+      if case .live = $0 { return true } else { return false }
+    }
+    return try XCTUnwrap(items.first, "scene r4 drew no live row")
+  }
+
   /// Scene r4: the watch that has been going since the afternoon.
   static func live() throws -> LiveRowModel {
     let rows = try scene("r4").model().now.compactMap { item -> LiveRowModel? in
-      if case .live(_, let row, _, _) = item { return row }
+      if case .live(_, let row, _, _, _) = item { return row }
       return nil
     }
     return try XCTUnwrap(rows.first, "scene r4 drew no live row")
@@ -305,7 +314,7 @@ enum SheetPieces {
   /// Scene r1: the publish on its second step.
   static func job() throws -> JobCardModel {
     let cards = try scene("r1").model().now.compactMap { item -> JobCardModel? in
-      if case .job(_, let card) = item { return card }
+      if case .job(_, let card, _) = item { return card }
       return nil
     }
     return try XCTUnwrap(cards.first, "scene r1 drew no job card")
@@ -535,14 +544,14 @@ private func actionWords(_ action: ActionModel) -> [String] {
 /// One NOW item's own strings.
 private func nowWords(_ item: NowItem) -> [String] {
   switch item {
-  case .hold(_, let card, _):
+  case .hold(_, let card, _, _):
     return [card.title, card.sub, card.quiet, card.question, card.consequence]
-  case .stuck(_, let card, let actions):
+  case .stuck(_, let card, let actions, _):
     return [card.title, card.reason] + actions.map(\.tip)
-  case .job(_, let card):
+  case .job(_, let card, _):
     return [card.title] + [card.sub].compactMap { $0 }
       + card.steps.flatMap { [$0.title] + [$0.value].compactMap { $0 } }
-  case .live(_, let row, let stop, _):
+  case .live(_, let row, let stop, _, _):
     return [row.title, row.sub] + (stop.map { [$0.tip] } ?? [])
   }
 }

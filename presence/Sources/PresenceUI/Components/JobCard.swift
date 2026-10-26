@@ -89,11 +89,14 @@ public struct JobCard: View {
     Grid.panelWidth - 2 * Grid.unit - 2 * Grid.rowInset - Grid.ringLarge - columnGap
 
   public let model: JobCardModel
+  /// The words the title carries where the card itself opens the document.
+  public let titleTip: String?
 
   @Environment(\.colorScheme) private var scheme
 
-  public init(model: JobCardModel) {
+  public init(model: JobCardModel, titleTip: String? = nil) {
     self.model = model
+    self.titleTip = titleTip
   }
 
   /// Whether the step rows are drawn at all.
@@ -122,6 +125,7 @@ public struct JobCard: View {
             column: Self.titleColumn
           )
           .metricProbe("job.title")
+          .tooltip(titleTip ?? "", align: .leading)
           if let sub = model.sub {
             Text(sub)
               .font(Typography.caption.font)

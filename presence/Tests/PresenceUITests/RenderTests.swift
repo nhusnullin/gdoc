@@ -413,7 +413,7 @@ final class RenderTests: XCTestCase {
     let scene = try XCTUnwrap(Scenes.all.first { $0.id == "e9" })
     let model = try scene.model()
 
-    guard case .live(_, let row, let stop, _)? = model.now.last else {
+    guard case .live(_, let row, let stop, _, _)? = model.now.last else {
       return XCTFail("e9 draws its watch as a live row")
     }
     // The title carries the word and the sub-line carries the moment and
@@ -424,7 +424,7 @@ final class RenderTests: XCTestCase {
     XCTAssertTrue(row.stopped, "the dot goes dim with the word")
     XCTAssertNil(stop, "nothing is polling, so there is nothing to stop")
 
-    guard case .stuck(_, let card, _)? = model.now.first else {
+    guard case .stuck(_, let card, _, _)? = model.now.first else {
       return XCTFail("e9 opens with the card `auth status` raised")
     }
     XCTAssertEqual(card.title, "Needs sign-in")
@@ -461,7 +461,7 @@ final class RenderTests: XCTestCase {
 
     XCTAssertEqual(
       model.now.compactMap { item -> String? in
-        if case .live(_, let row, _, _) = item { return row.title } else { return nil }
+        if case .live(_, let row, _, _, _) = item { return row.title } else { return nil }
       },
       ["Live stopped · Ch 5. Commercial Model: review draft v0.1"],
       "and NOW says the same word over the same document")
@@ -479,7 +479,7 @@ final class RenderTests: XCTestCase {
   /// allows: "since, replied and proposed counts".
   func testAWatchCountsItsWritesInTheWordsForThem() throws {
     let scene = try XCTUnwrap(Scenes.all.first { $0.id == "r4" })
-    guard case .live(_, let row, _, _)? = try scene.model().now.last else {
+    guard case .live(_, let row, _, _, _)? = try scene.model().now.last else {
       return XCTFail("r4 draws a live row")
     }
     XCTAssertEqual(row.sub, "since 13:10 · quiet 38 min · replied 1")

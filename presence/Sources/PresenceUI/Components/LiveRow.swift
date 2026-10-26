@@ -58,15 +58,18 @@ public struct LiveRow: View {
   public let state: ActionState?
   /// Whether the signal has gone and the end has not arrived.
   public let pending: Bool
+  /// The words the title carries where the row itself opens the document.
+  public let titleTip: String?
   public let onStop: () -> Void
 
   public init(
     model: LiveRowModel, stop: ActionState? = .live, pending: Bool = false,
-    onStop: @escaping () -> Void = {}
+    titleTip: String? = nil, onStop: @escaping () -> Void = {}
   ) {
     self.model = model
     self.state = stop
     self.pending = pending
+    self.titleTip = titleTip
     self.onStop = onStop
   }
 
@@ -86,7 +89,8 @@ public struct LiveRow: View {
   public var body: some View {
     RowView(
       .two, glyph: .dot, tone: model.stopped ? .dim : .live, title: model.name,
-      titlePrefix: model.prefix, titleColumn: MiddleTitle.nowColumn, sub: model.sub,
+      titlePrefix: model.prefix, titleColumn: MiddleTitle.nowColumn, titleTip: titleTip,
+      sub: model.sub,
       trailing: {
         if Self.showsRing(pending: pending) {
           // The ring is the glyph's 16 pt in the action's 24 pt box, so the

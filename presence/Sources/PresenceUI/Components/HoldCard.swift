@@ -63,6 +63,9 @@ public struct HoldCard: View {
   public let model: HoldCardModel
   /// Whether the card is asking rather than offering.
   public let asking: Bool
+  /// The words the title carries where the card itself opens the document.
+  /// A card that is asking carries none, because it opens nothing.
+  public let titleTip: String?
   public let onOpenChat: () -> Void
   public let onDismiss: () -> Void
   public let onConfirm: () -> Void
@@ -73,6 +76,7 @@ public struct HoldCard: View {
   public init(
     model: HoldCardModel,
     asking: Bool = false,
+    titleTip: String? = nil,
     onOpenChat: @escaping () -> Void = {},
     onDismiss: @escaping () -> Void = {},
     onConfirm: @escaping () -> Void = {},
@@ -80,6 +84,7 @@ public struct HoldCard: View {
   ) {
     self.model = model
     self.asking = asking
+    self.titleTip = titleTip
     self.onOpenChat = onOpenChat
     self.onDismiss = onDismiss
     self.onConfirm = onConfirm
@@ -164,6 +169,7 @@ public struct HoldCard: View {
             .font(Typography.titleEmphasis.font)
             .foregroundStyle(Self.titleInk(in: palette).color)
             .metricProbe("hold.title")
+            .tooltip(titleTip ?? "", align: .leading)
           Text(model.sub)
             .font(Typography.caption.font)
             .fixedSize(horizontal: false, vertical: true)

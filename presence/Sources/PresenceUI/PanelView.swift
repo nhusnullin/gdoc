@@ -128,6 +128,53 @@ struct PlacedSection: Identifiable {
   var id: String { section.id }
 }
 
+/// What a press on a NOW row means, which is one thing: open the document
+/// the row names.
+///
+/// Every row in NOW is about a document, so the row itself is the click
+/// target and not an icon on it, which is Nail's own answer at the fourth
+/// look (docs/v2/DECISIONS.md, 2026-10-26). The press leaves as the kind a
+/// DOCUMENTS row's first icon sends, so `Session.perform` reaches
+/// `Opener.openDocument` and nothing new asks the system.
+///
+/// The controls keep their own press: Stop is a button inside the row and
+/// takes the click that lands on it, so a hand reaching for Stop never
+/// opens a browser tab instead: testTheRowOpensAndOnlyStopStops.
+enum NowPress {
+  /// The words the title area carries, which are the Google Docs icon's:
+  /// the press is that icon's press, moved to the row.
+  static let words = Tips.openDoc
+
+  /// The document this row's press opens, or nothing where it has no press.
+  ///
+  /// A hold that is asking its question opens nothing: the card is two
+  /// buttons and a sentence about what follows from them, and a click
+  /// anywhere on it that went to a browser would be an answer nobody gave.
+  static func opens(_ item: NowItem) -> String? {
+    if case .hold(_, _, let asking, _) = item, asking { return nil }
+    return item.opens
+  }
+
+  /// The row's own press, where it has one.
+  static func open(_ item: NowItem, actions: PanelActions) -> (() -> Void)? {
+    guard let doc = opens(item) else { return nil }
+    return { actions.perform(.openDoc, doc) }
+  }
+
+  /// The words a row's title area carries, where the row is a press. A row
+  /// that opens nothing says nothing: a tooltip over a title that does not
+  /// click is the panel offering something it does not have.
+  static func tip(for item: NowItem) -> String? {
+    opens(item) == nil ? nil : words
+  }
+
+  /// The one control a live row carries, which is its own press and never
+  /// the row's.
+  static func stop(_ stop: ActionModel?, actions: PanelActions) -> () -> Void {
+    { actions.perform(.stopLive, stop?.target) }
+  }
+}
+
 /// NOW: the cards and the live rows, in the order the fold put them in.
 struct NowList: View {
   let items: [NowItem]
@@ -137,24 +184,32 @@ struct NowList: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
       ForEach(items) { item in
-        switch item {
-        case .hold(let id, let card, let asking):
-          HoldCard(
-            model: card, asking: asking,
-            onOpenChat: { actions.perform(.openChat, id) },
-            onDismiss: { actions.perform(.dismiss, id) },
-            onConfirm: { actions.perform(.dismiss, id) },
-            onKeep: { actions.perform(.keep, id) })
-        case .stuck(_, let card, let icons):
-          StuckCard(model: card, actions: icons.map { $0.icon(forced: forced, actions) })
-        case .job(_, let card):
-          JobCard(model: card)
-        case .live(_, let row, let stop, let pending):
-          LiveRow(
-            model: row, stop: stop?.state, pending: pending,
-            onStop: { actions.perform(.stopLive, stop?.target) })
-        }
+        row(item)
+          .opensDocument(NowPress.open(item, actions: actions))
       }
+    }
+  }
+
+  @ViewBuilder
+  private func row(_ item: NowItem) -> some View {
+    let tip = NowPress.tip(for: item)
+    switch item {
+    case .hold(let id, let card, let asking, _):
+      HoldCard(
+        model: card, asking: asking, titleTip: tip,
+        onOpenChat: { actions.perform(.openChat, id) },
+        onDismiss: { actions.perform(.dismiss, id) },
+        onConfirm: { actions.perform(.dismiss, id) },
+        onKeep: { actions.perform(.keep, id) })
+    case .stuck(_, let card, let icons, _):
+      StuckCard(
+        model: card, actions: icons.map { $0.icon(forced: forced, actions) }, titleTip: tip)
+    case .job(_, let card, _):
+      JobCard(model: card, titleTip: tip)
+    case .live(_, let row, let stop, let pending, _):
+      LiveRow(
+        model: row, stop: stop?.state, pending: pending, titleTip: tip,
+        onStop: NowPress.stop(stop, actions: actions))
     }
   }
 }
@@ -202,6 +257,16 @@ struct DocumentsList: View {
 }
 
 extension View {
+  /// The whole row or card as one press, which opens the document it names.
+  ///
+  /// The shape is the row's own box, so the quiet parts of it press too: a
+  /// sub-line of facts and the gap beside a title are what a hand lands on
+  /// first. A row that names no document carries no press at all and no
+  /// shape either, so it stays what it was.
+  func opensDocument(_ press: (() -> Void)?) -> some View {
+    modifier(OpensDocument(press: press))
+  }
+
   /// A document row's own menu, on a secondary click and on a press held
   /// half a second.
   ///
@@ -248,6 +313,27 @@ private struct RowMenu: ViewModifier {
         held = false
         actions.perform(item.kind, item.target)
       }
+    }
+  }
+}
+
+/// The row's own press: the one gesture, over the row's whole box.
+///
+/// It is a tap and not a button, because a button around a row with buttons
+/// in it is two controls one inside the other, and the inner one stops
+/// reporting its own state. The icons on the row are drawn over this and
+/// take the clicks that land on them, which is the platform's own rule
+/// about a child and the view behind it.
+private struct OpensDocument: ViewModifier {
+  let press: (() -> Void)?
+
+  func body(content: Content) -> some View {
+    if let press {
+      content
+        .contentShape(Rectangle())
+        .onTapGesture(perform: press)
+    } else {
+      content
     }
   }
 }

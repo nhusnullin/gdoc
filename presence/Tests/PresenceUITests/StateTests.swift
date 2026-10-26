@@ -299,7 +299,7 @@ final class StateTests: XCTestCase {
   func testTheSignOutCountsTheHoldsTheRecordHasOpen() throws {
     let asking = UIState(question: .signOut, questionAt: try at("2026-10-17T10:00:00Z"))
     let hidden = try drawn(
-      [held("2026-10-17T09:50:00Z", hold: "h_1", until: "2026-10-17T10:50:00Z")],
+      [held("2026-10-17T09:50:00Z", hold: "h_1", until: "2026-10-17T10:50:00Z", doc: chapter4)],
       at: "2026-10-17T10:00:00Z",
       ui: UIState(
         dismissed: ["h_1"], question: .signOut,
@@ -310,7 +310,7 @@ final class StateTests: XCTestCase {
       "the hold is still waiting in the chat, and the sign-out drops it")
 
     let ranOut = try drawn(
-      [held("2026-10-17T08:00:00Z", hold: "h_2", until: "2026-10-17T09:00:00Z")],
+      [held("2026-10-17T08:00:00Z", hold: "h_2", until: "2026-10-17T09:00:00Z", doc: chapter4)],
       at: "2026-10-17T10:00:00Z", ui: asking)
     XCTAssertEqual(ranOut.now.count, 1, "the card is on the screen")
     XCTAssertEqual(
@@ -639,7 +639,7 @@ final class StateTests: XCTestCase {
     switch state {
     case .hold:
       return (
-        [held("2026-10-17T17:00:00Z", hold: "h-1", until: "2026-10-17T19:00:00Z")],
+        [held("2026-10-17T17:00:00Z", hold: "h-1", until: "2026-10-17T19:00:00Z", doc: chapter4)],
         UIState(), []
       )
     case .running:
@@ -695,14 +695,108 @@ final class StateTests: XCTestCase {
     }
   }
 
+  /// Every row in NOW that names a document opens it, and no row opens
+  /// anything else.
+  ///
+  /// The fourth look made the row itself the press (docs/v2/DECISIONS.md,
+  /// 2026-10-26): a watch, a hold, a write that stopped and a job each say
+  /// which document they are about, and until now only the stuck card
+  /// offered a way into it. The id is the record's, so it is held to the
+  /// shape Drive writes before a press is offered at all: a line somebody
+  /// planted opens nothing, and so does a publish that has not created a
+  /// document yet.
+  func testEveryNowRowThatNamesADocumentOpensIt() throws {
+    let planted = "not-a-drive-id"
+    for shape in NowShape.allCases {
+      let named = try row(shape, doc: chapter4)
+      XCTAssertEqual(
+        named.opens, chapter4, "a \(shape.rawValue) row names a document, so it opens it")
+      XCTAssertEqual(NowPress.opens(named), chapter4, "and the press is offered")
+      XCTAssertEqual(
+        NowPress.tip(for: named), Tips.openDoc,
+        "and the title says so in the Google Docs icon's own words")
+
+      let forged = try row(shape, doc: planted)
+      XCTAssertNil(
+        forged.opens, "a \(shape.rawValue) row whose id Drive could not have written opens none")
+      XCTAssertNil(NowPress.opens(forged))
+      XCTAssertNil(NowPress.tip(for: forged), "and its title offers nothing")
+
+      guard shape != .live else { continue }
+      let nameless = try row(shape, doc: nil)
+      XCTAssertNil(
+        nameless.opens, "a \(shape.rawValue) row that names no document opens none")
+      XCTAssertNil(NowPress.tip(for: nameless))
+    }
+  }
+
+  /// A hold that is asking its question opens nothing.
+  ///
+  /// The card is two buttons and the sentence that says what follows from
+  /// them, so a click anywhere on it that opened a browser tab would be an
+  /// answer nobody gave. The document is still on the item: the card goes
+  /// back to offering when the question runs out, and the press comes back
+  /// with it.
+  func testAHoldThatIsAskingOpensNothing() throws {
+    let asked = try at("2026-10-17T17:30:00Z")
+    let ui = UIState(question: .dismissHold("h-1"), questionAt: asked)
+    let panel = try drawn(
+      [held("2026-10-17T17:00:00Z", hold: "h-1", until: "2026-10-17T19:00:00Z", doc: chapter4)],
+      at: "2026-10-17T17:30:01Z", ui: ui)
+    let item = try XCTUnwrap(panel.now.first, "the hold is the one row in NOW")
+    guard case .hold(_, _, let asking, _) = item else {
+      return XCTFail("a held write is a hold card")
+    }
+    XCTAssertTrue(asking, "the card is asking")
+    XCTAssertEqual(item.opens, chapter4, "the document is still what the row is about")
+    XCTAssertNil(NowPress.opens(item), "and the card offers no press while it asks")
+    XCTAssertNil(NowPress.tip(for: item), "so its title promises none")
+  }
+
+  /// The four shapes NOW draws, each built from the record.
+  private enum NowShape: String, CaseIterable {
+    case hold
+    case stuck
+    case job
+    case live
+  }
+
+  /// One row of NOW in the shape asked for, about the document named.
+  private func row(_ shape: NowShape, doc: String?) throws -> NowItem {
+    let events: [Event]
+    var alive: Set<Int32> = []
+    switch shape {
+    case .hold:
+      events = [
+        held("2026-10-17T17:00:00Z", hold: "h-1", until: "2026-10-17T19:00:00Z", doc: doc)
+      ]
+    case .stuck:
+      events = [
+        event("2026-10-17T17:00:00Z", .start, command: "publish", doc: doc),
+        event("2026-10-17T17:01:00Z", .end, command: "publish", doc: doc, ok: false),
+      ]
+    case .job:
+      events = [event("2026-10-17T17:00:00Z", .start, command: "publish", doc: doc)]
+      alive = [7101]
+    case .live:
+      events = [
+        event("2026-10-17T17:59:00Z", .start, command: "comments", doc: doc, wait: true)
+      ]
+      alive = [7101]
+    }
+    let panel = try drawn(events, at: drawnAt, alive: alive)
+    return try XCTUnwrap(
+      panel.now.first, "the record above draws no \(shape.rawValue) row")
+  }
+
   /// A write a rule held, as gdoc writes it: one line, and no call.
-  private func held(_ at: String, hold: String, until: String) -> Event {
+  private func held(_ at: String, hold: String, until: String, doc: String? = nil) -> Event {
     let formatter = ISO8601DateFormatter()
     formatter.formatOptions = [.withInternetDateTime]
     return Event(
       schema: 1, at: formatter.date(from: at) ?? Date(timeIntervalSince1970: 0),
       gdoc: "v2.15.0", pid: 7101, run: "3000000000000002", call: nil, kind: .held,
-      command: "reply", via: "chat", doc: chapter4, wait: false, title: nil, ok: nil,
+      command: "reply", via: "chat", doc: doc, wait: false, title: nil, ok: nil,
       verified: nil, ms: nil, hold: hold, rule: "dictated",
       until: formatter.date(from: until))
   }

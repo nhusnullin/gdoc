@@ -342,7 +342,7 @@ final class CardTests: XCTestCase {
     // cross, each of them live: scene e3's export.
     let named = try XCTUnwrap(
       try SheetPieces.scene("e3").model().now.compactMap { item -> [ActionModel]? in
-        if case .stuck(_, _, let actions) = item { return actions }
+        if case .stuck(_, _, let actions, _) = item { return actions }
         return nil
       }.first, "e3 drew no stuck card")
     XCTAssertEqual(named.map(\.icon), [.gdocs, .md, .branch, .link, .xmark])
@@ -351,6 +351,53 @@ final class CardTests: XCTestCase {
         XCTFail("e3's card carries a dead \(action.icon.rawValue): \(reason)")
       }
     }
+  }
+
+  /// A press on a live row opens its document, and the row's one control
+  /// stops the watch. Neither does the other.
+  ///
+  /// The two closures the view is built with are read here through a
+  /// `PanelActions` that writes down what it was handed, because this
+  /// package has no offscreen click: what a test can hold is that the row
+  /// and the icon were wired to two different things. Nail's hand check
+  /// after the run holds the rest of it.
+  ///
+  /// Stop keeps everything it had at the third look: its own state, its
+  /// ring while the signal is in flight, and no confirm. A click on the row
+  /// never stops a watch, which is principle 3.
+  func testTheRowOpensAndOnlyStopStops() throws {
+    var pressed: [(kind: ActionKind, target: String?)] = []
+    let actions = PanelActions { kind, target in pressed.append((kind, target)) }
+
+    let item = try SheetPieces.liveItem()
+    guard case .live(_, _, let stop, let pending, _) = item else {
+      return XCTFail("scene r4's row is a watch")
+    }
+    let doc = try XCTUnwrap(item.opens, "scene r4's watch names the document it watches")
+
+    let open = try XCTUnwrap(
+      NowPress.open(item, actions: actions), "the row opens the document it names")
+    open()
+    XCTAssertEqual(pressed.count, 1, "one press, one thing done")
+    XCTAssertEqual(pressed.first?.kind, .openDoc, "and it is the kind a document icon sends")
+    XCTAssertEqual(pressed.first?.target, doc)
+
+    NowPress.stop(stop, actions: actions)()
+    XCTAssertEqual(pressed.count, 2)
+    XCTAssertEqual(pressed.last?.kind, .stopLive, "Stop stops, and opens nothing")
+    XCTAssertEqual(pressed.last?.target, doc)
+
+    XCTAssertEqual(
+      pressed.filter { $0.kind == .openDoc }.count, 1,
+      "the control's press is its own and never the row's")
+    XCTAssertEqual(NowPress.words, Tips.openDoc, "the title area carries the icon's own words")
+
+    // Stop is what it was: the one icon, the ring while the signal is in
+    // flight, and no confirm beside either.
+    XCTAssertFalse(pending, "scene r4's watch has no signal in flight")
+    XCTAssertEqual(LiveRow.icons(pending: false), [.stop])
+    XCTAssertEqual(LiveRow.icons(pending: true), [], "the ring stands where the icon was")
+    XCTAssertTrue(LiveRow.showsRing(pending: true))
   }
 
   // `.stuck .acts` holds Open md, Continue with Claude and the bare cross,
