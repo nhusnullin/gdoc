@@ -325,9 +325,9 @@ func describe(ps []Piece) string {
 // session takes it out with the marker.
 func stripHeadingNumbers(md string) (string, []Piece) {
 	lines := strings.Split(md, "\n")
+	before := view.HeadingLines(md)
 	var out []Piece
-	moved := map[string]string{}
-	for _, heading := range view.HeadingLines(md) {
+	for _, heading := range before {
 		m := numberedHeading.FindStringSubmatch(lines[heading.Line])
 		if m == nil {
 			continue
@@ -335,11 +335,16 @@ func stripHeadingNumbers(md string) (string, []Piece) {
 		numbered, words := m[2]+headingNumberSeparator+m[3], m[3]
 		lines[heading.Line] = m[1] + words
 		out = append(out, Piece{Kind: PieceHeadingNumber, Text: numbered})
-		if from, to := view.Anchor(numbered), view.Anchor(words); from != to {
-			moved[from] = to
+	}
+	stripped := strings.Join(lines, "\n")
+	after := view.HeadingLines(stripped)
+	moved := make(map[string]string, len(before))
+	for i := 0; i < len(before) && i < len(after); i++ {
+		if before[i].ID != after[i].ID {
+			moved[before[i].ID] = after[i].ID
 		}
 	}
-	return repoint(strings.Join(lines, "\n"), moved), out
+	return repoint(stripped, moved), out
 }
 
 // keptNumbers names the headings that still open the way a house number does,
@@ -371,9 +376,9 @@ func keptNumbers(tab, md string) []string {
 }
 
 // repoint moves the links that pointed at a heading the number came off. The
-// target is the heading's own words as an anchor, so a heading that loses "1-"
-// loses it from every link into it as well, and a file whose links land nowhere
-// is not a file a session can merge.
+// target comes from that heading's position before and after the strip, so a
+// repeated heading keeps its own suffix and a file whose links land nowhere is
+// not a file a session can merge. A link inside a fence is code and stays.
 //
 // One pass over the targets, not one pass per entry of the map. Sequential
 // replacements chain: a document where one heading's new anchor is another
@@ -384,13 +389,62 @@ func repoint(md string, moved map[string]string) string {
 	if len(moved) == 0 {
 		return md
 	}
-	return headingLink.ReplaceAllStringFunc(md, func(m string) string {
-		from := m[len("](#") : len(m)-1]
-		if to, ok := moved[from]; ok {
-			return "](#" + to + ")"
+	lines := strings.Split(md, "\n")
+	var fence byte
+	var fenceLen int
+	for i, line := range lines {
+		marker, width, closing := fenceLine(line, fence, fenceLen)
+		if fence != 0 {
+			if closing {
+				fence, fenceLen = 0, 0
+			}
+			continue
 		}
-		return m
-	})
+		if marker != 0 {
+			fence, fenceLen = marker, width
+			continue
+		}
+		lines[i] = headingLink.ReplaceAllStringFunc(line, func(m string) string {
+			from := m[len("](#") : len(m)-1]
+			if to, ok := moved[from]; ok {
+				return "](#" + to + ")"
+			}
+			return m
+		})
+	}
+	return strings.Join(lines, "\n")
+}
+
+// fenceLine recognises an opening fence when open is zero and the matching
+// closing fence otherwise. Markdown permits up to three leading spaces; a
+// closing fence may be longer than its opener and carries only whitespace
+// behind it.
+func fenceLine(line string, open byte, openLen int) (marker byte, width int, closing bool) {
+	spaces := 0
+	for spaces < len(line) && spaces < 4 && line[spaces] == ' ' {
+		spaces++
+	}
+	if spaces > 3 || spaces == len(line) {
+		return 0, 0, false
+	}
+	marker = line[spaces]
+	if open == 0 {
+		if marker != '`' && marker != '~' {
+			return 0, 0, false
+		}
+	} else if marker != open {
+		return 0, 0, false
+	}
+	for spaces+width < len(line) && line[spaces+width] == marker {
+		width++
+	}
+	if width < 3 || open != 0 && width < openLen {
+		return 0, 0, false
+	}
+	if open != 0 {
+		closing = strings.TrimSpace(line[spaces+width:]) == ""
+	}
+	return marker, width, closing
 }
 
 // headingLink is a markdown link whose target is a place in this file. The

@@ -239,6 +239,30 @@ func TestRepointDoesNotChainRewrites(t *testing.T) {
 	}
 }
 
+// TestNumbersThatCollapseIntoOneHeadingKeepTheirLinksApart keeps the heading
+// sequence while stripping: the second Scope owns the repeated id scope-1.
+func TestNumbersThatCollapseIntoOneHeadingKeepTheirLinksApart(t *testing.T) {
+	md := "# 1-Scope\n\n[a](#1-scope)\n\n# 2-Scope\n\n[b](#2-scope)\n"
+	want := "# Scope\n\n[a](#scope)\n\n# Scope\n\n[b](#scope-1)\n"
+
+	got, _ := stripHeadingNumbers(md)
+	if got != want {
+		t.Errorf("stripHeadingNumbers() =\n%s\nwant\n%s", got, want)
+	}
+}
+
+// TestALinkInsideAFenceIsNotRepointed keeps code byte for byte while the same
+// projected link outside the fence follows the stripped heading.
+func TestALinkInsideAFenceIsNotRepointed(t *testing.T) {
+	md := "# 1-Scope\n\n```md\n[a](#1-scope)\n```\n\n[a](#1-scope)\n"
+	want := "# Scope\n\n```md\n[a](#1-scope)\n```\n\n[a](#scope)\n"
+
+	got, _ := stripHeadingNumbers(md)
+	if got != want {
+		t.Errorf("stripHeadingNumbers() =\n%s\nwant\n%s", got, want)
+	}
+}
+
 // TestAHeadingNumberInsideAFenceStays makes the heading question goldmark's:
 // a line shaped like a numbered heading is still code while it stands inside
 // either spelling of a fenced code block.

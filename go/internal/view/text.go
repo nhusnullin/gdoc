@@ -267,7 +267,7 @@ func Text(d *docs.Document) (string, []string) {
 // link inside that cycle can point at the wrong heading.
 func Project(d *docs.Document, o Options) (string, []string) {
 	words := headingWords(d)
-	_, _, lines := onePass(d, o, words)
+	_, _, lines := onePass(d, o, anchors(words, nil))
 	for i := 0; i < anchorPasses; i++ {
 		text, warnings, next := onePass(d, o, anchors(words, lines))
 		if sameLines(lines, next) {
@@ -283,39 +283,49 @@ func Project(d *docs.Document, o Options) (string, []string) {
 // heading lines to settle, after the first walk that measures them.
 const anchorPasses = 4
 
-// sameLines says whether two walks wrote every heading to the same line.
-func sameLines(a, b map[string]string) bool {
+// projectedHeading is one heading line the emitter wrote, in file order, and
+// the Docs heading id links to it by.
+type projectedHeading struct {
+	id   string
+	line string
+}
+
+// sameLines says whether two walks wrote every heading to the same line in the
+// same order.
+func sameLines(a, b []projectedHeading) bool {
 	if len(a) != len(b) {
 		return false
 	}
-	for id, line := range a {
-		if b[id] != line {
+	for i := range a {
+		if a[i] != b[i] {
 			return false
 		}
 	}
 	return true
 }
 
-// anchors is the words each heading is named by: the line it projected to
-// where there is one, and the words it holds where there is not. An empty line
-// is no line: the heading printed nothing, so it is not in the file at all and
-// the words are still the better guess.
-func anchors(words, lines map[string]string) map[string]string {
+// anchors is the id each heading is named by. A projected heading takes its id
+// from one generator walked over the file's heading lines in order, so repeats
+// take their own suffix. A heading with no projected line is named from its
+// words in isolation, which is the best guess for a heading outside this file.
+func anchors(words map[string]string, lines []projectedHeading) map[string]string {
 	out := make(map[string]string, len(words)+len(lines))
 	for id, w := range words {
-		out[id] = w
+		out[id] = Anchor(w)
 	}
-	for id, line := range lines {
-		if line != "" {
-			out[id] = line
+	ids := NewHeadingIDs()
+	for _, heading := range lines {
+		anchor := string(ids.Generate([]byte(heading.line), ast.KindHeading))
+		if heading.id != "" {
+			out[heading.id] = anchor
 		}
 	}
 	return out
 }
 
 // onePass is one walk of the document, and the heading lines it wrote.
-func onePass(d *docs.Document, o Options, headings map[string]string) (string, []string, map[string]string) {
-	e := &emitter{seen: map[string]bool{}, headings: headings, lines: map[string]string{}, opts: o}
+func onePass(d *docs.Document, o Options, headings map[string]string) (string, []string, []projectedHeading) {
+	e := &emitter{seen: map[string]bool{}, headings: headings, opts: o}
 	for _, tab := range d.Tabs {
 		if d.MultiTab() {
 			e.chunk(fmt.Sprintf("<!-- tab %s: %s -->", tab.ID, tab.Title))
@@ -387,9 +397,10 @@ type emitter struct {
 	cols     map[string]int
 	objects  map[string]docs.Object
 	headings map[string]string
-	// lines is the line each heading projected to, by the heading id a link
-	// names, which is what the anchor written for that link is taken from.
-	lines map[string]string
+	// lines is the ordered slice of heading lines this file wrote, each beside
+	// the Docs heading id a link names. One generator over this order gives a
+	// repeated heading its own suffixed id.
+	lines []projectedHeading
 	opts  Options
 	// inLink says the words being written are a link's. One bracket is markup
 	// there and nowhere else, because the words end at the first one a reader
@@ -746,16 +757,16 @@ func (e *emitter) paragraph(p *docs.Paragraph) {
 	// list that holds no text still counts: the numbers then say what the
 	// document shows rather than closing the gap over an item nobody typed into.
 	prefix := e.prefix(p)
-	// The line, before the prefix, is what a link to this heading is named by.
-	// It is recorded whatever the style, because headingWords names a paragraph
-	// carrying a heading id whether or not it is one of the six levels.
-	if p.HeadingID != "" {
-		e.lines[p.HeadingID] = strings.TrimSpace(text)
-	}
 	if text != "" {
 		// An empty paragraph is the document's blank line, and the chunks are
 		// already separated by one.
 		e.chunk(prefix + text)
+		// Only a heading line this file writes advances the file's heading-id
+		// generator. A heading inside a table cell has no heading prefix and a
+		// heading outside the projection has no line here.
+		if headingLevel(p.Style) > 0 {
+			e.lines = append(e.lines, projectedHeading{id: p.HeadingID, line: strings.TrimSpace(text)})
+		}
 	}
 	e.floating(p)
 }
@@ -1176,9 +1187,9 @@ func (ids *headingIDs) Put(value []byte) {
 	ids.used[string(value)] = true
 }
 
-// Anchor is a heading's words as the id a link to it names. It asks a fresh
-// NewHeadingIDs once, so a caller naming one heading gets the shared rule
-// without carrying repetition state from another heading.
+// Anchor is one heading's words as its id in isolation. A whole file carries
+// one NewHeadingIDs over its ordered headings instead, so repeated headings
+// take their own suffix.
 func Anchor(s string) string {
 	return string(NewHeadingIDs().Generate([]byte(s), ast.KindHeading))
 }
@@ -2129,7 +2140,7 @@ func textLink(r docs.Run) *docs.Link {
 func sameLink(a, b *docs.Link) bool { return a != nil && b != nil && *a == *b }
 
 // target is what the parentheses hold: the address of a link out of the
-// document, and "#" with the heading's own words slugged for a link to a heading
+// document, and "#" with the heading's generated id for a link to a heading
 // inside it, which is the form internal/body writes a note's own links in, so a
 // link read out of a document and a link written into one are the same string.
 //
@@ -2142,8 +2153,8 @@ func (e *emitter) target(l *docs.Link) string {
 	case l.URL != "":
 		return l.URL
 	case l.HeadingID != "":
-		if words := e.headings[l.HeadingID]; words != "" {
-			return "#" + Anchor(words)
+		if anchor := e.headings[l.HeadingID]; anchor != "" {
+			return "#" + anchor
 		}
 		return "#" + l.HeadingID
 	case l.BookmarkID != "":

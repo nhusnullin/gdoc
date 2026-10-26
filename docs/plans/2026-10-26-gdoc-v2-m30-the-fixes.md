@@ -707,7 +707,7 @@ literals in the tests: `Цели проекта` is `цели-проекта`; `
   `go/internal/export/project_test.go`, `go/internal/export/doc.go`,
   `go/internal/body/anchors_test.go`
 
-- [ ] test first:
+- [x] test first:
   - `view`: `TestALinkToTheSecondOfTwoHeadingsNamesTheSecond`: a Docs
     fixture with two `HEADING_2` paragraphs reading "Scope", heading ids
     `h.a` and `h.b`, and a paragraph linking to each. The projection holds
@@ -723,17 +723,17 @@ literals in the tests: `Цели проекта` is `цели-проекта`; `
     repointed
   - `TestRepointDoesNotChainRewrites` and
     `TestAHeadingLosesItsHouseNumberAndKeepsItsLinks` stay green, unchanged
-- [ ] run them: red
-- [ ] `view`: the ordered slice of the `#` heading lines the tab file writes,
+- [x] run them: red
+- [x] `view`: the ordered slice of the `#` heading lines the tab file writes,
       the generator run over it in output order once the walk settles, and
       `target()` reading the result, as in Technical Details
-- [ ] `export`: `repoint` by position through `HeadingLines`, skipping lines
+- [x] `export`: `repoint` by position through `HeadingLines`, skipping lines
       inside a fence
-- [ ] `view/text.go`: the comment above `Anchor` no longer says two headings
+- [x] `view/text.go`: the comment above `Anchor` no longer says two headings
       share an anchor
-- [ ] `view/doc.go` and `export/doc.go` say a repeated heading is linked by
+- [x] `view/doc.go` and `export/doc.go` say a repeated heading is linked by
       its own suffixed id, naming the tests
-- [ ] `make test` green
+- [x] `make test` green
 
 ### Task 8: Verify acceptance criteria
 

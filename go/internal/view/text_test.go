@@ -79,6 +79,31 @@ func TestOnlyAMultiTabDocumentCarriesTabLines(t *testing.T) {
 	}
 }
 
+// TestALinkToTheSecondOfTwoHeadingsNamesTheSecond keeps the heading-id
+// generator's repetition state over the projected file. Two Docs headings can
+// hold the same words and still be two destinations, named by their own ids.
+func TestALinkToTheSecondOfTwoHeadingsNamesTheSecond(t *testing.T) {
+	d := &docs.Document{Tabs: []docs.Tab{{Body: []docs.Block{
+		{Paragraph: &docs.Paragraph{Style: "HEADING_2", HeadingID: "h.a", Runs: []docs.Run{{Kind: docs.KindText, Text: "Scope"}}}},
+		{Paragraph: &docs.Paragraph{Style: "HEADING_2", HeadingID: "h.b", Runs: []docs.Run{{Kind: docs.KindText, Text: "Scope"}}}},
+		{Paragraph: &docs.Paragraph{Style: "NORMAL_TEXT", Runs: []docs.Run{
+			{Kind: docs.KindText, Text: "first", Link: &docs.Link{HeadingID: "h.a"}},
+			{Kind: docs.KindText, Text: " and "},
+			{Kind: docs.KindText, Text: "second", Link: &docs.Link{HeadingID: "h.b"}},
+		}}},
+	}}}}
+
+	text, warnings := Text(d)
+	for _, want := range []string{"[first](#scope)", "[second](#scope-1)"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("projection does not hold %q:\n%s", want, text)
+		}
+	}
+	if len(warnings) != 0 {
+		t.Errorf("projection warnings = %v, want none", warnings)
+	}
+}
+
 func TestAPlaceholderIsAWarning(t *testing.T) {
 	_, warnings := Text(fixture(t, "objects.json"))
 	want := []string{"[image]", "[drawing]", "[object]", "[equation]"}

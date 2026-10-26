@@ -13,6 +13,7 @@ import (
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/text"
 
+	"gdoc/internal/docs"
 	"gdoc/internal/view"
 )
 
@@ -146,6 +147,26 @@ func TestTwoOneWordRussianHeadingsAreTwoIDs(t *testing.T) {
 func TestARepeatedCyrillicHeadingTakesASuffix(t *testing.T) {
 	out := walk(t, "[first](#итоги) [second](#итоги-1)\n\n## Итоги\n\n## Итоги\n")
 	assertTwoDifferentJumps(t, out)
+}
+
+// TestARepeatedHeadingsLinkIsTheIDBodyCollects walks the projection itself:
+// both links must resolve without warning and land on different bookmarks.
+func TestARepeatedHeadingsLinkIsTheIDBodyCollects(t *testing.T) {
+	d := &docs.Document{Tabs: []docs.Tab{{Body: []docs.Block{
+		{Paragraph: &docs.Paragraph{Style: "HEADING_2", HeadingID: "h.a", Runs: []docs.Run{{Kind: docs.KindText, Text: "Scope"}}}},
+		{Paragraph: &docs.Paragraph{Style: "HEADING_2", HeadingID: "h.b", Runs: []docs.Run{{Kind: docs.KindText, Text: "Scope"}}}},
+		{Paragraph: &docs.Paragraph{Style: "NORMAL_TEXT", Runs: []docs.Run{
+			{Kind: docs.KindText, Text: "first", Link: &docs.Link{HeadingID: "h.a"}},
+			{Kind: docs.KindText, Text: " and "},
+			{Kind: docs.KindText, Text: "second", Link: &docs.Link{HeadingID: "h.b"}},
+		}}},
+	}}}}
+	markdown, warnings := view.Text(d)
+	if len(warnings) != 0 {
+		t.Fatalf("projection warnings = %v, want none", warnings)
+	}
+
+	assertTwoDifferentJumps(t, walk(t, markdown))
 }
 
 func TestAnAccentedHeadingAnswersToBothIDs(t *testing.T) {
