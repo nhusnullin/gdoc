@@ -187,6 +187,22 @@ drew over every DOCUMENTS row, which blocked the design review. Nail sent two
 messages for the night, the go on the plan and the merge of both. The lead's
 own context at the end of the night was not read.
 
+## 2026-10-27: M32 on Claude
+
+| Run | Task iterations | Tasks, total | Per task iteration | Biggest iteration | Review rounds | Review, total | Per review round | Whole worktree | Sessions |
+|---|---|---|---|---|---|---|---|---|---|
+| M32, the quiet watch (Claude) | 9 | 35.3M | 3.9M | 8.7M | 1 | 17.2M | 17.2M | 52.8M | 11 |
+
+- M32's tasks pass at 3.9M, under the bar of 4.9M. Nine tasks ran in nine
+  iterations, with no relaunch, in 55 minutes.
+- Its review fails at 17.2M against the bar of 6.6M. 13.7M of it is one
+  Claude pass over critical and major findings, and 3.5M is Claude weighing
+  what the codex peer found. 51.0M of the run's 52.8M were cache reads.
+
+The lead ran the suites by hand after the run and changed nothing. Nail sent
+three messages for the run: the go, "feel free to start", and the merge and
+release. The lead's own context at the end of the day was not read.
+
 ## Nail's confirmation
 
 The method and the baseline above are the lead's reading. They are not settled
