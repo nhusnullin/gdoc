@@ -223,6 +223,61 @@ func TestEverySkillPassesJSONToHelp(t *testing.T) {
 	}
 }
 
+// firstHelpCall is the first call to help a skill tells a session to make, and
+// whether there was one. The setup block stands above every sentence about the
+// object it printed, so the first help call in the file is the one that opens
+// the session.
+func firstHelpCall(calls []skillCall) (skillCall, bool) {
+	for _, call := range calls {
+		if len(call.words) > 0 && call.words[0] == "help" {
+			return call, true
+		}
+	}
+	return skillCall{}, false
+}
+
+// The whole command table reaches a session that only needed the mark in effect
+// and the release notice, and it reaches it on the first call of every run of
+// every skill. `help --brief --json` prints those two and no table, so the
+// opening call costs a few hundred bytes instead of a few thousand. A binary
+// older than the flag refuses it, which is why the sentence after the block
+// names the plain call: a skill that stopped there would be a skill an older
+// gdoc cannot run at all.
+func TestEverySkillOpensOnTheBriefHelp(t *testing.T) {
+	files, err := skillFiles(skillsDir)
+	if err != nil {
+		t.Fatalf("looking for the skills: %v", err)
+	}
+	if len(files) == 0 {
+		t.Fatalf("no SKILL.md under %s. A moved skills directory is a failure, not an empty pass", skillsDir)
+	}
+	for _, file := range files {
+		src, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatalf("reading %s: %v", file, err)
+		}
+		if !strings.Contains(string(src), "$GDOC help --brief --json") {
+			t.Errorf("%s does not open on `$GDOC help --brief --json`. The table it does not read is most of what the first call of the session costs", file)
+		}
+		call, found := firstHelpCall(skillCalls(file, string(src)))
+		if !found {
+			t.Errorf("%s tells a session to call help nowhere this test can see", file)
+			continue
+		}
+		for _, flag := range []string{briefFlag, jsonFlag} {
+			if !slices.Contains(call.flags, flag) {
+				t.Errorf("%s:%d: the setup call does not pass %s. The call that opens a session is the brief one", file, call.line, flag)
+			}
+		}
+		if !strings.Contains(string(src), "If it is refused, run `$GDOC help --json` instead.") {
+			t.Errorf("%s does not name the fallback after its setup block. A gdoc older than `--brief` refuses the call, and the session has to read the plain object instead of stopping", file)
+		}
+		for _, problem := range skillProblems(skillCalls(file, string(src))) {
+			t.Error(problem)
+		}
+	}
+}
+
 func TestAHelpCallWithoutJSONIsCaught(t *testing.T) {
 	// Arrange
 	src := "```bash\n$GDOC help publish\n$GDOC help --json\n```\n"

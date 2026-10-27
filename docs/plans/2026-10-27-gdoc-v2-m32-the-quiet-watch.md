@@ -503,17 +503,17 @@ Desktop, no `needs:` bump.
   `skills/gdoc-restyle/SKILL.md`, `skills/gdoc-publish/SKILL.md`,
   `skills/gdoc-align/SKILL.md`, `go/cmd/gdoc/skills_test.go`
 
-- [ ] test first: `TestEverySkillOpensOnTheBriefHelp` finds `$GDOC help --brief
+- [x] test first: `TestEverySkillOpensOnTheBriefHelp` finds `$GDOC help --brief
       --json` as each skill's setup call, followed by the fallback sentence
-- [ ] run it red
-- [ ] each setup: `$GDOC help --brief --json`, and one short sentence: "If it
+- [x] run it red
+- [x] each setup: `$GDOC help --brief --json`, and one short sentence: "If it
       is refused, run `$GDOC help --json` instead." What each skill reads from
       the object, the mark and the update notice, is unchanged; the four `help
       <command> --json` calls stay; no `needs:` line changes
-- [ ] `TestEverySkillPassesJSONToHelp`, `TestEverySkillBodyFitsTheSpecBudget`
+- [x] `TestEverySkillPassesJSONToHelp`, `TestEverySkillBodyFitsTheSpecBudget`
       (gdoc-publish is near its ceiling) and `TestNoSkillNeedsAReleaseNobodyCut`
       green
-- [ ] `make test` green
+- [x] `make test` green
 
 ### Task 8: Verify acceptance criteria
 
