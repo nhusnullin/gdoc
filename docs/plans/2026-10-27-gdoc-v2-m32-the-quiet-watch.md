@@ -463,7 +463,7 @@ Desktop, no `needs:` bump.
 - Modify: `skills/gdoc-review/live.md`, `skills/gdoc-review/SKILL.md`,
   `go/cmd/gdoc/skills_test.go`
 
-- [ ] test first in `skills_test.go`:
+- [x] test first in `skills_test.go`:
   - `TestTheLiveLoopFollowsUnderTheMonitorTool` reads `live.md` and finds the
     `--follow 29m` call, "Monitor tool", the restart when the follow ends, that
     a follow ended by a stop is never restarted, "Act on the items the line
@@ -474,8 +474,8 @@ Desktop, no `needs:` bump.
     checked against the table
   - `TestALiveReviewAsksForItsOwnSession` finds the own-session sentence in
     `SKILL.md`'s live pointer
-- [ ] run them red
-- [ ] `live.md`: a section before today's loop. Where the session has the
+- [x] run them red
+- [x] `live.md`: a section before today's loop. Where the session has the
       Monitor tool, start `$GDOC comments <url> --since "$CURSOR" --follow 29m`
       under it with a 30-minute limit. A window line: read the window with
       `$GDOC comments <url> --since <its since>`, act on the items the line
@@ -488,13 +488,13 @@ Desktop, no `needs:` bump.
       the totals once, and do not restart on the envelope that follows. If the
       binary refuses `--follow`, use the loop below. Today's `--wait` loop
       stays, word for word, as that fallback
-- [ ] `SKILL.md`'s live pointer: when this session already holds other work,
+- [x] `SKILL.md`'s live pointer: when this session already holds other work,
       ask the person to open a second Claude Code session in the same hub
       folder and start the live review there
-- [ ] `TestTheLiveLoopSaysWhichCursorsItKeeps`,
+- [x] `TestTheLiveLoopSaysWhichCursorsItKeeps`,
       `TestEverySkillNamesOnlyCommandsAndFlagsTheBinaryHas` and
       `TestEverySkillBodyFitsTheSpecBudget` green
-- [ ] `make test` green
+- [x] `make test` green
 
 ### Task 7: the five skills open on `help --brief --json`
 
