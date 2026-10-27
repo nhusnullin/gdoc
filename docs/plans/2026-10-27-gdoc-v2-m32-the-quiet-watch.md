@@ -517,19 +517,19 @@ Desktop, no `needs:` bump.
 
 ### Task 8: Verify acceptance criteria
 
-- [ ] every test named in Tasks 1 to 7 exists and is green
-- [ ] `git diff --name-only main...HEAD` lists none of `docs/v2/DECISIONS.md`,
+- [x] every test named in Tasks 1 to 7 exists and is green
+- [x] `git diff --name-only main...HEAD` lists none of `docs/v2/DECISIONS.md`,
       `docs/v2/SPEC.md`, `docs/v2/PLAN.md`, `go/internal/comments/wait_test.go`,
       and nothing under `go/internal/mcp`, `go/internal/chat`,
       `go/internal/presence`, `go/internal/guard` or `go/internal/auth`
-- [ ] if wait.go changed, the diff is the pure extraction Task 2 allows, and
+- [x] if wait.go changed, the diff is the pure extraction Task 2 allows, and
       every Wait test is green
-- [ ] no `--wait` test lost a line: `git diff main...HEAD --
+- [x] no `--wait` test lost a line: `git diff main...HEAD --
       go/cmd/gdoc/read_test.go` removes nothing
-- [ ] `presence/Sources` changed only in `Stopper.swift`'s comment, unless
+- [x] `presence/Sources` changed only in `Stopper.swift`'s comment, unless
       Task 5 found a red test, which its commit names
-- [ ] the only goldens that moved are the three help goldens
-- [ ] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
+- [x] the only goldens that moved are the three help goldens
+- [x] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
       `make app-test`, `make app-lint`, `make platform-test`, `make team-check`
 
 ### Task 9: [Final] Update documentation
