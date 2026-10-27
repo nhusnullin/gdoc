@@ -72,7 +72,10 @@ one example, and the function that runs it. The dispatcher, the usage line in
 every refusal, `help` and `completion` all read that table, so a command cannot
 exist without help and completion for it.
 
-`gdoc help` prints the table, and `gdoc help <command>` prints one entry. The
+`gdoc help` prints the table, and `gdoc help <command>` prints one entry.
+`gdoc help --brief` prints the version, the mark in effect and the update
+notice and no table, so a skill that names its own commands opens on a few
+hundred bytes. Added 2026-10-27, DECISIONS.md. The
 usage line is a call the binary would accept: what may be left out stands in
 brackets, and alternatives are joined by a bar, so `publish` reads `--md
 --folder-id [--house <file>]` and `restyle` reads `--dry-run | --from <file>`.
@@ -93,8 +96,10 @@ PowerShell lands with Windows, under the tag that ships it. Decided
   without `--json` writes nothing there: `help` when it answers and bare `gdoc`
   draw Panels on stderr instead, and `--json` prints the object wherever stdout
   goes. Every other result keeps its object, refusals and the panic envelope
-  included. Narrowed 2026-10-03, DECISIONS.md. Human prose never mixes into
-  stdout.
+  included. Narrowed 2026-10-03, DECISIONS.md. `comments --follow` is the third
+  exception: every line it writes is one JSON object, the last is its envelope,
+  and the exit code follows that last object. Added 2026-10-27, DECISIONS.md.
+  Human prose never mixes into stdout.
 - The object always carries `ok`, and on failure an `error` that names the
   problem. Warnings ride in `warnings` and are never dropped: a thing gdoc could
   not do is reported, not omitted.
@@ -132,7 +137,8 @@ by `gdoc update` under the same setting. Off is today's bytes. Decided
 **The panel, the same day.** The app draws the screens Nail chose and runs
 four fixed argv lists for the binary, `help --json`, `auth status`, `auth
 login`, `auth logout`, `update` and `update --desktop`, and nothing else; it
-signals one SIGINT to a `comments --wait` it has proved is gdoc's. The record
+signals one SIGINT to a `comments --wait` or `--follow` it has proved is
+gdoc's. The record
 gains `made`, `step`, `stop` with `line`, `via: code`, `interrupted` and the
 `dropped` hold ending, still no path, sentence, count or account. A hold
 remembers a hash of the refresh token it was held under and is dropped when
@@ -385,7 +391,17 @@ poll is `ok: false` with the polls so far, so the skill can tell an unread windo
 from an empty one. The cursor is opaque, the binary emits it and the caller hands
 it back, and it dies with the session. The interval was ten seconds until
 2026-09-18, DECISIONS.md. Anything that must survive across sessions
-lives in the front matter, nowhere else. Each comment is reported with its
+lives in the front matter, nowhere else. `--follow` is the same poll held
+open: it takes the same cursor, runs for its duration, at most an hour, or
+until a signal, and writes one short line for each window that holds a new
+comment or reply whose own marker is `ai?`, `ai!` or `ai:` and which does not
+open with gdoc's mark. The rest of a window is held and rides in the next line,
+so gdoc's own replies and a reply with no marker never wake a session alone.
+A line carries the window's `since` and `cursor`, when gdoc noticed it, and each
+new item's id, thread, marker and created time, at most twenty, and the session
+reads the window whole with a one-shot `--since`. It reads the document once, on
+its first poll. Its start is recorded as a wait. Added
+2026-10-27, DECISIONS.md. Each comment is reported with its
 marker: `ai:`, `ai?`, `ai!`, or none. An unmarked comment, including an unmarked
 follow-up in a thread gdoc has answered, is reported and never acted on. The
 marker is the trigger, always: stickiness carries context, never authority.
@@ -994,6 +1010,10 @@ because the tool that runs the command cannot wake more often than that, and
 every idle tick would spend a model turn on a quiet document. The loop over those
 calls is the skill's, which asks for nine minutes because its Bash tool gives up
 at ten. Liveness ends with the session. Changed 2026-09-07, DECISIONS.md.
+Where Claude Code has its Monitor tool, the skill runs one `--follow` of 29
+minutes under it instead, restarted when it ends and never after a stop, so a
+quiet document and gdoc's own replies cost no turn. A live review goes in a
+session of its own in the hub folder. Changed 2026-10-27, DECISIONS.md.
 
 ## Chat: `gdoc mcp`, the sixteenth command
 
