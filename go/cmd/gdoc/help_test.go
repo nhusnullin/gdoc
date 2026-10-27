@@ -324,7 +324,7 @@ func TestTheUsageLineMarksWhatIsOptionalAndWhatIsAnAlternative(t *testing.T) {
 		usage string
 	}{
 		{[]string{"help", "read"}, "Usage: gdoc read <url> [--structure]"},
-		{[]string{"help", "comments"}, "Usage: gdoc comments <url> [--since <cursor>] [--witness] [--wait <duration>]"},
+		{[]string{"help", "comments"}, "Usage: gdoc comments <url> [--since <cursor>] [--witness] [--wait <duration>] [--follow <duration>]"},
 		{[]string{"help", "suggestions"}, "Usage: gdoc suggestions <url> [--md <file>]"},
 		{[]string{"help", "export"}, "Usage: gdoc export <url> --out <file>"},
 		{[]string{"help", "restyle"}, "Usage: gdoc restyle <url> --dry-run | --from <file> [--fields <file>]"},

@@ -505,8 +505,11 @@ func dispatch(ctx context.Context, args []string, errOut io.Writer, lines *emit.
 	// two lines whether the flag is on or off, because Begin answers nil where
 	// it is off and every method on a nil run is a no-op:
 	// TestTheFlagChangesNoByteOfTheObject.
+	// A follow is recorded as a wait, and the record gains no field for it:
+	// what the panel reads the flag for is that this run is looking rather than
+	// answering, and a follow is that for as long as the process lives.
 	rec := presence.Begin(ctx, set.Presence && c.report, releaseVersion(),
-		c.name, presenceDoc(*c, a), a.has("--wait"), c.readsBack, errOut)
+		c.name, presenceDoc(*c, a), a.has("--wait") || a.has("--follow"), c.readsBack, errOut)
 	defer func() {
 		// And the one word a failed run says why in, where the command that
 		// failed named none: a failure gdoc did not sort is other rather than

@@ -559,3 +559,27 @@ func sourceFiles(t *testing.T) []string {
 	}
 	return out
 }
+
+// runLines runs the command and reads stdout as a stream of lines, each one
+// exactly one JSON object. It is runJSON for the one mode that prints more than
+// one object: `comments --follow` writes a line per window as it finds it and
+// the envelope last, which decodeOne would refuse on principle.
+//
+// The judgment is the same one, line by line: onlyJSONObject over each line, so
+// a line carrying two objects, half an object or a trailing word fails here
+// rather than reaching a reader.
+// TestFollowWritesOneLinePerWindowAndTheEnvelopeLast.
+func runLines(t *testing.T, ctx context.Context, args ...string) ([]map[string]any, int) {
+	t.Helper()
+	var buf bytes.Buffer
+	code := run(ctx, args, &buf, io.Discard, defaultsInEffect())
+	var out []map[string]any
+	for i, line := range strings.Split(strings.TrimSuffix(buf.String(), "\n"), "\n") {
+		got, err := onlyJSONObject(strings.NewReader(line))
+		if err != nil {
+			t.Fatalf("line %d of stdout is not exactly one JSON object: %v\n%q", i+1, err, line)
+		}
+		out = append(out, got)
+	}
+	return out, code
+}

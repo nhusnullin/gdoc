@@ -108,9 +108,14 @@ type scene struct {
 	setup func(t *testing.T) (context.Context, []string, []string)
 }
 
-// presenceScenes are the four commands the guard is measured over: a read, a
-// wait that was already stopped, a write that is read back, and the create
-// that makes a document of its own.
+// presenceScenes are the five commands the guard is measured over: a read, a
+// wait that was already stopped, a follow that was stopped the same way, a
+// write that is read back, and the create that makes a document of its own.
+//
+// The follow is in here for a reason the others are not: it is the one mode
+// that prints more than one object, so the flag has a second stream of bytes it
+// could move. Stopped before it polled, it prints its envelope and no window,
+// and the two runs are compared on that.
 func presenceScenes() []scene {
 	return []scene{
 		{
@@ -125,6 +130,13 @@ func presenceScenes() []scene {
 			setup: func(t *testing.T) (context.Context, []string, []string) {
 				stubSession(t, docsAndComments(t))
 				return done(t), []string{"comments", fixtureDocID, "--wait", "9m"}, nil
+			},
+		},
+		{
+			name: "comments --follow",
+			setup: func(t *testing.T) (context.Context, []string, []string) {
+				stubSession(t, docsAndComments(t))
+				return done(t), []string{"comments", fixtureDocID, "--since", waitSince, "--follow", "29m"}, nil
 			},
 		},
 		{
@@ -628,4 +640,33 @@ func publishCommand(t *testing.T) command {
 	}
 	t.Fatal("the table carries no publish")
 	return command{}
+}
+
+// A follow is a wait as far as the record is concerned, and as far as the panel
+// reading it is concerned: the start says this run is looking, so the live row
+// stays up for as long as the process does, and the end says whether the person
+// stopped it. The record gains no field for the new flag, because there is
+// nothing about a follow the panel has to tell from a wait.
+func TestAFollowsStartIsAWaitAndItsStopIsSaid(t *testing.T) {
+	dir := recording(t)
+	stubSession(t, docsAndComments(t))
+
+	var out bytes.Buffer
+	code := run(done(t), []string{"comments", fixtureDocID, "--since", waitSince, "--follow", "29m"},
+		&out, io.Discard, presenceOn())
+	if code != 0 {
+		t.Fatalf("a stopped follow is an answer: exit %d, %s", code, out.String())
+	}
+
+	events := presenceEvents(t, dir)
+	if len(events) != 2 {
+		t.Fatalf("want a start and an end, got %d: %+v", len(events), events)
+	}
+	start, end := events[0], events[1]
+	if !start.Wait {
+		t.Errorf("the start of a follow must say it is waiting: %+v", start)
+	}
+	if !end.Interrupted {
+		t.Errorf("the end after a signal must say it was interrupted: %+v", end)
+	}
 }

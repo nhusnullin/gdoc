@@ -282,20 +282,28 @@ func TestEveryExampleIsACallTheTableAccepts(t *testing.T) {
 	}
 }
 
-// --wait is refused without --since, in cmdComments and not in the table, so
-// the table cannot catch this one on itself. The rule is in read.go: a wait
-// with no cursor would answer with the whole document, which is the one-shot
-// read under another name.
+// --wait and --follow are both refused without --since, in cmdComments and not
+// in the table, so the table cannot catch this one on itself. The rule is the
+// same for the two: a poll with no cursor would answer with the whole document,
+// which is the one-shot read under another name.
 func TestTheCommentsExampleShowsTheCursorItsWaitNeeds(t *testing.T) {
 	for _, c := range commands() {
 		if c.name != "comments" {
 			continue
 		}
-		if !strings.Contains(c.example, "--wait") {
-			return
+		shown := 0
+		for _, flag := range []string{"--wait", "--follow"} {
+			if !strings.Contains(c.example, flag) {
+				continue
+			}
+			shown++
+			if !strings.Contains(c.example, "--since") {
+				t.Errorf("%s is refused without --since, and the comments example shows only the poll: %q",
+					flag, c.example)
+			}
 		}
-		if !strings.Contains(c.example, "--since") {
-			t.Errorf("--wait is refused without --since, and the comments example shows only the wait: %q", c.example)
+		if shown == 0 {
+			t.Errorf("the comments example shows neither poll, so this test is measuring nothing: %q", c.example)
 		}
 		return
 	}

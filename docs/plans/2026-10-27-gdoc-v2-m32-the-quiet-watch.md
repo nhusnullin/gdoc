@@ -397,7 +397,7 @@ Desktop, no `needs:` bump.
   `go/cmd/gdoc/testdata/pipe/help-comments.stdout.golden`,
   `go/cmd/gdoc/testdata/pipe/help-comments.stderr.golden`
 
-- [ ] test first in `follow_test.go`, with `waitWire`, `newsListing`,
+- [x] test first in `follow_test.go`, with `waitWire`, `newsListing`,
       `shortPolls`, `runJSONCtx` and a new `runLines`:
   - `TestFollowNeedsSince`, `TestFollowRefusesWait`, `TestFollowRefusesWitness`,
     `TestFollowRefusesMoreThanAnHour`, each naming `--follow` and what it
@@ -413,24 +413,24 @@ Desktop, no `needs:` bump.
   - `TestAnInterruptedFollowIsAnAnswer`: a context cancelled after one window;
     exit 0, `waited.interrupted` true
   - `TestTheWaitKeepsItsOwnWords`: `--wait 2h` is refused with today's bytes
-- [ ] in `presence_test.go`: a `comments --follow` scene in `presenceScenes`
+- [x] in `presence_test.go`: a `comments --follow` scene in `presenceScenes`
       with `done(t)`, so the flag-on and flag-off bytes match; and
       `TestAFollowsStartIsAWaitAndItsStopIsSaid`: the start has `wait: true`,
       and the end after a signal has `interrupted: true`
-- [ ] run them red
-- [ ] `parseWait(flag, text)`; the flag, its example and the refusals; a short
+- [x] run them red
+- [x] `parseWait(flag, text)`; the flag, its example and the refusals; a short
       `commentsFollow` in read.go around the existing `signal.NotifyContext`;
       shapes and conversion in follow.go; the `List` closure asks with the
       cursor it is given
-- [ ] `presence.Begin`'s wait argument is `a.has("--wait") || a.has("--follow")`,
+- [x] `presence.Begin`'s wait argument is `a.has("--wait") || a.has("--follow")`,
       and its comment in main.go says a follow is recorded as a wait;
       `TestBeginHasOneCaller` green
-- [ ] the literal usage line in help_test.go:299 gains `[--follow <duration>]`;
+- [x] the literal usage line in help_test.go:299 gains `[--follow <duration>]`;
       regenerate the three help goldens, the commit saying the diff is the
       `--follow` lines and the new example only
-- [ ] `TestOnlyTheWaitTrapsTheSignal` green: follow.go imports no `os/signal`
-- [ ] read.go is no longer than it was before this task
-- [ ] `make test` green
+- [x] `TestOnlyTheWaitTrapsTheSignal` green: follow.go imports no `os/signal`
+- [x] read.go is no longer than it was before this task
+- [x] `make test` green
 
 ### Task 5: the panel's proof for a long wait
 

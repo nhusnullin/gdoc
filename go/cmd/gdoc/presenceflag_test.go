@@ -26,13 +26,14 @@ import (
 // nowhere else.
 //
 // They were first taken before this flag existed, re-taken in M24b for the one
-// line `gdoc auth logout` adds to the table, and re-taken in M32 for the two
-// lines `help --brief` adds to the help entry. That is the only reason to
+// line `gdoc auth logout` adds to the table, and re-taken twice in M32: for the
+// two lines `help --brief` adds to the help entry, and for the flag line and
+// the example `comments --follow` moves. That is the only reason to
 // re-take them: a command or a flag a milestone adds names itself in this
 // object, and pipe_test.go holds the same exception over the goldens beside it.
 const (
-	helpObjectBytes  = 9440
-	helpObjectSHA256 = "f7796d7f440f058dd475c38a6d33501c69a3e10b6828c500e1ba6b466ebf4051"
+	helpObjectBytes  = 9610
+	helpObjectSHA256 = "91a7fd735d3445ec055309fece787615a8e2fd409512aea8b2d4cdda5c2668e3"
 )
 
 // One flag of the three is experimental, it is --presence, and it carries the
