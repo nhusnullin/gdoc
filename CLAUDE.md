@@ -127,11 +127,11 @@ into `docs/v2/DECISIONS.md`, not a refactor.
   `TestTheFirstRuleThatTripsIsTheOneNamed` and
   `TestAuthorDomainChangesNoOutcome`.
 - **One JSON object reaches stdout**, always through `internal/emit`, except that
-  `mcp` writes JSON-RPC lines there and a help screen on a terminal without `--json`
-  writes nothing there, and the exit code is 0 if and only if that object says `ok`,
-  or 0 for `help` and 1 for bare `gdoc` when the screen replaced it:
-  `TestOnlyJSONObjectRefusesAnythingAfterTheObject`, `TestAPanicIsStillOneEnvelope`,
-  `TestStdoutCarriesOnlyJSONRPC` and `TestHelpOnATerminalWritesNothingToStdout`.
+  `mcp` writes JSON-RPC lines, a help screen on a terminal without `--json` writes
+  nothing, and `comments --follow` writes one object per line with its envelope
+  last; the exit code is 0 if and only if that last object says `ok`, or 0 for
+  `help` and 1 for bare `gdoc`: `TestOnlyJSONObjectRefusesAnythingAfterTheObject`,
+  `TestAPanicIsStillOneEnvelope`, `TestStdoutCarriesOnlyJSONRPC`, `TestHelpOnATerminalWritesNothingToStdout` and `TestOnlyFollowWritesLines`.
 - **The binary never prompts, and every command but `mcp` leaves stdin alone.**
   `mcp` reads its protocol there, and only `main` names the real stdin and
   stdout, so every other room is handed a reader and a writer. It still refuses
@@ -183,7 +183,7 @@ into `docs/v2/DECISIONS.md`, not a refactor.
   `help --json`, `auth status`, `auth login`, `auth logout`, `update` and
   `update --desktop`, from `PresenceApp/Runner.swift` alone, at `~/.local/bin/gdoc`
   or beside the bundle and never from PATH, with four variables and no stdin; one
-  SIGINT to a `comments --wait` the kernel agreed every claim about, from
+  SIGINT to a `comments --wait` or `--follow` the kernel agreed every claim about, from
   `Stopper.swift` alone; the record, its plist and the `gdoc:` front matter of
   the notes Spotlight names and of those under the `hubPath` override where one
   is set, and no other byte: `testTheArgvEnumIsClosedAtSix`,

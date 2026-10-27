@@ -323,7 +323,8 @@
 // because the caller writes a line per window while the follow is still
 // running: a follow that collected them and answered at the end would be a wait
 // with a longer deadline. A line that could not be written leaves the cursor
-// where it was and carries the error out.
+// where it was and carries the error out:
+// TestAWindowThatCouldNotBeWrittenEndsTheFollow.
 //
 // The three endings are Wait's, and the two loops share the rule that tells them
 // apart: pollContext bounds the call rather than the gaps between polls, and

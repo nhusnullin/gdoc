@@ -534,24 +534,24 @@ Desktop, no `needs:` bump.
 
 ### Task 9: [Final] Update documentation
 
-- [ ] every `doc.go` touched names a test for every rule it states, or
+- [x] every `doc.go` touched names a test for every rule it states, or
       `TODO(test)`: `comments`, `cmd/gdoc`, `emit`
-- [ ] `CLAUDE.md`, two invariant bullets and nothing else, with the file's line
+- [x] `CLAUDE.md`, two invariant bullets and nothing else, with the file's line
       count unchanged: "One JSON object reaches stdout" says `comments
       --follow` writes one object per line with its envelope last, naming
       `TestOnlyFollowWritesLines`; "The menu bar app runs six argv lists,
       signals one wait" says a `comments --wait` or `--follow`. Tighten the
       wording inside each bullet so neither grows. `TestCLAUDEmdIsUnderTheCeiling`
       green in this step
-- [ ] `docs/guide/reading.md`: the usage line at :14 gains `[--follow
+- [x] `docs/guide/reading.md`: the usage line at :14 gains `[--follow
       DURATION]`, and a paragraph after the `--wait` section (:109-126) shows a
       window line, the envelope last, and the hold; `docs/guide/presence.md`
       :126 says a live watch is the stretch of `--wait` or `--follow` runs, and
       nothing else there changes
-- [ ] `go doc` over each touched package prints its package comment and
+- [x] `go doc` over each touched package prints its package comment and
       nothing a file comment meant for itself
       (`TestOnlyThePackageCommentReachesGoDoc` green)
-- [ ] move this plan to `docs/plans/completed/`
+- [x] move this plan to `docs/plans/completed/`
 
 ## Post-Completion
 

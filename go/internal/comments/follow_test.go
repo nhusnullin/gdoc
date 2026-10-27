@@ -599,3 +599,26 @@ func TestFollowRefusesOptionsItCannotRun(t *testing.T) {
 // noFollowList and noHand answer nothing, for the options table.
 func noFollowList(context.Context, *Cursor) ([]RawComment, error) { return nil, nil }
 func noHand(Window) error                                         { return nil }
+
+func TestAWindowThatCouldNotBeWrittenEndsTheFollow(t *testing.T) {
+	// The cursor moves when the caller was told, not when the follow found
+	// something. A follow that moved it past a line the stream refused would
+	// report a window nobody read, and the next line would start after it.
+	refused := errors.New("the window line could not be written: broken pipe")
+	since := &Cursor{At: at("2026-10-27T12:00:00Z")}
+	p := newTape(t, found(topComment("c1", "ai? which register", "2026-10-27T12:00:03Z")))
+	o := p.options(2*time.Second, time.Hour)
+	o.Hand = func(Window) error { return refused }
+
+	got, err := Follow(context.Background(), since, o)
+
+	if !errors.Is(err, refused) {
+		t.Fatalf("err = %v, want the write's own error", err)
+	}
+	if got.Polls != 1 {
+		t.Errorf("Polls = %d, want the one poll the follow made", got.Polls)
+	}
+	if got.Cursor != since {
+		t.Errorf("Cursor = %v, want the one handed in, %v", got.Cursor, since)
+	}
+}

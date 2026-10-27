@@ -32,7 +32,9 @@
 // and `comments --follow`, the poll held open, is what it is for: a window
 // found after four minutes is news now, and a caller that had to wait for the
 // envelope to read it could not act on it until the watch ended. The last
-// line is the envelope, and the exit code agrees with it as always.
+// line is the envelope, and the exit code agrees with it as always:
+// TestFollowWritesOneLinePerWindowAndTheEnvelopeLast and
+// TestFollowsExitCodeFollowsTheLastLine.
 //
 // There is one such writer in a run, run builds it from stdout, and it
 // travels down safeDispatch and dispatch onto the command's own args. So the
@@ -68,9 +70,10 @@
 //     sentence says.
 //   - read <url> [--structure]: the text projection, or the tree with the flag.
 //     internal/docs reads, internal/view projects.
-//   - comments <url> [--since] [--wait] [--witness]: the threads with their
-//     ranges, markers, replies and the next cursor. internal/comments, with
-//     internal/docx for the witness.
+//   - comments <url> [--since] [--wait] [--follow] [--witness]: the threads
+//     with their ranges, markers, replies and the next cursor, in one answer
+//     or one line per window. internal/comments, with internal/docx for the
+//     witness.
 //   - suggestions <url> [--md]: what is pending, and with a paired note what
 //     stopped being pending. internal/suggestions, internal/frontmatter.
 //   - export <url> --out: the document in the hub as Markdown, one file per
