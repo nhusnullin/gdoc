@@ -142,16 +142,23 @@ func TestFollowRefusesMoreThanAnHour(t *testing.T) {
 	}
 }
 
+// followOnce is the deadline of a follow that should see one window and end.
+// It is long enough for the first poll on a slow runner: at 1ms the deadline
+// passed during that poll under -race in the v2.22.0 release build, and the
+// follow ended with no window. The quiet listing after the scripted one keeps
+// the polls that follow the window empty.
+const followOnce = "1s"
+
 // The shape of the mode: one short line per window as it is found, the ordinary
 // envelope last, and nothing on a window line that a model would have to read
 // words out of. Ids, a thread, a marker and a time, and no author, no content
 // and no quote.
 func TestFollowWritesOneLinePerWindowAndTheEnvelopeLast(t *testing.T) {
 	shortPolls(t)
-	stubWire(t, waitWire(t, newsListing(t)))
+	stubWire(t, waitWire(t, newsListing(t), quietListing()))
 
 	lines, code := runLines(t, context.Background(),
-		"comments", fixtureDocID, "--since", waitSince, "--follow", "1ms")
+		"comments", fixtureDocID, "--since", waitSince, "--follow", followOnce)
 	if code != 0 {
 		t.Fatalf("comments --follow: exit %d, %v", code, lines)
 	}
@@ -216,11 +223,11 @@ func TestFollowWritesOneLinePerWindowAndTheEnvelopeLast(t *testing.T) {
 func TestALineListsAtMostTwentyItems(t *testing.T) {
 	shortPolls(t)
 	f := waitWire(t)
-	f.answers = append(f.answers, &answer{method: "GET", match: "/comments?", json: manyNewListing(25), once: true})
+	f.answers = append(f.answers, &answer{method: "GET", match: "/comments?", json: manyNewListing(25), once: true}, quietListing())
 	stubWire(t, f)
 
 	lines, code := runLines(t, context.Background(),
-		"comments", fixtureDocID, "--since", waitSince, "--follow", "1ms")
+		"comments", fixtureDocID, "--since", waitSince, "--follow", followOnce)
 	if code != 0 {
 		t.Fatalf("comments --follow: exit %d, %v", code, lines)
 	}
@@ -244,11 +251,11 @@ func TestALineNamesTheItemThatWokeIt(t *testing.T) {
 	shortPolls(t)
 	f := waitWire(t)
 	f.answers = append(f.answers, &answer{
-		method: "GET", match: "/comments?", json: heldThenMarkedListing(22), once: true})
+		method: "GET", match: "/comments?", json: heldThenMarkedListing(22), once: true}, quietListing())
 	stubWire(t, f)
 
 	lines, code := runLines(t, context.Background(),
-		"comments", fixtureDocID, "--since", waitSince, "--follow", "1ms")
+		"comments", fixtureDocID, "--since", waitSince, "--follow", followOnce)
 	if code != 0 {
 		t.Fatalf("comments --follow: exit %d, %v", code, lines)
 	}
