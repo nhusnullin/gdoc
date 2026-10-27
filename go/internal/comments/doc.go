@@ -1,5 +1,6 @@
 // Package comments is Drive's threads joined to the Docs ranges, the --since
-// cursor, and the --wait poll.
+// cursor, and the two polls: the --wait that ends on the first window, and the
+// --follow that stays open and hands over only what is addressed to gdoc.
 //
 // Two sources, because neither one carries the whole answer. Drive's
 // comments.list is documented and stable and carries the replies, the authors,
@@ -277,6 +278,60 @@
 // an interrupted wait is that same case rather than a second one, because it
 // comes back with no threads. TestAListingWithoutTheFlagCarriesNoWaitedObject
 // and TestAnEmptyWindowIsNotWitnessed are the pins.
+//
+// # The follow is that poll held open, and it hands over only what is addressed
+// to gdoc
+//
+// Follow is Wait with the loop kept running, and the two differences are both
+// about what a poll costs the caller. Wait returns on the first poll whose
+// listing carried anything, so the session spends a turn on it, and that
+// includes gdoc's own reply landing a second after gdoc wrote it. Follow hands a
+// window over only when something in it is addressed to gdoc, and keeps looking
+// otherwise, so a quiet half hour is one listing every two seconds and no model
+// turn at all. Nail's decision, 2026-10-27.
+//
+// The wake rule is hasNewMarked, and it is three questions about one item. Is it
+// news by the cursor's own rule, the same newer, sameInstant and reported the
+// listing narrows with. Is its own marker one of the three. Does it open with a
+// mark gdoc recognises. The instant the news question asks about is createdTime,
+// for a thread as well as for a reply, because a cursor advances on
+// modifiedTime: an old comment somebody edited, and a thread Drive touched
+// because a reply arrived, come back on every poll until something else moves
+// the instant, and reading that as news would hand the same thread over for
+// ever. TestEveryMarkerCounts, TestAWindowOfOnlyGdocsRepliesIsHeld,
+// TestGdocsReplyInAnOldMarkedThreadIsHeld, TestAnEditedOldCommentIsHeld and
+// TestAMarkedReplyAtTheCursorsInstantIsNews are the pins.
+//
+// A window nobody was handed holds its items and leaves the cursor where it was,
+// so the next poll asks the same question and those items ride in the next window
+// that is handed over, named in it beside the marked one. Nothing is dropped and
+// nothing is handed over twice, and the cursor the follow comes back with is the
+// one the last window carried, never one that moved past an item no window named.
+// TestAnUnmarkedReplyIsHeldAndRidesInTheNextWindow,
+// TestAHeldPollAsksFromTheLastPrintedCursor,
+// TestThePollAfterAWindowAsksFromItsCursor,
+// TestAHandedOverWindowIsNotHandedOverAgain and
+// TestHeldItemsAtTheEndLeaveTheLastPrintedCursor are the pins.
+//
+// The document is read once, on the first poll, and never again: the caller
+// reads it for the title and the tab count its envelope reports, and a window is
+// judged on the listing alone, so Threads is asked for a nil document and no
+// range is computed for a line that names ids and times.
+// TestAHeldWindowDoesNotReadTheDocument is the pin.
+//
+// Windows go out through a Hand callback rather than coming back in a list,
+// because the caller writes a line per window while the follow is still
+// running: a follow that collected them and answered at the end would be a wait
+// with a longer deadline. A line that could not be written leaves the cursor
+// where it was and carries the error out.
+//
+// The three endings are Wait's, and the two loops share the rule that tells them
+// apart: pollContext bounds the call rather than the gaps between polls, and
+// endingOf says whether a poll that did not come back was the person, the clock
+// or the read itself. TestFollowRunsToItsDeadline,
+// TestASignalEndsTheFollowAndSaysSo and TestAFailedPollEndsTheFollow are the
+// pins, with TestFollowRefusesOptionsItCannotRun over the options it will not
+// run.
 //
 // Nothing is kept. The wait writes no file of its own and keeps no session
 // state, and the cursor it prints is the only thing that carries to the next

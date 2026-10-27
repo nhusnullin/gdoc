@@ -319,7 +319,7 @@ Desktop, no `needs:` bump.
 - Modify: `go/internal/comments/wait.go` (a pure extraction only, if taken),
   `go/internal/comments/doc.go`
 
-- [ ] test first in `follow_test.go`, with a cursor-aware list that records the
+- [x] test first in `follow_test.go`, with a cursor-aware list that records the
       cursor each poll asked with, and `now` and `sleep`:
   - `TestAWindowWithAMarkedCommentIsHandedOver`: a new top-level `ai?` comment
     is handed over once, with `Since`, `Cursor` and `Noticed` set
@@ -348,16 +348,16 @@ Desktop, no `needs:` bump.
     `Interrupted` true, after any window already handed over
   - `TestAFailedPollEndsTheFollow`: a listing error ends it with the error, the
     polls so far and the last cursor handed over
-- [ ] run them red
-- [ ] `follow.go` as in Solution Overview: `Follow`, `FollowOptions`, `Window`,
+- [x] run them red
+- [x] `follow.go` as in Solution Overview: `Follow`, `FollowOptions`, `Window`,
       `Followed`, and the unexported `hasNewMarked`, which reuses the cursor's
       `newer`, `sameInstant` and `reported`
-- [ ] if Wait's deadline context and `failed` classification move into a
+- [x] if Wait's deadline context and `failed` classification move into a
       shared unexported helper, `wait_test.go` is untouched and every Wait test
       is green before and after; otherwise copy them and say so in the commit
-- [ ] `doc.go`: a paragraph "The follow" stating the wake rule, the hold, the
+- [x] `doc.go`: a paragraph "The follow" stating the wake rule, the hold, the
       one document read, and that a window is handed over once, naming the tests
-- [ ] `make test` green
+- [x] `make test` green
 
 ### Task 3: the line writer, and only `comments` gets one
 
