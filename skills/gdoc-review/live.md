@@ -46,8 +46,16 @@ written rides in the line after it. Run Steps 2 to 8 over those items, print
 the Step 8 report, and keep the line's `cursor` as `CURSOR`.
 
 Items whose `marker` is `none` are listed in that window's report and never
-acted on, which is Step 2's rule and not a new one. `more` is how many items
-did not fit on the line. The read names them all.
+acted on, which is Step 2's rule and not a new one.
+
+`more` is how many of the window's items did not fit on the line. A line names
+at most twenty, the ones that woke it first, and the read names them all. The
+line's `cursor` moves the watch past every item in that window, named on the
+line or not, so a line with `more` above 0 is the one case where the line alone
+is not enough: act on every marked item in that read whose `created` is at or
+before the line's `noticed`, and not only on the ones the line named. Anything
+created after `noticed` landed after the line was written and rides in the line
+after it.
 
 The last line is the ordinary `comments` envelope, with `threads` empty and
 `waited` filled in. Take one of three paths:

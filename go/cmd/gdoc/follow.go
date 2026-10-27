@@ -166,15 +166,38 @@ func followLineOf(w comments.Window) followLine {
 // followItemsOf is the window's items up to the ceiling, and the count of the
 // ones that did not fit. Items is never nil, so a line always carries a list
 // and no reader has to handle an absent one.
+//
+// The items that woke the window go first, and the held ones fill what is left.
+// Drive's own order would not do: a window carries every new item, gdoc's own
+// receipts included, and a pass that answered twenty threads leaves twenty
+// receipts ahead of the comment a colleague wrote after them. A ceiling taking
+// the first twenty of that would name none of the work, count it in `more`, and
+// hand over a cursor past it. Inside each group the order is Drive's still.
+// TestALineListsAtMostTwentyItems and TestALineNamesTheItemThatWokeIt.
 func followItemsOf(from []comments.NewItem) ([]followItem, int) {
 	items := make([]followItem, 0, len(from))
-	for _, it := range from {
-		if len(items) == followItemCeiling {
-			break
+	for _, wake := range []bool{true, false} {
+		for _, it := range from {
+			if len(items) == followItemCeiling {
+				return items, len(from) - len(items)
+			}
+			if wakesTheWindow(it) != wake {
+				continue
+			}
+			items = append(items, followItem{ID: it.ID, Thread: it.Thread, Marker: it.Marker, Created: it.Created})
 		}
-		items = append(items, followItem{ID: it.ID, Thread: it.Thread, Marker: it.Marker, Created: it.Created})
 	}
 	return items, len(from) - len(items)
+}
+
+// wakesTheWindow is the wake rule as a line reads it: an item carrying one of
+// the three markers that gdoc did not write itself. internal/comments asks the
+// same question of the same two fields to decide whether to hand the window
+// over at all, and this is the one place in the binary that has to name what
+// that answer rested on. It judges nothing: both fields are facts off the wire,
+// and what the items mean is still the skill's to read.
+func wakesTheWindow(it comments.NewItem) bool {
+	return it.Marker != comments.MarkerNone && !it.ByGdoc
 }
 
 // followResult is the last line: the ordinary comments envelope, with the

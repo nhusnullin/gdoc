@@ -35,6 +35,27 @@ func manyNewListing(n int) string {
 	return b.String()
 }
 
+// heldThenMarkedListing is n of gdoc's own receipts in Drive's own order, and
+// then the one marked comment that woke the window. It is the shape a live
+// session leaves behind: live.md starts the follow from the cursor Step 1
+// printed, which was taken before the first pass wrote a single receipt, so
+// every receipt it then wrote is new to that cursor and older than the comment
+// a colleague writes next.
+func heldThenMarkedListing(n int) string {
+	var b strings.Builder
+	b.WriteString(`{"comments":[`)
+	for i := 0; i < n; i++ {
+		fmt.Fprintf(&b, `{"id":"R%02d","author":{"displayName":"gdoc","emailAddress":"bot@example.org"},`+
+			`"createdTime":"2026-09-06T10:00:00Z","modifiedTime":"2026-09-06T10:00:00Z",`+
+			`"content":"\u2058 answered","resolved":false,"replies":[]},`, i)
+	}
+	b.WriteString(`{"id":"WOKE","author":{"displayName":"Ada Lovelace","emailAddress":"ada@example.org"},` +
+		`"createdTime":"2026-09-06T10:30:00Z","modifiedTime":"2026-09-06T10:30:00Z",` +
+		`"content":"ai? the one that woke it","resolved":false,"replies":[]}`)
+	b.WriteString(`]}`)
+	return b.String()
+}
+
 // windowLine is the one window line the stream carried, and it fails the test
 // where there is not exactly one.
 func windowLine(t *testing.T, lines []map[string]any) map[string]any {
@@ -210,6 +231,38 @@ func TestALineListsAtMostTwentyItems(t *testing.T) {
 	}
 	if w["more"] != float64(5) {
 		t.Errorf("more = %v, want the five that did not fit", w["more"])
+	}
+}
+
+// The ceiling counts what did not fit, and what it drops is never the item the
+// window was handed over for. A window carries every new item, gdoc's own
+// receipts included, so a pass that answered twenty threads leaves twenty
+// receipts ahead of the comment written after them. A ceiling taking Drive's
+// own first twenty would name none of the work, count it in `more`, and move
+// the cursor past it: the skill acts on what a line names.
+func TestALineNamesTheItemThatWokeIt(t *testing.T) {
+	shortPolls(t)
+	f := waitWire(t)
+	f.answers = append(f.answers, &answer{
+		method: "GET", match: "/comments?", json: heldThenMarkedListing(22), once: true})
+	stubWire(t, f)
+
+	lines, code := runLines(t, context.Background(),
+		"comments", fixtureDocID, "--since", waitSince, "--follow", "1ms")
+	if code != 0 {
+		t.Fatalf("comments --follow: exit %d, %v", code, lines)
+	}
+	w := windowLine(t, lines)
+	items, _ := w["items"].([]any)
+	if len(items) != 20 {
+		t.Fatalf("items = %d, want the twenty a line carries", len(items))
+	}
+	first, _ := items[0].(map[string]any)
+	if first["id"] != "WOKE" {
+		t.Errorf("the first item is %v, want the marked comment that woke the window", first)
+	}
+	if w["more"] != float64(3) {
+		t.Errorf("more = %v, want the three receipts that did not fit", w["more"])
 	}
 }
 

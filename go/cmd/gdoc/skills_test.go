@@ -864,6 +864,7 @@ func TestTheLiveLoopFollowsUnderTheMonitorTool(t *testing.T) {
 		`--since "$CURSOR" --follow 29m`:             "the follow call is what a watch now opens on",
 		"Monitor tool":                               "a stream of lines is read by the Monitor tool, not by a call that returned",
 		"Act on the items the line names":            "a line names the new items, and anything newer in the read that follows belongs to the next line",
+		"not only on the ones the line named":        "a line names at most twenty items while the cursor moves past the whole window, so a line with `more` above 0 is read in full or the work past the ceiling is lost",
 		"Start the next follow from the last cursor": "a follow that reached its deadline is restarted, or the watch stops after half an hour",
 		"do not restart":                             "a follow the person stopped is the end of the watch, and the envelope that follows it is not a reason to start another",
 		"stop the Monitor task":                      "the task outlives the answer in the chat unless the session stops it",

@@ -149,7 +149,9 @@ The exit code agrees with that last line, the way it does for every other
 command. A line names ids, markers and times and carries no words, so whatever is
 reading acts on a line and then asks for the words with a plain `comments
 --since` call using the cursor the line printed. A line names at most twenty
-items and counts the rest in `more`.
+items, the ones that woke it first, and counts the rest in `more`: the cursor
+moves past the whole window either way, so a line carrying `more` above 0 is one
+to read in full.
 
 A window with nothing marked for gdoc in it prints nothing at all and leaves the
 cursor where it was. That is the point of the mode: gdoc's own replies, and the
