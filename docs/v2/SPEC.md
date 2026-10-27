@@ -121,7 +121,9 @@ macOS Keychain in M17).
 login` write a start and an end line, and a chat hold writes held, released
 or expired, into `presence/<yyyy>-<mm>.jsonl` in the config directory. The
 line is a fixed projection, never the envelope: no document word but a title,
-no quote, no hold text, no error sentence, no path, no account. The binary
+no quote, no hold text, no error sentence, no path, no account. The title
+on a publish's end is the read-back's, or the note's cover title where the
+run stopped before the read-back. The binary
 exports no reader and nothing it decides depends on the file. A separate
 application, `GdocPresence.app`, travels in the darwin zips and is installed
 by `gdoc update` under the same setting. Off is today's bytes. Decided
@@ -168,6 +170,17 @@ through Spotlight and the `gdoc:` block, with `hubPath` as an override and
 no Hub row. The update glyph is always in the header, quiet, available or
 running, and the app asks `help --json` on open and every six hours.
 Decided 2026-10-18, DECISIONS.md, the third look.
+
+**The fourth look.** A NOW row that names a document opens it on a click of
+the row, down the same path a DOCUMENTS row's first icon takes, and Stop
+stays its own control. A DOCUMENTS row carries a mark only when the last run
+on its document failed, and a failed run says "failed", never "stopped". The
+eight-character floor of a cut title counts the name, not the verb in front
+of it. The held press opens the system menu the right-click opens, never a
+second window. The walk of a `hubPath` override stops at a ceiling and lets
+Spotlight answer, one walk at a time, and Spotlight waits for that walk. A
+run of either update button that installed nothing says why in one fixed
+sentence on its row. Decided 2026-10-26, DECISIONS.md, the fourth look.
 
 `auth login` is a real desktop flow: a loopback redirect with PKCE, hand-rolled.
 
@@ -542,7 +555,10 @@ no host the guard does not already open and asks for no grant.
 **One file per tab.** The first tab lands at `--out`, each further tab beside it
 as `<stem>-<tab title>.md`, the title lower-cased with every run of characters
 that are neither letters nor digits as one hyphen. It is not the heading id
-rule, which is goldmark's and drops an accented letter. Pictures follow
+rule, which keeps punctuation out and numbers a repeated heading. A heading's
+number is stripped on the way home only from a heading, never from a line
+inside a fenced code block, and a link to a repeated heading names that
+heading's own id. Pictures follow
 their own tab.
 
 **Nothing is overwritten, and no flag could.** A taken path takes the next free
@@ -633,20 +649,38 @@ person supplies the context a paired note would have given.
 header and footer, the three tables cell by cell, the contents field, heading
 numbering, and the logo. The generator reads it plus markdown and emits a docx.
 
-**The logo is named, not carried.** `logo:` holds the sizes and the anchor and
-exactly one of `drive`, the id of one PNG in the firm's Shared Drive, and
-`base64`, the bytes. The embedded file names the firm's file by id, so the
-tree, the releases and the binary carry no logo, and a boundary test holding
-the PNG's hash fails on any tracked file or docx member that does. `build` and
-`publish` fetch the bytes under `AllowAsset`, check them as a PNG of the stated
-size, and keep them in `assets/<id>` beside the token with a stamp: one
+**The logo is named, not carried.** `logo:` holds `mime`, `width_pt` and the
+anchor and exactly one of `drive`, the id of one PNG in the firm's Shared
+Drive, and `base64`, the bytes. The embedded file names the firm's file by id,
+so the tree, the releases and the binary carry no logo, and a boundary test
+holding the PNG's hash fails on any tracked file or docx member that does.
+`build` and `publish` fetch the bytes under `AllowAsset`, check them as a PNG
+within the byte ceiling and with no side over 4096 pixels, draw the picture
+`width_pt` wide with its height following its own ratio, so a logo of any size
+fits, and keep them in `assets/<id>` beside the token with a stamp: one
 request a day, the cache on any other day and whenever Drive cannot be
 reached, with the envelope's `logo` block saying `drive`, `cache` or `file`
 and why. No cache and no access refuses the run, and so does a file in Drive
 that is not the PNG the house states, because an unbranded document in the
 firm's name is the wrong answer and a wrong file in Drive is somebody's to
 fix now. `base64` stays for a test house and for a firm that embeds, and
-`--house <file>` is the only override. Decided 2026-10-17, DECISIONS.md.
+`--house <file>` is the only override. A logo in the footer is refused by
+name. Decided 2026-10-17, DECISIONS.md, and the pin on exact pixels replaced
+2026-10-26.
+
+**Every value a block states reaches the page.** A cover line's `align`,
+`italic`, `color` and `line_spacing`, the footer paragraph's alignment and
+rule, and a label's `keep_with_next` are written into the docx, and
+`heading_1` and `heading_2` carry six points after them, as `heading_3` and
+`heading_4` do. Decided 2026-10-26, DECISIONS.md.
+
+**A heading id keeps the heading's letters.** It is GitHub's rule: lower
+case, spaces as hyphens, punctuation dropped, and any letter kept, Cyrillic
+included, so `## Цели проекта` is `#цели-проекта`. A second heading with the
+same id takes `-1`, a third `-2`. An id that worked before 2026-10-26 keeps
+working: where the new rule gives another id, for an accented letter or an
+underscore, the old one stays as an alias a `#` link resolves through. The docx bookmark under it stays ASCII, `_h_` and a hash, and Drive's
+import keeps a link through it (MEASURED.md, 2026-10-26).
 
 **`---` on a line of its own in a note's body is a page break**, not a
 horizontal rule. Every thematic break goldmark parses is that one break,
@@ -1147,7 +1181,8 @@ Each is a test or a checkable run, not a claim.
    a request for an id outside the set is refused; a direct edit on a handed-in
    id is refused unless the run granted that one id the styling level, and there
    every kind but the four styling ones is refused, as is a `fields` mask of `*`,
-   an empty mask or one naming either header toggle. `createNamedRange` carries
+   an empty mask, one naming either header toggle, or one naming a field the
+   style object holds as `null`. `createNamedRange` carries
    only over the range `AllowMarker` granted.
 2. The drift test: config-rendered and master-rendered documents compare across
    the 171 items with no new differences.

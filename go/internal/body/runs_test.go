@@ -35,7 +35,7 @@ func TestARunMayNameItsCharacterStyle(t *testing.T) {
 // its words through, and the style has to survive the copy it makes of the
 // base formatting.
 func TestAddRunsNamesTheStyleItWasHanded(t *testing.T) {
-	r := &renderer{cfg: config(t), anchors: map[string]bool{}, deadAnchors: map[string]bool{}}
+	r := &renderer{cfg: config(t), anchors: map[string]string{}, deadAnchors: map[string]bool{}}
 	p := etree.NewElement("w:p")
 	r.addRuns(p, []Run{{Text: "pencilled"}}, runOpts{Style: "Pencil"})
 

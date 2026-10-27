@@ -582,19 +582,31 @@
 // TestEveryHeadingCarriesAHiddenBookmark is the pin on the pair and its
 // place before the runs.
 //
-// The name is goldmark's own auto heading id, which parser.WithAutoHeadingID
-// already computes and keeps unique across the file, rewritten by bookmarkName
-// into what Word takes: letters, digits and underscores, opening with a
-// letter, at most 40 characters. The leading "_h_" is the underscore the
-// import reads, and the "h_" after it is what makes a heading called
-// "1.1 Purpose" open with a letter once Word strips the underscore; every
-// character outside [A-Za-z0-9_] becomes an underscore, which is wider than
-// the lower-case letters, digits and hyphens goldmark emits, on purpose,
-// because the ids are the generator's and this package does not get to notice
-// when it widens; and a name over the ceiling keeps its first 32 characters,
-// so it reads where a name is read at all, and takes seven hex digits of the
-// FNV-1a hash of the id as it arrived, so two long headings sharing a prefix
-// keep two names. TestBookmarkNameIsWordSafe pins all four cases, and
+// The id is view.NewHeadingIDs, handed to goldmark's parse context: GitHub's
+// rule keeps Unicode letters, numbers and marks, '-' and '_', turns each space
+// into '-', drops other punctuation and suffixes repeats. A heading with
+// nothing left takes "heading", the one deliberate exception to GitHub's
+// empty answer. TestAnAnchorKeepsEveryLetter and
+// TestARepeatedCyrillicHeadingTakesASuffix pin the rule at both ends.
+//
+// Every heading also answers to the id goldmark's former default generator
+// gave it, unless that alias is another heading's current id. Notes already
+// carry those targets, and silently retiring one would print a working link as
+// plain text. TestTodaysHeadingIDsStillResolve pins every fixture and live-probe
+// id independently of the new generator, and TestAnAccentedHeadingAnswersToBothIDs
+// pins the one heading whose two ids differ in the fixture.
+//
+// bookmarkName rewrites an ASCII id without '_' exactly as before: the leading
+// "_h_" is what Drive reads and Word hides, punctuation becomes '_', and a
+// name over Word's 40-character ceiling keeps a readable stem plus seven FNV-1a
+// hex digits. A non-ASCII id, or one containing '_', is instead "_h_" plus
+// seven hash digits. The latter keeps GitHub's distinct a_b and a-b from both
+// becoming _h_a_b; the former is the ASCII bookmark form measured to survive
+// Drive import on 2026-10-26. TestBookmarkNameIsWordSafe and
+// TestAnUnderscoreAndAHyphenAreTwoBookmarks pin those forms. Two headings whose
+// seven digits collide stop the build naming both, because choosing either
+// would make a link land on the wrong heading;
+// TestTwoHeadingsSharingABookmarkNameAreRefused pins the refusal.
 // TestAnAnchorLinkIsAJumpAndNotARelationship pins that a "#" link anchors at
 // the name bookmarkName gave that heading.
 //

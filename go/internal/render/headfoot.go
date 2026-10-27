@@ -15,7 +15,7 @@ const logoRelID = "rId1"
 func (b *builder) headerPart(region house.Region, logo bool, name string) []byte {
 	doc, root := newPart("w:hdr")
 	for _, spec := range region.Paragraphs {
-		root.AddChild(b.regionParagraph(spec, region, logo))
+		root.AddChild(b.regionParagraph(spec, region, logo, false))
 	}
 	return b.serialise(doc, name)
 }
@@ -26,39 +26,40 @@ func (b *builder) headerPart(region house.Region, logo bool, name string) []byte
 func (b *builder) footerPart(region house.Region, name string) []byte {
 	doc, root := newPart("w:ftr")
 	for _, spec := range region.Paragraphs {
-		p := b.para(paraOpts{
-			Before:      spec.SpaceBeforePt,
-			After:       spec.SpaceAfterPt,
-			Line:        lineOr(spec.LineSpacing, region.LineSpacing),
-			IndentStart: region.IndentStartPt,
-			Mark:        regionMark(spec),
-		})
-		b.regionRuns(p, spec)
-		root.AddChild(p)
+		root.AddChild(b.regionParagraph(spec, region, false, true))
 	}
 	return b.serialise(doc, name)
 }
 
-// regionParagraph is one line of a header: a rule, a row of runs, or a row of
-// runs with the logo anchored beside them.
-func (b *builder) regionParagraph(spec house.Paragraph, region house.Region, logo bool) *etree.Element {
+// regionParagraph is one line of a header or footer: a rule, a row of runs, or
+// a header row with the logo anchored beside it. Footers take the region's
+// indent and may never carry the logo.
+func (b *builder) regionParagraph(spec house.Paragraph, region house.Region, logo, footer bool) *etree.Element {
 	align := spec.Align
 	if align == "" {
 		align = region.Align
 	}
+	var indent *float64
+	if footer {
+		indent = region.IndentStartPt
+	}
 	p := b.para(paraOpts{
-		Align:  align,
-		Before: spec.SpaceBeforePt,
-		After:  spec.SpaceAfterPt,
-		Line:   lineOr(spec.LineSpacing, region.LineSpacing),
-		Mark:   regionMark(spec),
+		Align:       align,
+		Before:      spec.SpaceBeforePt,
+		After:       spec.SpaceAfterPt,
+		Line:        lineOr(spec.LineSpacing, region.LineSpacing),
+		IndentStart: indent,
+		Mark:        regionMark(spec),
 	})
+	if footer && spec.Logo {
+		b.fail("the logo is anchored in a footer, and only the first page's header may carry it")
+	}
 	if spec.Rule != nil {
 		b.ruleRun(p, *spec.Rule)
 		return p
 	}
 	b.regionRuns(p, spec)
-	if spec.Logo {
+	if spec.Logo && !footer {
 		if !logo {
 			b.fail("the logo is anchored in a header that is not the first page's")
 			return p
@@ -142,7 +143,7 @@ func (b *builder) logoDrawing(p *etree.Element) {
 	v := sub(anchor, "wp:positionV", "relativeFrom", a.RelativeV)
 	sub(v, "wp:posOffset").SetText(emu(a.OffsetYPt))
 
-	sub(anchor, "wp:extent", "cx", emu(lg.WidthPt), "cy", emu(lg.HeightPt))
+	sub(anchor, "wp:extent", "cx", emu(lg.WidthPt), "cy", emu(b.logoHeight))
 	sub(anchor, "wp:effectExtent", "l", "0", "t", "0", "r", "0", "b", "0")
 	sub(anchor, "wp:wrapSquare", "wrapText", "bothSides",
 		"distT", dist, "distB", dist, "distL", dist, "distR", dist)
@@ -162,7 +163,7 @@ func (b *builder) logoDrawing(p *etree.Element) {
 	spPr := sub(pic, "pic:spPr")
 	xfrm := sub(spPr, "a:xfrm")
 	sub(xfrm, "a:off", "x", "0", "y", "0")
-	sub(xfrm, "a:ext", "cx", emu(lg.WidthPt), "cy", emu(lg.HeightPt))
+	sub(xfrm, "a:ext", "cx", emu(lg.WidthPt), "cy", emu(b.logoHeight))
 	sub(spPr, "a:prstGeom", "prst", "rect")
 	sub(spPr, "a:ln")
 }

@@ -3,6 +3,8 @@ package render
 import (
 	"strings"
 	"testing"
+
+	"gdoc/internal/house"
 )
 
 func TestTheFirstPageHeaderCarriesTheLogoWhereTheHouseAnchorsIt(t *testing.T) {
@@ -28,8 +30,8 @@ func TestTheFirstPageHeaderCarriesTheLogoWhereTheHouseAnchorsIt(t *testing.T) {
 	if got := extent.SelectAttrValue("cx", ""); got != "1857375" {
 		t.Errorf("logo cx = %q, want 1857375 EMU (146.25pt)", got)
 	}
-	if got := extent.SelectAttrValue("cy", ""); got != "675132" {
-		t.Errorf("logo cy = %q, want 675132 EMU (53.16pt)", got)
+	if got := extent.SelectAttrValue("cy", ""); got != "675077" {
+		t.Errorf("logo cy = %q, want 675077 EMU (53.156pt)", got)
 	}
 	h := anchor.SelectElement("wp:positionH")
 	if got := h.SelectAttrValue("relativeFrom", ""); got != "column" {
@@ -50,6 +52,26 @@ func TestTheFirstPageHeaderCarriesTheLogoWhereTheHouseAnchorsIt(t *testing.T) {
 	}
 	if got := doc.FindElement("//a:blip").SelectAttrValue("r:embed", ""); got != "rId1" {
 		t.Errorf("the logo names relationship %q, want rId1", got)
+	}
+}
+
+func TestTheLogoHeightFollowsThePicturesRatio(t *testing.T) {
+	pkg, err := Build(config(t), logoPNG(t, 400, 100), fields(), nil, nil, nil, 0)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	doc := parse(t, part(t, pkg, "word/header2.xml"))
+	for _, path := range []string{"//wp:extent", "//a:ext"} {
+		extent := doc.FindElement(path)
+		if extent == nil {
+			t.Fatalf("%s is missing", path)
+		}
+		if got := extent.SelectAttrValue("cx", ""); got != "1857375" {
+			t.Errorf("%s cx = %q, want 1857375", path, got)
+		}
+		if got := extent.SelectAttrValue("cy", ""); got != "464344" {
+			t.Errorf("%s cy = %q, want 464344", path, got)
+		}
 	}
 }
 
@@ -107,6 +129,76 @@ func TestAHeaderWithNoLogoCarriesNoDrawing(t *testing.T) {
 	doc := parse(t, part(t, pkg, "word/header1.xml"))
 	if doc.FindElement("//w:drawing") != nil {
 		t.Error("the running head's header carries a drawing, and only the first page's does")
+	}
+}
+
+func TestAFooterParagraphTakesItsAlignment(t *testing.T) {
+	cfg := config(t)
+	cfg.Footer.Default.Paragraphs[1].Align = "center"
+	cfg.Footer.First.Align = "right"
+
+	pkg, err := Build(cfg, houseLogo(t), fields(), nil, nil, nil, 0)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	defaultFooter := parse(t, part(t, pkg, "word/footer1.xml"))
+	paragraphs := defaultFooter.FindElement("//w:ftr").ChildElements()
+	if got := paragraphs[1].FindElement("w:pPr/w:jc").SelectAttrValue("w:val", ""); got != "center" {
+		t.Errorf("the default footer's second paragraph alignment is %q, want center", got)
+	}
+	firstFooter := parse(t, part(t, pkg, "word/footer2.xml"))
+	for i, p := range firstFooter.FindElement("//w:ftr").ChildElements() {
+		if got := p.FindElement("w:pPr/w:jc").SelectAttrValue("w:val", ""); got != "right" {
+			t.Errorf("first-page footer paragraph %d alignment is %q, want right", i+1, got)
+		}
+	}
+}
+
+func TestAFooterParagraphDrawsItsRule(t *testing.T) {
+	cfg := config(t)
+	cfg.Footer.Default.Paragraphs[0].Rule = &house.Rule{HeightPt: 1.5, Color: "#A0A0A0"}
+
+	pkg, err := Build(cfg, houseLogo(t), fields(), nil, nil, nil, 0)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	doc := parse(t, part(t, pkg, "word/footer1.xml"))
+	first := doc.FindElement("//w:ftr").ChildElements()[0]
+	rects := first.FindElements("w:r/w:pict/v:rect")
+	if len(rects) != 1 {
+		t.Fatalf("the footer rule paragraph has %d rectangles, want one", len(rects))
+	}
+	if got := rects[0].SelectAttrValue("style", ""); got != "width:0.0pt;height:1.5pt" {
+		t.Errorf("the footer rule style is %q, want width:0.0pt;height:1.5pt", got)
+	}
+	if got := rects[0].SelectAttrValue("fillcolor", ""); got != "#A0A0A0" {
+		t.Errorf("the footer rule colour is %q, want #A0A0A0", got)
+	}
+}
+
+func TestALogoInAFooterIsRefusedByName(t *testing.T) {
+	cfg := config(t)
+	cfg.Footer.Default.Paragraphs[1].Logo = true
+
+	_, err := Build(cfg, houseLogo(t), fields(), nil, nil, nil, 0)
+	if err == nil {
+		t.Fatal("Build succeeded with a logo in a footer")
+	}
+	if !strings.Contains(err.Error(), "footer") {
+		t.Errorf("the refusal is %q, and it has to name the footer", err)
+	}
+}
+
+func TestALogoInTheDefaultHeaderIsRefusedByName(t *testing.T) {
+	cfg := config(t)
+	cfg.Header.Default.Paragraphs[0].Logo = true
+
+	_, err := Build(cfg, houseLogo(t), fields(), nil, nil, nil, 0)
+	if err == nil {
+		t.Fatal("Build succeeded with a logo in the default header")
+	}
+	if !strings.Contains(err.Error(), "not the first page's") {
+		t.Errorf("the refusal is %q, want it to name a header that is not the first page's", err)
 	}
 }
 

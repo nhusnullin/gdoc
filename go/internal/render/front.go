@@ -80,9 +80,13 @@ func (b *builder) cover() []*etree.Element {
 			}
 		}
 		value, filled := b.placeholder(line.Placeholder)
+		align := line.Align
+		if align == "" {
+			align = c.Align
+		}
 		if !filled && len(line.Runs) == 0 && line.Text == "" {
 			out = append(out, b.blank(paraOpts{
-				Align:  c.Align,
+				Align:  align,
 				Before: line.SpaceBeforePt,
 				After:  line.SpaceAfterPt,
 				Line:   line.LineSpacing,
@@ -90,24 +94,31 @@ func (b *builder) cover() []*etree.Element {
 			continue
 		}
 		p := b.para(paraOpts{
-			Align:  c.Align,
+			Align:  align,
 			Before: line.SpaceBeforePt,
 			After:  line.SpaceAfterPt,
+			Line:   line.LineSpacing,
 		})
 		switch {
 		case filled:
-			textRun(p, value, runOpts{SizePt: line.SizePt, Bold: line.Bold})
+			textRun(p, value, runOpts{
+				SizePt: line.SizePt, Bold: line.Bold, Italic: line.Italic, Color: line.Color,
+			})
 		case len(line.Runs) > 0:
 			for _, r := range line.Runs {
 				text, o := b.runText(r, runOpts{
-					SizePt: line.SizePt, Bold: line.Bold,
+					SizePt: line.SizePt, Bold: line.Bold, Italic: line.Italic,
 					Color: r.Color, Highlight: r.Highlight,
 				})
+				if o.Color == "" {
+					o.Color = line.Color
+				}
 				textRun(p, text, o)
 			}
 		default:
 			textRun(p, line.Text, runOpts{
-				SizePt: line.SizePt, Bold: line.Bold, Highlight: line.Highlight,
+				SizePt: line.SizePt, Bold: line.Bold, Italic: line.Italic,
+				Color: line.Color, Highlight: line.Highlight,
 			})
 		}
 		out = append(out, p)
@@ -135,6 +146,7 @@ func (b *builder) label(ref string) *etree.Element {
 		Before:    l.SpaceBeforePt,
 		After:     l.SpaceAfterPt,
 		Line:      l.LineSpacing,
+		KeepNext:  l.KeepWithNext,
 		KeepLines: l.KeepLinesTogether,
 	})
 	textRun(p, l.Text, runOpts{

@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"gdoc/internal/asset"
 )
 
 // Every value in this file is written as a literal on purpose. A test that
@@ -71,8 +73,22 @@ func TestHeading1IsTheHouseHeading(t *testing.T) {
 	if s.SpaceBeforePt == nil || *s.SpaceBeforePt != 12 {
 		t.Errorf("heading_1.space_before_pt = %v, want 12", s.SpaceBeforePt)
 	}
+	if s.SpaceAfterPt == nil || *s.SpaceAfterPt != 6 {
+		t.Errorf("heading_1.space_after_pt = %v, want 6", s.SpaceAfterPt)
+	}
 	if !s.KeepWithNext {
 		t.Error("heading_1.keep_with_next = false, want true")
+	}
+}
+
+func TestHeading2HasSixPointsAfter(t *testing.T) {
+	cfg := load(t)
+	s, ok := cfg.Style("heading_2")
+	if !ok {
+		t.Fatal("styles.heading_2 is missing")
+	}
+	if s.SpaceAfterPt == nil || *s.SpaceAfterPt != 6 {
+		t.Errorf("heading_2.space_after_pt = %v, want 6", s.SpaceAfterPt)
 	}
 }
 
@@ -226,21 +242,18 @@ func TestTheThreeTablesAreThereWithTheirColumns(t *testing.T) {
 	}
 }
 
-// TestTheLogoDecodesAsAPNGOfTheStatedSize reads the copy under testdata
+// TestTheLogoStatesItsMimeWidthAndPlacement reads the copy under testdata
 // rather than the embedded file, because the firm's logo is one file in Drive
 // and no test in this tree carries its bytes. The copy is the embedded file
 // with the placeholder's base64 in place of them, so what is under test is
 // still the house's own statement of the mark and the decode of it.
-func TestTheLogoDecodesAsAPNGOfTheStatedSize(t *testing.T) {
+func TestTheLogoStatesItsMimeWidthAndPlacement(t *testing.T) {
 	cfg := loadBase64House(t)
 	if cfg.Logo.Mime != "image/png" {
 		t.Errorf("logo.mime = %q, want image/png", cfg.Logo.Mime)
 	}
-	if len(cfg.Logo.Px) != 2 || cfg.Logo.Px[0] != 509 || cfg.Logo.Px[1] != 185 {
-		t.Errorf("logo.px = %v, want [509 185]", cfg.Logo.Px)
-	}
-	if cfg.Logo.WidthPt != 146.25 || cfg.Logo.HeightPt != 53.16 {
-		t.Errorf("logo size = %v by %v pt, want 146.25 by 53.16", cfg.Logo.WidthPt, cfg.Logo.HeightPt)
+	if cfg.Logo.WidthPt != 146.25 {
+		t.Errorf("logo.width_pt = %v, want 146.25", cfg.Logo.WidthPt)
 	}
 	raw, err := cfg.LogoBytes()
 	if err != nil {
@@ -517,6 +530,39 @@ func TestALogoThatIsNotAPNGIsRefused(t *testing.T) {
 	}
 }
 
+func TestABase64LogoObeysTheAssetBounds(t *testing.T) {
+	pngBytes := func(width, height int) []byte {
+		t.Helper()
+		var buf bytes.Buffer
+		if err := png.Encode(&buf, image.NewRGBA(image.Rect(0, 0, width, height))); err != nil {
+			t.Fatalf("encode %dx%d PNG: %v", width, height, err)
+		}
+		return buf.Bytes()
+	}
+	whole := pngBytes(1, 1)
+	for _, c := range []struct {
+		name string
+		raw  []byte
+		want string
+	}{
+		{name: "byte ceiling", raw: append(append([]byte{}, whole...), make([]byte, asset.MaxBytes)...), want: "may not exceed"},
+		{name: "side ceiling", raw: pngBytes(asset.MaxSide+1, 1), want: "4097x1"},
+		{name: "complete decode", raw: append([]byte{}, whole[:33]...), want: "not a PNG"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			encoded := base64.StdEncoding.EncodeToString(c.raw)
+			src := houseWithLogo(t, logoBlock+"  base64: "+encoded+"\n")
+			_, err := LoadFile(write(t, src))
+			if err == nil {
+				t.Fatal("an out-of-bounds base64 logo was accepted")
+			}
+			if !strings.Contains(err.Error(), "logo") || !strings.Contains(err.Error(), c.want) {
+				t.Errorf("error %q does not name the logo and %q", err, c.want)
+			}
+		})
+	}
+}
+
 // TestNothingHereReachesTheNetwork is the render path's own rule, stated as a
 // test rather than left to review.
 //
@@ -598,11 +644,7 @@ func houseWithLogo(t *testing.T, block string) []byte {
 // name the bytes. The caller appends one of them, or both, or neither.
 const logoBlock = `logo:
   mime: image/png
-  px:
-  - 195
-  - 97
   width_pt: 146.25
-  height_pt: 72.75
   anchor:
     in: first_page_header
     relative_h: column
@@ -612,6 +654,24 @@ const logoBlock = `logo:
     wrap: square
     wrap_dist_pt: 9
 `
+
+func TestALogoThatStatesPixelsIsRefusedNamingTheKey(t *testing.T) {
+	for _, c := range []struct{ key, line string }{
+		{"px", "  px: [195, 97]\n"},
+		{"height_pt", "  height_pt: 72.75\n"},
+	} {
+		t.Run(c.key, func(t *testing.T) {
+			block := strings.Replace(logoBlock, "  width_pt: 146.25\n", c.line+"  width_pt: 146.25\n", 1)
+			_, err := LoadFile(write(t, houseWithLogo(t, block+"  drive: "+aDriveID+"\n")))
+			if err == nil {
+				t.Fatalf("a logo stating %s was accepted", c.key)
+			}
+			if !strings.Contains(err.Error(), c.key) {
+				t.Errorf("error %q does not name %s", err, c.key)
+			}
+		})
+	}
+}
 
 // aDriveID is a file id of the shape Drive mints, written out here so no test
 // in this package names the firm's own file.
@@ -702,7 +762,6 @@ func TestADriveLogoCarriesNoBytes(t *testing.T) {
 	}
 	for _, c := range []struct{ name, drop, names string }{
 		{"no width", "  width_pt: 146.25\n", "logo.width_pt"},
-		{"no height", "  height_pt: 72.75\n", "logo.height_pt"},
 		{"no anchor", "    in: first_page_header\n", "logo.anchor"},
 		{"no wrap", "    wrap: square\n", "logo.anchor.wrap"},
 	} {

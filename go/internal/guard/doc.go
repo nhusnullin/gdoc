@@ -138,10 +138,12 @@
 //     out of house.yaml rather than out of anything Drive said, the answer is a
 //     PNG, and a PNG carries no id to learn. What
 //     bounds the read is what the run then does with the bytes, which is
-//     internal/asset holding them to the house file's own mime and pixels
-//     before they reach a document. Every other shape on that id is not judged
-//     by this rule at all, so it falls through to the refusal an id nobody
-//     handed in has always had. The pins are in asset_test.go:
+//     internal/asset holding them to the stated mime, the byte ceiling and its
+//     own side ceiling before they reach a document. TestTheReadIsBounded,
+//     TestTheSideCeilingIs4096 and TestASideOverTheCeilingIsRefusedBeforeDecoding
+//     pin those bounds. Every other shape on that id is not judged by this rule
+//     at all, so it falls through to the refusal an id nobody handed in has
+//     always had. The grant pins are in asset_test.go:
 //     TestTheAssetGrantAdmitsOneMediaReadAndNothingElse,
 //     TestWithoutTheAssetGrantTheReadIsRefused,
 //     TestTheAssetGrantAdmitsNoDocument,
@@ -418,7 +420,9 @@
 // spelling rather than the behaviour. checkMaskIsSet walks every path into the
 // request's own style object, to the leaf, and refuses a path the request leaves
 // unset, a style object that is absent, one spelled under another case, and one
-// the walk cannot look inside. That is the builders' own rule held at the wire:
+// the walk cannot look inside. A field held as null is a field left unset too,
+// and TestAMaskNamingANullFieldIsRefused pins that spelling. That is the
+// builders' own rule held at the wire:
 // a field named in a mask and forgotten in the style object clears that property
 // on every paragraph, run or cell the request addressed. The segments are read
 // exactly, so the underscore spelling of a path whose camelCase is set is

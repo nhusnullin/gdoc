@@ -84,9 +84,10 @@ func hexColor(c string) string {
 // write. A part half built is never returned: Build checks err before it packs
 // anything.
 type builder struct {
-	cfg    *house.Config
-	fields cover.Fields
-	err    error
+	cfg        *house.Config
+	fields     cover.Fields
+	logoHeight float64
+	err        error
 }
 
 // fail records the first failure and keeps the rest, because the first one is

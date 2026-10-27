@@ -16,6 +16,12 @@
 // refuses an empty one rather than writing a document with no mark in its
 // header: TestBuildRefusesALogoWithNoBytes.
 //
+// The house states the logo's width, and Build reads the PNG header so its
+// height follows the picture's own ratio. Bytes that are not a PNG are refused
+// by name. TestTheLogoHeightFollowsThePicturesRatio,
+// TestBuildRefusesALogoThatIsNotAPNG and
+// TestTheFirstPageHeaderCarriesTheLogoWhereTheHouseAnchorsIt are the pins.
+//
 // This comment holds why the package refuses what it refuses. What it reports
 // is in the code beside it.
 //
@@ -137,6 +143,25 @@
 // TestTheFootersBlankLineCarriesItsSizeAndColourOnTheParagraphMark are the
 // pins. No drift item reads a paragraph mark, in either gate: the Docs API has
 // no paragraph mark to read, which is why the row is not there.
+//
+// # A block's own look reaches the page
+//
+// A cover line's alignment, line spacing, italic and colour override the
+// cover defaults; its runs inherit that colour unless they state their own,
+// and a filled placeholder keeps the line's colour while losing the
+// template's highlight. A footer paragraph takes its own alignment before
+// its region's and draws its own rule. A label may keep with the block behind
+// it. TestACoverLineCarriesItsOwnLook,
+// TestARunLineTakesTheLinesColourWhereTheRunStatesNone,
+// TestAFilledLineKeepsTheLinesColour,
+// TestAFooterParagraphTakesItsAlignment,
+// TestAFooterParagraphDrawsItsRule and
+// TestALabelKeepsWithTheBlockBehindIt are the pins.
+//
+// Only the first page's header may carry the logo. A logo stated in any
+// footer or in the default header is refused by name:
+// TestALogoInAFooterIsRefusedByName and
+// TestALogoInTheDefaultHeaderIsRefusedByName.
 //
 // # The note's own words reach the front matter, and one of them is a mark
 //

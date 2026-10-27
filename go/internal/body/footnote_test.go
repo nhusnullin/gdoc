@@ -668,7 +668,7 @@ func TestANoteWithNoFootnoteCarriesNone(t *testing.T) {
 // could be mistaken for something else: it carries no link, so the dead-anchor
 // branch never sees it.
 func TestAFootnoteReferenceIsNotADeadAnchor(t *testing.T) {
-	r := &renderer{cfg: config(t), anchors: map[string]bool{}, deadAnchors: map[string]bool{}}
+	r := &renderer{cfg: config(t), anchors: map[string]string{}, deadAnchors: map[string]bool{}}
 	p := etree.NewElement("w:p")
 	r.addRuns(p, []Run{{Footnote: 4}}, runOpts{})
 

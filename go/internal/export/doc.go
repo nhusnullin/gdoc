@@ -86,10 +86,16 @@
 // list numbering would renumber the ordinary paragraphs between the headings.
 // A note built from a file that kept those numbers and published again would be
 // numbered twice over, "1-1-Scope", so the prefix comes off and is listed as a
-// piece. The links that pointed at that heading move with it, through
-// view.Anchor, which is goldmark's own heading id rule and so is the rule the
-// note's links will be resolved by. One pass over the targets moves them, not
-// one pass per heading: TestRepointDoesNotChainRewrites.
+// piece. The links that pointed at that heading move with it by heading
+// position: HeadingLines gives the ids before and after the strip, so a
+// repeated heading is linked by its own suffixed id. One pass over the targets
+// moves them, not one pass per heading: TestRepointDoesNotChainRewrites and
+// TestNumbersThatCollapseIntoOneHeadingKeepTheirLinksApart.
+// A heading is only what goldmark parses as one, so a heading-shaped line in a
+// code block keeps its digits; TestAHeadingNumberInsideAFenceStays and
+// TestKeptNumbersNamesNoLineInsideAFence are the two sides of that rule.
+// A heading link inside the same fence is code too and is not repointed;
+// TestALinkInsideAFenceIsNotRepointed is the pin.
 // TestAHeadingLosesItsHouseNumberAndKeepsItsLinks and
 // TestTheHeadingNumberIsTheHouseSeparator are the pins, the second stating
 // house.yaml's own format as a literal.

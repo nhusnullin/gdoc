@@ -34,7 +34,7 @@ const theID = "1J3uh6poVAneP_V_Pc5FuNI4-Gahlab0s"
 
 // housePNG is what the house says of the file in these tests: a small PNG,
 // stated exactly.
-var housePNG = Want{Mime: "image/png", Width: 8, Height: 4}
+var housePNG = Want{Mime: "image/png"}
 
 // fake is the reach this room is handed. It counts its calls, because one
 // request a day rather than one a run is the whole reason the stamp exists.
@@ -274,8 +274,8 @@ func TestNoTokenAndACacheUsesTheCache(t *testing.T) {
 }
 
 // With no reach and nothing usable in the cache there is no answer, and the
-// refusal names the one thing that fixes it. A cache that is not the file the
-// house states is no cache.
+// refusal names the one thing that fixes it. A cache that is not a PNG is no
+// cache.
 func TestNoTokenAndNoCacheRefusesNamingTheLogin(t *testing.T) {
 	cases := []struct {
 		name string
@@ -283,7 +283,6 @@ func TestNoTokenAndNoCacheRefusesNamingTheLogin(t *testing.T) {
 	}{
 		{"nothing cached", func(t *testing.T) {}},
 		{"a cache that is not a PNG", func(t *testing.T) { seedCache(t, []byte("not a png"), time.Hour, true) }},
-		{"a cache of the wrong size", func(t *testing.T) { seedCache(t, pngOf(t, 9, 4), time.Hour, true) }},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -360,8 +359,7 @@ func TestABadFileRefusesEvenWithAGoodCache(t *testing.T) {
 		says string
 	}{
 		{"not a PNG", []byte("GIF89a and the rest"), housePNG, "not a PNG"},
-		{"the wrong pixels", nil, housePNG, "8x4"},
-		{"a mime this room does not carry", nil, Want{Mime: "image/jpeg", Width: 8, Height: 4}, "image/png"},
+		{"a mime this room does not carry", nil, Want{Mime: "image/jpeg"}, "image/png"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -389,6 +387,29 @@ func TestABadFileRefusesEvenWithAGoodCache(t *testing.T) {
 			}
 			if !bytes.Equal(readCacheFile(t), cached) {
 				t.Error("a refused file reached the cache")
+			}
+		})
+	}
+}
+
+func TestAPictureOfAnySizeIsCarried(t *testing.T) {
+	for _, size := range []struct{ width, height int }{{16, 8}, {509, 185}} {
+		t.Run(fmt.Sprintf("%dx%d", size.width, size.height), func(t *testing.T) {
+			configDir(t)
+			raw := pngOf(t, size.width, size.height)
+			got, err := Fetch(context.Background(), &fake{raw: raw}, theID, Want{Mime: "image/png"})
+			if err != nil {
+				t.Fatalf("Fetch: %v", err)
+			}
+			if !bytes.Equal(got.Raw, raw) {
+				t.Error("the carried bytes differ from Drive's answer")
+			}
+			cached, err := Fetch(context.Background(), nil, theID, Want{Mime: "image/png"})
+			if err != nil {
+				t.Fatalf("cached Fetch: %v", err)
+			}
+			if cached.Source != FromCache || !bytes.Equal(cached.Raw, raw) {
+				t.Errorf("cached Fetch = %+v, want the same bytes from cache", cached)
 			}
 		})
 	}
@@ -475,6 +496,51 @@ func TestAHugeStatedSizeIsRefusedWithoutDecoding(t *testing.T) {
 	if grew := after.TotalAlloc - before.TotalAlloc; grew > 64<<20 {
 		t.Errorf("the refusal allocated %d MiB, want under 64 MiB: the header was not read first",
 			grew/(1<<20))
+	}
+}
+
+func TestASideOverTheCeilingIsRefusedBeforeDecoding(t *testing.T) {
+	for _, c := range []struct {
+		name string
+		w, h int
+	}{
+		{name: "width", w: 4097, h: 1},
+		{name: "height", w: 1, h: 4097},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			configDir(t)
+			raw := pngHeaderOf(t, c.w, c.h)
+			got, err := Fetch(context.Background(), &fake{raw: raw}, theID, housePNG)
+			if err == nil {
+				t.Fatalf("Fetch() = %+v, want a refusal", got)
+			}
+			want := fmt.Sprintf("%dx%d", c.w, c.h)
+			if !strings.Contains(err.Error(), want) {
+				t.Errorf("the refusal is %q, want %s named in it", err, want)
+			}
+		})
+	}
+}
+
+func TestASideAtTheCeilingCarries(t *testing.T) {
+	for _, c := range []struct {
+		name string
+		w, h int
+	}{
+		{name: "width", w: 4096, h: 1},
+		{name: "height", w: 1, h: 4096},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			if err := hold(pngOf(t, c.w, c.h), housePNG); err != nil {
+				t.Errorf("hold(%dx%d) = %v, want the boundary accepted", c.w, c.h, err)
+			}
+		})
+	}
+}
+
+func TestTheSideCeilingIs4096(t *testing.T) {
+	if MaxSide != 4096 {
+		t.Errorf("MaxSide = %d, want 4096", MaxSide)
 	}
 }
 

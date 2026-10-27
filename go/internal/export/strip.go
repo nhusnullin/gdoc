@@ -8,6 +8,11 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/ast"
+	"github.com/yuin/goldmark/extension"
+	goldtext "github.com/yuin/goldmark/text"
+
 	"gdoc/internal/docs"
 	"gdoc/internal/prelude"
 	"gdoc/internal/view"
@@ -325,21 +330,26 @@ func describe(ps []Piece) string {
 // session takes it out with the marker.
 func stripHeadingNumbers(md string) (string, []Piece) {
 	lines := strings.Split(md, "\n")
+	before := view.HeadingLines(md)
 	var out []Piece
-	moved := map[string]string{}
-	for i, line := range lines {
-		m := numberedHeading.FindStringSubmatch(line)
+	for _, heading := range before {
+		m := numberedHeading.FindStringSubmatch(lines[heading.Line])
 		if m == nil {
 			continue
 		}
 		numbered, words := m[2]+headingNumberSeparator+m[3], m[3]
-		lines[i] = m[1] + words
+		lines[heading.Line] = m[1] + words
 		out = append(out, Piece{Kind: PieceHeadingNumber, Text: numbered})
-		if from, to := view.Anchor(numbered), view.Anchor(words); from != to {
-			moved[from] = to
+	}
+	stripped := strings.Join(lines, "\n")
+	after := view.HeadingLines(stripped)
+	moved := make(map[string]string, len(before))
+	for i := 0; i < len(before) && i < len(after); i++ {
+		if before[i].ID != after[i].ID {
+			moved[before[i].ID] = after[i].ID
 		}
 	}
-	return repoint(strings.Join(lines, "\n"), moved), out
+	return repoint(stripped, moved), out
 }
 
 // keptNumbers names the headings that still open the way a house number does,
@@ -371,9 +381,10 @@ func keptNumbers(tab, md string) []string {
 }
 
 // repoint moves the links that pointed at a heading the number came off. The
-// target is the heading's own words as an anchor, so a heading that loses "1-"
-// loses it from every link into it as well, and a file whose links land nowhere
-// is not a file a session can merge.
+// target comes from that heading's position before and after the strip, so a
+// repeated heading keeps its own suffix and a file whose links land nowhere is
+// not a file a session can merge. Link-shaped text inside code stays byte for
+// byte, whether the code is fenced, indented or inline.
 //
 // One pass over the targets, not one pass per entry of the map. Sequential
 // replacements chain: a document where one heading's new anchor is another
@@ -384,13 +395,83 @@ func repoint(md string, moved map[string]string) string {
 	if len(moved) == 0 {
 		return md
 	}
-	return headingLink.ReplaceAllStringFunc(md, func(m string) string {
-		from := m[len("](#") : len(m)-1]
-		if to, ok := moved[from]; ok {
-			return "](#" + to + ")"
+	protected := codeRanges(md)
+	matches := headingLink.FindAllStringIndex(md, -1)
+	var out strings.Builder
+	last := 0
+	for _, match := range matches {
+		if overlapsCode(match[0], match[1], protected) {
+			continue
 		}
-		return m
+		text := md[match[0]:match[1]]
+		from := text[len("](#") : len(text)-1]
+		to, ok := moved[from]
+		if !ok {
+			continue
+		}
+		out.WriteString(md[last:match[0]])
+		out.WriteString("](#")
+		out.WriteString(to)
+		out.WriteByte(')')
+		last = match[1]
+	}
+	if last == 0 {
+		return md
+	}
+	out.WriteString(md[last:])
+	return out.String()
+}
+
+type sourceRange struct{ start, stop int }
+
+// codeRanges asks goldmark which source bytes are code. Reading the parsed
+// structure avoids a second, incomplete fence parser here: containers may
+// indent or quote a fence, and a backtick fence with a backtick in its info
+// string is not a fence at all.
+func codeRanges(md string) []sourceRange {
+	source := []byte(md)
+	markdown := goldmark.New(goldmark.WithExtensions(extension.GFM, extension.Footnote))
+	doc := markdown.Parser().Parse(goldtext.NewReader(source))
+	var ranges []sourceRange
+	addLines := func(n ast.Node) {
+		for i := 0; i < n.Lines().Len(); i++ {
+			line := n.Lines().At(i)
+			ranges = append(ranges, sourceRange{start: line.Start, stop: line.Stop})
+		}
+	}
+	_ = ast.Walk(doc, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+		switch n := node.(type) {
+		case *ast.CodeBlock:
+			addLines(node)
+			return ast.WalkSkipChildren, nil
+		case *ast.FencedCodeBlock:
+			addLines(node)
+			if n.Info != nil {
+				ranges = append(ranges, sourceRange{start: n.Info.Segment.Start, stop: n.Info.Segment.Stop})
+			}
+			return ast.WalkSkipChildren, nil
+		case *ast.CodeSpan:
+			for child := n.FirstChild(); child != nil; child = child.NextSibling() {
+				text := child.(*ast.Text)
+				ranges = append(ranges, sourceRange{start: text.Segment.Start, stop: text.Segment.Stop})
+			}
+			return ast.WalkSkipChildren, nil
+		}
+		return ast.WalkContinue, nil
 	})
+	return ranges
+}
+
+func overlapsCode(start, stop int, ranges []sourceRange) bool {
+	for _, r := range ranges {
+		if start < r.stop && stop > r.start {
+			return true
+		}
+	}
+	return false
 }
 
 // headingLink is a markdown link whose target is a place in this file. The

@@ -333,13 +333,23 @@
 //
 // The words are the document's own and the target is where they point: the
 // address for a link out of the document, and "#" with an anchor for a link to
-// a heading inside it. The anchor rule is goldmark's, asked of goldmark in
-// Anchor rather than written out again, because the ids internal/body resolves
-// a note's links against are the ids goldmark made: a link read out of a
-// document and the link a note wrote are then the same string, which is what
-// lets a session compare the two without translating either.
-// TestALinkPrintsItsTarget, links.golden and
-// TestTheAnchorViewWritesIsTheIDBodyCollects are the pins.
+// a heading inside it. NewHeadingIDs is GitHub's rule: it keeps Unicode
+// letters, numbers and marks, '-' and '_', turns each space into '-', and
+// drops other punctuation. A heading with nothing left takes "heading", the
+// deliberate exception to GitHub's empty answer. Anchor asks a fresh generator
+// for one heading in isolation, while a projection and HeadingLines each use
+// one across the file, and internal/body hands the same generator to goldmark,
+// so a projected link and the parsed heading stay one string. A repeated
+// heading is linked by its own suffixed id. TestAnAnchorKeepsEveryLetter,
+// TestARepeatedIDTakesTheNextSuffix, TestALinkPrintsItsTarget,
+// TestALinkToTheSecondOfTwoHeadingsNamesTheSecond,
+// TestTheAnchorViewWritesIsTheIDBodyCollects and
+// TestARepeatedHeadingsLinkIsTheIDBodyCollects are the pins.
+//
+// HeadingLines asks the same parser which source lines are headings, carrying
+// each line's words and generated id. Code and footnote definitions do not
+// enter the document outline just because a line inside them starts with "#";
+// TestHeadingLinesFindsWhatGoldmarkFinds is the pin.
 //
 // The anchor is taken from the heading's projected line and not from its text
 // runs, because goldmark takes its id from the whole line: a heading holding a
@@ -347,9 +357,11 @@
 // the id, and a heading holding a person chip is "[person: Ann]" and goldmark
 // reads the label. Printing a link's target is what made the two diverge, so
 // the rule arrived with it. Project walks the document again for this, the
-// walks before the last one only to measure the lines, and a heading the walk
-// does not reach, one inside a table cell, keeps the words headingWords
-// collected. TestAHeadingsAnchorIsTheIDOfTheLineItProjects is the pin.
+// walks before the last one only to measure the ordered heading lines, and
+// then runs one id generator over them. A heading the walk does not reach, one
+// inside a table cell, keeps the words headingWords collected.
+// TestAHeadingsAnchorIsTheIDOfTheLineItProjects and
+// TestALinkToTheSecondOfTwoHeadingsNamesTheSecond are the pins.
 //
 // The walks repeat until the lines stop moving, under a ceiling, because a
 // heading can hold a link to another heading and writing that link changes the

@@ -41,6 +41,7 @@ earlier sections are frozen in [MEASURED-archive.md](MEASURED-archive.md).
 | 2026-10-18 | Where the screen cuts a panel as tall as its content | MEASURED.md |
 | 2026-10-18 | What Spotlight answers for a document id | MEASURED.md |
 | 2026-10-18 | What the header line holds, and what a second version costs it | MEASURED.md |
+| 2026-10-26 | Drive's import of a Russian heading and a link to it | MEASURED.md |
 
 A measurement is never edited to match a later reading; a different answer is a
 new section in this file rather than a change in the archive, and the old one
@@ -839,3 +840,36 @@ Nail may still want both on the line. That is a new decision entry and one
 of these: a shorter address, no mark, or the name dropped. Dropping the
 leading `v` from both versions buys 12 pt of the 49 needed, so it is not
 one of them.
+
+## Drive's import of a Russian heading and a link to it
+
+Measured 2026-10-26 by the team lead, before M30 was planned, with a throwaway
+test that was never committed. It built the probe note of
+`TestAPublishedHeadingCarriesAnIdAndAJumpIsAHeadingLink` through the
+production render, then rewrote `word/document.xml` in two places, and
+uploaded the result with `publish.Run` into the test folder. The read back is
+`documents.get` through `docs.URL`, walked by `headingsAndJumps`. The
+document is left in the folder as the evidence:
+`1AVeG_qbRtC8MjUsV39TieRbAQKzAmIlw5RfvNWx6K_4`.
+
+The question came from Nail's decision for M30. A Markdown id for a Russian
+heading keeps its Cyrillic, as GitHub does, while the docx bookmark stays ASCII
+as `_h_` and a hash. The design rests on Drive minting a heading id from
+such a bookmark on a heading whose text is Cyrillic, and on a link to the
+bookmark coming back as a link to that heading.
+
+| Variant | Heading text | Bookmark name | Heading id | The `#` link |
+|---|---|---|---|---|
+| A, the design | `1.1-Цели проекта` | `_h_3f9a2c1` | `h.b1z2r18uctoy` | `heading id h.b1z2r18uctoy`, so it lands on it |
+| B, for comparison | `1.2-Что получает читатель` | `_h_что_получает_читатель` | `h.ho7o1xkbmpk0` | no link named it |
+
+The publish reported `headings_without_id: 0`.
+
+So a hashed ASCII bookmark works on a Russian heading, and the link survives
+the import. Variant B says Drive also accepts a Cyrillic bookmark name, but
+Word's own rule for a name is ASCII letters, digits and underscores, and a
+name outside it is repaired rather than refused (`go/internal/body/body.go`,
+`bookmarkName`). The design keeps the ASCII form for Word's sake.
+
+Recheck when Google's docx import changes, or before a bookmark name leaves
+ASCII.

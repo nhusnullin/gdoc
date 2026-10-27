@@ -8,7 +8,6 @@ package main
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"net/url"
@@ -77,9 +76,8 @@ func driveLogoHouse(t *testing.T) string {
 	return path
 }
 
-// housePNG is what a stubbed Drive answers with: a PNG of the size the house
-// file states, so the room's own check passes and what is left under test is
-// where the bytes came from.
+// housePNG is what a stubbed Drive answers with: a valid PNG, so the room's
+// own checks pass and what is left under test is where the bytes came from.
 func housePNG(t *testing.T) []byte {
 	t.Helper()
 	raw, err := os.ReadFile(placeholderLogo)
@@ -400,7 +398,7 @@ func TestBuildWithNoTokenAndNoCacheRefusesNamingTheLogin(t *testing.T) {
 // cache: the firm's file is wrong and the refusal is the only message that
 // reaches whoever can fix it.
 func TestBuildRefusesAWrongFileInDriveWithAGoodCache(t *testing.T) {
-	wire := &logoWire{t: t, png: wrongSizePNG(t)}
+	wire := &logoWire{t: t, png: []byte("GIF89a")}
 	logoFetching(t, wire)
 	cachedLogo(t, logoFileID, housePNG(t), 30*time.Hour)
 	dir, md := buildNote(t)
@@ -545,20 +543,6 @@ func TestPublishReportsALogoInTheFile(t *testing.T) {
 	if len(wire.asked) != 0 {
 		t.Errorf("a logo in the house file is fetched from nowhere: %v", wire.asked)
 	}
-}
-
-// wrongSizePNG is a PNG of the wrong size: the one file that must refuse the
-// run however good the cache is.
-func wrongSizePNG(t *testing.T) []byte {
-	t.Helper()
-	// A 1x1 greyscale PNG, written out as base64 so this test states its own
-	// bytes rather than building an image.
-	raw, err := base64.StdEncoding.DecodeString(
-		"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVR4nGP4DwABAQEAWk1v8QAAAABJRU5ErkJggg==")
-	if err != nil {
-		t.Fatal(err)
-	}
-	return raw
 }
 
 // assetSum is the hash the stamp beside the cached bytes carries. It is

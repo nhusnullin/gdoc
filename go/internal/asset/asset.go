@@ -17,6 +17,13 @@ import (
 // than to trim a real one. TestTheReadIsBounded is the pin.
 const MaxBytes = 1 << 20
 
+// MaxSide is the largest width or height this room decodes. Compressed size
+// does not bound decoded size, so the PNG header is held to this ceiling before
+// png.Decode can allocate the picture. At 4096 by 4096, the largest admitted
+// RGBA image is 64 MiB. TestTheSideCeilingIs4096 states the literal, and
+// TestASideOverTheCeilingIsRefusedBeforeDecoding pins the order of the check.
+const MaxSide = 4096
+
 // Interval is how long a stamp stands before this room asks Drive again. A
 // day, because a logo changes less often than a release does, and because a
 // build that asks once a run would make every document cost a request.
@@ -47,13 +54,11 @@ type Drive interface {
 	FileBytes(ctx context.Context, fileID string, limit int64) ([]byte, error)
 }
 
-// Want is what the caller's own file says about the asset: the mime it is and
-// how many pixels across and down. The caller states it, this room holds the
-// bytes to it, and neither of them knows what the picture is for.
+// Want is what the caller's own file says about the asset: its mime. The
+// caller states it, this room holds the bytes to it, and neither of them knows
+// what the picture is for.
 type Want struct {
-	Mime   string
-	Width  int
-	Height int
+	Mime string
 }
 
 // check holds the statement itself to what this room can check. A caller
@@ -62,9 +67,6 @@ type Want struct {
 func (w Want) check() error {
 	if w.Mime != "image/png" {
 		return fmt.Errorf("the file is stated as %q, and image/png is the only mime this room checks", w.Mime)
-	}
-	if w.Width <= 0 || w.Height <= 0 {
-		return fmt.Errorf("the file is stated as %dx%d px, and both have to be real sizes", w.Width, w.Height)
 	}
 	return nil
 }
@@ -141,32 +143,42 @@ func Fetch(ctx context.Context, client Drive, id string, want Want) (Bytes, erro
 	return got, nil
 }
 
-// hold is the whole check this room makes on bytes it did not write: a PNG
-// that decodes, of the size the caller states. It runs on what Drive answered
-// and on what the cache holds, because a file gdoc half understands must not
-// reach a document by either route.
+// Validate is the whole check gdoc makes on logo bytes: the stated mime is one
+// it understands, the encoded file fits within the byte ceiling, and the PNG
+// decodes within the side ceiling. It is shared by Drive, cache, house-file
+// and render paths so none of them can admit bytes another path refuses.
 //
 // The header is read first and the size is judged on it, because Go's decoder
 // allocates the whole picture from what the header states before it reads one
 // pixel: a file of a few dozen bytes saying it is thirty thousand pixels
 // square would otherwise cost gigabytes to refuse. Judged on the header, the
-// decode that follows is bounded by the size the caller asked for.
-// TestAHugeStatedSizeIsRefusedWithoutDecoding is the pin.
+// decode that follows is bounded by MaxSide.
+// TestAHugeStatedSizeIsRefusedWithoutDecoding and
+// TestASideOverTheCeilingIsRefusedBeforeDecoding are the pins.
 //
 // The image is then decoded whole and not left at its header, because a header
 // says what the picture would be rather than that it is there: a file cut off
 // after its IHDR chunk reads as the stated size and carries no picture.
 // TestAHalfPNGIsRefusedByBothRoutes is the pin for that half.
-func hold(raw []byte, want Want) error {
+func Validate(raw []byte, want Want) error {
+	if err := want.check(); err != nil {
+		return err
+	}
+	if len(raw) > MaxBytes {
+		return fmt.Errorf("the file is %d bytes, and may not exceed %d", len(raw), MaxBytes)
+	}
 	cfg, err := png.DecodeConfig(bytes.NewReader(raw))
 	if err != nil {
 		return fmt.Errorf("it is not a PNG: %w", err)
 	}
-	if cfg.Width != want.Width || cfg.Height != want.Height {
-		return fmt.Errorf("it is stated as %dx%d px and the image is %dx%d", want.Width, want.Height, cfg.Width, cfg.Height)
+	if cfg.Width > MaxSide || cfg.Height > MaxSide {
+		return fmt.Errorf("the image is %dx%d px, and neither side may exceed %d", cfg.Width, cfg.Height, MaxSide)
 	}
 	if _, err := png.Decode(bytes.NewReader(raw)); err != nil {
 		return fmt.Errorf("it is not a PNG: %w", err)
 	}
 	return nil
 }
+
+// hold keeps the private name used by this package's cache and boundary tests.
+func hold(raw []byte, want Want) error { return Validate(raw, want) }

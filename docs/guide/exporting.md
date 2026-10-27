@@ -41,10 +41,12 @@ A document with one tab gives one file. A document with three gives three. The
 first tab lands at `--out` and each other tab lands beside it, named from its
 own title: a tab called `Appendix` beside `note.md` is `note-appendix.md`. The
 title is lowercased and every run of characters that are not letters or digits
-becomes one hyphen. It is not the rule a link to a heading follows: that one is
-goldmark's, and it drops an accented letter where this one keeps it. A tab
-with no title that can be spelled that way is `note-tab-2.md`, by its position.
-Two tabs with the same title take the numbering rule like any other taken name.
+becomes one hyphen. It is not the rule a link to a heading follows: a heading
+id keeps Unicode letters, numbers and marks, `-` and `_`, turns spaces into
+hyphens, drops other punctuation, and adds `-1`, `-2` and so on to repeats. A
+tab with no title that can be spelled that way is `note-tab-2.md`, by its
+position. Two tabs with the same title take the numbering rule like any other
+taken name.
 
 Pictures follow their own tab. Each file's `gdoc:` block names the document and
 the tab it came from.

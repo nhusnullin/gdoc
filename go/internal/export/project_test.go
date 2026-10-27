@@ -202,17 +202,16 @@ func TestAnEditedPreludeStaysAndWarns(t *testing.T) {
 
 // TestAHeadingLinkRoundTripsToItsSlug is the link into the document as the
 // note writes one. The two headings are the shapes 05-edge-cases.md holds: an
-// ampersand between two spaces, and accents. Both are goldmark's answer and
-// not the file-name slug's: goldmark writes one hyphen per space and drops a
-// letter it does not call ASCII, so these two are the headings that tell the
-// rules apart. TestTheAnchorViewWritesIsTheIDBodyCollects is the other half,
-// which asks goldmark itself rather than a literal.
+// ampersand between two spaces, and accents. Both use GitHub's heading rule
+// through view.NewHeadingIDs: punctuation is dropped without closing spaces,
+// while accented letters are kept. TestTheAnchorViewWritesIsTheIDBodyCollects
+// is the other half, which asks the shared generator rather than a literal.
 func TestAHeadingLinkRoundTripsToItsSlug(t *testing.T) {
 	files, _, _, _ := Project(fixture(t, "headings.json"), nil, nil)
 
 	for _, want := range []string{
 		"[Risk & Control <ampersands>](#risk--control-ampersands)",
-		"[the changes](#rsum-of-nderungen-nave-caf)",
+		"[the changes](#résumé-of-änderungen-naïve-café)",
 	} {
 		if !strings.Contains(files[0].Body, want) {
 			t.Errorf("%s is not in the file:\n%s", want, files[0].Body)
@@ -236,6 +235,92 @@ func TestRepointDoesNotChainRewrites(t *testing.T) {
 		}
 		if !strings.Contains(got, "[the other](#report)") {
 			t.Fatalf("run %d moved the second link somewhere else:\n%s", i, got)
+		}
+	}
+}
+
+// TestNumbersThatCollapseIntoOneHeadingKeepTheirLinksApart keeps the heading
+// sequence while stripping: the second Scope owns the repeated id scope-1.
+func TestNumbersThatCollapseIntoOneHeadingKeepTheirLinksApart(t *testing.T) {
+	md := "# 1-Scope\n\n[a](#1-scope)\n\n# 2-Scope\n\n[b](#2-scope)\n"
+	want := "# Scope\n\n[a](#scope)\n\n# Scope\n\n[b](#scope-1)\n"
+
+	got, _ := stripHeadingNumbers(md)
+	if got != want {
+		t.Errorf("stripHeadingNumbers() =\n%s\nwant\n%s", got, want)
+	}
+}
+
+// TestALinkInsideAFenceIsNotRepointed keeps code byte for byte while the same
+// projected link outside the fence follows the stripped heading.
+func TestALinkInsideAFenceIsNotRepointed(t *testing.T) {
+	md := "# 1-Scope\n\n```md\n[a](#1-scope)\n```\n\n[a](#1-scope)\n"
+	want := "# Scope\n\n```md\n[a](#1-scope)\n```\n\n[a](#scope)\n"
+
+	got, _ := stripHeadingNumbers(md)
+	if got != want {
+		t.Errorf("stripHeadingNumbers() =\n%s\nwant\n%s", got, want)
+	}
+}
+
+// TestLinkShapedCodeIsNotRepointed asks goldmark, rather than a second fence
+// scanner, what is code. A container can quote or indent a fence, and indented
+// and inline code have no fence line at all.
+func TestLinkShapedCodeIsNotRepointed(t *testing.T) {
+	md := "# 1-Scope\n\n> ```md\n> [quoted](#1-scope)\n> ```\n\n- example:\n\n  ```md\n  [listed](#1-scope)\n  ```\n\nIndented:\n\n    [indented](#1-scope)\n\n`[inline](#1-scope)` and [outside](#1-scope)\n"
+	want := "# Scope\n\n> ```md\n> [quoted](#1-scope)\n> ```\n\n- example:\n\n  ```md\n  [listed](#1-scope)\n  ```\n\nIndented:\n\n    [indented](#1-scope)\n\n`[inline](#1-scope)` and [outside](#scope)\n"
+
+	got, _ := stripHeadingNumbers(md)
+	if got != want {
+		t.Errorf("stripHeadingNumbers() =\n%s\nwant\n%s", got, want)
+	}
+}
+
+// TestABacktickInTheInfoStringDoesNotOpenAFence pins CommonMark's rule for a
+// backtick fence. The invalid opener must not hide the real link behind it.
+func TestABacktickInTheInfoStringDoesNotOpenAFence(t *testing.T) {
+	md := "# 1-Scope\n\n``` bad`info\n\n[a](#1-scope)\n"
+	want := "# Scope\n\n``` bad`info\n\n[a](#scope)\n"
+
+	got, _ := stripHeadingNumbers(md)
+	if got != want {
+		t.Errorf("stripHeadingNumbers() =\n%s\nwant\n%s", got, want)
+	}
+}
+
+// TestAHeadingNumberInsideAFenceStays makes the heading question goldmark's:
+// a line shaped like a numbered heading is still code while it stands inside
+// either spelling of a fenced code block.
+func TestAHeadingNumberInsideAFenceStays(t *testing.T) {
+	md := "# 1-Scope\n\n```sh\n# 1-Install the tool\n```\n\n~~~\n## 2.1-Not a heading\n~~~\n"
+	want := "# Scope\n\n```sh\n# 1-Install the tool\n```\n\n~~~\n## 2.1-Not a heading\n~~~\n"
+
+	got, pieces := stripHeadingNumbers(md)
+
+	if got != want {
+		t.Errorf("stripHeadingNumbers() =\n%s\nwant\n%s", got, want)
+	}
+	if len(pieces) != 1 || pieces[0].Kind != PieceHeadingNumber || pieces[0].Text != "1-Scope" {
+		t.Errorf("pieces = %v, want the one heading number 1-Scope", pieces)
+	}
+}
+
+// TestKeptNumbersNamesNoLineInsideAFence asks the warning side of the same
+// rule: code that resembles a numbered heading is not a heading it names.
+func TestKeptNumbersNamesNoLineInsideAFence(t *testing.T) {
+	md := "# 1-Scope\n\n```sh\n# 1-Install the tool\n```\n\n~~~\n## 2.1-Not a heading\n~~~\n"
+
+	warnings := keptNumbers("t.0", md)
+
+	if len(warnings) != 1 {
+		t.Fatalf("warnings = %v, want one", warnings)
+	}
+	if !strings.Contains(warnings[0], "1-Scope") {
+		t.Errorf("warning does not name the heading: %s", warnings[0])
+	}
+	for _, code := range []string{"1-Install the tool", "2.1-Not a heading"} {
+		if strings.Contains(warnings[0], code) {
+			t.Errorf("warning names code %q as a heading: %s", code, warnings[0])
 		}
 	}
 }

@@ -4,11 +4,14 @@ import (
 	"archive/zip"
 	"bytes"
 	"flag"
+	"image"
+	"image/png"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"gdoc/internal/asset"
 	"gdoc/internal/cover"
 	"gdoc/internal/house"
 	"github.com/beevik/etree"
@@ -57,6 +60,48 @@ func houseLogo(t *testing.T) []byte {
 		t.Fatalf("read the placeholder logo: %v", err)
 	}
 	return raw
+}
+
+func logoPNG(t *testing.T, width, height int) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, image.NewRGBA(image.Rect(0, 0, width, height))); err != nil {
+		t.Fatalf("encode logo: %v", err)
+	}
+	return buf.Bytes()
+}
+
+func TestBuildRefusesALogoThatIsNotAPNG(t *testing.T) {
+	_, err := Build(config(t), []byte("GIF89a"), fields(), nil, nil, nil, 0)
+	if err == nil {
+		t.Fatal("Build accepted a logo that is not a PNG")
+	}
+	if !strings.Contains(err.Error(), "PNG") {
+		t.Errorf("error %q does not name PNG", err)
+	}
+}
+
+func TestBuildRefusesALogoOutsideTheAssetBounds(t *testing.T) {
+	whole := logoPNG(t, 1, 1)
+	for _, c := range []struct {
+		name string
+		raw  []byte
+		want string
+	}{
+		{name: "byte ceiling", raw: append(append([]byte{}, whole...), make([]byte, asset.MaxBytes)...), want: "may not exceed"},
+		{name: "side ceiling", raw: logoPNG(t, asset.MaxSide+1, 1), want: "4097x1"},
+		{name: "complete decode", raw: append([]byte{}, whole[:33]...), want: "not a PNG"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			_, err := Build(config(t), c.raw, fields(), nil, nil, nil, 0)
+			if err == nil {
+				t.Fatal("Build accepted an out-of-bounds logo")
+			}
+			if !strings.Contains(err.Error(), c.want) {
+				t.Errorf("error %q does not contain %q", err, c.want)
+			}
+		})
+	}
 }
 
 func build(t *testing.T) *Package {

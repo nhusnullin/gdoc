@@ -96,8 +96,8 @@ func (r *logoReach) FileBytes(ctx context.Context, fileID string, limit int64) (
 //
 // A house style carrying its own bytes is the whole of the function. A house
 // style naming a file in Drive goes through internal/asset, which asks Drive
-// at most once a day, holds the answer to the mime and the pixels this file
-// states, and refuses rather than returning bytes it did not check.
+// at most once a day, holds the answer to the mime, byte ceiling and side
+// ceiling, and refuses rather than returning bytes it did not check.
 //
 // The two things a person hears about are the two worth hearing: a mark Drive
 // was asked for and did not give, so the document carries the cached copy
@@ -107,7 +107,8 @@ func (r *logoReach) FileBytes(ctx context.Context, fileID string, limit int64) (
 // the run, and nothing here judges either.
 // TestBuildReportsTheLogoSourceFile, TestBuildReportsTheLogoSourceDrive,
 // TestBuildReportsTheLogoSourceCache and
-// TestBuildWithNoTokenAndNoCacheRefusesNamingTheLogin.
+// TestBuildWithNoTokenAndNoCacheRefusesNamingTheLogin. A wrong Drive answer
+// refuses even with a good cache: TestBuildRefusesAWrongFileInDriveWithAGoodCache.
 func logoFor(ctx context.Context, cfg *house.Config) ([]byte, logoData, []string, error) {
 	id := cfg.LogoDrive()
 	if id == "" {
@@ -119,9 +120,7 @@ func logoFor(ctx context.Context, cfg *house.Config) ([]byte, logoData, []string
 	}
 
 	// One grant, one file, for this call. The want is the house file's own
-	// statement about the picture, and Px is read by index because every
-	// route to a Config has been through Validate, which refuses a logo whose
-	// px is not two numbers.
+	// statement about the picture's mime.
 	p := guard.NewPolicy()
 	p.AllowAsset(id)
 	reach := &logoReach{policy: p}
@@ -130,11 +129,7 @@ func logoFor(ctx context.Context, cfg *house.Config) ([]byte, logoData, []string
 	// binary is set where the command is.
 	ctx, cancel := context.WithTimeout(ctx, logoCeiling)
 	defer cancel()
-	got, err := asset.Fetch(ctx, reach, id, asset.Want{
-		Mime:   cfg.Logo.Mime,
-		Width:  cfg.Logo.Px[0],
-		Height: cfg.Logo.Px[1],
-	})
+	got, err := asset.Fetch(ctx, reach, id, asset.Want{Mime: cfg.Logo.Mime})
 	warns := append([]string{}, reach.opened...)
 	if err != nil {
 		return nil, logoData{}, warns, err

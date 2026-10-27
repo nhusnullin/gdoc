@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/yuin/goldmark/ast"
+
 	"gdoc/internal/docs"
 )
 
@@ -74,6 +76,31 @@ func TestOnlyAMultiTabDocumentCarriesTabLines(t *testing.T) {
 		if one, _ := Text(fixture(t, name)); strings.Contains(one, "<!-- tab ") {
 			t.Errorf("%s carries a tab line", name)
 		}
+	}
+}
+
+// TestALinkToTheSecondOfTwoHeadingsNamesTheSecond keeps the heading-id
+// generator's repetition state over the projected file. Two Docs headings can
+// hold the same words and still be two destinations, named by their own ids.
+func TestALinkToTheSecondOfTwoHeadingsNamesTheSecond(t *testing.T) {
+	d := &docs.Document{Tabs: []docs.Tab{{Body: []docs.Block{
+		{Paragraph: &docs.Paragraph{Style: "HEADING_2", HeadingID: "h.a", Runs: []docs.Run{{Kind: docs.KindText, Text: "Scope"}}}},
+		{Paragraph: &docs.Paragraph{Style: "HEADING_2", HeadingID: "h.b", Runs: []docs.Run{{Kind: docs.KindText, Text: "Scope"}}}},
+		{Paragraph: &docs.Paragraph{Style: "NORMAL_TEXT", Runs: []docs.Run{
+			{Kind: docs.KindText, Text: "first", Link: &docs.Link{HeadingID: "h.a"}},
+			{Kind: docs.KindText, Text: " and "},
+			{Kind: docs.KindText, Text: "second", Link: &docs.Link{HeadingID: "h.b"}},
+		}}},
+	}}}}
+
+	text, warnings := Text(d)
+	for _, want := range []string{"[first](#scope)", "[second](#scope-1)"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("projection does not hold %q:\n%s", want, text)
+		}
+	}
+	if len(warnings) != 0 {
+		t.Errorf("projection warnings = %v, want none", warnings)
 	}
 }
 
@@ -850,6 +877,62 @@ func TestReadNamesNothingTheNextBuildWouldRead(t *testing.T) {
 	for _, w := range warnings {
 		if strings.Contains(w, "next build") {
 			t.Errorf("the read names what a build would read: %q", w)
+		}
+	}
+}
+
+// TestHeadingLinesFindsWhatGoldmarkFinds keeps markdown structure, rather than
+// the shape of a source line, as the definition of a heading. Code and a
+// footnote may hold the same characters without adding a heading to the note.
+func TestHeadingLinesFindsWhatGoldmarkFinds(t *testing.T) {
+	md := "# ATX heading\n\nSetext heading\n--------------\n\n```sh\n# fenced code\n```\n\n    # indented code\n\nA note.[^note]\n\n[^note]:\n    # footnote heading\n"
+
+	got := HeadingLines(md)
+	want := []HeadingLine{
+		{Line: 0, Text: "ATX heading", ID: "atx-heading"},
+		{Line: 2, Text: "Setext heading", ID: "setext-heading"},
+	}
+
+	if len(got) != len(want) {
+		t.Fatalf("HeadingLines() = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("HeadingLines()[%d] = %+v, want %+v", i, got[i], want[i])
+		}
+	}
+}
+
+// TestAnAnchorKeepsEveryLetter pins the shared GitHub heading-id rule. It
+// keeps Unicode letters, numbers and marks, keeps underscores, turns each
+// space into one hyphen, and drops punctuation without closing the gaps.
+func TestAnAnchorKeepsEveryLetter(t *testing.T) {
+	for _, c := range []struct{ heading, want string }{
+		{"Цели проекта", "цели-проекта"},
+		{"1.1-Цели проекта", "11-цели-проекта"},
+		{"Ёлка", "ёлка"},
+		{"under_score and space", "under_score-and-space"},
+		{"Risk & Control", "risk--control"},
+		{"+++", "heading"},
+		{"Résumé of Änderungen: naïve café", "résumé-of-änderungen-naïve-café"},
+		{"Re\u0301sume\u0301", "re\u0301sume\u0301"},
+	} {
+		if got := Anchor(c.heading); got != c.want {
+			t.Errorf("Anchor(%q) = %q, want %q", c.heading, got, c.want)
+		}
+	}
+}
+
+func TestARepeatedIDTakesTheNextSuffix(t *testing.T) {
+	ids := NewHeadingIDs()
+	for i, c := range []struct{ heading, want string }{
+		{"Итоги", "итоги"},
+		{"Итоги", "итоги-1"},
+		{"Итоги-1", "итоги-1-1"},
+		{"Итоги", "итоги-2"},
+	} {
+		if got := string(ids.Generate([]byte(c.heading), ast.KindHeading)); got != c.want {
+			t.Errorf("id %d for %q = %q, want %q", i, c.heading, got, c.want)
 		}
 	}
 }
