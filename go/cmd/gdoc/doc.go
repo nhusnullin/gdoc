@@ -228,7 +228,7 @@
 // The whole help goes to stderr beside it, so the person who typed it reads
 // what they could have typed. TestUnknownCommandFailsAndNamesItself,
 // TestNoArgumentsFails and TestBareGdocStillFailsAndPrintsTheHelpToStderr are
-// the pins, and TestHelpTakesWordsAndOnlyTheJSONFlag holds that help itself is
+// the pins, and TestHelpTakesWordsAndOnlyItsTwoFlags holds that help itself is
 // parsed as strictly as everything else: it takes --json and refuses every
 // other flag by name.
 //
@@ -269,7 +269,18 @@
 // TestHelpWithJSONPrintsTheObjectOnATerminal. gdoc --json alone is still an
 // unknown command, because a flag names no command: TestJSONAloneIsStillUnknown.
 // Any other flag on help is refused by name:
-// TestHelpTakesWordsAndOnlyTheJSONFlag.
+// TestHelpTakesWordsAndOnlyItsTwoFlags.
+//
+// --brief is help's second flag, and the setup call of every skill. Under it
+// the object carries settings and update and no table, which is the two facts
+// a skill reads, in the same fields, for a few hundred bytes instead of 7.5 KB:
+// TestHelpBriefCarriesTheMarkAndTheNotice and TestHelpBriefIsAFewHundredBytes.
+// It answers about the tool, so a command word beside it is refused by name:
+// TestHelpBriefTakesNoCommandWord. It is never a screen, because a caller
+// asked for it, so its object prints on a terminal with the notice head alone
+// on stderr: TestHelpBriefPrintsItsObjectOnATerminal. It is a flag of help and
+// of nothing else, so gdoc --help --brief is still an unknown command:
+// TestHelpBriefIsAFlagOfHelpAndOfNothingElse.
 //
 // The hint is the last line of a screen that dropped its object, dim, and it
 // says to add --json. It is written by run, never where the object was printed,

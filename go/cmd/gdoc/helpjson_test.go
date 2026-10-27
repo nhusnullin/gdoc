@@ -1,8 +1,11 @@
-// --json on help, in every spelling of the question.
+// --json on help, in every spelling of the question, and --brief, the setup
+// call a skill opens on.
 
 package main
 
 import (
+	"bytes"
+	"context"
 	"slices"
 	"strings"
 	"testing"
@@ -100,5 +103,103 @@ func TestJSONAloneIsStillUnknown(t *testing.T) {
 	msg, _ := got["error"].(string)
 	if !strings.Contains(msg, `unknown command "--json"`) {
 		t.Errorf("the refusal must name what was typed: %q", msg)
+	}
+}
+
+// --brief is the setup call of every skill: the mark it must open a thread
+// with, and the release notice, with the 7.5 KB table left out. The facts a
+// skill reads are the same facts, in the same fields, so a skill that read the
+// whole help reads this one without a second path.
+func TestHelpBriefCarriesTheMarkAndTheNotice(t *testing.T) {
+	pl := &checkPlain{listing: listing("v2.3.4", "v2.3.0", "v2.2.0")}
+	checking(t, "v2.2.0", pl)
+
+	got, _, code := runHelp(t, "help", "--brief", "--json")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("the brief help is an answer: %v (exit %d)", got, code)
+	}
+	if got["version"] != "v2.2.0" {
+		t.Errorf("the envelope carries the version: %v", got)
+	}
+	data := dataOf(t, got)
+	if _, ok := data["commands"]; ok {
+		t.Errorf("the brief help leaves the table out: %v", data)
+	}
+	set, ok := data["settings"].(map[string]any)
+	if !ok {
+		t.Fatalf("data.settings is not an object: %v", data)
+	}
+	if set["mark"] != "⁘" || set["mark_from"] != "default" {
+		t.Errorf("the brief help says which mark is in effect and where it came from: %v", set)
+	}
+	facts := updateFactsOf(t, got)
+	if facts["installed"] != "v2.2.0" || facts["latest_stable"] != "v2.3.0" {
+		t.Errorf("the brief help carries the notice a due check wrote: %v", facts)
+	}
+}
+
+// The whole reason for the flag is the size, so the size is pinned. A skill
+// that opens on the brief help pays a few hundred bytes of its context for the
+// two facts it needs, and not the thousands the table costs.
+func TestHelpBriefIsAFewHundredBytes(t *testing.T) {
+	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+
+	var out, errOut bytes.Buffer
+	code := run(context.Background(), []string{"help", "--brief", "--json"}, &out, &errOut, defaultsInEffect())
+	if code != 0 {
+		t.Fatalf("the brief help is an answer and exited %d: %s", code, out.String())
+	}
+	if n := out.Len(); n >= briefCeiling {
+		t.Errorf("the brief help is %d bytes and must stay under %d: %s", n, briefCeiling, out.String())
+	}
+}
+
+// briefCeiling is what the brief help may cost a skill's context, as a literal.
+// A field added to it that pushes it past this is a decision, not a diff.
+const briefCeiling = 600
+
+// --brief is the help of the tool, not of one command, so a command word
+// beside it is a call nobody can answer: a skill asking about publish wants
+// the table for publish. It is refused by name rather than quietly answered
+// with the tool's own facts.
+func TestHelpBriefTakesNoCommandWord(t *testing.T) {
+	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+
+	got, _, code := runHelp(t, "help", "publish", "--brief")
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("a command word beside --brief must be refused: %v (exit %d)", got, code)
+	}
+	msg, _ := got["error"].(string)
+	if !strings.Contains(msg, "--brief") || !strings.Contains(msg, "publish") {
+		t.Errorf("the refusal must name the flag and the word: %q", msg)
+	}
+}
+
+// A help screen replaces the object on a terminal, and the brief help is not a
+// screen: it is a few hundred bytes a caller asked for by name. So its object
+// prints wherever stdout goes, and stderr carries the notice head alone, with
+// no table under it.
+func TestHelpBriefPrintsItsObjectOnATerminal(t *testing.T) {
+	pl := &checkPlain{listing: listing("v2.3.4", "v2.3.0", "v2.2.0")}
+	checking(t, "v2.2.0", pl)
+
+	var out, errOut bytes.Buffer
+	terminals(t, &out, &errOut)
+	code := run(context.Background(), []string{"help", "--brief"}, &out, &errOut, defaultsInEffect())
+	if code != 0 {
+		t.Fatalf("the brief help is an answer and exited %d: %s", code, errOut.String())
+	}
+	got := decodeOne(t, &out)
+	if got["ok"] != true {
+		t.Fatalf("the object must print on a terminal too: %v", got)
+	}
+	if _, ok := dataOf(t, got)["commands"]; ok {
+		t.Errorf("the brief help leaves the table out: %v", got["data"])
+	}
+	if !strings.Contains(errOut.String(), "gdoc v2.3.0 is published") {
+		t.Errorf("stderr must carry the notice head: %q", errOut.String())
+	}
+	if strings.Contains(errOut.String(), "gdoc <command> [words] [flags]") {
+		t.Errorf("stderr must carry no help under the notice: %q", errOut.String())
 	}
 }

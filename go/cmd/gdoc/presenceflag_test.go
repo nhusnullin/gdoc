@@ -25,13 +25,14 @@ import (
 // length and by sha256. Both literals, so a byte that moves is named here and
 // nowhere else.
 //
-// They were first taken before this flag existed, and re-taken in M24b for the
-// one line `gdoc auth logout` adds to the table. That is the only reason to
-// re-take them: a command a milestone adds names itself in this object, and
-// pipe_test.go holds the same exception over the goldens beside it.
+// They were first taken before this flag existed, re-taken in M24b for the one
+// line `gdoc auth logout` adds to the table, and re-taken in M32 for the two
+// lines `help --brief` adds to the help entry. That is the only reason to
+// re-take them: a command or a flag a milestone adds names itself in this
+// object, and pipe_test.go holds the same exception over the goldens beside it.
 const (
-	helpObjectBytes  = 9307
-	helpObjectSHA256 = "a44685aa3d53bf7d867a7e2dc598021a3170d6af807719553ccf617d071e07a2"
+	helpObjectBytes  = 9440
+	helpObjectSHA256 = "f7796d7f440f058dd475c38a6d33501c69a3e10b6828c500e1ba6b466ebf4051"
 )
 
 // One flag of the three is experimental, it is --presence, and it carries the

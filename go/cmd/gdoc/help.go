@@ -20,7 +20,11 @@ import (
 // helpReport is what a caller reads. One shape for both forms, so a skill
 // written against `gdoc help publish` reads `gdoc help` without a second path.
 type helpReport struct {
-	Commands []helpCommand `json:"commands"`
+	// Commands is every entry the question matched, and it is absent only
+	// under --brief, which asks about the tool rather than about a command.
+	// Every other help carries at least one entry, because a question that
+	// matched none is refused: TestHelpBriefCarriesTheMarkAndTheNotice.
+	Commands []helpCommand `json:"commands,omitempty"`
 	// Settings is what this run would write into a thread, and where that
 	// value came from. It is always there, the empty mark included, because
 	// the question a colleague asks the help is which mark is in effect, and
@@ -92,6 +96,16 @@ type helpFlag struct {
 // line; this is the one place that writes it, above the help itself and with
 // one blank line between them. See notice.go.
 //
+// brief is the setup call of a skill: the mark in effect and the release
+// notice, and no table. It is the two facts every skill reads out of the help
+// object, in the same fields, so a skill reads it without a second path, and
+// it costs a few hundred bytes of context instead of thousands. It answers
+// about the tool, so a command word beside it is refused by name, and it is
+// never a screen, because a caller asked for it.
+// TestHelpBriefCarriesTheMarkAndTheNotice, TestHelpBriefIsAFewHundredBytes,
+// TestHelpBriefTakesNoCommandWord and
+// TestHelpBriefPrintsItsObjectOnATerminal.
+//
 // json is whether the caller asked for the object in so many words. It changes
 // nothing about what this function answers: the object is the same object, and
 // the words are the same words, drawn as a screen or printed as today's text
@@ -105,7 +119,22 @@ type helpFlag struct {
 // TestARefusalKeepsItsObjectOnATerminal.
 //
 // TestHelpPrintsTheNoticeLineAndABlankLine.
-func cmdHelp(ctx context.Context, words []string, json bool, errOut io.Writer, set settings.InEffect) emit.Result {
+func cmdHelp(ctx context.Context, words []string, json, brief bool, errOut io.Writer, set settings.InEffect) emit.Result {
+	if brief && len(words) > 0 {
+		return briefTakesNoWord(words)
+	}
+	if brief {
+		facts, line, warns := notice(ctx)
+		// The head and not writeHelp: there is no table to put under it,
+		// and the warnings are not marked on a terminal because the
+		// object carrying them is printed there too.
+		writePlainHead(errOut, line, warns, true)
+		return emit.Result{
+			OK:       true,
+			Data:     helpReport{Settings: settingsAsked(set), Update: facts},
+			Warnings: warns,
+		}
+	}
 	// The one word help answers that names no command, and it is answered
 	// before the table is walked: helpMatches would find nothing for it and
 	// the question would be refused the way a typo is. It asks GitHub
@@ -124,17 +153,32 @@ func cmdHelp(ctx context.Context, words []string, json bool, errOut io.Writer, s
 		OK: true,
 		Data: helpReport{
 			Commands: helpEntries(matched),
-			Settings: helpSettings{
-				Mark:         set.Mark,
-				MarkFrom:     set.MarkFrom,
-				Presence:     set.Presence,
-				PresenceFrom: set.PresenceFrom,
-			},
-			Update: facts,
+			Settings: settingsAsked(set),
+			Update:   facts,
 		},
 		Warnings: warns,
 		Screen:   !json,
 	}
+}
+
+// settingsAsked is the settings in effect as the object carries them, built in
+// one place because both forms of the help answer the same question with it.
+func settingsAsked(set settings.InEffect) helpSettings {
+	return helpSettings{
+		Mark:         set.Mark,
+		MarkFrom:     set.MarkFrom,
+		Presence:     set.Presence,
+		PresenceFrom: set.PresenceFrom,
+	}
+}
+
+// briefTakesNoWord is the refusal for a command word beside --brief. The flag
+// is the help of the tool, so answering it with the tool's own facts would
+// drop the question somebody asked. The words it names are the way to ask it.
+func briefTakesNoWord(words []string) emit.Result {
+	asked := strings.Join(words, " ")
+	return emit.Result{OK: false,
+		Error: fmt.Sprintf("%s is the help of the tool and takes no command word, and this call named %q. Run gdoc help %s --json for one command.", briefFlag, asked, asked)}
 }
 
 // helpMatches is every command whose name opens with these words, so `help

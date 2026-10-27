@@ -99,6 +99,12 @@ type flag struct {
 // into a flag only one of them answers to.
 const jsonFlag = "--json"
 
+// briefFlag is help's second flag, the setup call of every skill: the mark in
+// effect and the release notice, with the table left out. It is named here
+// because two readers take it, the parser from the table entry below and
+// cmdHelp, which answers a different object under it.
+const briefFlag = "--brief"
+
 // markTopic is the one word `gdoc help` answers that names no command. The
 // seven authoring marks are a thing a colleague asks the binary about, and
 // they belong to no command: build and publish write them, export reads them
@@ -520,11 +526,12 @@ func commands() []command {
 			topics:   []string{markTopic},
 			flags: []flag{
 				{jsonFlag, kindNone, needOptional, "print the JSON object even on a terminal, and keep stderr plain"},
+				{briefFlag, kindNone, needOptional, "print the mark in effect and the release notice alone, without the table"},
 			},
 			summary: "Print every command gdoc takes, or the words and flags of one.",
 			example: "gdoc help publish",
 			run: func(ctx context.Context, a *args, errOut io.Writer) emit.Result {
-				return cmdHelp(ctx, a.positional, a.has(jsonFlag), errOut, a.set)
+				return cmdHelp(ctx, a.positional, a.has(jsonFlag), a.has(briefFlag), errOut, a.set)
 			},
 		},
 		{

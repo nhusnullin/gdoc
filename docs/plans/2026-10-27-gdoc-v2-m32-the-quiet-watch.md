@@ -294,7 +294,7 @@ Desktop, no `needs:` bump.
   `go/cmd/gdoc/helpjson_test.go`, `go/cmd/gdoc/help_test.go`,
   `go/cmd/gdoc/testdata/pipe/help.stdout.golden`, `go/cmd/gdoc/doc.go`
 
-- [ ] test first in `helpjson_test.go`, with `atVersion` and the notice stub:
+- [x] test first in `helpjson_test.go`, with `atVersion` and the notice stub:
   - `TestHelpBriefCarriesTheMarkAndTheNotice`: `help --brief --json` decodes
     `version`, `settings.mark`, `settings.mark_from`, and `update` when a notice
     is due, and has no `commands` key
@@ -303,14 +303,14 @@ Desktop, no `needs:` bump.
   - `TestHelpBriefTakesNoCommandWord`: `help publish --brief` is refused by name
   - `TestHelpBriefPrintsItsObjectOnATerminal`: with both streams a terminal,
     stdout carries the object and stderr only the notice head
-- [ ] run them red
-- [ ] `--brief` in the `help` entry; `cmdHelp` as in Technical Details
-- [ ] `TestHelpTakesWordsAndOnlyTheJSONFlag` becomes
+- [x] run them red
+- [x] `--brief` in the `help` entry; `cmdHelp` as in Technical Details
+- [x] `TestHelpTakesWordsAndOnlyTheJSONFlag` becomes
       `TestHelpTakesWordsAndOnlyItsTwoFlags`, with its comment
-- [ ] regenerate `help.stdout.golden` only; the commit says the diff is the
+- [x] regenerate `help.stdout.golden` only; the commit says the diff is the
       `--brief` lines
-- [ ] `doc.go`'s help paragraph names `--brief` and its tests
-- [ ] `make test` green
+- [x] `doc.go`'s help paragraph names `--brief` and its tests
+- [x] `make test` green
 
 ### Task 2: `comments.Follow`, the poll held open
 

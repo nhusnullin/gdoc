@@ -459,9 +459,13 @@ func dispatch(ctx context.Context, args []string, errOut io.Writer, set settings
 	// they are answered before the table is walked and before the parser runs.
 	// So `gdoc restyle --from x --help` is an answer rather than a refusal of a
 	// flag restyle does not take, and no parser refusal changes.
+	// --brief is not read here. It is a flag of help and of no other
+	// command, so on this route it is one more word that names none, and
+	// `gdoc --help --brief` is the refusal it has always been:
+	// TestHelpBriefIsAFlagOfHelpAndOfNothingElse.
 	if rest, asked := helpAsked(args); asked {
 		words, json := helpWords(rest)
-		return cmdHelp(ctx, words, json, errOut, set)
+		return cmdHelp(ctx, words, json, false, errOut, set)
 	}
 	c := match(args)
 	if c == nil {
