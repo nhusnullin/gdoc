@@ -122,19 +122,29 @@ contradicts the spec stops the plan.
 
 ## What is next
 
-M17 is next. Nail named it on 2026-10-13, when Part C left M16 so that v2.11.0
-would not wait for a certificate: the token moves into the macOS Keychain, and a
-release is signed on Nail's Mac. Its plan is
-`docs/plans/2026-10-13-gdoc-v2-m17-keychain.md`, with its specification beside
-it as `docs/plans/2026-10-13-gdoc-v2-m17-keychain-spec.md`. It starts from
-`main` after M16 has merged, and it is released as v2.12.0.
+The whole-jobs road. The research of 2026-10-27,
+[research/how-ai-skills-talk-to-gdoc.md](research/how-ai-skills-talk-to-gdoc.md),
+found that the time from a comment to its answer, and the tokens it costs, are
+set by how many model turns a job takes, not by gdoc and not by the transport.
+gdoc is about a quarter of a live window, and each turn re-reads the whole
+session. So the road moves the mechanical loop into gdoc, leaves the judgement in
+one plan the model writes, and wakes the model only for real work. Each stage is
+its own milestone, planned when it starts against the code that exists then, and
+each names what proves it worked.
 
-Beside it the open work is M14 above, the by-hand list below, the backlog, and
-what the team asks for after M13 reaches them. A milestone starts when Nail
-names it, and its plan is written then, against the code that exists by then.
+| Stage | What it builds | What proves it | Waits on |
+|---|---|---|---|
+| M32, week one | `comments --follow` with the echo filter, `help --brief`, live review in its own session under the Monitor tool, the panel showing and stopping a follow, and the stopwatch on every comment | a live hour's tokens fall by about half; written, noticed and answered times are known, including how long a comment waits with no session open | Nail's go |
+| M33, weeks two and three | the job packet: `review --work` hands one packet, `respond --from plan.json` re-reads each thread first, posts, and runs the read-backs in parallel, and `publish` folds the build in | median reply under 35 s from Drive's own times, at most 2 turns before the last write, `propose` under 4.5 s, piping under 10% of calls | M32's numbers as the before |
+| The replay | the same comments through today's session and through a fresh, isolated worker on the same model, rated blind and timed | the fresh worker answers as well or better | M33 |
+| Unattended answers | a headless worker per window, opt-in per document and for `ai?` only, with holds and `ai!` sent to the panel; a resident gdoc service that owns watching, claims and retries, if the no-session wait turns out large | the wait with no session open falls from hours to under a minute | Nail's decision on the no-watcher rule, after M32 and the replay |
+| Later, if the data asks | `gdoc mcp` in Claude Code too; gdoc's own agent if `claude -p` start-up dominates; batch reads and projections | each its own measure | the stages above |
 
-The three candidates, in no order, each a backlog item today: the picture bytes
-inside `read` itself, so a review session sees a diagram rather than a
+Beside it the open work is M14 above, the by-hand list below and the backlog. A
+milestone starts when Nail names it.
+
+The three older candidates, in no order, each a backlog item today: the picture
+bytes inside `read` itself, so a review session sees a diagram rather than a
 placeholder; the hub-wide live session; and proposing into one tab of a tabbed
 document, which stays refused until somebody measures what a write into a tab
 does.
