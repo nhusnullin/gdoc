@@ -115,11 +115,13 @@ func TestEveryFlagIsReadTheWayItsKindSays(t *testing.T) {
 
 	for _, c := range commands() {
 		for _, f := range c.flags {
-			// help's flag is read through the constant both readers of it
-			// share, the parser here and helpWords for --help and -h, so the
-			// literal would be two spellings of one flag: see jsonFlag.
+			// help's two flags are read through the constants their
+			// readers share, the parser here and helpWords for --help and
+			// -h, so a literal would be two spellings of one flag: see
+			// jsonFlag and briefFlag.
+			named := map[string]string{jsonFlag: "a.has(jsonFlag)", briefFlag: "a.has(briefFlag)"}
 			presence := strings.Contains(source, `a.has("`+f.name+`")`) ||
-				(f.name == jsonFlag && strings.Contains(source, "a.has(jsonFlag)"))
+				(named[f.name] != "" && strings.Contains(source, named[f.name]))
 			value := strings.Contains(source, `a.flags["`+f.name+`"]`) ||
 				strings.Contains(source, `required(a, "`+f.name+`")`)
 			if f.value == kindNone {
@@ -280,20 +282,28 @@ func TestEveryExampleIsACallTheTableAccepts(t *testing.T) {
 	}
 }
 
-// --wait is refused without --since, in cmdComments and not in the table, so
-// the table cannot catch this one on itself. The rule is in read.go: a wait
-// with no cursor would answer with the whole document, which is the one-shot
-// read under another name.
+// --wait and --follow are both refused without --since, in cmdComments and not
+// in the table, so the table cannot catch this one on itself. The rule is the
+// same for the two: a poll with no cursor would answer with the whole document,
+// which is the one-shot read under another name.
 func TestTheCommentsExampleShowsTheCursorItsWaitNeeds(t *testing.T) {
 	for _, c := range commands() {
 		if c.name != "comments" {
 			continue
 		}
-		if !strings.Contains(c.example, "--wait") {
-			return
+		shown := 0
+		for _, flag := range []string{"--wait", "--follow"} {
+			if !strings.Contains(c.example, flag) {
+				continue
+			}
+			shown++
+			if !strings.Contains(c.example, "--since") {
+				t.Errorf("%s is refused without --since, and the comments example shows only the poll: %q",
+					flag, c.example)
+			}
 		}
-		if !strings.Contains(c.example, "--since") {
-			t.Errorf("--wait is refused without --since, and the comments example shows only the wait: %q", c.example)
+		if shown == 0 {
+			t.Errorf("the comments example shows neither poll, so this test is measuring nothing: %q", c.example)
 		}
 		return
 	}

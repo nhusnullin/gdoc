@@ -66,3 +66,37 @@ func ExitCode(r Result) int {
 	}
 	return 1
 }
+
+// Lines is a writer that prints one JSON object per line, and it is the one
+// crack in "exactly one object". It exists for `comments --follow`, the poll
+// held open: a window found after four minutes is news now, and a caller that
+// had to wait for the envelope to read it could not act on it until the watch
+// ended. So each window goes out on its own line as it is found, and the
+// envelope is the last line, with the exit code that agrees with it.
+//
+// The shapes of those lines are the caller's, not this package's: a window is
+// cmd/gdoc's follow.go and nothing here knows a cursor from a marker. What is
+// here is the promise a reader needs, one object, one newline, nothing else on
+// the line: TestLinesWritesOneObjectPerLine.
+//
+// It is handed out rather than fetched, and to one command. cmd/gdoc's run
+// builds the one writer there is from stdout and passes it down the dispatch
+// chain; the chat route passes none, because a session speaks JSON-RPC on that
+// stream: TestOnlyFollowWritesLines and TestTheMcpRouteHandsNoLineWriter.
+type Lines struct {
+	enc *json.Encoder
+}
+
+// NewLines holds the writer the lines go to. The encoder is made once rather
+// than per line, so the writer and its escaping are settled for the run.
+func NewLines(w io.Writer) *Lines {
+	enc := json.NewEncoder(w)
+	enc.SetEscapeHTML(false)
+	return &Lines{enc: enc}
+}
+
+// WriteLine writes one object and a newline. The escaping is Print's, for the
+// same reason: a `<` in a path or a title helps nobody read it as <.
+func (l *Lines) WriteLine(v any) error {
+	return l.enc.Encode(v)
+}

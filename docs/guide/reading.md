@@ -11,7 +11,7 @@ you paste from the browser, or a bare document id.
 
 ```bash
 gdoc read <url> [--structure]
-gdoc comments <url> [--since CURSOR] [--wait DURATION] [--witness]
+gdoc comments <url> [--since CURSOR] [--wait DURATION] [--follow DURATION] [--witness]
 gdoc suggestions <url> [--md PATH]
 gdoc restyle <url> --dry-run
 ```
@@ -106,7 +106,7 @@ nobody has commented on, the cursor is dated from the run's own clock a few
 minutes back rather than from anything anybody did. Nothing writes it down either, so it lives as long
 as whatever is polling.
 
-`--wait` turns that one call into a poll. The binary asks Drive every ten
+`--wait` turns that one call into a poll. The binary asks Drive every two
 seconds inside the call, and comes back the moment something happened after the
 cursor, or at the deadline with an empty window. It needs `--since`, because a
 wait with no cursor answers with the whole document, which is the plain listing
@@ -128,6 +128,36 @@ than a crash: the object comes back `ok: true` with no threads, the cursor you
 handed in, and `interrupted: true`, and the exit code is still 0. A poll that
 failed ends the wait with `ok: false` and says how many polls it made, so
 whatever is looping can say the window is unread rather than empty.
+
+`--follow` is that same poll held open. It takes the same kind of duration, needs
+the same `--since`, and is refused beside `--wait` or `--witness`. What changes is
+when the call comes back. A wait ends on the first window that carries anything.
+A follow keeps looking for the whole duration, and prints a line the moment it
+finds a window that carries something marked for gdoc: a comment or a reply whose
+own marker is `ai?`, `ai!` or `ai:`, and which gdoc did not write itself.
+
+This is the one command that prints more than one object. Each window is one JSON
+object on its own line, written while the watch is still running, and the last
+line is the ordinary `comments` envelope:
+
+```jsonc
+{"line":"window","since":"<cursor>","cursor":"<cursor>","noticed":"2026-10-27T09:14:02Z","items":[{"id":"AAABc1","thread":"AAABc1","marker":"ai?","created":"2026-10-27T09:13:58Z"}],"more":0}
+{"ok":true,"data":{"document_id":"1AbC...","title":"Treasury policy","tabs":1,"multi_tab":false,"cursor":"<cursor>","threads":[],"waited":{"polls":870,"seconds":1740,"interrupted":true}}}
+```
+
+The exit code agrees with that last line, the way it does for every other
+command. A line names ids, markers and times and carries no words, so whatever is
+reading acts on a line and then asks for the words with a plain `comments
+--since` call using the cursor the line printed. A line names at most twenty
+items, the ones that woke it first, and counts the rest in `more`: the cursor
+moves past the whole window either way, so a line carrying `more` above 0 is one
+to read in full.
+
+A window with nothing marked for gdoc in it prints nothing at all and leaves the
+cursor where it was. That is the point of the mode: gdoc's own replies, and the
+comments people write to each other, cost no line. Anything held that way is
+named in the next line that does go out, so nothing is dropped and nothing is
+handed over twice.
 
 `--witness` reads the document a second time, as a docx export, and says of each
 thread whether that export carries it `anchored` to text, `detached` from it, or

@@ -163,3 +163,37 @@ func TestScreenNeverReachesTheObject(t *testing.T) {
 		t.Error("Screen changes no exit code: it stays 0 if and only if the result says ok")
 	}
 }
+
+// A line writer prints one object per line, and every line is readable on its
+// own. A caller reads a line, acts on it, and reads the next one, so a line
+// that carried a newline inside it or two objects on one line would be a
+// window no reader could parse. The escaping follows Print's: a quote in a
+// document's title is a quote and not &.
+func TestLinesWritesOneObjectPerLine(t *testing.T) {
+	var buf bytes.Buffer
+	l := NewLines(&buf)
+	for _, v := range []map[string]any{
+		{"line": "window", "items": 1},
+		{"line": "window", "title": "<a> & b"},
+	} {
+		if err := l.WriteLine(v); err != nil {
+			t.Fatal(err)
+		}
+	}
+	lines := strings.Split(strings.TrimSuffix(buf.String(), "\n"), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("two writes are two lines: %q", buf.String())
+	}
+	for i, line := range lines {
+		var got map[string]any
+		if err := json.Unmarshal([]byte(line), &got); err != nil {
+			t.Fatalf("line %d is not one JSON object: %v (%q)", i, err, line)
+		}
+		if got["line"] != "window" {
+			t.Errorf("line %d came back wrong: %v", i, got)
+		}
+	}
+	if !strings.Contains(lines[1], "<a> & b") {
+		t.Errorf("a line escapes HTML no more than Print does: %q", lines[1])
+	}
+}

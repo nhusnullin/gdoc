@@ -253,9 +253,9 @@ func TestBareGdocStillFailsAndPrintsTheHelpToStderr(t *testing.T) {
 	}
 }
 
-// help takes words and one flag, --json, and refuses any other by name like
-// every other command here. Nothing is accepted and ignored.
-func TestHelpTakesWordsAndOnlyTheJSONFlag(t *testing.T) {
+// help takes words and two flags, --json and --brief, and refuses any other by
+// name like every other command here. Nothing is accepted and ignored.
+func TestHelpTakesWordsAndOnlyItsTwoFlags(t *testing.T) {
 	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
 
 	for _, args := range [][]string{
@@ -277,9 +277,37 @@ func TestHelpTakesWordsAndOnlyTheJSONFlag(t *testing.T) {
 			t.Errorf("%v must be refused by name: %q", args, msg)
 		}
 	}
-	got, _, code := runHelp(t, "help", "--json")
-	if code != 0 || got["ok"] != true {
-		t.Errorf("the one flag help takes must be taken: %v (exit %d)", got, code)
+	for _, args := range [][]string{
+		{"help", "--json"},
+		{"help", "--brief"},
+		{"help", "--brief", "--json"},
+	} {
+		got, _, code := runHelp(t, args...)
+		if code != 0 || got["ok"] != true {
+			t.Errorf("%v names only flags help takes: %v (exit %d)", args, got, code)
+		}
+	}
+}
+
+// --brief is a flag of help and of no other command, so it has no meaning
+// standing on a line that merely asks for help: `gdoc --help --brief` is one
+// word that names no command, which is what it was before the flag existed.
+func TestHelpBriefIsAFlagOfHelpAndOfNothingElse(t *testing.T) {
+	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+
+	for _, args := range [][]string{
+		{"--help", "--brief"},
+		{"--brief"},
+	} {
+		got, _, code := runHelp(t, args...)
+		if code == 0 || got["ok"] != false {
+			t.Errorf("%v must be refused: %v (exit %d)", args, got, code)
+			continue
+		}
+		msg, _ := got["error"].(string)
+		if !strings.Contains(msg, `unknown command "--brief"`) {
+			t.Errorf("the refusal must name what was typed: %q", msg)
+		}
 	}
 }
 
@@ -296,7 +324,7 @@ func TestTheUsageLineMarksWhatIsOptionalAndWhatIsAnAlternative(t *testing.T) {
 		usage string
 	}{
 		{[]string{"help", "read"}, "Usage: gdoc read <url> [--structure]"},
-		{[]string{"help", "comments"}, "Usage: gdoc comments <url> [--since <cursor>] [--witness] [--wait <duration>]"},
+		{[]string{"help", "comments"}, "Usage: gdoc comments <url> [--since <cursor>] [--witness] [--wait <duration>] [--follow <duration>]"},
 		{[]string{"help", "suggestions"}, "Usage: gdoc suggestions <url> [--md <file>]"},
 		{[]string{"help", "export"}, "Usage: gdoc export <url> --out <file>"},
 		{[]string{"help", "restyle"}, "Usage: gdoc restyle <url> --dry-run | --from <file> [--fields <file>]"},

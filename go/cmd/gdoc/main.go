@@ -364,7 +364,7 @@ func run(ctx context.Context, args []string, out, errOut io.Writer, set settings
 	// process in production and one of each per call here, so no test inherits
 	// what another said: internal/presence's Fresh.
 	presence.Fresh()
-	return printResult(safeDispatch(ctx, args, errOut, set), out, errOut)
+	return printResult(safeDispatch(ctx, args, errOut, emit.NewLines(out), set), out, errOut)
 }
 
 // printResult is the result on its streams and the exit code that agrees with
@@ -413,14 +413,20 @@ func writeJSONHint(r emit.Result, errOut io.Writer) {
 // stack trace, nothing at all on stdout, and exits 2, which breaks the one
 // contract every command has. The trace still goes to stderr, where it is
 // readable without being mistaken for output.
-func safeDispatch(ctx context.Context, args []string, errOut io.Writer, set settings.InEffect) (r emit.Result) {
+//
+// lines is the line writer the run may print windows on, and it is threaded
+// through this chain rather than read from a package variable so that the
+// route a call came in on decides whether there is one. run above builds the
+// one writer there is, from stdout; the chat route passes nil, because a
+// session speaks JSON-RPC on that stream: TestTheMcpRouteHandsNoLineWriter.
+func safeDispatch(ctx context.Context, args []string, errOut io.Writer, lines *emit.Lines, set settings.InEffect) (r emit.Result) {
 	defer func() {
 		if p := recover(); p != nil {
 			fmt.Fprintf(errOut, "gdoc crashed: %v\n%s\n", p, debug.Stack())
 			r = emit.Result{OK: false, Error: fmt.Sprintf("gdoc crashed: %v", p)}
 		}
 	}()
-	return dispatching(ctx, args, errOut, set)
+	return dispatching(ctx, args, errOut, lines, set)
 }
 
 // dispatching is dispatch behind a variable, as login, openSession and
@@ -442,7 +448,7 @@ var dispatching = dispatch
 // in a deferred call, so a command that panicked still ends its run, with the
 // zero result's ok: false, before safeDispatch above turns the panic into the
 // envelope: TestAPanicInACommandStillWritesAnEndWithOkFalse.
-func dispatch(ctx context.Context, args []string, errOut io.Writer, set settings.InEffect) (r emit.Result) {
+func dispatch(ctx context.Context, args []string, errOut io.Writer, lines *emit.Lines, set settings.InEffect) (r emit.Result) {
 	// Bare gdoc named no command, so there is nothing to quote back: `unknown
 	// command ""` names nothing and reads like a fault in the tool. The run did
 	// no work, so it still fails and still exits 1. What is new is that the
@@ -459,9 +465,13 @@ func dispatch(ctx context.Context, args []string, errOut io.Writer, set settings
 	// they are answered before the table is walked and before the parser runs.
 	// So `gdoc restyle --from x --help` is an answer rather than a refusal of a
 	// flag restyle does not take, and no parser refusal changes.
+	// --brief is not read here. It is a flag of help and of no other
+	// command, so on this route it is one more word that names none, and
+	// `gdoc --help --brief` is the refusal it has always been:
+	// TestHelpBriefIsAFlagOfHelpAndOfNothingElse.
 	if rest, asked := helpAsked(args); asked {
 		words, json := helpWords(rest)
-		return cmdHelp(ctx, words, json, errOut, set)
+		return cmdHelp(ctx, words, json, false, errOut, set)
 	}
 	c := match(args)
 	if c == nil {
@@ -478,6 +488,11 @@ func dispatch(ctx context.Context, args []string, errOut io.Writer, set settings
 		return emit.Result{OK: false, Error: err.Error()}
 	}
 	a.set = set
+	// And the line writer, the same way and for the same reason: the route
+	// decides whether this run has one, and the one command that prints lines
+	// asks its args rather than reaching for stdout. Every other command never
+	// asks: TestOnlyFollowWritesLines.
+	a.lines = lines
 	// Who is running this, where the environment says so. It is one read, here,
 	// because internal/presence is a file and a clock and reads no environment
 	// of its own, and a session of gdoc mcp has already marked its context,
@@ -490,8 +505,11 @@ func dispatch(ctx context.Context, args []string, errOut io.Writer, set settings
 	// two lines whether the flag is on or off, because Begin answers nil where
 	// it is off and every method on a nil run is a no-op:
 	// TestTheFlagChangesNoByteOfTheObject.
+	// A follow is recorded as a wait, and the record gains no field for it:
+	// what the panel reads the flag for is that this run is looking rather than
+	// answering, and a follow is that for as long as the process lives.
 	rec := presence.Begin(ctx, set.Presence && c.report, releaseVersion(),
-		c.name, presenceDoc(*c, a), a.has("--wait"), c.readsBack, errOut)
+		c.name, presenceDoc(*c, a), a.has("--wait") || a.has("--follow"), c.readsBack, errOut)
 	defer func() {
 		// And the one word a failed run says why in, where the command that
 		// failed named none: a failure gdoc did not sort is other rather than

@@ -108,6 +108,7 @@ replaced it)`, or `measured`. Nothing else.
 | 2026-10-18 | The third look: nothing scrolls, DOCUMENTS is the pinned and the last five, the note is found and not configured, the update glyph has three states | holds | DECISIONS.md |
 | 2026-10-26 | The fixes: a cover line and the footer keep their own look, a logo of any size fits by width, six points after the two top headings, Russian heading ids keep their letters, the guard refuses an empty leaf in a style mask, export keeps code and repeated headings apart | holds | DECISIONS.md |
 | 2026-10-26 | The fourth look: every document on the panel opens on a click, a mark only for a failed run, names that survive, buttons that say what happened, a panel that stays open, a bounded hub | holds | DECISIONS.md |
+| 2026-10-27 | Week one of whole jobs: a watch that wakes a session only for marked work, a short help, live review in its own session, and a stopwatch on every comment | holds | DECISIONS.md |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -1298,3 +1299,91 @@ caller held by go/boundary; no field, reader, URL, argv or system call is
 added, and the hub walk only narrows what the app reads.
 
 The plan is `docs/plans/2026-10-26-gdoc-v2-m31-the-fourth-look.md`.
+
+## 2026-10-27. Week one of whole jobs: a watch that wakes a session only for marked work, a short help, live review in its own session, and a stopwatch on every comment.
+
+The research of 2026-10-27, `docs/v2/research/how-ai-skills-talk-to-gdoc.md`,
+measured where a live review's time and tokens go. gdoc is about a quarter of
+a live window and starts in 20 to 60 ms. The rest is model turns, and each turn
+re-reads the whole session: 445k to 725k tokens in a hub session, 257k to 317k
+in a session of its own. Of 120 waits, 43 came back on the first poll, often
+with the session's own reply, and 26 ran the full nine minutes, and each of
+those cost a full turn. Nail asked for a plan for the first step of the road
+the research recommends: "Do Plan for week 1. Also keep somewhere out plans for
+next week's." The lead put five questions with a recommendation: the five parts
+only and no echo filter in `--wait`; a reply with no marker stays quiet and is
+listed at the next real wake-up; the panel's live row exactly as today; the job
+packet, a session per comment, unattended answers and Claude Desktop all out;
+and the run tonight. Nail answered "ok". The later weeks are the table under
+"What is next" in `docs/v2/PLAN.md`. Serves principles 1 and 4.
+
+**A watch that keeps running, `comments --follow`.** It takes the same `--since`
+cursor as `--wait`, polls the same listing every two seconds, and runs until
+its duration, at most an hour, or a signal. It prints one line for each window
+that holds work, and keeps running. A window holds work when it has a new
+comment or reply whose own marker is `ai?`, `ai!` or `ai:` and which does not
+open with gdoc's mark. Everything else in the window is held, not dropped:
+gdoc's own replies, a reply with no marker, an edit. Held items ride in the next
+line that is printed, so nothing is lost and nothing wakes the session alone.
+That rule reads two facts gdoc already reports, the marker and `by_gdoc`, and
+judges nothing. The line is short, so the tool that reads it never cuts it: the
+window's own `since` and `cursor`, when gdoc noticed it, and for each new item
+its id, thread, marker and created time, at most twenty with a count of the
+rest. The session reads the window whole with the one-shot `comments --since`,
+as it does today. The follow reads the document once, on its first poll, and
+judges a window from the listing alone, so a held reply never costs a read. The last line is the
+command's envelope, with `waited` as `--wait` writes it, so an interrupt is
+still an answer.
+
+**One object per line, for this one mode.** The output contract held one JSON
+object per command, with `mcp`'s protocol lines and the help screen as the two
+exceptions. `comments --follow` is the third: every line on stdout is one JSON
+object, and the last is the envelope that says `ok`. The exit code follows that
+last object. Every other command keeps exactly one object.
+
+**The watch is still not a watcher.** It runs inside a call a session started,
+it is bounded to an hour, and it dies with that session. "There is no watcher,
+and the loop starts when Nail starts it" holds unchanged. A comment written
+while no session is open still waits until one looks, and this week measures
+how long.
+
+**The panel sees it as a wait, and Stop reaches it.** The record writes a
+follow's start with `wait: true`, the field it already has, so the panel shows
+it live for as long as its process runs, joins a restart within three minutes
+into one session, and ends it at once when it was stopped. Stop sends its one
+SIGINT after the same process check as today: the record names `comments` with
+a wait, the process is this user's gdoc, and it started when the record says.
+The record gains no field, and the app gains no argv list and reads nothing new.
+
+**A short help, and live review in its own session.** `help --brief` prints
+the version, the mark in effect and the update notice, a few hundred bytes in
+place of the whole table, and the five skills open with it. The review skill
+runs a live review under Claude Code's Monitor tool when it has one: one
+`--follow` of 29 minutes, restarted when it ends, and never restarted after a
+stop. Without the Monitor tool, as in Claude Desktop or an older Claude Code, or
+with a binary that refuses `--follow` or `--brief`, it keeps today's `--wait`
+loop and today's `help --json`, so no session breaks before its binary updates. When the session already holds other work, the
+skill asks the person to open a second session in the same hub folder for the
+live review. `--wait` keeps returning every window, gdoc's own replies included.
+
+**The stopwatch.** Three times for every marked comment: written, which is
+Drive's time on the comment; noticed, which is the time on the `--follow` line;
+and answered, which is Drive's time on gdoc's reply. For comments written while
+no session watched, written and answered alone. The lead reads written and
+answered at the end of the week from `comments` on the paired documents, read
+only, and noticed from the live sessions' transcripts, where each line landed,
+and puts the table in `docs/team/measure.md` beside the tokens per live hour.
+
+Out: the job packet, a session per comment, answers with no session open, the
+echo filter in `--wait`, and any change to Claude Desktop.
+
+Trust guardian, 2026-10-27: signed. No URL, grant, scope, host or presence
+field is added: the follow reads the one handed-in document through the same
+`comments.Fetch` and `docs.Fetch` the wait uses, Stop reaches only a `comments`
+start with `wait: true` that the unchanged `ProcessCheck.verdict` proves is this
+user's gdoc, and the extra stdout lines come from `cmdComments` alone, held by
+`TestOnlyFollowWritesLines` beside `TestOnlyJSONObjectRefusesAnythingAfterTheObject`
+and `TestStdoutCarriesOnlyJSONRPC`. The hold reads the marker and the mark and
+drops nothing, because a follow's cursor moves only when a line is printed.
+
+The plan is `docs/plans/2026-10-27-gdoc-v2-m32-the-quiet-watch.md`.

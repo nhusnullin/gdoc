@@ -27,6 +27,24 @@
 // rules are in internal/mcp/doc.go, and what chat adds to a command is in
 // internal/chat/doc.go.
 //
+// And one mode that prints more than one object, held to one command by the
+// shape of the code. internal/emit's Lines writes one JSON object per line,
+// and `comments --follow`, the poll held open, is what it is for: a window
+// found after four minutes is news now, and a caller that had to wait for the
+// envelope to read it could not act on it until the watch ended. The last
+// line is the envelope, and the exit code agrees with it as always:
+// TestFollowWritesOneLinePerWindowAndTheEnvelopeLast and
+// TestFollowsExitCodeFollowsTheLastLine.
+//
+// There is one such writer in a run, run builds it from stdout, and it
+// travels down safeDispatch and dispatch onto the command's own args. So the
+// route a call came in on decides whether the run can print lines at all: the
+// chat route passes nil, because stdout there carries JSON-RPC, and a follow
+// asked for with no writer is refused by name before the token is read.
+// TestOnlyFollowWritesLines holds the constructor to main.go and the write
+// method to the two files that hold the follow, TestTheMcpRouteHandsNoLineWriter
+// holds the nil, and TestAFollowWithNoLineWriterIsRefused holds the refusal.
+//
 // And one narrowing. A help screen on a terminal without --json writes nothing
 // to stdout, because the reader of that screen is a person and the object under
 // it is 7.5 KB they did not ask for. Every other result keeps its object,
@@ -52,9 +70,10 @@
 //     sentence says.
 //   - read <url> [--structure]: the text projection, or the tree with the flag.
 //     internal/docs reads, internal/view projects.
-//   - comments <url> [--since] [--wait] [--witness]: the threads with their
-//     ranges, markers, replies and the next cursor. internal/comments, with
-//     internal/docx for the witness.
+//   - comments <url> [--since] [--wait] [--follow] [--witness]: the threads
+//     with their ranges, markers, replies and the next cursor, in one answer
+//     or one line per window. internal/comments, with internal/docx for the
+//     witness.
 //   - suggestions <url> [--md]: what is pending, and with a paired note what
 //     stopped being pending. internal/suggestions, internal/frontmatter.
 //   - export <url> --out: the document in the hub as Markdown, one file per
@@ -228,7 +247,7 @@
 // The whole help goes to stderr beside it, so the person who typed it reads
 // what they could have typed. TestUnknownCommandFailsAndNamesItself,
 // TestNoArgumentsFails and TestBareGdocStillFailsAndPrintsTheHelpToStderr are
-// the pins, and TestHelpTakesWordsAndOnlyTheJSONFlag holds that help itself is
+// the pins, and TestHelpTakesWordsAndOnlyItsTwoFlags holds that help itself is
 // parsed as strictly as everything else: it takes --json and refuses every
 // other flag by name.
 //
@@ -269,7 +288,18 @@
 // TestHelpWithJSONPrintsTheObjectOnATerminal. gdoc --json alone is still an
 // unknown command, because a flag names no command: TestJSONAloneIsStillUnknown.
 // Any other flag on help is refused by name:
-// TestHelpTakesWordsAndOnlyTheJSONFlag.
+// TestHelpTakesWordsAndOnlyItsTwoFlags.
+//
+// --brief is help's second flag, and the setup call of every skill. Under it
+// the object carries settings and update and no table, which is the two facts
+// a skill reads, in the same fields, for a few hundred bytes instead of 7.5 KB:
+// TestHelpBriefCarriesTheMarkAndTheNotice and TestHelpBriefIsAFewHundredBytes.
+// It answers about the tool, so a command word beside it is refused by name:
+// TestHelpBriefTakesNoCommandWord. It is never a screen, because a caller
+// asked for it, so its object prints on a terminal with the notice head alone
+// on stderr: TestHelpBriefPrintsItsObjectOnATerminal. It is a flag of help and
+// of nothing else, so gdoc --help --brief is still an unknown command:
+// TestHelpBriefIsAFlagOfHelpAndOfNothingElse.
 //
 // The hint is the last line of a screen that dropped its object, dim, and it
 // says to add --json. It is written by run, never where the object was printed,

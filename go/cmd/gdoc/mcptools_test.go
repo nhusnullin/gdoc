@@ -16,14 +16,16 @@ import (
 // and against the schema.
 //
 // flagsNeverOffered are the flags a chat caller never fills. --wait would hold
-// a chat turn open for nine minutes; --md and --folder reach a hub and a Drive
-// folder, and nothing in chat does either; --quote and --body-file are
+// a chat turn open for nine minutes, and --follow for half an hour and with no
+// stream to write its lines on: the chat route is handed no line writer, so the
+// command refuses the flag there anyway. --md and --folder reach a hub and a
+// Drive folder, and nothing in chat does either; --quote and --body-file are
 // annotate's by-hand form, where chat sends the list instead. reply's
 // --body-file is on the list because the body property fills --body: the words
 // go on the line, and chat writes no file for one sentence.
 var flagsNeverOffered = map[string][]string{
 	"read":        nil,
-	"comments":    {"--wait"},
+	"comments":    {"--wait", "--follow"},
 	"suggestions": {"--md"},
 	"reply":       {"--body-file"},
 	"annotate":    {"--quote", "--body-file"},

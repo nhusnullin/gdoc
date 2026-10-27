@@ -27,8 +27,10 @@ Google suggestion with a comment explaining why. Never edit the document.
 ```bash
 GDOC=gdoc
 ROOT="$PWD"
-$GDOC help --json
+$GDOC help --brief --json
 ```
+
+If it is refused, run `$GDOC help --json` instead.
 
 `gdoc` is the v2 binary, on PATH. It prints exactly one JSON object and exits.
 Exit 0 means the object says `ok`. Read the object, never the exit code alone.
@@ -332,3 +334,7 @@ When the request says "live", run everything above once, print its Step 3
 list and Step 8 report as always, then read `live.md`, beside this file. It
 holds the watch loop on that one document, the Bash timeout it needs, the four
 answers a wait can come back with, and the totals printed when you stop it.
+
+A live review holds this session for as long as it watches. When the session
+already holds other work, ask the person to open a second Claude Code session
+in the same hub folder and start the live review there.

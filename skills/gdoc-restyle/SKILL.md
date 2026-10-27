@@ -27,8 +27,10 @@ person, and an apply that quotes the survey back. Nothing skips the survey.
 ```bash
 GDOC=gdoc
 ROOT="$PWD"
-$GDOC help --json
+$GDOC help --brief --json
 ```
+
+If it is refused, run `$GDOC help --json` instead.
 
 `gdoc` is the v2 binary, on PATH. It prints exactly one JSON object and exits.
 Exit 0 means the object says `ok`. Read the object, never the exit code alone.

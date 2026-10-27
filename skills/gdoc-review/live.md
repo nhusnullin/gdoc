@@ -11,6 +11,77 @@ report are printed as they always are. Then the session starts watching.
 One session watches one document, the link you gave. There is no hub-wide
 watch.
 
+## The watch, under the Monitor tool
+
+`CURSOR` starts as the `cursor` from Step 1's `comments` run. That run always
+prints one, a document with no comments in it included.
+
+Where this session has the Monitor tool, start the watch under it, with a limit
+of 30 minutes:
+
+```bash
+$GDOC comments <url> --since "$CURSOR" --follow 29m
+```
+
+That call does not come back with a window. It holds the poll open for half an
+hour and writes one JSON line the moment it sees a comment or a reply marked
+for gdoc, so each window arrives as its own event and a quiet half hour costs
+no thinking at all. Where the Monitor tool here allows a shorter limit than
+thirty minutes, ask for the longest it allows and set `--follow` a minute under
+it.
+
+Read the `line` field to tell the two kinds of line apart. A window carries
+`"line": "window"`. The envelope the follow ends on carries no such field.
+
+A window line names ids, markers and times, and no words at all:
+
+```json
+{"line":"window","since":"<cursor>","cursor":"<cursor>","noticed":"2026-10-27T09:14:02Z","items":[{"id":"AAABc","thread":"AAABc","marker":"ai?","created":"2026-10-27T09:13:58Z"}],"more":0}
+```
+
+To read the window, run `$GDOC comments <url> --since <the line's since>`.
+Act on the items the line names, and leave anything newer in that read to the
+next line: the follow is still polling, and whatever landed after the line was
+written rides in the line after it. Run Steps 2 to 8 over those items, print
+the Step 8 report, and keep the line's `cursor` as `CURSOR`.
+
+Items whose `marker` is `none` are listed in that window's report and never
+acted on, which is Step 2's rule and not a new one.
+
+`more` is how many of the window's items did not fit on the line. A line names
+at most twenty, the ones that woke it first, and the read names them all. The
+line's `cursor` moves the watch past every item in that window, named on the
+line or not, so a line with `more` above 0 is the one case where the line alone
+is not enough: act on every marked item in that read whose `created` is at or
+before the line's `noticed`, and not only on the ones the line named. Anything
+created after `noticed` landed after the line was written and rides in the line
+after it.
+
+The last line is the ordinary `comments` envelope, with `threads` empty and
+`waited` filled in. Take one of three paths:
+
+- **`ok: true`, `waited.interrupted: false`.** The half hour ran out and
+  nothing is wrong. Start the next follow from the last cursor you kept.
+- **`ok: true`, `waited.interrupted: true`.** You stopped it. Print the totals
+  below and do not restart.
+- **`ok: false`.** A poll failed. Today's retry rule holds: print the error,
+  wait thirty seconds, start again from the cursor you already had, and stop
+  after three failures in a row.
+
+When the person says stop in the chat, stop the Monitor task, then
+print the totals once and do not restart on the envelope that follows. The
+task is stopped from outside, so its last line lands after your answer and
+says the same stop twice.
+
+`--follow` needs `--since`, and is refused beside `--wait` and beside
+`--witness`.
+
+If the binary refuses `--follow`, or there is no Monitor tool in this session,
+use the wait loop below. It watches the same document and costs a turn more
+often.
+
+## The fallback loop, on `--wait`
+
 The loop. `CURSOR` starts as the `cursor` from Step 1's `comments` run. That
 run always prints one, a document with no comments in it included: there is
 nothing to construct by hand and nothing to work around.

@@ -110,49 +110,19 @@ func Wait(ctx context.Context, since *Cursor, o WaitOptions) (Waited, error) {
 	// window as null.
 	out := Waited{Threads: []Thread{}, Cursor: since}
 
-	// The deadline bounds the whole call, not just the gaps between polls. The
-	// only other bound on one poll is the client's own timeout, which is
-	// minutes and applies per request, so a poll that stalls late in the window
-	// could carry a nine minute wait well past the ten the nine was chosen to
-	// fit inside. What ends such a call is the harness killing it, and a killed
-	// wait comes back as interrupted, which the skill reads as the person
-	// having stopped the session.
-	//
-	// It is a second context rather than the caller's, so the two endings stay
-	// apart: ctx being done is the signal, and this one being done is the
-	// deadline, which is an empty window and not a failure.
-	poll := ctx
-	if o.Deadline > 0 {
-		var cancel context.CancelFunc
-		poll, cancel = context.WithTimeout(ctx, o.Deadline)
-		defer cancel()
-	}
+	poll, cancel := pollContext(ctx, o.Deadline)
+	defer cancel()
 
 	// failed is the answer to a poll that did not come back, whichever of its
-	// two reads failed. The signal and the deadline are the quiet endings;
-	// anything else is the poll's own failure, reported rather than retried.
+	// two reads failed. The signal and the deadline are the quiet endings, each
+	// with no threads and the cursor handed in, so the next call asks the same
+	// question; anything else is the poll's own failure, reported rather than
+	// retried. endingOf holds which is which.
 	failed := func(err error) (Waited, error) {
-		if ctx.Err() != nil {
-			// The signal that ends the session ends the request in flight.
-			// Blaming Drive for the person's Ctrl-C would send somebody to
-			// look at a read that was fine.
+		switch endingOf(ctx, poll, err) {
+		case endingInterrupt:
 			return interrupted(out, start), nil
-		}
-		if poll.Err() != nil && errors.Is(err, context.DeadlineExceeded) {
-			// The deadline cut the poll short. That is the quiet ending
-			// this call already has a shape for: no threads, the cursor
-			// handed in, and the next call asks the same question.
-			//
-			// The gate is the error's own identity and not just the
-			// context's state, because the two answer different questions.
-			// A poll that is still in flight when the deadline lands can
-			// return a Drive failure of its own a moment later: a 503 read
-			// at the tail of the window, or a body that did not decode. The
-			// context is done by then either way, so reading only that
-			// reported a failed poll as a quiet document, which is the one
-			// thing this call's doc comment promises it never does. A
-			// degraded Drive answering slower than the interval makes that
-			// the last poll of every wait rather than a knife-edge race.
+		case endingDeadline:
 			out.Waited = now().Sub(start)
 			return out, nil
 		}
@@ -220,4 +190,61 @@ func interrupted(out Waited, start time.Time) Waited {
 	out.Interrupted = true
 	out.Waited = now().Sub(start)
 	return out
+}
+
+// pollContext is the context every poll of a wait or a follow runs on, and both
+// loops build it here so neither can be the one that forgets.
+//
+// The deadline bounds the whole call, not just the gaps between polls. The only
+// other bound on one poll is the client's own timeout, which is minutes and
+// applies per request, so a poll that stalls late in the window could carry a
+// nine minute wait well past the ten the nine was chosen to fit inside. What
+// ends such a call is the harness killing it, and a killed wait comes back as
+// interrupted, which the skill reads as the person having stopped the session.
+//
+// It is a second context rather than the caller's, so the two endings stay
+// apart: ctx being done is the signal, and this one being done is the deadline,
+// which is a quiet ending and not a failure.
+// TestTheDeadlineBoundsTheCallAndNotOnlyTheGapsBetweenPolls is the pin.
+func pollContext(ctx context.Context, deadline time.Duration) (context.Context, context.CancelFunc) {
+	if deadline <= 0 {
+		return ctx, func() {}
+	}
+	return context.WithTimeout(ctx, deadline)
+}
+
+// ending is which of the three a poll that did not come back was: the person,
+// the clock, or the read itself.
+type ending int
+
+const (
+	endingFailure ending = iota
+	endingInterrupt
+	endingDeadline
+)
+
+// endingOf classifies a poll that failed, and the wait and the follow both ask
+// it rather than each carrying the rule.
+//
+// The signal comes first: it ends the request in flight, and blaming Drive for
+// the person's Ctrl-C would send somebody to look at a read that was fine.
+//
+// The deadline is gated on the error's own identity and not just on the
+// context's state, because the two answer different questions. A poll still in
+// flight when the deadline lands can return a Drive failure of its own a moment
+// later: a 503 read at the tail of the window, or a body that did not decode.
+// The context is done by then either way, so reading only that reported a
+// failed poll as a quiet document, which is the one silence these two loops
+// promise they never report. A degraded Drive answering slower than the
+// interval makes that the last poll of every wait rather than a knife-edge
+// race. TestAPollThatFailedOfItsOwnAccordPastTheDeadlineIsStillAFailure and
+// TestAPollThatFailedBecauseOfTheInterruptIsReportedAsTheInterrupt are the pins.
+func endingOf(ctx, poll context.Context, err error) ending {
+	if ctx.Err() != nil {
+		return endingInterrupt
+	}
+	if poll.Err() != nil && errors.Is(err, context.DeadlineExceeded) {
+		return endingDeadline
+	}
+	return endingFailure
 }

@@ -123,8 +123,8 @@ A section with nothing in it is left out rather than labelled.
   these, and `verified: false` is not either: a read-back that did not confirm
   is a hollow check, not a failed write, and the row says "not read back".
 - **A running job** is a command with an end that has not arrived yet.
-- **A live watch** is the stretch of `gdoc comments --wait` runs on one
-  document, with gaps under three minutes counted as one watch. A wait you
+- **A live watch** is the stretch of `gdoc comments --wait` or `--follow` runs on
+  one document, with gaps under three minutes counted as one watch. A wait you
   stopped ends the watch where that wait ended, because no poll follows one.
   The row says
   since when, how long it has been quiet, and how many replies and proposals

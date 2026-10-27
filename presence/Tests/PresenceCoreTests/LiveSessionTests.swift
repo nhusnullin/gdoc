@@ -369,6 +369,94 @@ final class LiveSessionTests: XCTestCase {
     XCTAssertGreaterThan(seen, 5, "no Swift files were read, so this test guards nothing")
   }
 
+  // MARK: - A wait that holds itself open
+
+  /// `comments --follow` is one process for half an hour instead of twelve
+  /// processes of two minutes, and the fold reads it the same way: a start
+  /// with `wait`, no end, and a pid the kernel knows. Nothing here counts
+  /// polls, so a wait that has not written an end for 29 minutes is the
+  /// watch in flight and the one process Stop can signal.
+  func testAWaitLongerThanTheGapStaysLiveWhileItsProcessRuns() throws {
+    let held = wait(from: "2026-10-17T17:00:00Z", to: nil, run: "aaaa")
+    let session = try XCTUnwrap(
+      Live.sessions(held, now: try moment("2026-10-17T17:29:00Z"), alive: { _ in true }).first)
+
+    XCTAssertTrue(session.isOpen, "29 minutes with no end is a watch, not a gap")
+    XCTAssertNil(session.ended)
+    XCTAssertEqual(session.since, try moment("2026-10-17T17:00:00Z"))
+    XCTAssertEqual(
+      session.lastPoll, try moment("2026-10-17T17:00:00Z"),
+      "a wait in flight is where it began, because that is the last fact about it")
+
+    let flight = try XCTUnwrap(session.flight, "the held poll is the process Stop signals")
+    XCTAssertEqual(flight.started, try moment("2026-10-17T17:00:00Z"))
+
+    // The three-minute gap is between polls and never inside one: the same
+    // wait with its process gone is the watch over at its own start.
+    let gone = try XCTUnwrap(
+      Live.sessions(held, now: try moment("2026-10-17T17:29:00Z"), alive: { _ in false }).first)
+    XCTAssertFalse(gone.isOpen)
+    XCTAssertEqual(gone.ended, try moment("2026-10-17T17:00:00Z"))
+  }
+
+  /// A follow that reached its deadline ends and the skill starts the next
+  /// one, so the gap rule is what keeps the two halves of a long watch
+  /// together. 20 seconds is well inside three minutes.
+  func testAFollowRestartedInsideTheGapIsOneSession() throws {
+    let events =
+      wait(from: "2026-10-17T17:00:00Z", to: "2026-10-17T17:29:00Z", run: "aaaa")
+      + wait(from: "2026-10-17T17:29:20Z", to: nil, run: "bbbb")
+
+    let sessions = Live.sessions(
+      events, now: try moment("2026-10-17T17:30:00Z"), alive: { _ in true })
+    XCTAssertEqual(sessions.count, 1, "the deadline ended the poll, not the watch")
+
+    let session = sessions[0]
+    XCTAssertEqual(session.since, try moment("2026-10-17T17:00:00Z"), "the first follow's start")
+    XCTAssertTrue(session.isOpen)
+    XCTAssertFalse(session.stoppedByYou, "a deadline is nobody stopping anything")
+    XCTAssertEqual(
+      try XCTUnwrap(session.flight).started, try moment("2026-10-17T17:29:20Z"),
+      "and the second follow is the one in flight")
+  }
+
+  /// The same end with `interrupted` true is a person pressing Stop, and the
+  /// skill reads `waited.interrupted` and starts no second follow. So the
+  /// watch is over at that end, with no three minutes spent waiting to see.
+  func testAStoppedFollowEndsTheSessionAtOnce() throws {
+    let signalled = wait(
+      from: "2026-10-17T17:00:00Z", to: "2026-10-17T17:29:00Z", run: "aaaa", interrupted: true)
+    let session = try XCTUnwrap(
+      Live.sessions(signalled, now: try moment("2026-10-17T17:29:10Z"), alive: { _ in true })
+        .first)
+
+    XCTAssertFalse(session.isOpen, "ten seconds after the signal, and it is over")
+    XCTAssertEqual(session.ended, try moment("2026-10-17T17:29:00Z"))
+    XCTAssertTrue(session.stoppedByYou)
+    XCTAssertNil(session.flight, "there is no process left to signal")
+  }
+
+  /// A follow answers while it is still running: the session's writes are
+  /// every ok end inside its span, and an open session runs to the moment it
+  /// is folded at. A reply 20 minutes into a half-hour follow is counted and
+  /// anchors the quiet, with no end written for the follow itself.
+  func testAReplyWhileTheWaitIsInFlightIsCounted() throws {
+    let events =
+      wait(from: "2026-10-17T17:00:00Z", to: nil, run: "aaaa")
+      + [
+        write(at: "2026-10-17T17:20:00Z", command: "reply", ok: true),
+        write(at: "2026-10-17T17:21:00Z", command: "propose", ok: true),
+      ]
+    let session = try XCTUnwrap(
+      Live.sessions(events, now: try moment("2026-10-17T17:29:00Z"), alive: { _ in true }).first)
+
+    XCTAssertTrue(session.isOpen, "the follow is still held open")
+    XCTAssertEqual(session.replied, 1, "an answer inside a wait in flight is an answer")
+    XCTAssertEqual(session.proposed, 1)
+    XCTAssertEqual(session.lastWrite, try moment("2026-10-17T17:21:00Z"))
+    XCTAssertEqual(session.quietSince, try moment("2026-10-17T17:21:00Z"))
+  }
+
   // MARK: - The pieces a test states
 
   private let chapterFive = "1Ch5AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPp"

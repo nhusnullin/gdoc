@@ -144,6 +144,38 @@ final class StopperTests: XCTestCase {
     XCTAssertTrue(stopper.pendingDocs(in: closed).isEmpty, "and off once the end arrived")
   }
 
+  /// A `comments --follow` holds one process open for half an hour, so the
+  /// wait Stop reaches is 29 minutes old instead of two. Nothing in the
+  /// check is a function of now: it compares the kernel's start time against
+  /// the event's own, so an old wait passes every check a fresh one does and
+  /// the row the panel draws for it still offers Stop.
+  func testStopReachesALongWaitAfterTheProcessCheck() throws {
+    let at = try moment("2026-10-17T12:00:00Z")
+    let halfAnHourOn = at.addingTimeInterval(29 * 60)
+    let desk = Desk()
+    let stopper = armed(desk)
+    let events = waiting(at: at)
+
+    XCTAssertEqual(
+      stopper.standing(doc: Self.doc, in: events), .ready,
+      "a wait 29 minutes old is the same wait the kernel agreed about")
+    XCTAssertEqual(stopper.unstoppable(in: events), [], "so no row is greyed")
+
+    let live = try panel(events, at: halfAnHourOn)
+    guard case .live(_, _, let offered, let pending, _) = try first(of: live) else {
+      return XCTFail("a follow still running draws a live row")
+    }
+    XCTAssertEqual(offered?.state, .live, "and Stop can be pressed half an hour in")
+    XCTAssertFalse(pending, "nothing has been signalled yet")
+
+    XCTAssertEqual(stopper.stop(doc: Self.doc, in: events), .signalled)
+    XCTAssertEqual(
+      desk.sent, [Sent(pid: 4311, signal: SIGINT)],
+      "one SIGINT, to the pid the record named, and only after the check")
+    XCTAssertEqual(
+      stopper.pendingDocs(in: events), [Self.doc], "the ring is on until the follow's end")
+  }
+
   // MARK: what the panel says
 
   func testAFailedCheckGreysStopWithItsTooltip() throws {

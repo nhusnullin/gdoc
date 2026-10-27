@@ -210,10 +210,17 @@ func (fs flagSet) names() string {
 // thread, because the three setting flags are off the line before the parser
 // runs and dispatch is the one place that could put them back. A command that
 // has nothing to do with the mark simply never asks.
+//
+// lines is the same shape of thing: the writer a run may print windows on,
+// put here by dispatch and nil on every route that has none. It is on args
+// rather than fetched from stdout so that the route a call came in on decides
+// whether a command can print more than one object, and the one command that
+// does asks for it by name: TestOnlyFollowWritesLines.
 type args struct {
 	positional []string
 	flags      map[string]string
 	set        settings.InEffect
+	lines      *emit.Lines
 }
 
 // target is the first positional argument, which every command that names a
@@ -422,28 +429,6 @@ func unplacedWarnings(d *docs.Document) []string {
 	return out
 }
 
-// waitInterval is how long a wait sleeps between polls. It is two seconds, a
-// constant the spec names, and a package variable only so a test can drive two
-// polls in no wall time. It is deliberately not a flag: a caller that could set
-// it could poll Drive as fast as it liked, and nothing on the wire would say
-// the interval had changed. TestTheWaitIntervalIsTwoSeconds pins the literal.
-var waitInterval = 2 * time.Second
-
-// maxWait is the longest one call will look. The skill asks for nine minutes,
-// because the tool that runs the command waits ten at most; the hour is the bar
-// that stops a wait from becoming the watcher principle 1 refuses to have.
-const maxWait = time.Hour
-
-// waitedData is what one wait did, and every field is a fact. How many times it
-// looked, how long it took, and whether the person stopped it. There is no
-// field saying whether what came back was worth anything: that is the skill's,
-// reading the same threads a one-shot listing prints.
-type waitedData struct {
-	Polls       int  `json:"polls"`
-	Seconds     int  `json:"seconds"`
-	Interrupted bool `json:"interrupted"`
-}
-
 // commentsData is what `gdoc comments` prints. The cursor is what the next poll
 // hands back, and every listing prints one: a run whose threads carried no
 // instant is dated from this run's clock instead, which is startCursor below.
@@ -505,24 +490,17 @@ func startCursor(c *comments.Cursor, at time.Time) *comments.Cursor {
 	return &comments.Cursor{At: at.Add(-cursorFloor)}
 }
 
-// parseWait reads the --wait value. Every refusal quotes what it was given: a
-// caller reading "not a duration" without its own word back cannot tell which
-// argument it wrote wrongly.
-func parseWait(text string) (time.Duration, error) {
-	d, err := time.ParseDuration(text)
-	if err != nil {
-		return 0, fmt.Errorf("--wait %q is not a length of time. Write it as 9m or 90s", text)
-	}
-	if d <= 0 {
-		return 0, fmt.Errorf("--wait %q is not a length of time to look for", text)
-	}
-	if d > maxWait {
-		return 0, fmt.Errorf("--wait %q is longer than the %s this command will look for", text, maxWait)
-	}
-	return d, nil
-}
-
 func cmdComments(ctx context.Context, a *args) emit.Result {
+	// Before the cursor and before the token: a follow with nowhere to write
+	// its lines has no answer to give. The windows are the answer in that
+	// mode, and a run that polled for half an hour and printed them into
+	// nothing would spend Drive reads on words no reader gets. The route is
+	// what decides, so this is the one thing the command can say about it:
+	// TestAFollowWithNoLineWriterIsRefused.
+	if a.has("--follow") && a.lines == nil {
+		return emit.Result{OK: false,
+			Error: "--follow has nowhere to write its lines: it answers with one line per window, which this route cannot carry"}
+	}
 	var since *comments.Cursor
 	if a.has("--since") {
 		// Before the session, because a cursor nobody can read is a mistake in
@@ -533,20 +511,17 @@ func cmdComments(ctx context.Context, a *args) emit.Result {
 		}
 		since = parsed
 	}
-	var deadline time.Duration
-	if a.has("--wait") {
-		// A wait with no cursor would hand back every thread in the document at
-		// once, which is the one-shot read under another name and reads to a
-		// session as news. The first read is the baseline and takes no --wait.
-		if since == nil {
-			return emit.Result{OK: false,
-				Error: "--wait needs --since: the cursor is what makes a window, and a wait without one answers with the whole document"}
-		}
-		parsed, err := parseWait(a.flags["--wait"])
-		if err != nil {
-			return failed(err)
-		}
-		deadline = parsed
+	// How long each mode looks, and what each of them refuses before any read
+	// is made: follow.go holds both. The follow's refusals are asked first, so
+	// a line carrying --follow and --wait is told which pair it wrote rather
+	// than which cursor it is missing.
+	follow, err := followDeadline(a, since)
+	if err != nil {
+		return failed(err)
+	}
+	deadline, err := waitDeadline(a, since)
+	if err != nil {
+		return failed(err)
 	}
 	r, err := open(a.target())
 	if err != nil {
@@ -573,9 +548,9 @@ func cmdComments(ctx context.Context, a *args) emit.Result {
 	// poll whose narrowed listing carries something; comments.Wait decides,
 	// and its doc comment says why. The one-shot listing reads both.
 	var d *docs.Document
-	list := func(ctx context.Context) ([]comments.RawComment, error) {
-		return comments.Fetch(ctx, r.session, r.id, since)
-	}
+	// The wait asks one question for the whole call, so its listing is
+	// follow.go's with the cursor it was handed fixed into it.
+	list := func(ctx context.Context) ([]comments.RawComment, error) { return followList(ctx, r, since) }
 	read := func(ctx context.Context) (*docs.Document, error) {
 		got, err := docs.Fetch(ctx, r.session, r.id)
 		if err != nil {
@@ -583,6 +558,14 @@ func cmdComments(ctx context.Context, a *args) emit.Result {
 		}
 		d = got
 		return got, nil
+	}
+
+	if a.has("--follow") {
+		// The windows were the answer and they are already written. What comes
+		// back here is how the watch ended, and follow.go turns it into the
+		// last line.
+		f, err := commentsFollow(ctx, a, r, since, follow, read)
+		return followResult(r, d, f, err)
 	}
 
 	if !a.has("--wait") {
@@ -633,13 +616,7 @@ func cmdComments(ctx context.Context, a *args) emit.Result {
 	// Ctrl-C then does nothing at all, and the run answers as though nobody had
 	// pressed it.
 	stop()
-	waited := &waitedData{
-		Polls: w.Polls,
-		// Rounded, because the caller reads it to know how long the document was
-		// quiet and not to measure the binary.
-		Seconds:     int((w.Waited + time.Second/2) / time.Second),
-		Interrupted: w.Interrupted,
-	}
+	waited := waitedFrom(w.Polls, w.Waited, w.Interrupted)
 	if err != nil {
 		// A failed poll is the one ending that is a failure, and the polls it
 		// made still go out: the skill says so, waits, and calls again with the
@@ -657,6 +634,37 @@ func cmdComments(ctx context.Context, a *args) emit.Result {
 	rest, cancel := context.WithTimeout(ctx, deadline-w.Waited)
 	defer cancel()
 	return commentsResult(rest, r, d, w.Threads, w.Unplaced, w.Cursor, a.has("--witness"), waited)
+}
+
+// commentsFollow is the follow's poll, and it is here rather than in follow.go
+// for the reason the wait's loop is: the signal. Ctrl-C is how a watch ends, and
+// the envelope the follow already has is the answer to it, so the default kill
+// is taken away for as long as the poll runs and put back the moment it is
+// over. read.go is the one file in this binary that names os/signal, and
+// TestOnlyTheWaitTrapsTheSignal holds it there.
+//
+// Nothing runs after this, so the deferred stop is the whole of it: there is no
+// --witness export on this route, which is why --follow refuses one.
+func commentsFollow(ctx context.Context, a *args, r *reach, since *comments.Cursor,
+	deadline time.Duration, read comments.Read) (comments.Followed, error) {
+	sigCtx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	list := func(ctx context.Context, c *comments.Cursor) ([]comments.RawComment, error) {
+		return followList(ctx, r, c)
+	}
+	// One line per window, written as the window is found: a window four
+	// minutes into a half-hour watch is news now, and a caller that had to wait
+	// for the envelope could not act on it until the watch ended.
+	hand := func(w comments.Window) error { return a.lines.WriteLine(followLineOf(w)) }
+	return comments.Follow(sigCtx, since, comments.FollowOptions{
+		Interval: waitInterval,
+		Deadline: deadline,
+		List:     list,
+		Read:     read,
+		Mark:     a.set.Mark,
+		Hand:     hand,
+	})
 }
 
 // commentsBase is the envelope's document fields. The document is nil whenever

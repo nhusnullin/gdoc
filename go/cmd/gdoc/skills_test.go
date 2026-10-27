@@ -223,6 +223,61 @@ func TestEverySkillPassesJSONToHelp(t *testing.T) {
 	}
 }
 
+// firstHelpCall is the first call to help a skill tells a session to make, and
+// whether there was one. The setup block stands above every sentence about the
+// object it printed, so the first help call in the file is the one that opens
+// the session.
+func firstHelpCall(calls []skillCall) (skillCall, bool) {
+	for _, call := range calls {
+		if len(call.words) > 0 && call.words[0] == "help" {
+			return call, true
+		}
+	}
+	return skillCall{}, false
+}
+
+// The whole command table reaches a session that only needed the mark in effect
+// and the release notice, and it reaches it on the first call of every run of
+// every skill. `help --brief --json` prints those two and no table, so the
+// opening call costs a few hundred bytes instead of a few thousand. A binary
+// older than the flag refuses it, which is why the sentence after the block
+// names the plain call: a skill that stopped there would be a skill an older
+// gdoc cannot run at all.
+func TestEverySkillOpensOnTheBriefHelp(t *testing.T) {
+	files, err := skillFiles(skillsDir)
+	if err != nil {
+		t.Fatalf("looking for the skills: %v", err)
+	}
+	if len(files) == 0 {
+		t.Fatalf("no SKILL.md under %s. A moved skills directory is a failure, not an empty pass", skillsDir)
+	}
+	for _, file := range files {
+		src, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatalf("reading %s: %v", file, err)
+		}
+		if !strings.Contains(string(src), "$GDOC help --brief --json") {
+			t.Errorf("%s does not open on `$GDOC help --brief --json`. The table it does not read is most of what the first call of the session costs", file)
+		}
+		call, found := firstHelpCall(skillCalls(file, string(src)))
+		if !found {
+			t.Errorf("%s tells a session to call help nowhere this test can see", file)
+			continue
+		}
+		for _, flag := range []string{briefFlag, jsonFlag} {
+			if !slices.Contains(call.flags, flag) {
+				t.Errorf("%s:%d: the setup call does not pass %s. The call that opens a session is the brief one", file, call.line, flag)
+			}
+		}
+		if !strings.Contains(string(src), "If it is refused, run `$GDOC help --json` instead.") {
+			t.Errorf("%s does not name the fallback after its setup block. A gdoc older than `--brief` refuses the call, and the session has to read the plain object instead of stopping", file)
+		}
+		for _, problem := range skillProblems(skillCalls(file, string(src))) {
+			t.Error(problem)
+		}
+	}
+}
+
 func TestAHelpCallWithoutJSONIsCaught(t *testing.T) {
 	// Arrange
 	src := "```bash\n$GDOC help publish\n$GDOC help --json\n```\n"
@@ -785,6 +840,65 @@ func TestTheLiveLoopSaysWhichCursorsItKeeps(t *testing.T) {
 	} {
 		if !strings.Contains(src, want) {
 			t.Errorf("skills/gdoc-review/live.md does not say %q. A session that keeps a cursor from a listing it did not read skips activity for good", want)
+		}
+	}
+}
+
+// `--wait` returns on the first activity after the cursor, gdoc's own reply
+// included, so a live review paid a model turn for every receipt it wrote and
+// for every unmarked word between two colleagues. `--follow` holds the poll open
+// and hands over only a window carrying something marked for gdoc, which is a
+// line in a stream rather than a call that returned. The loop that reads that
+// stream is the Monitor tool's, so live.md has to say how the watch is started,
+// what one line asks of the session, when the follow is started again, and when
+// it is not. The `--wait` loop stays underneath it as the fallback, because a
+// session without the Monitor tool and a binary too old for `--follow` both have
+// to keep watching.
+func TestTheLiveLoopFollowsUnderTheMonitorTool(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join(skillsDir, "gdoc-review", "live.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := string(b)
+	for want, why := range map[string]string{
+		`--since "$CURSOR" --follow 29m`:             "the follow call is what a watch now opens on",
+		"Monitor tool":                               "a stream of lines is read by the Monitor tool, not by a call that returned",
+		"Act on the items the line names":            "a line names the new items, and anything newer in the read that follows belongs to the next line",
+		"not only on the ones the line named":        "a line names at most twenty items while the cursor moves past the whole window, so a line with `more` above 0 is read in full or the work past the ceiling is lost",
+		"Start the next follow from the last cursor": "a follow that reached its deadline is restarted, or the watch stops after half an hour",
+		"do not restart":                             "a follow the person stopped is the end of the watch, and the envelope that follows it is not a reason to start another",
+		"stop the Monitor task":                      "the task outlives the answer in the chat unless the session stops it",
+		"print the totals once":                      "a stop that printed the totals twice reads as two sessions ending",
+		"--wait 9m":                                  "the wait loop stays as the fallback",
+		"If the binary refuses `--follow`":           "an older binary falls back to the wait loop rather than stopping the watch",
+		"no Monitor tool":                            "a session without the tool falls back to the wait loop too",
+	} {
+		if !strings.Contains(src, want) {
+			t.Errorf("skills/gdoc-review/live.md does not say %q. %s", want, why)
+		}
+	}
+	calls := skillCalls("live.md", src)
+	if len(calls) == 0 {
+		t.Fatalf("live.md tells a session to call gdoc nowhere this test can see")
+	}
+	for _, problem := range skillProblems(calls) {
+		t.Error(problem)
+	}
+}
+
+// A live review holds the watch for half an hour at a time, and the session
+// running it cannot be doing anything else while it reads the lines. A person
+// who asked for it in the middle of other work gets a second session rather than
+// a watch that competes with what is already open.
+func TestALiveReviewAsksForItsOwnSession(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join(skillsDir, "gdoc-review", "SKILL.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := string(b)
+	for _, want := range []string{"second Claude Code session", "same hub folder"} {
+		if !strings.Contains(src, want) {
+			t.Errorf("skills/gdoc-review/SKILL.md does not say %q in its live pointer. A watch started inside a session that is already busy makes the person choose between the two", want)
 		}
 	}
 }

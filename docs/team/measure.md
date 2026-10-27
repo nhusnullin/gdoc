@@ -156,6 +156,37 @@ review ended with its fixes committed in `1a465e0`. Nothing was reverted on
 the day it merged. The lead's own context at the end of the day was not
 read.
 
+### The night of 2026-10-26: M30 on codex, M31 on Claude
+
+Measured 2026-10-27 by the lead. M30, the fixes, ran on codex, so its numbers
+are summed from `~/.codex/sessions` the same way as M29's. The task phase ran
+from 23:47 to 00:38 local time and the review from 00:38 to 01:11, and each
+session is counted in the phase its start falls in. M31, the fourth look, ran
+on Claude, so `meter.py` reads it. Its review called codex once as the outside
+reviewer, which found nothing.
+
+| Run | Task iterations | Tasks, total | Per task iteration | Biggest iteration | Review rounds | Review, total | Per review round | Whole worktree | Sessions |
+|---|---|---|---|---|---|---|---|---|---|
+| M30, the fixes (codex) | 9 | 15.3M | 1.7M | 3.1M | 2 | 23.8M | 11.9M | 39.1M | 21 |
+| M31, the fourth look (Claude) | 10 | 68.0M | 6.8M | 12.1M | 1 | 0.1M | 0.1M | 68.2M | 11 |
+| M31, its codex reviewer | 0 | 0 | 0 | 0 | 1 | 0.8M | 0.8M | 0.8M | 1 |
+
+Against the bars of 4.9M per task iteration and 6.6M per review round:
+
+- M30's tasks pass at 1.7M. Its review fails at 11.9M per round, because a
+  codex review round fans out to several sessions. The first fair test on code
+  says codex is cheap at writing and not at reviewing. 37.0M of its 39.1M were
+  cached input.
+- M31's tasks fail at 6.8M, under half the 14.6M baseline but over the third.
+  66.4M of its 68.2M were cache reads. Its review passes because it found
+  nothing to fix.
+
+After the runs the lead fixed three things by hand: a path in this page that CI
+does not have, a flaky Swift test re-run once, and a placeholder the renderer
+drew over every DOCUMENTS row, which blocked the design review. Nail sent two
+messages for the night, the go on the plan and the merge of both. The lead's
+own context at the end of the night was not read.
+
 ## Nail's confirmation
 
 The method and the baseline above are the lead's reading. They are not settled

@@ -499,7 +499,11 @@ func mcpSend(ctx context.Context, c mcpCommand, args json.RawMessage, errOut io.
 			return res
 		}
 	}
-	r := safeDispatch(ctx, argv, errOut, ch.set)
+	// No line writer: stdout here carries one JSON-RPC message per line, and a
+	// window printed beside them is bytes the client cannot read. So the one
+	// mode that prints lines is refused on this route rather than written
+	// somewhere nobody reads: TestTheMcpRouteHandsNoLineWriter.
+	r := safeDispatch(ctx, argv, errOut, nil, ch.set)
 	r.Error = files.name(r.Error)
 	for i := range r.Warnings {
 		r.Warnings[i] = files.name(r.Warnings[i])
