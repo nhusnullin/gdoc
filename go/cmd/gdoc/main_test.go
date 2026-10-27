@@ -335,15 +335,8 @@ func TestNoArgumentsFails(t *testing.T) {
 // The check fails in both directions, like the boundary tests: it fails when
 // the import spreads, and it fails when read.go stops installing one.
 func TestOnlyTheWaitTrapsTheSignal(t *testing.T) {
-	files, err := filepath.Glob("*.go")
-	if err != nil {
-		t.Fatal(err)
-	}
 	var traps []string
-	for _, name := range files {
-		if strings.HasSuffix(name, "_test.go") {
-			continue
-		}
+	for _, name := range sourceFiles(t) {
 		b, err := os.ReadFile(name)
 		if err != nil {
 			t.Fatal(err)
@@ -448,4 +441,121 @@ func TestAnUntaggedBuildCarriesNoVersionAnywhere(t *testing.T) {
 	if strings.Contains(prose, "dev") {
 		t.Errorf("a dev build's help must not name a version: %q", prose)
 	}
+}
+
+// The line writer is built in one room and written in one job.
+//
+// Every command but one prints a single object, so a writer that can print
+// more than one is the sharpest edge in this package: a command that picked
+// one up could put a second object on stdout and break the contract every
+// skill reads. So the constructor is named in main.go alone, where stdout
+// itself is held, and the write method only in the two files that hold the
+// follow. Nothing else may name either.
+//
+// The constructor fails in both directions, like the boundary tests: it fails
+// when a second room builds a writer, and it fails when main.go stops
+// building one. The write method is held to its two files from above, because
+// the one caller arrives with the follow itself.
+func TestOnlyFollowWritesLines(t *testing.T) {
+	var builds, writes []string
+	for _, name := range sourceFiles(t) {
+		b, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(b), "emit.NewLines(") {
+			builds = append(builds, name)
+		}
+		if strings.Contains(string(b), ".WriteLine(") {
+			writes = append(writes, name)
+		}
+	}
+	sort.Strings(builds)
+	if !reflect.DeepEqual(builds, []string{"main.go"}) {
+		t.Errorf("emit.NewLines is built in %v, and only main.go holds stdout", builds)
+	}
+	for _, name := range writes {
+		if name != "read.go" && name != "follow.go" {
+			t.Errorf("%s writes a line, and only read.go and follow.go hold the follow", name)
+		}
+	}
+}
+
+// The chat route hands no line writer, because a chat call is one tool answer
+// and a session that printed a window on stdout would be writing beside the
+// JSON-RPC it speaks there. So mcpSend passes nil, and a follow asked for over
+// chat is refused rather than written somewhere nobody reads.
+//
+// It is a source rule because the nil is the whole of it: there is no object
+// to read it from. The two call sites are pinned too, so a third route cannot
+// quietly hand one over.
+func TestTheMcpRouteHandsNoLineWriter(t *testing.T) {
+	calls := map[string]string{}
+	for _, name := range sourceFiles(t) {
+		b, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, line := range strings.Split(string(b), "\n") {
+			line = strings.TrimSpace(line)
+			if !strings.Contains(line, "safeDispatch(") {
+				continue
+			}
+			if strings.HasPrefix(line, "//") || strings.HasPrefix(line, "func safeDispatch") {
+				continue
+			}
+			calls[name] = line
+		}
+	}
+	if len(calls) != 2 {
+		t.Fatalf("safeDispatch has two callers, the terminal and the chat: %v", calls)
+	}
+	if !strings.Contains(calls["main.go"], "emit.NewLines(out)") {
+		t.Errorf("the terminal route hands the writer it built from stdout: %q", calls["main.go"])
+	}
+	if !strings.Contains(calls["mcptools.go"], "nil") {
+		t.Errorf("the chat route hands no line writer: %q", calls["mcptools.go"])
+	}
+}
+
+// A follow with nowhere to write its lines is refused by name, before the
+// token is read and before anything reaches the wire. The writer is the whole
+// of what the mode needs: a run that polled for half an hour and printed its
+// windows into nothing would spend Drive reads on an answer no reader gets.
+func TestAFollowWithNoLineWriterIsRefused(t *testing.T) {
+	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+
+	a := &args{
+		positional: []string{fixtureDocID},
+		flags:      map[string]string{"--since": waitSince, "--follow": "29m"},
+		set:        defaultsInEffect(),
+	}
+	r := cmdComments(context.Background(), a)
+	if r.OK {
+		t.Fatalf("a follow with no line writer must be refused: %v", r)
+	}
+	if !strings.Contains(r.Error, "--follow") {
+		t.Errorf("the refusal must name the flag: %q", r.Error)
+	}
+	if strings.Contains(r.Error, "token") {
+		t.Errorf("the refusal comes before the token is read: %q", r.Error)
+	}
+}
+
+// sourceFiles is this package's own non-test files, which is what a source
+// rule reads. It is written once because three rules here ask the same
+// question of the tree.
+func sourceFiles(t *testing.T) []string {
+	t.Helper()
+	files, err := filepath.Glob("*.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out []string
+	for _, name := range files {
+		if !strings.HasSuffix(name, "_test.go") {
+			out = append(out, name)
+		}
+	}
+	return out
 }

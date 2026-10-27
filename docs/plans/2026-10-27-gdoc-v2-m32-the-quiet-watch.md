@@ -367,7 +367,7 @@ Desktop, no `needs:` bump.
   `go/cmd/gdoc/settings_test.go`, `go/cmd/gdoc/main_test.go`,
   `go/cmd/gdoc/read.go`, `go/cmd/gdoc/doc.go`
 
-- [ ] test first:
+- [x] test first:
   - `TestLinesWritesOneObjectPerLine` in emit_test.go
   - `TestOnlyFollowWritesLines`, a source rule: the `emit.Lines` constructor is
     named in main.go alone, and its write method only in read.go and
@@ -376,14 +376,14 @@ Desktop, no `needs:` bump.
     `safeDispatch` passes nil
   - `TestAFollowWithNoLineWriterIsRefused`: `cmdComments` with `--follow` and a
     nil writer refuses by name, before any network
-- [ ] run them red
-- [ ] `emit.Lines`: one object per line on the writer it holds, and nothing else
-- [ ] `safeDispatch`, `dispatching` and `dispatch` gain one `*emit.Lines`
+- [x] run them red
+- [x] `emit.Lines`: one object per line on the writer it holds, and nothing else
+- [x] `safeDispatch`, `dispatching` and `dispatch` gain one `*emit.Lines`
       parameter; `run` passes one built from `out`; `mcpSend` passes nil; the
       fake in settings_test.go:68 takes the new parameter; `args` carries it
-- [ ] `cmdComments` refuses `--follow` with no writer; nothing else reads it yet
-- [ ] every existing test green, `TestStdoutCarriesOnlyJSONRPC` included
-- [ ] `make test` green
+- [x] `cmdComments` refuses `--follow` with no writer; nothing else reads it yet
+- [x] every existing test green, `TestStdoutCarriesOnlyJSONRPC` included
+- [x] `make test` green
 
 ### Task 4: `comments --follow` on the command line
 

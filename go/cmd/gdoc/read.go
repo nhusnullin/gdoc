@@ -210,10 +210,17 @@ func (fs flagSet) names() string {
 // thread, because the three setting flags are off the line before the parser
 // runs and dispatch is the one place that could put them back. A command that
 // has nothing to do with the mark simply never asks.
+//
+// lines is the same shape of thing: the writer a run may print windows on,
+// put here by dispatch and nil on every route that has none. It is on args
+// rather than fetched from stdout so that the route a call came in on decides
+// whether a command can print more than one object, and the one command that
+// does asks for it by name: TestOnlyFollowWritesLines.
 type args struct {
 	positional []string
 	flags      map[string]string
 	set        settings.InEffect
+	lines      *emit.Lines
 }
 
 // target is the first positional argument, which every command that names a
@@ -523,6 +530,16 @@ func parseWait(text string) (time.Duration, error) {
 }
 
 func cmdComments(ctx context.Context, a *args) emit.Result {
+	// Before the cursor and before the token: a follow with nowhere to write
+	// its lines has no answer to give. The windows are the answer in that
+	// mode, and a run that polled for half an hour and printed them into
+	// nothing would spend Drive reads on words no reader gets. The route is
+	// what decides, so this is the one thing the command can say about it:
+	// TestAFollowWithNoLineWriterIsRefused.
+	if a.has("--follow") && a.lines == nil {
+		return emit.Result{OK: false,
+			Error: "--follow has nowhere to write its lines: it answers with one line per window, which this route cannot carry"}
+	}
 	var since *comments.Cursor
 	if a.has("--since") {
 		// Before the session, because a cursor nobody can read is a mistake in

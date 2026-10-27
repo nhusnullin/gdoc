@@ -27,6 +27,22 @@
 // rules are in internal/mcp/doc.go, and what chat adds to a command is in
 // internal/chat/doc.go.
 //
+// And one mode that prints more than one object, held to one command by the
+// shape of the code. internal/emit's Lines writes one JSON object per line,
+// and `comments --follow`, the poll held open, is what it is for: a window
+// found after four minutes is news now, and a caller that had to wait for the
+// envelope to read it could not act on it until the watch ended. The last
+// line is the envelope, and the exit code agrees with it as always.
+//
+// There is one such writer in a run, run builds it from stdout, and it
+// travels down safeDispatch and dispatch onto the command's own args. So the
+// route a call came in on decides whether the run can print lines at all: the
+// chat route passes nil, because stdout there carries JSON-RPC, and a follow
+// asked for with no writer is refused by name before the token is read.
+// TestOnlyFollowWritesLines holds the constructor to main.go and the write
+// method to the two files that hold the follow, TestTheMcpRouteHandsNoLineWriter
+// holds the nil, and TestAFollowWithNoLineWriterIsRefused holds the refusal.
+//
 // And one narrowing. A help screen on a terminal without --json writes nothing
 // to stdout, because the reader of that screen is a person and the object under
 // it is 7.5 KB they did not ask for. Every other result keeps its object,

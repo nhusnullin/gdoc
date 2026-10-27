@@ -65,7 +65,7 @@ func watchingDispatch(t *testing.T) *watchedDispatch {
 	t.Helper()
 	w := &watchedDispatch{}
 	old := dispatching
-	dispatching = func(_ context.Context, args []string, _ io.Writer, set settings.InEffect) emit.Result {
+	dispatching = func(_ context.Context, args []string, _ io.Writer, _ *emit.Lines, set settings.InEffect) emit.Result {
 		w.record(args, set)
 		return emit.Result{OK: true}
 	}
