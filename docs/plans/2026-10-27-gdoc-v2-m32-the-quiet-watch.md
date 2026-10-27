@@ -439,7 +439,7 @@ Desktop, no `needs:` bump.
   `presence/Tests/PresenceAppTests/StopperTests.swift`,
   `presence/Sources/PresenceApp/Stopper.swift` (a comment only)
 
-- [ ] test first, building events inline with `wait(from:to:run:)`:
+- [x] test first, building events inline with `wait(from:to:run:)`:
   - `testAWaitLongerThanTheGapStaysLiveWhileItsProcessRuns`: a `comments` start
     with `wait: true`, no end, pid alive, 29 minutes old: in flight, and live
   - `testAFollowRestartedInsideTheGapIsOneSession`: an end at minute 29 with
@@ -450,12 +450,12 @@ Desktop, no `needs:` bump.
     still in flight counts toward the session
   - in `StopperTests`: `testStopReachesALongWaitAfterTheProcessCheck`, the
     29-minute start, one SIGINT after every check holds
-- [ ] run them: they are expected green on today's code; if any is red, the
+- [x] run them: they are expected green on today's code; if any is red, the
       fix is in `LiveSession.swift` or `Stopper.swift`, named in the commit
-- [ ] `Stopper.swift`'s comment points at the trap by name (`cmdComments` in
+- [x] `Stopper.swift`'s comment points at the trap by name (`cmdComments` in
       read.go), not by line number
-- [ ] no fixture file changes; `TestTheSwiftFixtureIsTheGoFixture` green
-- [ ] `make app-test` and `make app-lint` green
+- [x] no fixture file changes; `TestTheSwiftFixtureIsTheGoFixture` green
+- [x] `make app-test` and `make app-lint` green
 
 ### Task 6: the live loop under the Monitor tool
 

@@ -44,9 +44,10 @@ public enum StopStanding: Sendable, Equatable {
 /// Unchecked Sendable because the one thing it remembers is behind its lock.
 /// Both halves of the kernel are injected, so no test signals anything.
 public final class Stopper: @unchecked Sendable {
-  /// The one signal. `comments --wait` traps it at
-  /// `go/cmd/gdoc/read.go:589` and answers `data.waited.interrupted`, so the
-  /// run still ends the way the skill reads.
+  /// The one signal. `cmdComments` in `go/cmd/gdoc/read.go` traps it, for
+  /// both `--wait` and the held-open `--follow`, and answers
+  /// `data.waited.interrupted`, so the run still ends the way the skill
+  /// reads: testStopReachesALongWaitAfterTheProcessCheck.
   public static let signal = SIGINT
 
   private let gdoc: String?
