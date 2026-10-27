@@ -813,3 +813,72 @@ func TestTheSessionIsCappedAtSixtyFourRunes(t *testing.T) {
 		t.Fatalf("the session is %d runes long", len([]rune(got)))
 	}
 }
+
+// The name a run was given reaches its end only where the answer carries no
+// title of its own.
+//
+// A publish that stopped inside the render prints an envelope with no title in
+// it, because the title is a field of a document that was never made. The name
+// is still known: the cover was read. So the run keeps it, and the end says it
+// where there is nothing else to say, and never over a title the command
+// printed: the record's title is the answer's first.
+func TestANamedTitleIsWrittenOnlyWhereTheAnswerCarriesNone(t *testing.T) {
+	cases := []struct {
+		name  string
+		named string
+		data  any
+		want  string
+	}{
+		{"an answer with no title", "Supplier Register Policy", map[string]any{"folder_id": "F"}, "Supplier Register Policy"},
+		{"an answer with a title", "Supplier Register Policy", map[string]any{"title": "Supplier Register Policy v2"}, "Supplier Register Policy v2"},
+		{"no data at all", "Supplier Register Policy", nil, "Supplier Register Policy"},
+		{"an answer whose title is empty", "Supplier Register Policy", map[string]any{"title": ""}, "Supplier Register Policy"},
+		{"an answer whose title is a number", "Supplier Register Policy", map[string]any{"title": 7}, "Supplier Register Policy"},
+		{"a run nobody named", "", map[string]any{"folder_id": "F"}, ""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			dir, errOut := scene(t)
+			run := Begin(context.Background(), true, version, "publish", "", false, false, errOut)
+			ctx := WithRun(context.Background(), run)
+			if c.named != "" {
+				Named(ctx, c.named)
+			}
+			run.End(emit.Result{OK: false, Data: c.data})
+
+			got := decoded(t, dir, "2026-10.jsonl")[1].Title
+			if got != c.want {
+				t.Fatalf("the end says title %q, want %q", got, c.want)
+			}
+		})
+	}
+
+	// And the name goes through the same cap the answer's title does, because
+	// it comes from a note this package did not choose either.
+	dir, errOut := scene(t)
+	run := Begin(context.Background(), true, version, "publish", "", false, false, errOut)
+	Named(WithRun(context.Background(), run), strings.Repeat("ы", 250))
+	run.End(emit.Result{OK: false})
+	if got := decoded(t, dir, "2026-10.jsonl")[1].Title; got != strings.Repeat("ы", 200) {
+		t.Fatalf("the named title is %d runes", len([]rune(got)))
+	}
+}
+
+// A name handed in outside a run writes nothing and raises nothing.
+//
+// It is the rule every method here follows: the flag being off is a nil run,
+// and a room between a command and the hook may hand a name over without
+// knowing whether anybody is recording. A context nobody marked, a context
+// carrying a nil run, and no context at all each do nothing at all.
+func TestANamedTitleOutsideARunWritesNothing(t *testing.T) {
+	dir, errOut := scene(t)
+	Named(context.Background(), "Supplier Register Policy")
+	Named(WithRun(context.Background(), nil), "Supplier Register Policy")
+	Named(nil, "Supplier Register Policy")
+	if _, err := os.Stat(filepath.Join(dir, "presence")); !os.IsNotExist(err) {
+		t.Fatalf("a name outside a run wrote a record: %v", err)
+	}
+	if errOut.String() != "" {
+		t.Fatalf("a name outside a run said %q", errOut.String())
+	}
+}

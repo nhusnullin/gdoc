@@ -160,6 +160,62 @@ struct Release: Comparable {
   }
 }
 
+/// Why a press of the header's update glyph installed nothing.
+///
+/// The panel tells the cases apart by `ok` and the `action` word alone, and
+/// never by a warning or an error sentence: those are the child's own words
+/// about this machine, and a quiet line is not where somebody reads them.
+/// A run the two fields cannot tell apart is `stopped`, which names the
+/// command to type.
+public enum UpdateMiss: Sendable, Equatable, CaseIterable {
+  /// `major_available`: a newer major release the run declined, because the
+  /// app passes no flag at all.
+  case major
+  /// `unreachable`: GitHub did not answer, so this run can say nothing
+  /// about what is published.
+  case unreachable
+  /// `ok: false`, an answer this app cannot read, or an action word it has
+  /// no case for.
+  case stopped
+}
+
+/// Why a press of Install extension left Claude Desktop with nothing.
+public enum ExtensionMiss: Sendable, Equatable, CaseIterable {
+  /// The release this run found is a major one, so gdoc declined it and
+  /// wrote the extension of nothing.
+  case major
+  /// `ok: false`, or an answer this app cannot read.
+  case stopped
+  /// The run ended and the extension did not reach Desktop. gdoc writes the
+  /// file before it opens it, so the file beside the binary is no proof of
+  /// the handing over, and `extension_opened` is.
+  case handedNothing
+}
+
+/// One run of the header's update that installed nothing, and the moment it
+/// ended. The moment is in the sentence, so a person knows which press they
+/// are reading about.
+public struct UpdateRun: Sendable, Equatable {
+  public let miss: UpdateMiss
+  public let at: Date
+
+  public init(miss: UpdateMiss, at: Date) {
+    self.miss = miss
+    self.at = at
+  }
+}
+
+/// The same for one run of Install extension.
+public struct ExtensionRun: Sendable, Equatable {
+  public let miss: ExtensionMiss
+  public let at: Date
+
+  public init(miss: ExtensionMiss, at: Date) {
+    self.miss = miss
+    self.at = at
+  }
+}
+
 /// Everything about the machine the panel draws beside the record.
 public struct Facts: Sendable, Equatable {
   /// The signed-in address, or nothing where the token carries none.
@@ -224,6 +280,14 @@ public struct Facts: Sendable, Equatable {
   /// a press that did something is owed an answer, and "nothing to do" is
   /// an answer.
   public let updateChecked: Date?
+  /// The last run of the header's update that installed nothing, which is
+  /// the quiet line under the version. It stays until the next press of
+  /// either button and dies with the process: a run is about the minute it
+  /// happened in, and nothing writes one down.
+  public let updateRun: UpdateRun?
+  /// The same for Install extension, on the Claude Desktop row's own quiet
+  /// line.
+  public let extensionRun: ExtensionRun?
 
   public init(
     account: String? = nil,
@@ -245,7 +309,9 @@ public struct Facts: Sendable, Equatable {
     newerRecord: Bool = false,
     unstoppable: Set<String> = [],
     updating: Bool = false,
-    updateChecked: Date? = nil
+    updateChecked: Date? = nil,
+    updateRun: UpdateRun? = nil,
+    extensionRun: ExtensionRun? = nil
   ) {
     self.account = account
     self.auth = auth
@@ -267,6 +333,8 @@ public struct Facts: Sendable, Equatable {
     self.unstoppable = unstoppable
     self.updating = updating
     self.updateChecked = updateChecked
+    self.updateRun = updateRun
+    self.extensionRun = extensionRun
   }
 
   /// What the app knows before it has asked anything: its own version, and

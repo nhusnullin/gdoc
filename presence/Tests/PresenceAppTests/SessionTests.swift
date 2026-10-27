@@ -164,6 +164,54 @@ final class SessionTests: XCTestCase {
     XCTAssertTrue(try argv().contains("update --desktop"), "one run, and the flag it was for")
   }
 
+  /// A run that installed nothing says why, and the sentence stays until
+  /// somebody presses one of the two buttons again.
+  ///
+  /// The fake gdoc here writes the extension and prints no
+  /// `extension_opened`, which is the real one's answer when Claude Desktop
+  /// refused the open: the row keeps its button and gains the one line that
+  /// says what happened. Nothing writes the sentence down, so a launch
+  /// starts with none, and a press of either button takes whichever is
+  /// there off: a line about a run of five minutes ago under a run that is
+  /// starting now reads as a line about this one.
+  func testASentenceAboutARunStaysUntilTheNextPress() throws {
+    try writeTheRecord([])
+    let session = made()
+    answered(session)
+    XCTAssertNil(session.facts.extensionRun, "a launch starts with nothing to say")
+    XCTAssertNil(session.facts.updateRun)
+
+    let saidWhy = expectation(description: "the extension run reached the panel")
+    saidWhy.assertForOverFulfill = false
+    session.start { [weak session] in
+      guard let session, session.facts.extensionRun != nil else { return }
+      saidWhy.fulfill()
+    }
+    session.perform(.installExtension, "desktop")
+    wait(for: [saidWhy], timeout: 20)
+
+    XCTAssertEqual(session.facts.extensionRun?.miss, .handedNothing)
+    let said = try XCTUnwrap(session.model.settings.first { $0.kind == .desktop })
+    XCTAssertEqual(
+      said.actions.map(\.kind), [.installExtension], "the button is still the one thing to do")
+    XCTAssertNotNil(said.quiet, "and the row says what the run did")
+
+    let pressedAgain = expectation(description: "the update run reached the panel")
+    pressedAgain.assertForOverFulfill = false
+    session.start { [weak session] in
+      guard let session, session.updateChecked != nil else { return }
+      pressedAgain.fulfill()
+    }
+    session.perform(.update, "gdoc")
+    wait(for: [pressedAgain], timeout: 20)
+
+    XCTAssertNil(session.facts.extensionRun, "the next press took the sentence off")
+    XCTAssertNil(
+      session.facts.updateRun, "and this run is already on the newest release")
+    let quiet = try XCTUnwrap(session.model.settings.first { $0.kind == .desktop })
+    XCTAssertNil(quiet.quiet, "so the row is back to what it was")
+  }
+
   /// Update and Install extension take one slot. Both argv lists are `gdoc
   /// update` and `--desktop` installs the release it writes the extension
   /// of, so two children at once are two processes staging and renaming one
@@ -1048,6 +1096,125 @@ final class SessionTests: XCTestCase {
     XCTAssertEqual(session.hubScans, 1, "and the folder being watched starts one")
   }
 
+  /// Spotlight is asked nothing at all while the first walk of the override
+  /// is still out, and the walk landing is what asks about the rest.
+  ///
+  /// This is the race `testTheOverrideIsAskedBeforeSpotlight` was failing
+  /// on a slow runner: both routes started together and the override only
+  /// won when its walk finished first. Here the walk is held on a gate of
+  /// this test's own, so the order is the one the rule names and not the one
+  /// the machine happened to run.
+  func testSpotlightWaitsWhileTheOverrideIsBeingRead() throws {
+    try writeTheRecord([
+      line(kind: "end", command: "reply", call: 1, doc: Self.doc, extra: "\"ok\":true")
+    ])
+    let store = Store()
+    let preferences = Preferences(store: store)
+    preferences.hub = "/hub"
+    let search = StatedSearch([Self.doc: ["/notes/spotlight.md"]])
+    let held = HeldScan(HubIndex(hub: "/hub", notes: [Self.doc: "notes/scope.md"]))
+    let session = made(preferences: preferences, noteSearch: search, hubScan: held.scan)
+
+    let drew = expectation(description: "the record reached the panel")
+    drew.assertForOverFulfill = false
+    session.start { if session.drawn.documents != nil { drew.fulfill() } }
+    wait(for: [drew], timeout: 20)
+    XCTAssertNotNil(session.hubFirstScan, "the first walk of the hub is out")
+    XCTAssertEqual(search.asked, [], "so Spotlight has been asked nothing")
+
+    held.open()
+    try waitUntil("the walk landed") { session.facts.pairing[Self.doc] != nil }
+    XCTAssertNil(session.hubFirstScan, "the gate the walk held is open")
+    XCTAssertEqual(
+      session.facts.pairing[Self.doc], "/hub/notes/scope.md",
+      "the pairing is the override's own note")
+    XCTAssertEqual(search.asked, [], "and Spotlight was never asked about it")
+  }
+
+  /// The gate is the first walk of the folder and no later one. A watcher
+  /// rescan holds nothing back, and a walk cancelled by a newer one lets the
+  /// gate go rather than holding Spotlight off for the life of the app.
+  func testOnlyTheFirstScanHoldsSpotlight() throws {
+    try writeTheRecord([])
+    let session = made()
+    session.preferences.hub = "/hub"
+
+    session.readTheHub()
+    XCTAssertEqual(session.hubFirstScan, 1, "the first walk of this folder holds the gate")
+
+    session.rescanIfWatched("/hub")
+    XCTAssertEqual(session.hubWatched, "/hub", "the watcher is on the folder named")
+    XCTAssertEqual(session.hubScans, 2, "a file event asked for a second walk")
+    XCTAssertNil(
+      session.hubFirstScan,
+      "which cancelled the first, so nothing is left to wait for")
+
+    // And the walk that was cancelled landing later takes nothing back.
+    session.tookTheWalk(1, "/hub", HubIndex(hub: "/hub", notes: [:], stop: .cancelled))
+    XCTAssertNil(session.hubFirstScan, "the gate stays open")
+  }
+
+  /// A folder larger than the walk reads is set aside: no pairing, no
+  /// watcher over it, and the finder answers every document the way it does
+  /// on a machine with no override at all.
+  func testAHubOverTheCeilingIsSetAsideAndSpotlightAnswers() throws {
+    try writeTheRecord([
+      line(kind: "end", command: "reply", call: 1, doc: Self.doc, extra: "\"ok\":true")
+    ])
+    let store = Store()
+    let preferences = Preferences(store: store)
+    preferences.hub = "/hub"
+    let search = StatedSearch([Self.doc: ["/notes/spotlight.md"]])
+    let over = HubIndex(hub: "/hub", notes: [:], stop: .overTheCeiling)
+    let paired = note(pairing: Self.doc)
+    let session = made(
+      preferences: preferences, noteSearch: search, noteRead: { _ in paired },
+      hubScan: { _ in over })
+    answered(session)
+
+    try waitUntil("the walk came back over the ceiling") {
+      session.hubFirstScan == nil && session.index.notes.isEmpty
+    }
+    XCTAssertEqual(session.index, HubIndex.empty, "the override pairs nothing")
+    XCTAssertNil(session.hubWatched, "and no watcher is left on that folder")
+    XCTAssertNil(session.hubWatcher)
+
+    try waitUntil("the finder answered instead") { session.facts.pairing[Self.doc] != nil }
+    XCTAssertEqual(search.asked, [Self.doc], "the one document on the screen, once")
+    XCTAssertEqual(session.facts.pairing[Self.doc], "/notes/spotlight.md")
+  }
+
+  /// One walk of the hub at a time. A newer one cancels the walk before it,
+  /// and the cancelled walk's answer is nobody's.
+  ///
+  /// Every burst of file events in a vault asked for its own full walk, and
+  /// nothing stopped the one before it: a vault syncing for a minute left a
+  /// pile of walks on the utility queue, each of them reading files whose
+  /// answer was already owed to a newer walk.
+  func testOnlyOneWalkOfTheHubRunsAtATime() throws {
+    try writeTheRecord([])
+    let first = HeldScan(HubIndex(hub: "/hub", notes: [Self.doc: "first.md"]))
+    let session = made(hubScan: first.scan)
+    session.preferences.hub = "/hub"
+
+    session.readTheHub()
+    try waitUntil("the first walk started") { first.started }
+
+    session.rescanIfWatched("/hub")
+    XCTAssertEqual(session.hubScans, 2, "a second walk was asked for")
+    first.open()
+    try waitUntil("the first walk let go") { first.wasCancelled }
+    XCTAssertTrue(first.wasCancelled, "the walk before it was asked to stop")
+    XCTAssertEqual(
+      session.index, HubIndex.empty, "and its pairing never reached the session")
+
+    // Which is the rule stated over the one function that takes an answer.
+    XCTAssertFalse(
+      session.tookTheScan(2, HubIndex(hub: "/hub", notes: [Self.doc: "x.md"], stop: .cancelled)),
+      "a walk that let go carries no pairing, whatever its number says")
+    XCTAssertEqual(session.index, HubIndex.empty)
+  }
+
   /// A hub scan that comes back after a newer one is dropped.
   ///
   /// Every burst of file events in the hub starts its own walk, off the main
@@ -1107,6 +1274,7 @@ final class SessionTests: XCTestCase {
     loginService: LoginService = FakeRegister(),
     noteSearch: NoteSearch = StatedSearch(),
     noteRead: @escaping @Sendable (String) -> String = { _ in "" },
+    hubScan: @escaping @Sendable (String) -> HubIndex = { HubIndex.scan(hub: $0) },
     alive: @escaping (Int32) -> Bool = { _ in false },
     quit: @escaping () -> Void = {},
     clock: @escaping () -> Date = Date.init
@@ -1121,6 +1289,7 @@ final class SessionTests: XCTestCase {
       loginService: loginService,
       noteSearch: noteSearch,
       noteRead: noteRead,
+      hubScan: hubScan,
       environment: ["HOME": root.path, "PATH": "/usr/bin:/bin"],
       alive: alive,
       clock: clock,
@@ -1334,5 +1503,55 @@ private final class Tally {
   func bump() -> Bool {
     count += 1
     return true
+  }
+}
+
+/// A walk of the hub this test opens and closes by hand.
+///
+/// The real walk is a file system and a clock, and the race it was in is the
+/// thing under test: so the walk here waits on a gate until the test opens
+/// it, and says afterwards whether it was asked to let go while it waited.
+/// It runs on the session's own detached task, which is why `Task.isCancelled`
+/// is the question it asks.
+final class HeldScan: @unchecked Sendable {
+  private let gate = DispatchSemaphore(value: 0)
+  private let lock = NSLock()
+  private let answer: HubIndex
+  private var walks = 0
+  private var cancelled = false
+
+  init(_ answer: HubIndex) {
+    self.answer = answer
+  }
+
+  /// Whether a walk has reached the gate, so a test knows the session got
+  /// that far before it does anything else.
+  var started: Bool {
+    lock.lock()
+    defer { lock.unlock() }
+    return walks > 0
+  }
+
+  /// Whether a walk was cancelled while it waited.
+  var wasCancelled: Bool {
+    lock.lock()
+    defer { lock.unlock() }
+    return cancelled
+  }
+
+  /// Let one waiting walk through.
+  func open() { gate.signal() }
+
+  /// The closure the session is handed.
+  var scan: @Sendable (String) -> HubIndex {
+    { [self] _ in
+      lock.withLock { walks += 1 }
+      gate.wait()
+      if Task.isCancelled {
+        lock.withLock { cancelled = true }
+        return HubIndex(hub: answer.hub, notes: [:], stop: .cancelled)
+      }
+      return answer
+    }
   }
 }

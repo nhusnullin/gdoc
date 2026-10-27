@@ -183,6 +183,7 @@ final class BarTests: XCTestCase {
 
     let header = PanelModel.header(
       facts: launching, ui: UIState(), now: Date(timeIntervalSince1970: 0),
+      calendar: Calendar(identifier: .gregorian),
       stopping: PanelModel.Stopping(live: 0, holds: 0))
     XCTAssertTrue(header.versionWaiting, "the ring says the question is out")
     XCTAssertNil(header.version, "and no version is claimed")
@@ -191,6 +192,7 @@ final class BarTests: XCTestCase {
     let missing = Facts(auth: .ok, versions: Versions(app: "2.14.0"))
     let notFound = PanelModel.header(
       facts: missing, ui: UIState(), now: Date(timeIntervalSince1970: 0),
+      calendar: Calendar(identifier: .gregorian),
       stopping: PanelModel.Stopping(live: 0, holds: 0))
     XCTAssertEqual(notFound.version, "not found", "no path is the only not found there is")
     XCTAssertEqual(notFound.versionTone, .bad)

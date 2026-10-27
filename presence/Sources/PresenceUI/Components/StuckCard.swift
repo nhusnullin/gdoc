@@ -155,13 +155,17 @@ public struct StuckCard: View {
   /// The actions in the order they are drawn, the cross last where there is
   /// one. Built once so a test reads the same list the card draws.
   public let actions: [IconAction]
+  /// The words the title carries where the card itself opens the document.
+  public let titleTip: String?
 
   @Environment(\.colorScheme) private var scheme
 
   public init(
-    model: StuckCardModel, actions: [IconAction], onDismiss: (() -> Void)? = nil
+    model: StuckCardModel, actions: [IconAction], titleTip: String? = nil,
+    onDismiss: (() -> Void)? = nil
   ) {
     self.model = model
+    self.titleTip = titleTip
     var drawn = actions
     if let onDismiss {
       drawn.append(IconAction(.xmark, tip: Self.dismissTip, perform: onDismiss))
@@ -194,6 +198,7 @@ public struct StuckCard: View {
         line(title[0], column: Self.column(line: 0, actions: actions.count), in: palette)
           .frame(maxWidth: .infinity, alignment: .leading)
           .metricProbe("stuck.title")
+          .tooltip(titleTip ?? "", align: .leading)
         HStack(spacing: Grid.actionGap) {
           ForEach(actions) { action in
             ActionButton(

@@ -209,9 +209,9 @@ branch.
 - Delete: `docs/backlog/the-override-before-spotlight-test-is-flaky.md`,
   `docs/backlog/a-chosen-hub-is-walked-with-no-bound.md`
 
-- [ ] the scan is injected into `Session` (a closure from hub path to
+- [x] the scan is injected into `Session` (a closure from hub path to
       `HubIndex`, `HubIndex.scan` by default), so a test can hold it
-- [ ] while the override's scan for the current hub has not landed,
+- [x] while the override's scan for the current hub has not landed,
       `lookUpTheNotes` asks Spotlight about nothing; the landing scan's
       recompose asks for what the override did not pair. Test
       `testSpotlightWaitsWhileTheOverrideIsBeingRead`: the scan held on a
@@ -222,7 +222,7 @@ branch.
       Spotlight back again (`testOnlyTheFirstScanHoldsSpotlight`).
       `testTheOverrideIsAskedBeforeSpotlight` passes 50 runs in a row
       (`swift test --filter` in a loop, once, not kept as a test)
-- [ ] `HubIndex.scan` visits at most 20,000 entries, dot folders not
+- [x] `HubIndex.scan` visits at most 20,000 entries, dot folders not
       counted. Over it the walk stops and answers an index marked over the
       ceiling, with no notes; the session then sets the override aside for
       that hub, stops its watcher and lets the finder answer. The number is
@@ -230,12 +230,12 @@ branch.
       Tests over a fixture tree built with a small ceiling handed in:
       under it every note is found, over it nothing is and the index says
       so, and the session asks Spotlight and holds no watcher
-- [ ] one walk at a time: `rescanTheHub` cancels the walk before it, and
+- [x] one walk at a time: `rescanTheHub` cancels the walk before it, and
       `scan` checks for cancellation between entries; a test holds the
       first scan, starts a second, and reads that the first stopped and its
       answer was never taken
-- [ ] `git rm` both backlog files
-- [ ] `make app-lint`, `make app-test`
+- [x] `git rm` both backlog files
+- [x] `make app-lint`, `make app-test`
 
 ### Task 2: a publish that stopped in the render keeps the note's name
 
@@ -250,13 +250,13 @@ branch.
   `stillYourCall`), `presence/Tests/PresenceUITests/RenderTests.swift`
 - Delete: `docs/backlog/a-publish-that-stopped-in-the-render-has-no-name.md`
 
-- [ ] Go, test first: `presence.Named(ctx, title)` keeps a title on the run
+- [x] Go, test first: `presence.Named(ctx, title)` keeps a title on the run
       that is on the context, safe on a nil run and a context with no run,
       capped at the same 200 runes. `End` writes it only where `lift` found
       no title in the answer: `TestANamedTitleIsWrittenOnlyWhereTheAnswerCarriesNone`
       and `TestANamedTitleOutsideARunWritesNothing`. No new field:
       `TestTheEventCarriesOnlyItsListedFields` is unchanged and green
-- [ ] `cmdPublish` calls it once, after the render has read the cover and
+- [x] `cmdPublish` calls it once, after the render has read the cover and
       before it returns, with the note's cover title. If `renderNote`
       returns no cover title on a failure past `cover.Read`, it sets the
       title as soon as `cover.Read` succeeds and nothing else in its
@@ -264,24 +264,24 @@ branch.
       note with an `svg` picture, the r2 case, reads `title` on the end
       line. `TestAPublishWhoseCoverCannotBeReadWritesNoTitle` holds the other
       side
-- [ ] the one caller is held in `go/boundary/presence_test.go` as
+- [x] the one caller is held in `go/boundary/presence_test.go` as
       `TestNamedHasOnlyPublishAsCaller`, using `callsOf` the way
       `TestStepHasOnlyPublishAsCaller` does (the trust guardian's condition 1)
-- [ ] `renderNote` sets `doc.Title` right after `cover.Read`, and the failure
+- [x] `renderNote` sets `doc.Title` right after `cover.Read`, and the failure
       envelopes of `build` and `publish` stay byte for byte as today
       (`buildFailed`, `publish.go`). `TestAFailedBuildStillPrintsTheLogoBlock`
       stays green and unedited (the trust guardian's condition 2)
-- [ ] `go/internal/presence/doc.go`'s paragraph on the one document word
+- [x] `go/internal/presence/doc.go`'s paragraph on the one document word
       says the end's title is the answer's, or the name the run was given
       where the answer has none, and names the two tests
-- [ ] Swift: r2's fixture puts the title on the end line, as gdoc now writes
+- [x] Swift: r2's fixture puts the title on the end line, as gdoc now writes
       it, and the card reads "Publish stopped · Chapter 4"; the caption says
       so; the last line of `stillYourCall` goes.
       `testTheIndexOpensWithWhatIsStillYourCall` changes in two places: the
       count, 8 today, as a new literal, and the subject "nameless", which it
       no longer asserts
-- [ ] `git rm` the backlog file
-- [ ] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make vet`,
+- [x] `git rm` the backlog file
+- [x] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`, `make vet`,
       `make app-lint`, `make app-test`
 
 ### Task 3: the name keeps its room behind a verb
@@ -293,21 +293,21 @@ branch.
   `presence/Tests/PresenceUITests/RowTests.swift`, `CardTests.swift`
 - Delete: `docs/backlog/a-verb-prefix-eats-the-document-name-in-a-row.md`
 
-- [ ] the item's first shape: a title is handed over as two pieces, the
+- [x] the item's first shape: a title is handed over as two pieces, the
       prefix ("Live", "Live stopped", "Publishing") and the name. The prefix
       and its separator are drawn whole, and the eight-character floor and
       the middle cut are measured on the name alone, in the room the prefix
       leaves. A title with no prefix draws exactly as today
-- [ ] `LiveRowModel` and `JobCardModel` carry the two pieces; the live row
+- [x] `LiveRowModel` and `JobCardModel` carry the two pieces; the live row
       and the job card draw through `MiddleTitle`, so the job card's name
       is cut in the middle like every other name and not at its tail
-- [ ] tests with literals: "Live stopped" in front of
+- [x] tests with literals: "Live stopped" in front of
       "Ch 5. Commercial Model v0.1" shows at least eight characters of the
       name's head and keeps " v0.1"; the job card with the same name does
       the same; a name with no prefix measures as it did
       (`testAPrefixTakesItsRoomAndTheFloorCountsTheName`)
-- [ ] `git rm` the backlog file
-- [ ] `make app-lint`, `make app-test`
+- [x] `git rm` the backlog file
+- [x] `make app-lint`, `make app-test`
 
 ### Task 4: the mark means one thing, a run that failed
 
@@ -319,21 +319,21 @@ branch.
   caption that names the check or the dot on a DOCUMENTS row)
 - Delete: `docs/backlog/the-documents-mark-says-nothing-a-person-can-read.md`
 
-- [ ] a DOCUMENTS row draws the red exclamation when its last run ended
+- [x] a DOCUMENTS row draws the red exclamation when its last run ended
       `ok: false`, and the blank glyph in every other state: done, live
       stopped, live, hold, running, unknown and pinned only. The column
       stays, so every title starts at one edge. A table test over the eight
       states (`testADocumentRowIsMarkedOnlyWhenItsLastRunFailed`)
-- [ ] a failed run's sub-line names the command and says failed, "reply
+- [x] a failed run's sub-line names the command and says failed, "reply
       failed Tue", where it said "stopped Tue"; a stopped watch keeps "live
       stopped 12:26"; a test states both lines and that neither contains
       the other's word (`testAFailedRunDoesNotReadAsAStoppedOne`)
-- [ ] `verified: false` stays a run that worked: no mark, and the word it
+- [x] `verified: false` stays a run that worked: no mark, and the word it
       has today
-- [ ] e1's last five carry one failed reply, so a render shows the one mark
+- [x] e1's last five carry one failed reply, so a render shows the one mark
       the list can have; the caption says what the mark means
-- [ ] `git rm` the backlog file
-- [ ] `make app-lint`, `make app-test`
+- [x] `git rm` the backlog file
+- [x] `make app-lint`, `make app-test`
 
 ### Task 5: a press on a row opens the document
 
@@ -346,30 +346,30 @@ branch.
 - Delete: `docs/backlog/a-live-row-has-no-link-to-its-document.md`,
   `docs/backlog/the-hub-pickers-modal-closes-the-panel.md`
 
-- [ ] every `NowItem` carries the document it opens: the hold's, the stuck
+- [x] every `NowItem` carries the document it opens: the hold's, the stuck
       write's, the job's and the watch's id, and nothing where the id is
       missing or not Drive-shaped (`LinkLine.isDocumentID`). A publish
       still running has none. A table test over the four shapes with and
       without an id (`testEveryNowRowThatNamesADocumentOpensIt`)
-- [ ] the whole row or card is the click target, as the lead decided, and
+- [x] the whole row or card is the click target, as the lead decided, and
       the press leaves as `PanelActions.perform(.openDoc, id)`, the kind a
       DOCUMENTS row's first icon sends, so `Session.perform` reaches
       `Opener.openDocument` and nothing new asks the system. The title area
       carries the Google Docs icon's tooltip. A hold card that is asking
       its question opens nothing
-- [ ] the controls on a row keep their own press: Stop sends `.stopLive`
+- [x] the controls on a row keep their own press: Stop sends `.stopLive`
       alone and the row sends `.openDoc` alone. A test reads the two
       closures the view is built with through a recording `PanelActions`
       (`testTheRowOpensAndOnlyStopStops`). No offscreen click test: that
       test and Nail's hand check after the run hold the behaviour.
       Stop's state, ring and process check are unchanged and it gains no
       confirm
-- [ ] `docs/backlog/the-hub-pickers-modal-closes-the-panel.md` is closed with
+- [x] `docs/backlog/the-hub-pickers-modal-closes-the-panel.md` is closed with
       no code: the picker went at the third look and
       `testTheSystemIsAskedOnlyThroughTheOpenerAndTheRelauncher` refuses
       `NSOpenPanel`. The commit message names that test
-- [ ] `git rm` the two backlog files
-- [ ] `make app-lint`, `make app-test`
+- [x] `git rm` the two backlog files
+- [x] `make app-lint`, `make app-test`
 
 ### Task 6: the held press opens the system menu, and the panel stays
 
@@ -380,18 +380,18 @@ branch.
   `presence/Tests/PresenceCoreTests/SourceRulesTests.swift`
 - Delete: `docs/backlog/the-held-press-may-never-reach-a-rows-menu.md`
 
-- [ ] the right-click stays SwiftUI's `.contextMenu`. Only the held press
+- [x] the right-click stays SwiftUI's `.contextMenu`. Only the held press
       changes: it builds an `NSMenu` from the same `MenuItemModel`s the
       `.contextMenu` draws, and pops it up with `popUp(positioning:at:in:)`
       from a `MenuAnchor`, an `NSViewRepresentable` placed behind the row's
       title area. The anchor's `hitTest` returns nil, so it never catches a
       click meant for the row or for its icons
-- [ ] no second window exists to take key. The gesture is on the title area and not
+- [x] no second window exists to take key. The gesture is on the title area and not
       over the five icons. A source rule: no `.popover(` under
       `Sources/PresenceUI`. A test through an injected menu presenter: the
       held press hands it the model's words and nothing else
-- [ ] `git rm` the backlog file
-- [ ] `make app-lint`, `make app-test`
+- [x] `git rm` the backlog file
+- [x] `make app-lint`, `make app-test`
 
 ### Task 7: the update buttons say what happened
 
@@ -406,35 +406,35 @@ branch.
   (their captions)
 - Delete: `docs/backlog/neither-update-button-says-anything-when-the-run-did-nothing.md`
 
-- [ ] read `go/cmd/gdoc/update.go` and `go/internal/update/policy.go` first
+- [x] read `go/cmd/gdoc/update.go` and `go/internal/update/policy.go` first
       and confirm the `action` word each case prints, including the
       `--desktop` run whose newer release is a major one. The panel tells
       cases apart by `ok` and `action` alone and never by a warning or an
       error sentence. A case that cannot be told apart that way falls to
       the general sentence, and the commit says which
-- [ ] `installExtension` hands back a standing like `update` does, and
+- [x] `installExtension` hands back a standing like `update` does, and
       `Facts` carries the last run of each button with its moment
-- [ ] the header's quiet line under the version says, for the update:
+- [x] the header's quiet line under the version says, for the update:
       `major_available`, "Only a major version is newer. gdoc update --major
       installs it."; `unreachable`, "GitHub did not answer at 14:02. Nothing
       changed."; `ok: false` or an answer the app cannot read, "The update
       stopped at 14:02. gdoc update in a terminal says why." `up_to_date`
       keeps the one-second check and adds no line; `updated` relaunches as
       today
-- [ ] the Claude Desktop row's quiet line says, for the extension: the major
+- [x] the Claude Desktop row's quiet line says, for the extension: the major
       case, "Update gdoc with --major first, then install the extension.";
       `ok: false`, "The install stopped at 14:02. gdoc update --desktop in a
       terminal says why."; any other run that handed nothing over, "Claude
       Desktop was not handed the extension at 14:02."
-- [ ] every sentence is a fixed string with the clock in it, none carries
+- [x] every sentence is a fixed string with the clock in it, none carries
       the child's own words, and each fits two lines at 320 pt; a sentence
       stays until the next press of either button or the next launch of
       the app. A table test over every case and both rows
       (`testEachRunThatInstalledNothingSaysWhyInAFixedSentence`)
-- [ ] r8 carries the unreachable update and e6 the extension's major case;
+- [x] r8 carries the unreachable update and e6 the extension's major case;
       their captions say so
-- [ ] `git rm` the backlog file
-- [ ] `make app-lint`, `make app-test`
+- [x] `git rm` the backlog file
+- [x] `make app-lint`, `make app-test`
 
 ### Task 8: the renders, once
 
@@ -442,15 +442,15 @@ branch.
 - Modify: `presence/Tests/PresenceUITests/Scenes.swift` (captions only, if
   the check below finds one stale)
 
-- [ ] read every caption in `Scenes.swift` as text against Tasks 2 to 7,
+- [x] read every caption in `Scenes.swift` as text against Tasks 2 to 7,
       and fix any caption that describes a drawing this plan changed. The
       eighteen scenes stay eighteen
-- [ ] `rm -rf "$HOME/gdoc-m31-board/shots"`, then
+- [x] `rm -rf "$HOME/gdoc-m31-board/shots"`, then
       `PRESENCE_SHOTS="$HOME/gdoc-m31-board/shots" make app-test`, once
-- [ ] check with `ls` and nothing else: each of the 18 scene ids has its
+- [x] check with `ls` and nothing else: each of the 18 scene ids has its
       `<id>-dark.png`, and `index.html` is there. The folder also holds the
       `-bar-` images and the sheet pages, which are not counted. Open no PNG. The design reviewer reads them after the run
-- [ ] the commit message names the folder as an absolute path, which the
+- [x] the commit message names the folder as an absolute path, which the
       lead hands to `gdoc-design-reviewer`
 
 ### Task 9: Verify acceptance criteria
@@ -458,18 +458,18 @@ branch.
 **Files:**
 - Modify: this plan
 
-- [ ] every row of the Acceptance table at the foot of this plan names a
+- [x] every row of the Acceptance table at the foot of this plan names a
       test that exists and passes; a test a task named differently is
       renamed here, not in the code
-- [ ] `git diff --name-only main...HEAD`: nothing under `go/` outside
+- [x] `git diff --name-only main...HEAD`: nothing under `go/` outside
       `go/internal/presence/`, `go/cmd/gdoc/` (publish, `build.go`'s
       `renderNote` and their tests) and `go/boundary/presence_test.go`,
       `CLAUDE.md` and `docs/v2/` not in the list, and the nine backlog files
       of this plan deleted
-- [ ] `grep -rn "popover(" presence/Sources` prints nothing;
+- [x] `grep -rn "popover(" presence/Sources` prints nothing;
       `grep -rn "NSWorkspace\|NSPasteboard" presence/Sources` names
       `Opener.swift` and `Relauncher.swift` only
-- [ ] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
+- [x] `make vet`, `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test`,
       `make app-lint`, `make app-test`, `make app`
 
 ### Task 10: [Final] Update documentation
@@ -478,20 +478,20 @@ branch.
 - Modify: `docs/guide/presence.md`,
   `docs/design/2026-10-17-presence-design-principles.md`; move this plan
 
-- [ ] the guide: "### Now", every row that names a document opens it on a
+- [x] the guide: "### Now", every row that names a document opens it on a
       click, and Stop is its own control; "### Documents", the mark is a
       failed last run and nothing else, the right-click and the held press
       open one menu; "### Settings" and "### Update, and Install extension",
       the sentences a run that installed nothing leaves; "## The note
       beside the document", the override's ceiling and what happens over it;
       "## The file, and what is never in it", the title on a publish's end
-- [ ] the principles file gains "Amendments, 2026-10-26, the fourth look":
+- [x] the principles file gains "Amendments, 2026-10-26, the fourth look":
       the mark means a failed run; the eight-character floor counts the
       name and not the verb in front of it; the held press is the system
       menu and never a second window
-- [ ] `CLAUDE.md` untouched
-- [ ] move this plan to `docs/plans/completed/`
-- [ ] `make app-lint`, `make app-test`
+- [x] `CLAUDE.md` untouched
+- [x] move this plan to `docs/plans/completed/`
+- [x] `make app-lint`, `make app-test`
 
 ## Acceptance
 
@@ -506,10 +506,10 @@ row's test is the one that fails if its answer is taken away.
 | a failed run must not look like a stopped one | "reply failed Tue" against "live stopped 12:26" | `StateTests.testAFailedRunDoesNotReadAsAStoppedOne` |
 | names survive a verb | the floor and the cut are measured on the name | `RowTests.testAPrefixTakesItsRoomAndTheFloorCountsTheName` |
 | names survive a publish that stopped in the render | the end carries the note's cover title | `TestAPublishThatStoppedInTheRenderNamesTheNote`, `TestANamedTitleIsWrittenOnlyWhereTheAnswerCarriesNone`, `TestNamedHasOnlyPublishAsCaller` |
-| the update buttons say what happened | one fixed sentence with its moment per case, on the row of the button | `StateTests.testEachRunThatInstalledNothingSaysWhyInAFixedSentence`, `UpdateActionTests` over the standings |
-| menus keep the panel open | the held press is the system menu from the row's own view; no popover in the source | `SourceRulesTests` popover rule, the menu presenter test |
+| the update buttons say what happened | one fixed sentence with its moment per case, on the row of the button | `StateTests.testEachRunThatInstalledNothingSaysWhyInAFixedSentence`, `UpdateActionTests.testTheRunIsReadByOkAndTheActionWordAlone`, `UpdateActionTests.testARunThatDidSomethingWritesNoSentence` |
+| menus keep the panel open | the held press is the system menu from the row's own view; no popover in the source | `SourceRulesTests.testNoViewOpensASecondWindow`, `CardTests.testTheHeldPressOpensTheSystemMenuWithTheRowsOwnWords` |
 | the folder picker keeps the panel open | there is no picker since the third look | `SourceRulesTests.testTheSystemIsAskedOnlyThroughTheOpenerAndTheRelauncher` |
-| a large hub folder cannot slow the Mac | 20,000 entries at most, one walk at a time, Spotlight over the ceiling | `HubIndexTests` ceiling test, `SessionTests` cancel and over-ceiling tests |
+| a large hub folder cannot slow the Mac | 20,000 entries at most, one walk at a time, Spotlight over the ceiling | `HubIndexTests.testAHubOverTheCeilingIsWalkedNoFurther`, `SessionTests.testOnlyOneWalkOfTheHubRunsAtATime`, `SessionTests.testAHubOverTheCeilingIsSetAsideAndSpotlightAnswers` |
 | the flaky panel test is fixed | Spotlight waits for the override's scan | `SessionTests.testSpotlightWaitsWhileTheOverrideIsBeingRead` |
 
 ## Post-Completion

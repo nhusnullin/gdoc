@@ -99,6 +99,40 @@ public enum Sentences {
   /// third look, and there is no hub to name.
   public static let noNoteYet = "no note"
 
+  /// What the header's quiet line says about an update that installed
+  /// nothing, and what the Claude Desktop row says about an install that
+  /// handed nothing over.
+  ///
+  /// Each is a fixed string with the clock of the run in it, and none of
+  /// them carries a word the child wrote: the command's own warning is a
+  /// paragraph about this machine, and the one thing a person can do with
+  /// it is read it in a terminal, which is what two of these say.
+  /// StateTests.testEachRunThatInstalledNothingSaysWhyInAFixedSentence.
+  public static func updateMiss(_ run: UpdateRun, calendar: Calendar) -> String {
+    let clock = Words.clock(run.at, calendar: calendar)
+    switch run.miss {
+    case .major:
+      return "Only a major version is newer. gdoc update --major installs it."
+    case .unreachable:
+      return "GitHub did not answer at \(clock). Nothing changed."
+    case .stopped:
+      return "The update stopped at \(clock). gdoc update in a terminal says why."
+    }
+  }
+
+  /// The same for Install extension.
+  public static func extensionMiss(_ run: ExtensionRun, calendar: Calendar) -> String {
+    let clock = Words.clock(run.at, calendar: calendar)
+    switch run.miss {
+    case .major:
+      return "Nothing was installed at \(clock). It needs gdoc update --major first."
+    case .stopped:
+      return "The install stopped at \(clock). gdoc update --desktop in a terminal says why."
+    case .handedNothing:
+      return "Claude Desktop was not handed the extension at \(clock)."
+    }
+  }
+
   /// A path as a row writes it: with the home directory as a tilde, or
   /// whole where it is somewhere else.
   ///
@@ -236,8 +270,10 @@ struct Phrases {
   /// place in the list, which is a position and not a forecast.
   func jobCard(_ run: NowRun) -> JobCardModel {
     let place = run.index.flatMap { index in run.count.map { "step \(index) of \($0)" } }
+    let title = titled(Words.running(run.command) ?? run.command, run.title)
     return JobCardModel(
-      title: sentence([Words.running(run.command) ?? run.command, run.title]),
+      prefix: title.prefix,
+      name: title.name,
       sub: sentence([place, "started \(clock(run.started))", Words.via(run.via)]),
       progress: run.progress,
       steps: steps(run))
@@ -298,8 +334,11 @@ struct Phrases {
     // DOCUMENTS uses for it. The row kept opening with "Live" over a
     // sub-line that said the watch had stopped:
     // testE9SaysTheWatchIsStoppedInEverySectionAndDrawsNoStop.
+    let title = titled(
+      session.isOpen ? "Live" : "Live stopped", session.title ?? session.doc)
     return LiveRowModel(
-      title: sentence([session.isOpen ? "Live" : "Live stopped", session.title ?? session.doc]),
+      prefix: title.prefix,
+      name: title.name,
       sub: sentence(parts),
       stopped: !session.isOpen)
   }
@@ -339,7 +378,7 @@ struct Phrases {
     case .liveStopped: return "live stopped \(clockInSentence(row.at))"
     case .done:
       return "\(Words.verb(row.command)?.past ?? row.command) \(clockInSentence(row.at))"
-    case .failed: return "stopped \(clockInSentence(row.at))"
+    case .failed: return "\(Words.failure(row.command)) \(clockInSentence(row.at))"
     case .unknown: return "outcome unknown · \(clockInSentence(row.at))"
     case .pinnedOnly: return nil
     }
@@ -364,5 +403,17 @@ struct Phrases {
 
   func sentence(_ parts: [String?]) -> String {
     parts.compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: Sentences.separator)
+  }
+
+  /// A row's title as the two pieces it is drawn in: the verb in front, and
+  /// the document's name.
+  ///
+  /// The verb is drawn whole and the name is measured on its own, so a verb
+  /// as long as "Live stopped" does not eat the name behind it. Where the
+  /// record names no document the verb is the whole title and there is no
+  /// prefix: a line of one word is measured as any other line of one word.
+  func titled(_ verb: String, _ name: String?) -> (prefix: String?, name: String) {
+    guard let name, !name.isEmpty else { return (nil, verb) }
+    return (verb, name)
   }
 }

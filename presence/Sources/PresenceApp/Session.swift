@@ -69,6 +69,10 @@ public final class Session {
   let relauncher: Relauncher?
   let tail: LogTail
   let finder: NoteFinder
+  /// How the hub is read. It is a closure so a test can hold one walk open
+  /// on a gate of its own and watch what the rest of the session does while
+  /// it is out: testSpotlightWaitsWhileTheOverrideIsBeingRead.
+  let hubScan: @Sendable (String) -> HubIndex
   let watcher: BundleWatcher?
   let alive: (Int32) -> Bool
   let clock: () -> Date
@@ -116,6 +120,18 @@ public final class Session {
   /// Which hub scan was started last. A scan that comes back and is not it
   /// is an older walk of the folder, and it is dropped.
   var hubScans = 0
+  /// The walk that is out, so the next one cancels it: one walk of one
+  /// folder at a time, and never a pile of them on the utility queue:
+  /// testOnlyOneWalkOfTheHubRunsAtATime.
+  var hubWalk: Task<Void, Never>?
+  /// The number of the first walk of the hub now set, while it is still out.
+  /// Spotlight is asked nothing while it is: the override is read first, and
+  /// a query for a document it is about to pair is a query for an answer
+  /// nobody reads. It is the first walk only, because a watcher rescan is
+  /// the folder being read again and the panel is already drawing it:
+  /// testSpotlightWaitsWhileTheOverrideIsBeingRead and
+  /// testOnlyTheFirstScanHoldsSpotlight.
+  var hubFirstScan: Int?
 
   /// Whether the record has held a line from a gdoc at a schema this app does
   /// not read. It is sticky: the line is skipped and never kept, so the one
@@ -147,6 +163,13 @@ public final class Session {
   /// to Claude Desktop. True until a run says otherwise, because the file
   /// beside the binary is what answers before any run of this app's.
   var extensionHandedOver = true
+  /// The last run of either button that installed nothing, as the quiet
+  /// line it writes. Each stays until the next press of either button, and
+  /// neither is written down: a run is about the minute it happened in, so
+  /// a launch starts with nothing to say:
+  /// testASentenceAboutARunStaysUntilTheNextPress.
+  var updateRun: UpdateRun?
+  var extensionRun: ExtensionRun?
 
   /// The menu bar's check, and whether what the tail has delivered so far is
   /// the file as it stood at launch. Every line in it is a replay, and a
@@ -177,6 +200,7 @@ public final class Session {
     noteRead: @escaping @Sendable (String) -> String = {
       HubIndex.head(of: URL(fileURLWithPath: $0))
     },
+    hubScan: @escaping @Sendable (String) -> HubIndex = { HubIndex.scan(hub: $0) },
     environment: [String: String] = ProcessInfo.processInfo.environment,
     alive: @escaping (Int32) -> Bool = Liveness.isAlive,
     clock: @escaping () -> Date = Date.init,
@@ -214,6 +238,7 @@ public final class Session {
     let forgotten = NoteForgotten()
     self.finder = NoteFinder(
       search: noteSearch, read: noteRead, forgot: { [forgotten] id in forgotten.tell(id) })
+    self.hubScan = hubScan
     self.watcher = places.bundle.map { BundleWatcher(bundle: $0, running: places.version) }
     self.alive = alive
     self.clock = clock
@@ -265,6 +290,8 @@ public final class Session {
     bannerTimer = nil
     tail.stop()
     watcher?.stop()
+    hubWalk?.cancel()
+    hubWalk = nil
     stopWatchingTheHub()
   }
 
@@ -444,7 +471,9 @@ public final class Session {
       // The press and not the actor's standing, so the extension's own run
       // closes both buttons too: the actor moves no version for that one.
       updating: installing,
-      updateChecked: updateChecked)
+      updateChecked: updateChecked,
+      updateRun: updateRun,
+      extensionRun: extensionRun)
   }
 
   /// Whether gdoc has ever written the Claude Desktop extension here. The
@@ -589,10 +618,13 @@ public final class Session {
   func readTheHub() {
     guard let hub = preferences.hub, !hub.isEmpty else {
       index = HubIndex.empty
+      hubWalk?.cancel()
+      hubWalk = nil
+      hubFirstScan = nil
       stopWatchingTheHub()
       return
     }
-    rescanTheHub(hub)
+    rescanTheHub(hub, holdsSpotlight: true)
     // The Hub row made a second choice reachable, and a watcher holds the
     // folder it was made for: left in place it would rescan the folder
     // nobody chose on its next file event, and that scan is the newest one,
@@ -627,20 +659,58 @@ public final class Session {
   /// testAScanFromTheWatcherOnTheOldHubIsDropped.
   func rescanIfWatched(_ hub: String) {
     guard hubWatched == hub else { return }
-    rescanTheHub(hub)
+    rescanTheHub(hub, holdsSpotlight: false)
   }
 
-  /// One scan, numbered, because only the newest of them may stand.
-  private func rescanTheHub(_ hub: String) {
+  /// One scan, numbered, because only the newest of them may stand, and the
+  /// walk before it let go: a burst of file events in a vault would
+  /// otherwise pile full walks up on the utility queue, each of them doing
+  /// work whose answer is already owed to a newer one.
+  ///
+  /// `holdsSpotlight` is the first walk of a folder nobody has read yet. A
+  /// watcher rescan is false, and it also lets a held gate go: that walk was
+  /// cancelled above, so its answer is never landing, and a gate waiting on
+  /// it would hold Spotlight off for the life of the app.
+  private func rescanTheHub(_ hub: String, holdsSpotlight: Bool) {
     hubScans += 1
     let scan = hubScans
-    Task.detached(priority: .utility) { [weak self] in
-      let scanned = HubIndex.scan(hub: hub)
+    hubWalk?.cancel()
+    hubFirstScan = holdsSpotlight ? scan : nil
+    let walk = hubScan
+    hubWalk = Task.detached(priority: .utility) { [weak self] in
+      let scanned = walk(hub)
       await MainActor.run { [weak self] in
-        guard let self, self.tookTheScan(scan, scanned) else { return }
-        Task { await self.recompose() }
+        self?.tookTheWalk(scan, hub, scanned)
       }
     }
+  }
+
+  /// One walk back on the main actor: the gate it may have held goes, the
+  /// pairing is taken where it is still the newest asked for, and a folder
+  /// over the ceiling is set aside.
+  func tookTheWalk(_ scan: Int, _ hub: String, _ scanned: HubIndex) {
+    let released = hubFirstScan == scan
+    if released { hubFirstScan = nil }
+    var redraw = tookTheScan(scan, scanned)
+    if scan == hubScans, scanned.stop == .overTheCeiling {
+      setTheOverrideAside()
+      redraw = true
+    }
+    // The gate going is a reason to redraw on its own: the documents the
+    // override did not pair have had nothing asked about them yet.
+    guard redraw || released else { return }
+    if released { lookUpTheNotes() }
+    Task { [weak self] in await self?.recompose() }
+  }
+
+  /// A folder larger than the walk reads is left alone: no pairing of its
+  /// own, no watcher over it, and the finder answers every document, which
+  /// is what the app does on the machines that have no override at all.
+  /// Nothing is written into anybody's defaults: the override stands, and
+  /// the next launch walks it again and stops again.
+  private func setTheOverrideAside() {
+    index = HubIndex.empty
+    stopWatchingTheHub()
   }
 
   // MARK: the note the finder answered
@@ -650,7 +720,15 @@ public final class Session {
   /// The override's own notes are not asked about: `hubPath` is read first
   /// and a query for a document it already pairs is a query for an answer
   /// nobody reads: testTheOverrideIsAskedBeforeSpotlight.
+  ///
+  /// Read first means read before, and not started before: while the first
+  /// walk of the hub is still out, nothing here asks Spotlight anything at
+  /// all, and the walk landing is what asks about whatever it did not pair.
+  /// Without that the order was whichever of the two was quicker, which is
+  /// the one way this rule was ever broken:
+  /// testSpotlightWaitsWhileTheOverrideIsBeingRead.
   func lookUpTheNotes() {
+    guard hubFirstScan == nil else { return }
     let moment = clock()
     let wanted = drawn.documents.rows.map(\.doc).filter {
       index.notes[$0] == nil && notes[$0] == nil && !looking.contains($0)
@@ -766,7 +844,11 @@ public final class Session {
   /// slow walk of the hub as it was, landing after a fast walk of the hub as
   /// it is, would leave Open md on yesterday's note until the next file
   /// event: testAnOlderHubScanDoesNotReplaceANewerOne.
+  ///
+  /// A walk that let go carries no pairing at all, so its answer is nobody's
+  /// whatever its number says: testOnlyOneWalkOfTheHubRunsAtATime.
   func tookTheScan(_ scan: Int, _ scanned: HubIndex) -> Bool {
+    guard scanned.stop != .cancelled else { return false }
     guard scan == hubScans, scanned != index else { return false }
     index = scanned
     return true

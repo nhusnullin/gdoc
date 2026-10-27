@@ -9,6 +9,7 @@
 
 import Foundation
 import PresenceCore
+import SwiftUI
 import XCTest
 
 @testable import PresenceUI
@@ -194,6 +195,84 @@ final class StateTests: XCTestCase {
     XCTAssertEqual(after.header.update?.tip, "Check for a new version")
   }
 
+  /// Every run of either button that installed nothing says why, in a
+  /// sentence this file holds as a literal.
+  ///
+  /// Three cases each, told apart by `ok` and the action word alone. The
+  /// clock in the sentence is the moment the run ended, because a sentence
+  /// stays until the next press and a person reading it later is owed to
+  /// know which press it is about. Two of them name the command to type:
+  /// the child's own warning is a paragraph about this machine, and a quiet
+  /// line in a menu bar is not where anybody reads one.
+  func testEachRunThatInstalledNothingSaysWhyInAFixedSentence() throws {
+    let ended = try at("2026-10-17T14:02:00Z")
+    let later = "2026-10-17T14:05:00Z"
+
+    let update: [(UpdateMiss, String)] = [
+      (.major, "Only a major version is newer. gdoc update --major installs it."),
+      (.unreachable, "GitHub did not answer at 14:02. Nothing changed."),
+      (.stopped, "The update stopped at 14:02. gdoc update in a terminal says why."),
+    ]
+    XCTAssertEqual(update.count, UpdateMiss.allCases.count, "every case has its sentence")
+    for (miss, sentence) in update {
+      let panel = try drawn(
+        [], at: later,
+        facts: Scenes.machine(
+          latestStable: "v3.0.0", updateRun: UpdateRun(miss: miss, at: ended)))
+      XCTAssertEqual(
+        panel.header.quiet, [sentence],
+        "the answer to the press takes the quiet line under the version")
+      XCTAssertEqual(
+        panel.header.update?.state, .live, "and the glyph is there to press again")
+    }
+
+    let desktop: [(ExtensionMiss, String)] = [
+      (.major, "Nothing was installed at 14:02. It needs gdoc update --major first."),
+      (
+        .stopped,
+        "The install stopped at 14:02. gdoc update --desktop in a terminal says why."
+      ),
+      (.handedNothing, "Claude Desktop was not handed the extension at 14:02."),
+    ]
+    XCTAssertEqual(desktop.count, ExtensionMiss.allCases.count)
+    for (miss, sentence) in desktop {
+      let panel = try drawn(
+        [], at: later,
+        facts: Scenes.machine(
+          extensionState: .notInstalled, extensionRun: ExtensionRun(miss: miss, at: ended)))
+      let row = try XCTUnwrap(panel.settings.first { $0.kind == .desktop })
+      XCTAssertEqual(row.quiet, sentence)
+      XCTAssertEqual(row.value, "not installed", "the row itself says what it always said")
+      XCTAssertEqual(
+        row.actions.map(\.kind), [.installExtension], "and the button stays where it was")
+    }
+
+    // Each of them fits two lines in the room the panel has, which is its
+    // 320 less the 8 either side.
+    let room = Grid.panelWidth - Grid.unit * 2
+    let one = try XCTUnwrap(probes(QuietLine("one line"), scheme: .dark, width: room))
+    let line = try XCTUnwrap(one["quiet.text"]).height
+    for sentence in update.map(\.1) + desktop.map(\.1) {
+      let measured = try XCTUnwrap(
+        probes(QuietLine(sentence), scheme: .dark, width: room)["quiet.text"])
+      XCTAssertLessThanOrEqual(measured.height, line * 2, "\(sentence) runs past two lines")
+    }
+  }
+
+  /// A run that did something says nothing: the version that moved and the
+  /// check for a second are the answers to those two presses, and a
+  /// sentence beside either would be the panel saying it twice.
+  func testARunThatDidSomethingLeavesThePublishedLineWhereItWas() throws {
+    let panel = try drawn(
+      [], at: "2026-10-17T14:05:00Z", facts: Scenes.machine(latestStable: "v2.15.0"))
+    XCTAssertEqual(panel.header.quiet, ["v2.15.0 is published"])
+
+    let handedOver = try drawn(
+      [], at: "2026-10-17T14:05:00Z", facts: Scenes.machine(extensionState: .notInstalled))
+    let row = try XCTUnwrap(handedOver.settings.first { $0.kind == .desktop })
+    XCTAssertNil(row.quiet, "a row nobody has pressed has nothing to say")
+  }
+
   /// A machine with no gdoc on it has nothing to update, so there is no
   /// glyph: the header says where it looked instead.
   func testAMachineWithNoGdocOffersNoUpdate() throws {
@@ -299,7 +378,7 @@ final class StateTests: XCTestCase {
   func testTheSignOutCountsTheHoldsTheRecordHasOpen() throws {
     let asking = UIState(question: .signOut, questionAt: try at("2026-10-17T10:00:00Z"))
     let hidden = try drawn(
-      [held("2026-10-17T09:50:00Z", hold: "h_1", until: "2026-10-17T10:50:00Z")],
+      [held("2026-10-17T09:50:00Z", hold: "h_1", until: "2026-10-17T10:50:00Z", doc: chapter4)],
       at: "2026-10-17T10:00:00Z",
       ui: UIState(
         dismissed: ["h_1"], question: .signOut,
@@ -310,7 +389,7 @@ final class StateTests: XCTestCase {
       "the hold is still waiting in the chat, and the sign-out drops it")
 
     let ranOut = try drawn(
-      [held("2026-10-17T08:00:00Z", hold: "h_2", until: "2026-10-17T09:00:00Z")],
+      [held("2026-10-17T08:00:00Z", hold: "h_2", until: "2026-10-17T09:00:00Z", doc: chapter4)],
       at: "2026-10-17T10:00:00Z", ui: asking)
     XCTAssertEqual(ranOut.now.count, 1, "the card is on the screen")
     XCTAssertEqual(
@@ -514,14 +593,289 @@ final class StateTests: XCTestCase {
     XCTAssertEqual(panel.documents?.rows.count, 1, "and it is the whole of the list")
   }
 
+  /// The mark in front of a document row means one thing: the last run on
+  /// that document failed.
+  ///
+  /// It carried five marks until the fourth look: a green check for a run
+  /// that worked, a dot for a live watch, a dim dot for one that stopped, a
+  /// pause for a hold, the red exclamation for a failure. Nail read a list
+  /// of grey dots and green checks on 2026-10-26 and nothing on the panel
+  /// said why, and the second line already says what the last run was. So
+  /// the check, the dots and the pause go, the exclamation stays, and the
+  /// column stays with it: a row with nothing to say still keeps the 16 pt
+  /// every title starts after.
+  ///
+  /// The table is `DocumentState.allCases`, so a ninth state cannot be
+  /// added without an answer here. Each record is built through the fold,
+  /// and the fold's own state is read back before the glyph is, so the
+  /// table is the states and not the lines that make them.
+  func testADocumentRowIsMarkedOnlyWhenItsLastRunFailed() throws {
+    XCTAssertEqual(DocumentState.allCases.count, 8, "the eight states a row can be in")
+
+    for state in DocumentState.allCases {
+      let made = try record(for: state)
+      let fold = Documents.fold(
+        made.events, now: try at(drawnAt), pinned: made.ui.pinned,
+        alive: { made.alive.contains($0) })
+      XCTAssertEqual(
+        fold.rows.first?.state, state, "the record built for \(state) folds to it")
+
+      let panel = try drawn(made.events, at: drawnAt, ui: made.ui, alive: made.alive)
+      let row = try XCTUnwrap(panel.documents?.rows.first, "\(state) draws a row")
+      if state == .failed {
+        XCTAssertEqual(row.glyph, .exclamation, "a run that failed is the one marked row")
+        XCTAssertEqual(row.tone, .bad)
+      } else {
+        XCTAssertEqual(row.glyph, .blank, "\(state) is not a failure, so nothing is drawn")
+        XCTAssertEqual(row.tone, .quiet, "\(state) draws no colour either")
+      }
+    }
+
+    // Scene e1, which is the render of the list: the reply on Chapter 5
+    // failed, the person dismissed its card in NOW, and the one mark the
+    // list can have is on that one row.
+    let scene = try XCTUnwrap(Scenes.all.first { $0.id == "e1" })
+    let drawn = try XCTUnwrap(try scene.model().documents).rows
+    XCTAssertEqual(
+      drawn.filter { $0.glyph == .exclamation }.map(\.doc), [SceneDocuments.chapter5],
+      "e1 draws one mark, on the document whose last run failed")
+    XCTAssertEqual(
+      drawn.filter { $0.glyph == .blank }.count, 5, "and nothing in front of the other five")
+    XCTAssertTrue(try scene.model().now.isEmpty, "with the failure's own card dismissed")
+  }
+
+  /// A run that failed and a watch that was stopped read as two different
+  /// things, in the words as well as in the mark.
+  ///
+  /// They read alike until the fourth look: the row of a failed reply said
+  /// "stopped Tue" and the row of a stopped watch "live stopped 12:26", and
+  /// both drew a dot or a check nobody could tell apart. A failure now
+  /// names the write and says failed, and neither line carries the other's
+  /// word.
+  func testAFailedRunDoesNotReadAsAStoppedOne() throws {
+    let failed = try drawn(
+      [
+        event(
+          "2026-10-13T12:00:00Z", .end, command: "reply", doc: chapter4, title: "Ch 4",
+          ok: false)
+      ], at: drawnAt)
+    let failedRow = try XCTUnwrap(failed.documents?.rows.first)
+    XCTAssertEqual(
+      failedRow.sub, "reply failed Tue · ~/hub/falcon/chapters/04.md",
+      "the write's own name, and the one word for how it went")
+    XCTAssertEqual(failedRow.glyph, .exclamation)
+
+    let watch = try drawn(
+      [
+        event(
+          "2026-10-17T12:00:00Z", .start, command: "comments", doc: chapter4, wait: true),
+        event(
+          "2026-10-17T12:26:00Z", .end, command: "comments", doc: chapter4, wait: true,
+          ok: true),
+      ], at: drawnAt)
+    let watchRow = try XCTUnwrap(watch.documents?.rows.first)
+    XCTAssertEqual(
+      watchRow.sub, "live stopped 12:26 · ~/hub/falcon/chapters/04.md",
+      "a watch somebody stopped kept its words")
+    XCTAssertEqual(watchRow.glyph, .blank, "and nothing in front of them")
+
+    XCTAssertFalse(
+      failedRow.sub.contains("stopped"), "a failure never says the word a watch says")
+    XCTAssertFalse(
+      watchRow.sub.contains("failed"), "and a watch that stopped never says failed")
+  }
+
+  /// A write the read-back did not confirm is a run that worked: no mark,
+  /// and the word it has today.
+  ///
+  /// `verified: false` is the hollow check of principle 5, which is a write
+  /// that happened and a read-back that did not say so. The mark is for
+  /// `ok: false` and nothing else, so the two rows here are one drawing.
+  func testAWriteThatWasNotReadBackIsStillARunThatWorked() throws {
+    for verified in [true, false] {
+      let panel = try drawn(
+        [
+          event(
+            "2026-10-13T12:00:00Z", .end, command: "reply", doc: chapter4, title: "Ch 4",
+            ok: true, verified: verified)
+        ], at: drawnAt)
+      let row = try XCTUnwrap(panel.documents?.rows.first)
+      XCTAssertEqual(row.glyph, .blank, "verified: \(verified) is no failure")
+      XCTAssertEqual(
+        row.sub, "replied Tue · ~/hub/falcon/chapters/04.md",
+        "and the word is the write's own past, as it was before the fourth look")
+    }
+  }
+
+  /// The moment every table above is drawn at.
+  private let drawnAt = "2026-10-17T18:00:00Z"
+
+  /// One record for each of the eight states, with the person's own state
+  /// and the pids the kernel knows about, all on the one document.
+  private func record(for state: DocumentState) throws -> (
+    events: [Event], ui: UIState, alive: Set<Int32>
+  ) {
+    switch state {
+    case .hold:
+      return (
+        [held("2026-10-17T17:00:00Z", hold: "h-1", until: "2026-10-17T19:00:00Z", doc: chapter4)],
+        UIState(), []
+      )
+    case .running:
+      return (
+        [event("2026-10-17T17:00:00Z", .start, command: "reply", doc: chapter4)], UIState(), [7101]
+      )
+    case .live:
+      return (
+        [
+          event(
+            "2026-10-17T17:59:00Z", .start, command: "comments", doc: chapter4, wait: true)
+        ], UIState(), [7101]
+      )
+    case .liveStopped:
+      return (
+        [
+          event(
+            "2026-10-17T17:00:00Z", .start, command: "comments", doc: chapter4, wait: true),
+          event(
+            "2026-10-17T17:05:00Z", .end, command: "comments", doc: chapter4, wait: true,
+            ok: true),
+        ], UIState(), []
+      )
+    case .done:
+      return (
+        [
+          event(
+            "2026-10-17T17:00:00Z", .end, command: "reply", doc: chapter4, title: "Ch 4",
+            ok: true, verified: true)
+        ], UIState(), []
+      )
+    case .failed:
+      return (
+        [
+          event(
+            "2026-10-17T17:00:00Z", .end, command: "reply", doc: chapter4, title: "Ch 4",
+            ok: false)
+        ], UIState(), []
+      )
+    case .unknown:
+      // The same start as `.running`, with a pid the kernel does not know.
+      return (
+        [event("2026-10-17T17:00:00Z", .start, command: "reply", doc: chapter4)], UIState(), []
+      )
+    case .pinnedOnly:
+      return (
+        [],
+        UIState(
+          pinned: [
+            DocumentChoice(doc: chapter4, at: try at("2026-10-17T17:00:00Z"), title: "Ch 4")
+          ]), []
+      )
+    }
+  }
+
+  /// Every row in NOW that names a document opens it, and no row opens
+  /// anything else.
+  ///
+  /// The fourth look made the row itself the press (docs/v2/DECISIONS.md,
+  /// 2026-10-26): a watch, a hold, a write that stopped and a job each say
+  /// which document they are about, and until now only the stuck card
+  /// offered a way into it. The id is the record's, so it is held to the
+  /// shape Drive writes before a press is offered at all: a line somebody
+  /// planted opens nothing, and so does a publish that has not created a
+  /// document yet.
+  func testEveryNowRowThatNamesADocumentOpensIt() throws {
+    let planted = "not-a-drive-id"
+    for shape in NowShape.allCases {
+      let named = try row(shape, doc: chapter4)
+      XCTAssertEqual(
+        named.opens, chapter4, "a \(shape.rawValue) row names a document, so it opens it")
+      XCTAssertEqual(NowPress.opens(named), chapter4, "and the press is offered")
+      XCTAssertEqual(
+        NowPress.tip(for: named), Tips.openDoc,
+        "and the title says so in the Google Docs icon's own words")
+
+      let forged = try row(shape, doc: planted)
+      XCTAssertNil(
+        forged.opens, "a \(shape.rawValue) row whose id Drive could not have written opens none")
+      XCTAssertNil(NowPress.opens(forged))
+      XCTAssertNil(NowPress.tip(for: forged), "and its title offers nothing")
+
+      guard shape != .live else { continue }
+      let nameless = try row(shape, doc: nil)
+      XCTAssertNil(
+        nameless.opens, "a \(shape.rawValue) row that names no document opens none")
+      XCTAssertNil(NowPress.tip(for: nameless))
+    }
+  }
+
+  /// A hold that is asking its question opens nothing.
+  ///
+  /// The card is two buttons and the sentence that says what follows from
+  /// them, so a click anywhere on it that opened a browser tab would be an
+  /// answer nobody gave. The document is still on the item: the card goes
+  /// back to offering when the question runs out, and the press comes back
+  /// with it.
+  func testAHoldThatIsAskingOpensNothing() throws {
+    let asked = try at("2026-10-17T17:30:00Z")
+    let ui = UIState(question: .dismissHold("h-1"), questionAt: asked)
+    let panel = try drawn(
+      [held("2026-10-17T17:00:00Z", hold: "h-1", until: "2026-10-17T19:00:00Z", doc: chapter4)],
+      at: "2026-10-17T17:30:01Z", ui: ui)
+    let item = try XCTUnwrap(panel.now.first, "the hold is the one row in NOW")
+    guard case .hold(_, _, let asking, _) = item else {
+      return XCTFail("a held write is a hold card")
+    }
+    XCTAssertTrue(asking, "the card is asking")
+    XCTAssertEqual(item.opens, chapter4, "the document is still what the row is about")
+    XCTAssertNil(NowPress.opens(item), "and the card offers no press while it asks")
+    XCTAssertNil(NowPress.tip(for: item), "so its title promises none")
+  }
+
+  /// The four shapes NOW draws, each built from the record.
+  private enum NowShape: String, CaseIterable {
+    case hold
+    case stuck
+    case job
+    case live
+  }
+
+  /// One row of NOW in the shape asked for, about the document named.
+  private func row(_ shape: NowShape, doc: String?) throws -> NowItem {
+    let events: [Event]
+    var alive: Set<Int32> = []
+    switch shape {
+    case .hold:
+      events = [
+        held("2026-10-17T17:00:00Z", hold: "h-1", until: "2026-10-17T19:00:00Z", doc: doc)
+      ]
+    case .stuck:
+      events = [
+        event("2026-10-17T17:00:00Z", .start, command: "publish", doc: doc),
+        event("2026-10-17T17:01:00Z", .end, command: "publish", doc: doc, ok: false),
+      ]
+    case .job:
+      events = [event("2026-10-17T17:00:00Z", .start, command: "publish", doc: doc)]
+      alive = [7101]
+    case .live:
+      events = [
+        event("2026-10-17T17:59:00Z", .start, command: "comments", doc: doc, wait: true)
+      ]
+      alive = [7101]
+    }
+    let panel = try drawn(events, at: drawnAt, alive: alive)
+    return try XCTUnwrap(
+      panel.now.first, "the record above draws no \(shape.rawValue) row")
+  }
+
   /// A write a rule held, as gdoc writes it: one line, and no call.
-  private func held(_ at: String, hold: String, until: String) -> Event {
+  private func held(_ at: String, hold: String, until: String, doc: String? = nil) -> Event {
     let formatter = ISO8601DateFormatter()
     formatter.formatOptions = [.withInternetDateTime]
     return Event(
       schema: 1, at: formatter.date(from: at) ?? Date(timeIntervalSince1970: 0),
       gdoc: "v2.15.0", pid: 7101, run: "3000000000000002", call: nil, kind: .held,
-      command: "reply", via: "chat", doc: chapter4, wait: false, title: nil, ok: nil,
+      command: "reply", via: "chat", doc: doc, wait: false, title: nil, ok: nil,
       verified: nil, ms: nil, hold: hold, rule: "dictated",
       until: formatter.date(from: until))
   }
@@ -563,15 +917,15 @@ final class StateTests: XCTestCase {
   /// One line of the record, by the wire's own names.
   private func event(
     _ at: String, _ kind: EventKind, command: String? = nil, via: String = "terminal",
-    doc: String? = nil, call: Int64 = 1, title: String? = nil, made: String? = nil,
-    ok: Bool? = nil, verified: Bool? = nil
+    doc: String? = nil, call: Int64 = 1, wait: Bool = false, title: String? = nil,
+    made: String? = nil, ok: Bool? = nil, verified: Bool? = nil
   ) -> Event {
     let formatter = ISO8601DateFormatter()
     formatter.formatOptions = [.withInternetDateTime]
     return Event(
       schema: 1, at: formatter.date(from: at) ?? Date(timeIntervalSince1970: 0),
       gdoc: "v2.15.0", pid: 7101, run: "3000000000000002", call: call, kind: kind,
-      command: command, via: via, doc: doc, wait: false, interrupted: false, step: nil,
+      command: command, via: via, doc: doc, wait: wait, interrupted: false, step: nil,
       index: nil, count: nil, title: title, made: made, ok: ok, verified: verified, stop: nil,
       line: nil, ms: nil, hold: nil, rule: nil, until: nil)
   }

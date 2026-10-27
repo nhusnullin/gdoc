@@ -15,6 +15,8 @@ import (
 	"context"
 	"io"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"gdoc/internal/presence"
@@ -179,4 +181,82 @@ func sameWords(got, want []string) bool {
 		}
 	}
 	return true
+}
+
+// A publish that stopped inside the render still names the note.
+//
+// The envelope a render failure prints carries no title: the title is a field
+// of a document that was never made. The name is known all the same, because
+// the cover was read before the picture was refused, so the end carries the
+// note's cover title and the panel's card says which publish stopped. The run
+// is the SVG one, which is the one refusal a real note reaches the render with.
+func TestAPublishThatStoppedInTheRenderNamesTheNote(t *testing.T) {
+	theHouseLogoCached(t)
+	dir := os.Getenv("GDOC_CONFIG_DIR")
+	note := noteWithAnSVG(t)
+
+	var out bytes.Buffer
+	if code := run(context.Background(),
+		[]string{"publish", "--md", note, "--folder-id", testFolderID}, &out, io.Discard, presenceOn()); code == 0 {
+		t.Fatalf("an SVG is refused, and this publish answered ok: %s", out.String())
+	}
+
+	end := endOf(t, presenceEvents(t, dir))
+	if end.Title != "Supplier Register Policy" {
+		t.Errorf("the end of a publish that stopped in the render says title %q, want the note's cover title", end.Title)
+	}
+	if end.OK == nil || *end.OK {
+		t.Errorf("the end of a refused publish says ok %v", end.OK)
+	}
+	// And the object a caller reads carries no title, because no document was
+	// made: the name is the record's and nothing moved in the envelope.
+	if strings.Contains(out.String(), `"title"`) {
+		t.Errorf("the failure envelope grew a title: %s", out.String())
+	}
+}
+
+// A publish that could not read the cover names nothing.
+//
+// The cover is where the name comes from, so a note whose front matter has no
+// title leaves the run with no name to keep, and the end says nothing about a
+// title rather than guessing one from the file's own name. The sentence a
+// person reads still proposes a candidate; that is the envelope's business and
+// not the record's.
+func TestAPublishWhoseCoverCannotBeReadWritesNoTitle(t *testing.T) {
+	theHouseLogoCached(t)
+	dir := os.Getenv("GDOC_CONFIG_DIR")
+	note := noteWithNoTitle(t)
+
+	var out bytes.Buffer
+	if code := run(context.Background(),
+		[]string{"publish", "--md", note, "--folder-id", testFolderID}, &out, io.Discard, presenceOn()); code == 0 {
+		t.Fatalf("a note with no title is refused, and this publish answered ok: %s", out.String())
+	}
+
+	end := endOf(t, presenceEvents(t, dir))
+	if end.Title != "" {
+		t.Errorf("the end names title %q, and the cover was never read", end.Title)
+	}
+}
+
+// noteWithNoTitle is the publishable note every other publish test uses with
+// the one field the cover cannot do without taken out of its front matter.
+func noteWithNoTitle(t *testing.T) string {
+	t.Helper()
+	src, err := os.ReadFile(filepath.Join("testdata", "build-note.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var kept []string
+	for _, line := range strings.Split(string(src), "\n") {
+		if strings.HasPrefix(line, "title:") {
+			continue
+		}
+		kept = append(kept, line)
+	}
+	path := filepath.Join(t.TempDir(), "supplier-register.md")
+	if err := os.WriteFile(path, []byte(strings.Join(kept, "\n")), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return path
 }

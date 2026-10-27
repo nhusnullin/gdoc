@@ -110,6 +110,7 @@ type Run struct {
 	call      int64
 	readsBack bool
 	made      string
+	title     string
 	started   time.Time
 	errOut    io.Writer
 }
@@ -172,6 +173,38 @@ func (r *Run) Made(id string) {
 		return
 	}
 	r.made = id
+}
+
+// Named is the name this run knows the document by, kept for an end whose
+// answer carries no title of its own.
+//
+// A publish that stopped inside the render prints an envelope with no title
+// in it: the title is a field of a document that was never made. The name is
+// still known at that moment, because the cover has been read, and a panel
+// with a nameless card is a person who cannot tell which publish stopped. So
+// the run keeps the name and End writes it only where lift found nothing, and
+// never over a title the command printed: the record's title is the answer's
+// first. No new field, and the same 200-rune cap, because the value comes out
+// of a note this package did not choose.
+// TestANamedTitleIsWrittenOnlyWhereTheAnswerCarriesNone, with cmd/gdoc's
+// TestAPublishThatStoppedInTheRenderNamesTheNote over a real run and
+// go/boundary's TestNamedHasOnlyPublishAsCaller over the one room that calls
+// it.
+//
+// The run comes off the context, where dispatch put it, as Step's does, so a
+// caller hands a name over without knowing whether anybody is recording: a
+// context nobody marked, a nil run and no context at all each do nothing.
+// TestANamedTitleOutsideARunWritesNothing.
+func Named(ctx context.Context, title string) {
+	runOf(ctx).named(title)
+}
+
+// named is the name itself, safe on a nil run as every method here is.
+func (r *Run) named(title string) {
+	if r == nil {
+		return
+	}
+	r.title = capRunes(title, titleRunes)
 }
 
 // Step writes the one line that says a part of this command's work is
@@ -243,12 +276,18 @@ func stepIndex(name string) int {
 // envelope itself carries document words, warnings, error sentences and
 // paths, and none of those may reach a file that lasts:
 // TestAnEventCarriesNoWordOfTheEnvelopeButTheTitle.
+//
+// The title is the answer's, and the name Named gave the run only where the
+// answer has none: TestANamedTitleIsWrittenOnlyWhereTheAnswerCarriesNone.
 func (r *Run) End(res emit.Result) {
 	if r == nil {
 		return
 	}
 	ok := res.OK
 	title, verified, interrupted := lift(res.Data)
+	if title == "" {
+		title = r.title
+	}
 	if !r.readsBack {
 		verified = nil
 	}

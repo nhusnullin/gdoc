@@ -413,7 +413,7 @@ final class RenderTests: XCTestCase {
     let scene = try XCTUnwrap(Scenes.all.first { $0.id == "e9" })
     let model = try scene.model()
 
-    guard case .live(_, let row, let stop, _)? = model.now.last else {
+    guard case .live(_, let row, let stop, _, _)? = model.now.last else {
       return XCTFail("e9 draws its watch as a live row")
     }
     // The title carries the word and the sub-line carries the moment and
@@ -424,7 +424,7 @@ final class RenderTests: XCTestCase {
     XCTAssertTrue(row.stopped, "the dot goes dim with the word")
     XCTAssertNil(stop, "nothing is polling, so there is nothing to stop")
 
-    guard case .stuck(_, let card, _)? = model.now.first else {
+    guard case .stuck(_, let card, _, _)? = model.now.first else {
       return XCTFail("e9 opens with the card `auth status` raised")
     }
     XCTAssertEqual(card.title, "Needs sign-in")
@@ -454,11 +454,14 @@ final class RenderTests: XCTestCase {
     XCTAssertEqual(
       watched.sub, "live stopped 15:29 · ~/hub/falcon/chapters/05.md",
       "DOCUMENTS said live while NOW said stopped")
-    XCTAssertEqual(watched.tone, .dim, "and drew the live dot for a watch that is over")
+    XCTAssertEqual(
+      watched.glyph, .blank,
+      "the row's words carry the state: the mark is a failed run and nothing else since "
+        + "the fourth look")
 
     XCTAssertEqual(
       model.now.compactMap { item -> String? in
-        if case .live(_, let row, _, _) = item { return row.title } else { return nil }
+        if case .live(_, let row, _, _, _) = item { return row.title } else { return nil }
       },
       ["Live stopped · Ch 5. Commercial Model: review draft v0.1"],
       "and NOW says the same word over the same document")
@@ -476,7 +479,7 @@ final class RenderTests: XCTestCase {
   /// allows: "since, replied and proposed counts".
   func testAWatchCountsItsWritesInTheWordsForThem() throws {
     let scene = try XCTUnwrap(Scenes.all.first { $0.id == "r4" })
-    guard case .live(_, let row, _, _)? = try scene.model().now.last else {
+    guard case .live(_, let row, _, _, _)? = try scene.model().now.last else {
       return XCTFail("r4 draws a live row")
     }
     XCTAssertEqual(row.sub, "since 13:10 · quiet 38 min · replied 1")
@@ -600,7 +603,7 @@ final class RenderTests: XCTestCase {
   /// third look closed the DOCUMENTS header count, which Nail settled on
   /// 2026-10-18 by asking for the label alone.
   func testTheIndexOpensWithWhatIsStillYourCall() throws {
-    XCTAssertEqual(Scenes.stillYourCall.count, 8, "the pass left eight choices to Nail")
+    XCTAssertEqual(Scenes.stillYourCall.count, 7, "the pass left seven choices to Nail")
 
     let page = html(["<section>a screen</section>"])
     let heading = try XCTUnwrap(page.range(of: "Still your call"), "the page does not open with it")
@@ -616,7 +619,7 @@ final class RenderTests: XCTestCase {
     // failure rather than a shorter page.
     let subjects = [
       "decision 32", "decision 10", "trash",
-      "decision 39", "nameless", "faintest control",
+      "decision 39", "faintest control",
       "pinned above DOCUMENTS", "tooltip's plate in light",
     ]
     for subject in subjects {
@@ -637,6 +640,13 @@ final class RenderTests: XCTestCase {
         Scenes.stillYourCall.contains { $0.contains(settled) },
         "the DOCUMENTS header count is settled and not a choice left open: \(settled)")
     }
+
+    // Nor is the nameless publish, which the fourth look answered: gdoc
+    // writes the note's cover title on the end of a run that stopped in the
+    // render, and r2's card reads it.
+    XCTAssertFalse(
+      Scenes.stillYourCall.contains { $0.contains("nameless") },
+      "the publish that stopped in the render has a name now and no choice is left")
   }
 
   /// The bright idle mark is said once, as a decision and not a choice.

@@ -37,7 +37,7 @@ extension PanelModel {
   /// does not wait for something else to go wrong first:
   /// testTheExtensionRowAppearsOnlyUntilGdocHasWrittenOne and
   /// testARunThatOpenedNothingLeavesTheRowWhereItWas.
-  static func settingsRows(facts: Facts) -> [SettingsRowModel] {
+  static func settingsRows(facts: Facts, calendar: Calendar) -> [SettingsRowModel] {
     var rows: [SettingsRowModel] = []
 
     if let network = facts.network, !network.reachable {
@@ -46,7 +46,7 @@ extension PanelModel {
           .network, value: "Google not reachable", glyph: .exclamation, tone: .bad))
     }
 
-    rows.append(contentsOf: desktop(facts: facts))
+    rows.append(contentsOf: desktop(facts: facts, calendar: calendar))
     rows.append(loginItem(facts: facts))
     rows.append(SettingsRowModel(.quit, value: SettingsRows.quitShortcut, select: .quit))
     return rows
@@ -58,19 +58,25 @@ extension PanelModel {
   /// wrote one and could not hand it over is the same thing with a file
   /// left behind. A file that is there says nothing about what Desktop
   /// loaded, and a row claiming it was connected would be a guess.
-  static func desktop(facts: Facts) -> [SettingsRowModel] {
+  ///
+  /// The quiet line under it is the last run of this process that handed
+  /// Claude Desktop nothing, which is the one thing the row had no way to
+  /// say until the fourth look: a press that wrote no extension left the
+  /// button where it was and said nothing at all.
+  static func desktop(facts: Facts, calendar: Calendar) -> [SettingsRowModel] {
     guard facts.extensionState == .notInstalled else { return [] }
+    let said = facts.extensionRun.map { Sentences.extensionMiss($0, calendar: calendar) }
     // While an update child is up the row offers nothing to press. Both
     // argv lists are `gdoc update` and `--desktop` installs the release it
     // writes the extension of, so a second press is a second process
     // renaming the binary the first one is replacing:
     // testNeitherUpdateIsOfferedWhileOneIsRunning.
     guard !facts.updating else {
-      return [SettingsRowModel(.desktop, value: "not installed", glyph: .empty)]
+      return [SettingsRowModel(.desktop, value: "not installed", glyph: .empty, quiet: said)]
     }
     return [
       SettingsRowModel(
-        .desktop, value: "not installed", glyph: .empty,
+        .desktop, value: "not installed", glyph: .empty, quiet: said,
         actions: [
           ActionModel(
             .installExtension, icon: .down, tip: Tips.installExtension, target: "desktop")

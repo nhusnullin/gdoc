@@ -304,6 +304,21 @@ final class CardTests: XCTestCase {
     XCTAssertNil(short["stuck.title.second"], "a title that fits draws one line")
   }
 
+  /// A publish that stopped in the render still names the note it was
+  /// building.
+  ///
+  /// The envelope of such a run carries no title: the title is a field of a
+  /// document that was never made. Since 2026-10-26 gdoc keeps the note's
+  /// cover title on the run and writes it on the end, so the card reads the
+  /// name the mockup draws instead of "Publish stopped" alone. Scene r2's
+  /// fixture is that end line.
+  func testThePublishThatStoppedInTheRenderNamesTheNote() throws {
+    let stopped = try SheetPieces.stuck()
+    XCTAssertEqual(
+      stopped.card.title, "Publish stopped \u{00B7} Chapter 4",
+      "the card of a publish that stopped in the render is nameless")
+  }
+
   /// Principle 4's second sentence: a card never carries an icon that would
   /// do nothing.
   ///
@@ -327,7 +342,7 @@ final class CardTests: XCTestCase {
     // cross, each of them live: scene e3's export.
     let named = try XCTUnwrap(
       try SheetPieces.scene("e3").model().now.compactMap { item -> [ActionModel]? in
-        if case .stuck(_, _, let actions) = item { return actions }
+        if case .stuck(_, _, let actions, _) = item { return actions }
         return nil
       }.first, "e3 drew no stuck card")
     XCTAssertEqual(named.map(\.icon), [.gdocs, .md, .branch, .link, .xmark])
@@ -335,6 +350,143 @@ final class CardTests: XCTestCase {
       if case .off(let reason) = action.state {
         XCTFail("e3's card carries a dead \(action.icon.rawValue): \(reason)")
       }
+    }
+  }
+
+  /// A press on a live row opens its document, and the row's one control
+  /// stops the watch. Neither does the other.
+  ///
+  /// The two closures the view is built with are read here through a
+  /// `PanelActions` that writes down what it was handed, because this
+  /// package has no offscreen click: what a test can hold is that the row
+  /// and the icon were wired to two different things. Nail's hand check
+  /// after the run holds the rest of it.
+  ///
+  /// Stop keeps everything it had at the third look: its own state, its
+  /// ring while the signal is in flight, and no confirm. A click on the row
+  /// never stops a watch, which is principle 3.
+  func testTheRowOpensAndOnlyStopStops() throws {
+    var pressed: [(kind: ActionKind, target: String?)] = []
+    let actions = PanelActions { kind, target in pressed.append((kind, target)) }
+
+    let item = try SheetPieces.liveItem()
+    guard case .live(_, _, let stop, let pending, _) = item else {
+      return XCTFail("scene r4's row is a watch")
+    }
+    let doc = try XCTUnwrap(item.opens, "scene r4's watch names the document it watches")
+
+    let open = try XCTUnwrap(
+      NowPress.open(item, actions: actions), "the row opens the document it names")
+    open()
+    XCTAssertEqual(pressed.count, 1, "one press, one thing done")
+    XCTAssertEqual(pressed.first?.kind, .openDoc, "and it is the kind a document icon sends")
+    XCTAssertEqual(pressed.first?.target, doc)
+
+    NowPress.stop(stop, actions: actions)()
+    XCTAssertEqual(pressed.count, 2)
+    XCTAssertEqual(pressed.last?.kind, .stopLive, "Stop stops, and opens nothing")
+    XCTAssertEqual(pressed.last?.target, doc)
+
+    XCTAssertEqual(
+      pressed.filter { $0.kind == .openDoc }.count, 1,
+      "the control's press is its own and never the row's")
+    XCTAssertEqual(NowPress.words, Tips.openDoc, "the title area carries the icon's own words")
+
+    // Stop is what it was: the one icon, the ring while the signal is in
+    // flight, and no confirm beside either.
+    XCTAssertFalse(pending, "scene r4's watch has no signal in flight")
+    XCTAssertEqual(LiveRow.icons(pending: false), [.stop])
+    XCTAssertEqual(LiveRow.icons(pending: true), [], "the ring stands where the icon was")
+    XCTAssertTrue(LiveRow.showsRing(pending: true))
+  }
+
+  /// The held press of a document row opens the system's own menu, with the
+  /// words the model put in it and nothing else.
+  ///
+  /// It was a SwiftUI popover until the fourth look, which is a window of
+  /// its own, and the panel is a borderless `KeyPanel` that closes the
+  /// moment it loses key: the menu could have taken the panel it belongs to
+  /// with it. The press now hands the words to a presenter, which is an
+  /// `NSMenu` popped up from the row's own view in the app and a recorder
+  /// here. Opening the menu does nothing to the document, and a word of it
+  /// does exactly what the same word of the secondary click's menu does.
+  func testTheHeldPressOpensTheSystemMenuWithTheRowsOwnWords() throws {
+    var offered: [[String]] = []
+    var entries: [MenuEntry] = []
+    var pressed: [(kind: ActionKind, target: String?)] = []
+    let actions = PanelActions { kind, target in pressed.append((kind, target)) }
+    let present = MenuPresenter { words, _ in
+      offered.append(words.map(\.word))
+      entries = words
+    }
+
+    let menu = RowMenu(
+      items: [MenuItemModel(.hideDoc, word: "Hide from the list", target: SceneDocuments.chapter4)],
+      actions: actions, present: present)
+    let press = try XCTUnwrap(menu.held, "a row with a word in its menu has a held press")
+    press()
+    XCTAssertEqual(offered, [["Hide from the list"]], "the words are the model's")
+    XCTAssertTrue(pressed.isEmpty, "opening a menu does nothing to the document")
+
+    try XCTUnwrap(entries.first).press()
+    XCTAssertEqual(pressed.count, 1, "one word, one press")
+    XCTAssertEqual(pressed.first?.kind, .hideDoc)
+    XCTAssertEqual(pressed.first?.target, SceneDocuments.chapter4)
+
+    XCTAssertNil(
+      RowMenu(items: [], actions: actions, present: present).held,
+      "a pinned row offers nothing, so a press held on it opens nothing")
+  }
+
+  /// The gesture is the title's own, and the view the menu is measured from
+  /// catches nothing.
+  ///
+  /// The press sat on the whole row, action strip included, so a slow click
+  /// on an icon both did the icon's thing and opened the menu. It is the
+  /// title area's now: the five icons are a column of their own and the
+  /// gesture is not over them. The anchor is behind that title, and its
+  /// `hitTest` is nil, so a click meant for the row or for one of its icons
+  /// goes where it was going.
+  func testTheHeldPressIsTheTitlesAndTheAnchorCatchesNothing() throws {
+    let anchor = MenuAnchorView(frame: NSRect(x: 0, y: 0, width: 160, height: 44))
+    XCTAssertNil(
+      anchor.hitTest(NSPoint(x: 80, y: 22)), "the anchor is a place to measure from")
+
+    var held = 0
+    let row = RowView(
+      .doc, glyph: .blank, title: "Ch 4. Pricing", titleHeld: { held += 1 },
+      trailing: { EmptyView() })
+    try XCTUnwrap(row.titleHeld, "the row carries the press on its title")()
+    XCTAssertEqual(held, 1)
+
+    let plain = RowView(.doc, glyph: .blank, title: "Ch 4. Pricing", trailing: { EmptyView() })
+    XCTAssertNil(plain.titleHeld, "a row with no menu carries no gesture at all")
+    XCTAssertEqual(Timing.menuHold, 0.5, "half a second, which is what the guide promises")
+  }
+
+  /// A render draws no anchor, so a row with a menu is the same picture as
+  /// the row without one.
+  ///
+  /// The anchor is an `NSView`, and `ImageRenderer` cannot draw AppKit: it
+  /// puts its yellow "cannot draw this" box where the view is. The first
+  /// renders of the fourth look had that box over the title of every row
+  /// with a menu, so the reviewer could not read the rows the look changed.
+  func testARenderDrawsNoMenuAnchor() throws {
+    let actions = PanelActions { _, _ in }
+    let present = MenuPresenter { _, _ in }
+    let items = [
+      MenuItemModel(.hideDoc, word: "Hide from the list", target: SceneDocuments.chapter4)
+    ]
+    func row() -> some View {
+      RowView(.doc, glyph: .blank, title: "Ch 4. Pricing", trailing: { EmptyView() })
+        .frame(width: 320, height: 44)
+    }
+    for scheme in [ColorScheme.dark, .light] {
+      let withMenu = try png(
+        row().rowMenu(RowMenu(items: items, actions: actions, present: present)).rendering(),
+        scheme: scheme)
+      let without = try png(row().rendering(), scheme: scheme)
+      XCTAssertEqual(withMenu, without, "a render of a row with a menu draws no anchor, \(scheme)")
     }
   }
 
@@ -394,7 +546,7 @@ final class CardTests: XCTestCase {
   // of them the card is the ring and the two lines, and never four grey rows
   // the app invented.
   func testTheJobCardShowsStepRowsOnlyWhenStepsAreKnown() throws {
-    let blind = JobCardModel(title: "Publishing", sub: nil, progress: nil, steps: [])
+    let blind = JobCardModel(name: "Publishing", sub: nil, progress: nil, steps: [])
     XCTAssertFalse(JobCard.showsSteps(blind))
     let measured = try probes(JobCard(model: blind), scheme: .dark, width: cardWidth)
     XCTAssertNotNil(measured["job.card"])

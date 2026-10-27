@@ -192,7 +192,9 @@ public actor HealthPoller {
       newerRecord: facts.newerRecord,
       unstoppable: facts.unstoppable,
       updating: facts.updating,
-      updateChecked: facts.updateChecked)
+      updateChecked: facts.updateChecked,
+      updateRun: facts.updateRun,
+      extensionRun: facts.extensionRun)
   }
 
   // MARK: the two questions

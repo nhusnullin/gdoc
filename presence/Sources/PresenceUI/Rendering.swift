@@ -4,8 +4,9 @@
 // indeterminate ring drawn through `ImageRenderer` without this flag comes
 // out at whatever angle the animation was at, so two renders of one scene
 // are two different PNGs and a reviewer comparing them is comparing noise.
-// `rendering()` says so once at the top of a tree, and `RingView` is the one
-// view that reads it.
+// `rendering()` says so once at the top of a tree, and two views read it:
+// `RingView`, and `RowMenu`, which draws no menu anchor into an image because
+// `ImageRenderer` cannot draw an `NSView` and puts a yellow box there instead.
 //
 // It was three cases until 2026-10-18: live, clipped and whole, because the
 // panel was capped at 600 pt and a reviewer needed the uncapped copy of a

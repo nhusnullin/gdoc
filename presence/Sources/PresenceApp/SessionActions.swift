@@ -274,11 +274,13 @@ extension Session {
   private func install() {
     guard !installing else { return }
     installing = true
+    pressed()
     retick()
     Task { [weak self] in
       guard let self else { return }
       let standing = await self.updates.update()
       self.installing = false
+      self.updateRun = standing.miss.map { UpdateRun(miss: $0, at: self.clock()) }
       if standing.isCurrent {
         self.updateChecked = self.clock()
         self.revert(after: Timing.doneFlash)
@@ -308,15 +310,30 @@ extension Session {
   private func installTheExtension() {
     guard !installing else { return }
     installing = true
+    pressed()
     retick()
     Task { [weak self] in
       guard let self else { return }
-      self.extensionHandedOver = await self.updates.installExtension()
+      let standing = await self.updates.installExtension()
+      self.extensionHandedOver = standing == .handedOver
+      self.extensionRun = standing.miss.map { ExtensionRun(miss: $0, at: self.clock()) }
       self.installing = false
       self.retick()
       await self.recompose()
       self.changed()
     }
+  }
+
+  /// What a press of either button takes off the screen: the sentence the
+  /// last run of either of them left.
+  ///
+  /// Both, and not only the one being pressed. The two sentences are about
+  /// the same two processes over one binary, and a line about a run of five
+  /// minutes ago under a run that is starting now reads as a line about
+  /// this one: testASentenceAboutARunStaysUntilTheNextPress.
+  private func pressed() {
+    updateRun = nil
+    extensionRun = nil
   }
 
   // MARK: the switch

@@ -120,6 +120,20 @@
 // where it is there as a string: TestTitleIsLiftedOnlyWhenPresentAsAString
 // and TestTheTitleIsCappedAtTwoHundredRunes.
 //
+// On an end the title is the answer's, or the name the run was given where the
+// answer has none. That is Named, and publish is its one caller: a publish
+// that stopped inside the render prints no title, because the title is a field
+// of a document that was never made, and the cover had already been read. So
+// the end says the note's cover title rather than nothing, and a card on the
+// panel names the publish that stopped. Nothing is written over a title a
+// command printed, and no field is new.
+// TestANamedTitleIsWrittenOnlyWhereTheAnswerCarriesNone and
+// TestANamedTitleOutsideARunWritesNothing, with cmd/gdoc's
+// TestAPublishThatStoppedInTheRenderNamesTheNote and
+// TestAPublishWhoseCoverCannotBeReadWritesNoTitle over real runs and
+// go/boundary's TestNamedHasOnlyPublishAsCaller over the one room that calls
+// it. Decided 2026-10-26, DECISIONS.md, "The fourth look".
+//
 // made is the one other id a line may carry: the document a run created,
 // which only a publish does. Every other command was handed its document and
 // the doc field names it, so made is never a second name for the same thing.

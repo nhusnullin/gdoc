@@ -225,6 +225,40 @@ func TestStepHasOnlyPublishAsCaller(t *testing.T) {
 	}
 }
 
+// presenceNamed is the name a run keeps for an end whose answer carries none,
+// and the one room that hands one over.
+const (
+	presenceNamed = "Named"
+	namedRoom     = "cmd/gdoc/publish.go"
+)
+
+// TestNamedHasOnlyPublishAsCaller holds the name to the one command that
+// needs one.
+//
+// Every other command was handed its document, and its answer carries the
+// title the read-back found. A publish is the only run that makes a document
+// and so the only one whose failure prints no title at all, which is a card on
+// the panel with no name on it. A second caller would be a command writing a
+// title into a record out of something other than its own answer, and a reader
+// of the record could not tell the two apart. It sits beside
+// TestStepHasOnlyPublishAsCaller for the same reason, and is the trust
+// guardian's first condition on the 2026-10-26 decision.
+func TestNamedHasOnlyPublishAsCaller(t *testing.T) {
+	found, err := callsOf(presenceNamed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(found) == 0 {
+		t.Fatalf("presence.%s is called from nowhere, so this test guards nothing", presenceNamed)
+	}
+	for _, c := range found {
+		if c.file != namedRoom {
+			t.Errorf("presence.%s is called from %s's %s, and %s is the one room that names a run",
+				presenceNamed, c.file, c.fn, namedRoom)
+		}
+	}
+}
+
 // TestNoSkillPassesThePresenceFlag holds the flag out of the five skills.
 //
 // --presence is experimental: one person turns it on for their own machine,

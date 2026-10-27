@@ -36,7 +36,7 @@ final class FieldsTests: XCTestCase {
           line: 41),
       ], at: "2026-10-17T09:06:00Z")
 
-    guard case .stuck(_, let card, _)? = panel.now.first else {
+    guard case .stuck(_, let card, _, _)? = panel.now.first else {
       return XCTFail("a failed publish is a stuck card")
     }
     XCTAssertEqual(
@@ -144,7 +144,7 @@ final class FieldsTests: XCTestCase {
     ]
     let panel = try drawn(events, at: "2026-10-17T09:04:00Z", alive: [7101])
 
-    guard case .job(_, let card)? = panel.now.first else {
+    guard case .job(_, let card, _)? = panel.now.first else {
       return XCTFail("a publish that is running is a job card")
     }
     XCTAssertEqual(card.title, "Publishing · Chapter 4", "the title the first step carried")
@@ -209,8 +209,8 @@ final class FieldsTests: XCTestCase {
       ], at: "2026-10-17T14:00:00Z")
     XCTAssertEqual(failed.reasons, ["The terminal that ran it has the reason."])
     XCTAssertEqual(
-      failed.documents?.rows.first?.sub, "stopped 12:01 · ~/hub/falcon/chapters/05.md",
-      "the document's row is what carries the moment")
+      failed.documents?.rows.first?.sub, "restyle failed 12:01 · ~/hub/falcon/chapters/05.md",
+      "the document's row is what carries the moment, and the write that failed")
   }
 
   // Scene r3: `via: code` is gdoc under Claude Code, which is where most of
@@ -222,7 +222,7 @@ final class FieldsTests: XCTestCase {
       at: "2026-10-17T11:39:00Z", alive: [7101])
 
     XCTAssertEqual(Words.via("code"), "from Claude Code")
-    guard case .job(_, let card)? = panel.now.first else {
+    guard case .job(_, let card, _)? = panel.now.first else {
       return XCTFail("a command that is still running is a job card")
     }
     XCTAssertEqual(card.sub, "started 11:37 · from Claude Code")
@@ -240,7 +240,7 @@ final class FieldsTests: XCTestCase {
           "2026-10-17T17:04:00Z", .end, command: "comments", doc: chapter5, wait: true,
           title: "Chapter 5 storyline", ok: false, stop: "network"),
       ], at: "2026-10-17T17:05:00Z")
-    guard case .live(_, let row, _, _)? = network.now.first else {
+    guard case .live(_, let row, _, _, _)? = network.now.first else {
       return XCTFail("an open watch is a live row")
     }
     XCTAssertEqual(row.sub, "last poll failed 17:04 · network")
@@ -277,7 +277,7 @@ final class FieldsTests: XCTestCase {
       ], at: "2026-10-17T15:30:00Z", facts: Scenes.machine(auth: .missingScopes),
       alive: [7101])
 
-    guard case .stuck(_, let card, _)? = panel.now.first else {
+    guard case .stuck(_, let card, _, _)? = panel.now.first else {
       return XCTFail("a token that is not working raises its card")
     }
     XCTAssertEqual(
@@ -356,7 +356,7 @@ final class FieldsTests: XCTestCase {
             hold: "h_1", rule: "Unread target"),
         ], at: "2026-10-17T16:34:00Z")
 
-      guard case .hold(_, let card, _)? = panel.now.first else {
+      guard case .hold(_, let card, _, _)? = panel.now.first else {
         return XCTFail("a held \(command) is one card in NOW")
       }
       XCTAssertEqual(
@@ -410,12 +410,12 @@ final class FieldsTests: XCTestCase {
 
   /// The sub-line of a live row, where an item is one.
   private func liveSub(_ item: NowItem) -> String? {
-    if case .live(_, let row, _, _) = item { return row.sub }
+    if case .live(_, let row, _, _, _) = item { return row.sub }
     return nil
   }
 
   private func liveTitle(_ item: NowItem) -> String? {
-    if case .live(_, let row, _, _) = item { return row.title }
+    if case .live(_, let row, _, _, _) = item { return row.title }
     return nil
   }
 }

@@ -95,6 +95,29 @@ final class WordsTests: XCTestCase {
       "01:30 in Amsterdam is the same local day the panel is drawn in")
   }
 
+  /// The clock alone, whatever day the moment is on.
+  ///
+  /// It is what the two update sentences carry. They stay until the next
+  /// press of either button, so a panel nobody has pressed anything on
+  /// since midnight still says the clock of the run: "Yesterday" in a
+  /// sentence about a press is a moment nobody can place.
+  func testTheClockIsTheClockOnEveryDay() throws {
+    let calendar = try utc()
+
+    XCTAssertEqual(Words.clock(try moment("2026-10-17T14:02:00Z"), calendar: calendar), "14:02")
+    XCTAssertEqual(Words.clock(try moment("2026-10-17T09:05:00Z"), calendar: calendar), "09:05")
+    XCTAssertEqual(
+      Words.clock(try moment("2026-10-11T23:59:00Z"), calendar: calendar), "23:59",
+      "a moment a week back is still a clock here")
+
+    var amsterdam = Calendar(identifier: .gregorian)
+    amsterdam.timeZone = try XCTUnwrap(TimeZone(identifier: "Europe/Amsterdam"))
+    amsterdam.locale = Locale(identifier: "en_US_POSIX")
+    XCTAssertEqual(
+      Words.clock(try moment("2026-10-17T12:02:00Z"), calendar: amsterdam), "14:02",
+      "in the person's own zone, as every other moment is")
+  }
+
   /// `quiet 52 min`, `quiet 2 h`, `quiet 1 h 20 min`, `5 h 45 min`.
   func testDurationsAreMinutesAndHours() {
     XCTAssertEqual(Words.duration(52 * 60), "52 min")

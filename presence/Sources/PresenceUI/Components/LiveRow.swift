@@ -18,8 +18,13 @@ import SwiftUI
 
 /// What a live row draws.
 public struct LiveRowModel: Equatable, Sendable {
-  /// `Live · Chapter 5 storyline`.
-  public let title: String
+  /// The verb in front of the name, "Live" or "Live stopped". It is drawn
+  /// whole and the name is measured in the room it leaves, so a watch over
+  /// `Ch 5. Commercial Model v0.1` keeps a name a person can read:
+  /// testAPrefixTakesItsRoomAndTheFloorCountsTheName.
+  public let prefix: String?
+  /// The document's own name, `Chapter 5 storyline`.
+  public let name: String
   /// Since when, how long it has been quiet, what it replied, and whether
   /// the last poll failed. Facts, never a prediction.
   public let sub: String
@@ -29,11 +34,16 @@ public struct LiveRowModel: Equatable, Sendable {
   /// things about one watch. Scene e9.
   public let stopped: Bool
 
-  public init(title: String, sub: String, stopped: Bool = false) {
-    self.title = title
+  public init(prefix: String? = nil, name: String, sub: String, stopped: Bool = false) {
+    self.prefix = prefix
+    self.name = name
     self.sub = sub
     self.stopped = stopped
   }
+
+  /// `Live · Chapter 5 storyline`: the line a reader sees, which is the two
+  /// pieces put back together.
+  public var title: String { MiddleTitle.whole(prefix: prefix, name: name) }
 }
 
 /// One watch.
@@ -48,15 +58,18 @@ public struct LiveRow: View {
   public let state: ActionState?
   /// Whether the signal has gone and the end has not arrived.
   public let pending: Bool
+  /// The words the title carries where the row itself opens the document.
+  public let titleTip: String?
   public let onStop: () -> Void
 
   public init(
     model: LiveRowModel, stop: ActionState? = .live, pending: Bool = false,
-    onStop: @escaping () -> Void = {}
+    titleTip: String? = nil, onStop: @escaping () -> Void = {}
   ) {
     self.model = model
     self.state = stop
     self.pending = pending
+    self.titleTip = titleTip
     self.onStop = onStop
   }
 
@@ -75,7 +88,9 @@ public struct LiveRow: View {
 
   public var body: some View {
     RowView(
-      .two, glyph: .dot, tone: model.stopped ? .dim : .live, title: model.title, sub: model.sub,
+      .two, glyph: .dot, tone: model.stopped ? .dim : .live, title: model.name,
+      titlePrefix: model.prefix, titleColumn: MiddleTitle.nowColumn, titleTip: titleTip,
+      sub: model.sub,
       trailing: {
         if Self.showsRing(pending: pending) {
           // The ring is the glyph's 16 pt in the action's 24 pt box, so the

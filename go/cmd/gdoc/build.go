@@ -159,13 +159,21 @@ func noteSource(md string) ([]byte, error) {
 // It never answers nil, even when it fails. Docx is the field a caller reads
 // to know whether there is a document, and what the run earned on the way to
 // failing is still the caller's to print: a logo that was fetched and could
-// not be cached is worth a line whatever happened next.
+// not be cached is worth a line whatever happened next. Title is one of those
+// earnings, set as soon as the cover gives it rather than at the end, so a
+// publish that stopped further down still knows the note's name:
+// TestAPublishThatStoppedInTheRenderNamesTheNote.
 func renderNote(ctx context.Context, source []byte, md string, a *args) (*noteDocx, error) {
 	doc := &noteDocx{}
 	fields, markdown, err := cover.Read(source)
 	if err != nil {
 		return doc, errors.New(titleError(err, string(markdown), md))
 	}
+	// The name as early as the cover gives it, so a run that stops further
+	// down still has one. Nothing in a failure envelope reads this field:
+	// buildFailed and publish's own refusal print the house and the logo and
+	// no title, which TestAFailedBuildStillPrintsTheLogoBlock holds.
+	doc.Title = fields.CoverTitle()
 	cfg, style, err := readHouse(a)
 	if err != nil {
 		return doc, err
@@ -195,7 +203,7 @@ func renderNote(ctx context.Context, source []byte, md string, a *args) (*noteDo
 		return doc, err
 	}
 	doc.Docx = buf.Bytes()
-	doc.Title, doc.RunningHead = fields.CoverTitle(), fields.RunningHead()
+	doc.RunningHead = fields.RunningHead()
 	return doc, nil
 }
 

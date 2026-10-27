@@ -18,7 +18,7 @@ import PresenceCore
 extension PanelModel {
   /// The header, out of the machine's facts and what the person asked.
   static func header(
-    facts: Facts, ui: UIState, now: Date, stopping: Stopping
+    facts: Facts, ui: UIState, now: Date, calendar: Calendar, stopping: Stopping
   ) -> HeaderModel {
     let banner: BannerModel? =
       if let account = facts.account,
@@ -29,7 +29,7 @@ extension PanelModel {
         nil
       }
 
-    let version = versionPieces(facts, now: now)
+    let version = versionPieces(facts, now: now, calendar: calendar)
     let account = accountPieces(facts)
 
     // The question is asked in place of the line. The pair of buttons takes
@@ -105,7 +105,9 @@ extension PanelModel {
   /// wait for a release they already know is out. What the states differ in
   /// is what this app has been told, never what the press does.
   /// testTheUpdateGlyphIsAlwaysThereInItsThreeStates.
-  private static func versionPieces(_ facts: Facts, now: Date) -> VersionPieces {
+  private static func versionPieces(_ facts: Facts, now: Date, calendar: Calendar)
+    -> VersionPieces
+  {
     guard facts.gdocFound else {
       return VersionPieces(
         text: "not found", tone: .bad, quiet: "looked for it at \(facts.gdocPathTried)")
@@ -139,7 +141,15 @@ extension PanelModel {
     // both. Nail may still want it on the line, and that is his word to
     // say.
     let look: UpdateLook = latest == nil ? .quiet : .available
-    let published = latest.map { "\($0) is published" }
+    // A press of the glyph that installed nothing takes that line. The two
+    // of them are about the same thing, and the one a person is owed is
+    // the answer to what they just pressed: the number that is published is
+    // still on the glyph's own dot and in its tooltip. The line goes at the
+    // next press of either button, and with the process.
+    // StateTests.testEachRunThatInstalledNothingSaysWhyInAFixedSentence.
+    let published =
+      facts.updateRun.map { Sentences.updateMiss($0, calendar: calendar) }
+      ?? latest.map { "\($0) is published" }
 
     // The second after a run that installed nothing. The check stands in
     // for the arrow, as a copied link's does, and it goes by itself.
@@ -155,7 +165,7 @@ extension PanelModel {
       return VersionPieces(
         text: version,
         update: ActionModel(.update, icon: .down, tip: Tips.checkUpdate, target: "gdoc"),
-        look: .quiet)
+        look: .quiet, quiet: published)
     }
     return VersionPieces(
       text: version,
