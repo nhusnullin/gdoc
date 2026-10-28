@@ -129,6 +129,12 @@ public struct RowView<Leading: View, Trailing: View>: View {
   /// quiet parts of the row press through the row's own box, which is
   /// `opensDocument` in the list: DocumentPress.open.
   public let titleTap: (() -> Void)?
+  /// The row uncut, which a pointer resting on the middle column brings up.
+  /// A row that has none carries none: NOW's rows say their words in a
+  /// bubble, and the card is DOCUMENTS' own.
+  public let card: DetailCardModel?
+  /// The card held open with no pointer, which only a still ever asks for.
+  public let forcedCard: Bool
   public let value: String?
   public let sub: String?
   /// The title's colour, where the row is not drawn on the panel's own
@@ -143,6 +149,9 @@ public struct RowView<Leading: View, Trailing: View>: View {
 
   @Environment(\.colorScheme) private var scheme
   @State private var pointerInside = false
+  /// Whether this row's card is up, which three gestures on the same words
+  /// decide between them: Components/CardRest.
+  @State private var rest = CardRest()
 
   public init(
     _ shape: RowShape = .plain,
@@ -152,6 +161,8 @@ public struct RowView<Leading: View, Trailing: View>: View {
     titleTip: String? = nil,
     titleHeld: (() -> Void)? = nil,
     titleTap: (() -> Void)? = nil,
+    card: DetailCardModel? = nil,
+    forcedCard: Bool = false,
     value: String? = nil,
     sub: String? = nil,
     titleInk: Swatch? = nil,
@@ -168,6 +179,8 @@ public struct RowView<Leading: View, Trailing: View>: View {
     self.titleTip = titleTip
     self.titleHeld = titleHeld
     self.titleTap = titleTap
+    self.card = card
+    self.forcedCard = forcedCard
     self.value = value
     self.sub = sub
     self.titleInk = titleInk
@@ -210,8 +223,8 @@ public struct RowView<Leading: View, Trailing: View>: View {
         .frame(minHeight: Typography.rowTitle.lineHeight)
         .metricProbe("row.title")
         .tooltip(titleTip ?? "", align: .leading)
-        .opensDocument(titleTap)
-        .heldPress(titleHeld)
+        .opensDocument(tapTellingTheCard)
+        .heldPress(heldTellingTheCard)
 
         if let sub {
           Text(sub)
@@ -224,6 +237,10 @@ public struct RowView<Leading: View, Trailing: View>: View {
             .metricProbe("row.sub")
         }
       }
+      // The two lines the card says whole are the two lines it rests over.
+      // The icon column is outside it, so a pointer that moved on to an
+      // icon has left the card and the icon's own words take the layer.
+      .detailCard(card, rest: $rest, forced: forcedCard)
 
       // `.row.is-busy .acts{display:none}`: while a write of this row's own
       // is in flight the row carries no action at all, rather than one that
@@ -249,6 +266,37 @@ public struct RowView<Leading: View, Trailing: View>: View {
     .metricProbe("row.\(shape.rawValue)")
   }
 
+  /// The click, with the card told about it first.
+  ///
+  /// A card is an answer to a question the click has just stopped asking:
+  /// the browser is coming up, and a plate left behind over the row would
+  /// be the panel still explaining itself.
+  var tapTellingTheCard: (() -> Void)? {
+    guard let titleTap else { return nil }
+    let press: @MainActor () -> Void = {
+      rest.after(.click)
+      titleTap()
+    }
+    return press
+  }
+
+  /// The held press, with the card told first and the menu opened on the
+  /// next turn of the main queue.
+  ///
+  /// The turn is the whole point: `NSMenu.popUp` tracks the menu itself and
+  /// does not return until it closes, so a menu opened in the same turn as
+  /// the card's removal would stand over a card nothing had redrawn. It is
+  /// here and not in `RowMenu.held`, because the card is the row's and the
+  /// menu knows nothing about it.
+  var heldTellingTheCard: (() -> Void)? {
+    guard let titleHeld else { return nil }
+    let press: @MainActor () -> Void = {
+      rest.after(.heldPress)
+      Task { titleHeld() }
+    }
+    return press
+  }
+
   /// The sub-line's colour on a tinted row, which is the plate's quiet ink.
   var subInk: Swatch? {
     guard titleInk != nil else { return nil }
@@ -272,6 +320,8 @@ extension RowView where Leading == StatusGlyph, Trailing == EmptyView {
     titleTip: String? = nil,
     titleHeld: (() -> Void)? = nil,
     titleTap: (() -> Void)? = nil,
+    card: DetailCardModel? = nil,
+    forcedCard: Bool = false,
     value: String? = nil,
     sub: String? = nil,
     gone: Bool = false,
@@ -279,8 +329,8 @@ extension RowView where Leading == StatusGlyph, Trailing == EmptyView {
   ) {
     self.init(
       shape, title: title, titlePrefix: titlePrefix, titleColumn: titleColumn,
-      titleTip: titleTip, titleHeld: titleHeld, titleTap: titleTap, value: value,
-      sub: sub, gone: gone, hovering: hovering,
+      titleTip: titleTip, titleHeld: titleHeld, titleTap: titleTap, card: card,
+      forcedCard: forcedCard, value: value, sub: sub, gone: gone, hovering: hovering,
       leading: { StatusGlyph(glyph, tone: tone) }, trailing: { EmptyView() })
   }
 }
@@ -298,6 +348,8 @@ extension RowView where Leading == StatusGlyph {
     titleTip: String? = nil,
     titleHeld: (() -> Void)? = nil,
     titleTap: (() -> Void)? = nil,
+    card: DetailCardModel? = nil,
+    forcedCard: Bool = false,
     value: String? = nil,
     sub: String? = nil,
     titleInk: Swatch? = nil,
@@ -308,8 +360,8 @@ extension RowView where Leading == StatusGlyph {
   ) {
     self.init(
       shape, title: title, titlePrefix: titlePrefix, titleColumn: titleColumn,
-      titleTip: titleTip, titleHeld: titleHeld, titleTap: titleTap, value: value,
-      sub: sub, titleInk: titleInk, gone: gone,
+      titleTip: titleTip, titleHeld: titleHeld, titleTap: titleTap, card: card,
+      forcedCard: forcedCard, value: value, sub: sub, titleInk: titleInk, gone: gone,
       hovering: hovering, busy: busy,
       leading: { StatusGlyph(glyph, tone: tone) }, trailing: trailing)
   }

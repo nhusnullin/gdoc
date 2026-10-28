@@ -152,38 +152,6 @@ public enum NowItem: Sendable, Equatable, Identifiable {
   }
 }
 
-/// One document's row.
-public struct DocumentRowModel: Sendable, Equatable, Identifiable {
-  public let doc: String
-  public let title: String
-  public let sub: String
-  public let glyph: GlyphKind
-  public let tone: GlyphTone
-  /// The document is in the trash. The v1 record never says so, so this is
-  /// false until M24b.
-  public let gone: Bool
-  /// Whether the person pinned it, which the row draws as the state of its
-  /// last icon: the tack is filled on a pinned row and hollow on the rest.
-  public let isPinned: Bool
-  /// The document a press on the row opens: its own id where Drive could
-  /// have written it, and nothing otherwise.
-  ///
-  /// It is the rule a NOW row already follows. An id of another shape opens
-  /// nothing, because `Opener` refuses to build a URL out of it and a row
-  /// that offers a press doing nothing is worse than a row that offers
-  /// none: testADocumentRowOpensItselfAndCarriesFourIcons.
-  public let opens: String?
-  public let actions: [ActionModel]
-  /// The row's own menu: Hide from the list, and nothing on a pinned row.
-  public let menu: [MenuItemModel]
-  /// The row uncut, which a rested pointer brings up over it. It is built
-  /// for every row and drawn for the one the pointer is on, so a still of
-  /// any row's card is renderable from the model alone.
-  public let card: DetailCardModel
-
-  public var id: String { doc }
-}
-
 /// A question asked in place of a row: the words, what follows from them,
 /// and the word on the loud half of the pair. The quiet half is always Keep.
 public struct QuestionModel: Sendable, Equatable {
@@ -229,15 +197,6 @@ public struct SettingsRowModel: Sendable, Equatable, Identifiable {
     self.isOn = isOn
     self.select = select
   }
-}
-
-/// DOCUMENTS: its rows, every one of which is drawn.
-public struct DocumentsSectionModel: Sendable, Equatable {
-  public let rows: [DocumentRowModel]
-  /// The one line a panel with no documents says instead.
-  public let empty: String?
-  /// Whether the four labels are drawn under the first row.
-  public let showsStrip: Bool
 }
 
 /// The address said once at its full size, for five seconds after a sign-in.
@@ -682,7 +641,8 @@ extension PanelModel {
       // them to do the thing they are doing, so the line is the quiet one
       // until that write names a document.
       empty: rows.isEmpty ? (busy ? Sentences.nothingYet : Sentences.noDocuments) : nil,
-      showsStrip: !ui.stripSeen && !rows.isEmpty)
+      showsStrip: !ui.stripSeen && !rows.isEmpty,
+      forcedCard: ui.forcedCard)
   }
 
   /// A row's own menu: the hide, on a row that is not pinned.

@@ -502,6 +502,149 @@ final class ControlTests: XCTestCase {
     }
   }
 
+  // MARK: the card
+
+  // The plate a rested pointer brings up over a document row. It is the two
+  // edges the fifth look's design note names: the title's own left edge,
+  // 44 pt in, and the column every value, every time and every icon in the
+  // panel ends on, 20 pt from the right. On the 360 pt panel that is 296.
+  //
+  // Stated as a literal and read back off the drawing, because a card as
+  // wide as its longest line would be a different shape on every row of
+  // one list.
+  func testTheCardSpansFromTheTitleToTheValueColumn() throws {
+    XCTAssertEqual(DetailCard.width, 296, "the title's edge to the value column")
+    XCTAssertEqual(
+      DetailCard.width, Grid.panelWidth - Grid.quietInset - Grid.unit - Grid.rowInset,
+      "which is 360 less the 44 the title starts at and the 20 the values end on")
+    XCTAssertEqual(DetailCard.padding, 8)
+
+    let model = DetailCardModel(
+      title: "Northwind, Altery and a wallet partner call: screening quota and conversion rate",
+      when: "commented Wed 28 Oct 2026, 12:08",
+      note: "~/hub/partners/northwind-call.md",
+      hint: "Click opens in Google Docs")
+    let card = DetailCard(model)
+
+    for scheme in [ColorScheme.dark, .light] {
+      let measured = try probes(card, scheme: scheme)
+      XCTAssertEqual(
+        measured["card"]?.width, 296, "the card's own width in \(scheme)")
+      XCTAssertGreaterThan(
+        measured["card"]?.height ?? 0, 60,
+        "four lines, and the long title wrapped rather than cut, in \(scheme)")
+    }
+
+    // A pinned-only row says nothing about a moment and the hint is gone
+    // after the first click, so the same plate draws two lines and is
+    // shorter. Nothing on it is ever cut, so nothing on it is ever padded
+    // out either.
+    let bare = DetailCardModel(
+      title: "Wallet note: the partner shortlist", when: nil,
+      note: "No note paired yet", hint: nil)
+    let short = try probes(DetailCard(bare), scheme: .dark)
+    XCTAssertEqual(short["card"]?.width, 296, "the width is the two edges and not the words")
+    XCTAssertLessThan(
+      short["card"]?.height ?? 0, try XCTUnwrap(probes(card, scheme: .dark)["card"]?.height),
+      "two lines are shorter than four")
+
+    // It is ink in both appearances, and the two are not one drawing.
+    for scheme in [ColorScheme.dark, .light] {
+      XCTAssertGreaterThan(
+        try inkedPixels(card, scheme: scheme, side: Grid.panelWidth), 1_000,
+        "the card drew nothing in \(scheme)")
+    }
+    XCTAssertNotEqual(try png(card, scheme: .dark), try png(card, scheme: .light))
+  }
+
+  // Which of the requests under the panel the layer draws. A row's tree
+  // puts its middle column before its trailing icons, so the title's card
+  // is an earlier request than any icon's words, and the last request wins:
+  // the pointer is on the icon, and what the icon does is what it is
+  // asking.
+  func testAnIconsTooltipWinsOverTheCard() throws {
+    let model = DetailCardModel(
+      title: "Partner bank setup", when: "restyled Wed 28 Oct 2026, 10:12",
+      note: "~/hub/partners/partner-bank.md", hint: nil)
+    let card = Ask(content: .card(model), forced: false)
+    let words = Ask(content: .words(Tips.copyLink), forced: false)
+
+    let chosen = try XCTUnwrap(Tooltip.chosen([card, words]))
+    guard case .words(let drawn) = chosen.content else {
+      return XCTFail("the icon's words came later and the layer drew the card")
+    }
+    XCTAssertEqual(drawn, Tips.copyLink)
+
+    // One request on its own is that request, and nothing at all is
+    // nothing: a panel nobody is pointing at draws no plate.
+    guard case .card = try XCTUnwrap(Tooltip.chosen([card])).content else {
+      return XCTFail("the one request was the card")
+    }
+    XCTAssertNil(Tooltip.chosen([Ask]()))
+
+    // A forced one wins wherever it stands, which is how a still of the
+    // card is drawn: scene e1 forces one and points at nothing.
+    let forcedCard = Ask(content: .card(model), forced: true)
+    guard case .card = try XCTUnwrap(Tooltip.chosen([forcedCard, words])).content else {
+      return XCTFail("a forced request is the one the layer draws")
+    }
+  }
+
+  /// A request without a box, so the rule can be stated over the two
+  /// contents: an `Anchor` is made by the tree and by nothing else.
+  private struct Ask: TooltipChoice {
+    let content: TooltipContent
+    let forced: Bool
+  }
+
+  // When the card is up, as the pure function it is. The rest and not the
+  // entry, as the tooltip's own rule is; and the two presses that put
+  // something else over the same words take it away until the pointer
+  // leaves and comes back.
+  func testTheCardShowsAfterTheRestAndGoesOnLeaveHeldPressOrClick() throws {
+    XCTAssertEqual(
+      CardRestEvent.allCases.map(\.rawValue),
+      ["enter", "rested", "leave", "heldPress", "click"],
+      "the five events, and no sixth")
+
+    var rest = CardRest()
+    XCTAssertFalse(rest.isShowing, "nothing is pointed at")
+    rest.after(.enter)
+    XCTAssertFalse(rest.isShowing, "the entry is not the rest")
+    rest.after(.rested)
+    XCTAssertTrue(rest.isShowing, "half a second still, and the card is up")
+
+    // The pointer leaves.
+    rest.after(.leave)
+    XCTAssertFalse(rest.isShowing)
+    rest.after(.rested)
+    XCTAssertFalse(rest.isShowing, "a rest with the pointer gone is nobody resting")
+
+    // The held press: the system's menu is coming up over these words, so
+    // the card goes and stays gone under this pointer.
+    rest.after(.enter)
+    rest.after(.rested)
+    XCTAssertTrue(rest.isShowing)
+    rest.after(.heldPress)
+    XCTAssertFalse(rest.isShowing, "the menu and the card are never up together")
+    rest.after(.rested)
+    XCTAssertFalse(rest.isShowing, "and it does not come back under the same pointer")
+    rest.after(.enter)
+    rest.after(.rested)
+    XCTAssertTrue(rest.isShowing, "the next pointer in is a new question")
+
+    // The click: a browser tab is coming up, so the plate explaining that
+    // goes with it.
+    rest.after(.click)
+    XCTAssertFalse(rest.isShowing)
+    rest.after(.rested)
+    XCTAssertFalse(rest.isShowing, "and stays away until the pointer leaves and returns")
+    rest.after(.leave)
+    rest.after(.enter)
+    rest.after(.rested)
+    XCTAssertTrue(rest.isShowing)
+  }
+
   // MARK: the scan
 
   /// Whether the text makes one, with the needle's first word standing on

@@ -360,11 +360,23 @@ enum Scenes {
         + "Chapter 5 failed at 11:40, and a run that failed is the one thing the mark "
         + "means since 2026-10-26. The five rows around it say what their last run was "
         + "and draw nothing in front of it. NOW is empty because the person dismissed "
-        + "that failure's card, and a dismissal hides a card and changes no row.",
+        + "that failure's card, and a dismissal hides a card and changes no row. "
+        + "The plate over the second row is the card, which a pointer resting half a "
+        + "second on a document's name brings up and which goes when it leaves, is "
+        + "held down or is clicked. It is the row uncut and never the row plus: its "
+        + "first line is the whole name, its second what last happened and when, "
+        + "written out with the day and the year, and its third where the note is. "
+        + "The fourth line, Click opens in Google Docs, is the one line that is not "
+        + "about the document: it goes after the person's own first click on a row "
+        + "and never comes back, so it is on this screen and on no later one.",
       fixture: "e1", moment: "2026-10-17T18:10:00Z", alive: [],
       facts: machine(),
       ui: UIState(
         dismissed: ["3000000000000003|1"],
+        // The first of the five under the pin, which is the export of
+        // 18:10 that the moment of this scene is.
+        forcedCard: SceneDocuments.concept,
+        cardHintSeen: false,
         pinned: [
           DocumentChoice(
             doc: SceneDocuments.wallet, at: Date(timeIntervalSince1970: 1_792_141_200),

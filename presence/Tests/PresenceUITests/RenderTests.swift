@@ -245,7 +245,7 @@ final class RenderTests: XCTestCase {
   /// is out: testTheSignOutQuestionPinsNothing.
   func testSettingsIsPinnedWhileASignInIsInFlight() throws {
     let waiting = try XCTUnwrap(Scenes.all.first { $0.id == "e8" }).model()
-    let empty = DocumentsSectionModel(rows: [], empty: nil, showsStrip: false)
+    let empty = DocumentsSectionModel(rows: [], empty: nil, showsStrip: false, forcedCard: nil)
     XCTAssertEqual(
       waiting.sections.map(\.id),
       [PanelSection.settings([]).id, PanelSection.documents(empty).id],

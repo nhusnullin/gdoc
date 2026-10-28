@@ -43,6 +43,11 @@ public struct UIState: Sendable, Equatable {
   /// One action's words, held open with no pointer. It is an `ActionModel`
   /// id, which is the target and the kind.
   public var forcedTooltip: String?
+  /// The document whose card is held open with no pointer, by id. It is
+  /// `forcedTooltip`'s shape on the other thing the layer draws, and
+  /// nothing in the app ever sets it: a still of the card is the one
+  /// reason it exists.
+  public var forcedCard: String?
   /// Whether the four labels under the first document row have been seen.
   /// They go after the first click on any icon and never come back.
   public var stripSeen: Bool
@@ -80,6 +85,7 @@ public struct UIState: Sendable, Equatable {
     question: PanelQuestion? = nil,
     questionAt: Date? = nil,
     forcedTooltip: String? = nil,
+    forcedCard: String? = nil,
     stripSeen: Bool = true,
     cardHintSeen: Bool = true,
     noteFault: [String: NoteFault] = [:],
@@ -93,6 +99,7 @@ public struct UIState: Sendable, Equatable {
     self.question = question
     self.questionAt = questionAt
     self.forcedTooltip = forcedTooltip
+    self.forcedCard = forcedCard
     self.stripSeen = stripSeen
     self.cardHintSeen = cardHintSeen
     self.noteFault = noteFault

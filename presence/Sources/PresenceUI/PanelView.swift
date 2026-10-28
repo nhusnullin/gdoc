@@ -246,7 +246,8 @@ struct DocumentsList: View {
           VStack(alignment: .leading, spacing: 0) {
             RowView(
               .doc, glyph: row.glyph, tone: row.tone, title: row.title,
-              titleHeld: menu.held, titleTap: press, sub: row.sub,
+              titleHeld: menu.held, titleTap: press, card: row.card,
+              forcedCard: model.forcedCard == row.doc, sub: row.sub,
               gone: row.gone,
               trailing: {
                 HStack(spacing: Grid.actionGap) {

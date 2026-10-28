@@ -11,7 +11,13 @@
 // its box upwards through `anchorPreference` rather than drawing a bubble of
 // its own: a bubble inside a row would be clipped by the row, and two
 // bubbles would overlap. The layer takes the last request, or the forced one
-// where there is one.
+// where there is one, which is `Tooltip.chosen`.
+//
+// Since the fifth look it draws two things and not one: a control's words,
+// and a document row's card, which is Components/DetailCard. They are one
+// layer because they float over the same panel and would otherwise be able
+// to cover each other with nothing deciding which; and the last request
+// wins, so the icon the pointer is actually on beats the row behind it.
 //
 // Nothing here waits for the pointer except `Tooltip.shows`, which is the
 // half second written down as a function so a test can state it.
@@ -71,6 +77,18 @@ public enum Tooltip {
   /// How long the pointer rests first.
   public static let delay: TimeInterval = Timing.tooltipDelay
 
+  /// Which of the requests under the panel the layer draws: the forced one,
+  /// else the last.
+  ///
+  /// The last, because a row's tree puts its middle column before its
+  /// trailing icons, so an icon's words are a later request than the
+  /// title's card and win the layer. That is the rule the panel wants: the
+  /// pointer is on the icon, and the words under it say what the icon does:
+  /// testAnIconsTooltipWinsOverTheCard.
+  public static func chosen<Request: TooltipChoice>(_ requests: [Request]) -> Request? {
+    requests.first(where: \.forced) ?? requests.last
+  }
+
   /// Whether the words are drawn: the pointer's rest, or a forced one.
   ///
   /// The rest and not the entry, because a pointer that crossed a button on
@@ -113,9 +131,30 @@ public enum Tooltip {
   }
 }
 
-/// One view's request for the layer: the words, the alignment and its box.
-public struct TooltipRequest: Sendable {
-  public let words: String
+/// What the layer has to draw: one line about a control, or one document's
+/// card.
+///
+/// Two, because the layer is one layer: the card floats over the panel for
+/// the same reason a bubble does, and a second layer would be two things
+/// able to cover each other with nothing deciding which.
+public enum TooltipContent: Sendable {
+  /// A control's own label, on one line.
+  case words(String)
+  /// A document row, uncut.
+  case card(DetailCardModel)
+}
+
+/// What the layer chooses between. A request is the only thing that
+/// conforms in the app; a test states the rule over its own.
+public protocol TooltipChoice {
+  /// Held open with no pointer, which is a render's doing and Copy link's.
+  var forced: Bool { get }
+}
+
+/// One view's request for the layer: what to draw, the alignment and its
+/// box.
+public struct TooltipRequest: Sendable, TooltipChoice {
+  public let content: TooltipContent
   public let align: TooltipAlign
   public let forced: Bool
   public let anchor: Anchor<CGRect>
@@ -172,19 +211,36 @@ extension View {
     modifier(TooltipCarrier(words: words, align: align, forced: forced))
   }
 
-  /// Draw the panel's one tooltip over everything under it.
+  /// Draw the panel's one tooltip, or the one card, over everything under
+  /// it.
   public func tooltipLayer() -> some View {
     overlayPreferenceValue(TooltipAnchors.self) { requests in
       GeometryReader { geometry in
-        if let request = requests.first(where: \.forced) ?? requests.last {
+        if let request = Tooltip.chosen(requests) {
           TooltipPlacementLayout(
             anchor: geometry[request.anchor], align: request.align
           ) {
-            TooltipBubble(request.words)
+            TooltipPlate(request.content)
           }
         }
       }
       .allowsHitTesting(false)
+    }
+  }
+}
+
+/// Whichever of the two the chosen request asked for.
+struct TooltipPlate: View {
+  let content: TooltipContent
+
+  init(_ content: TooltipContent) {
+    self.content = content
+  }
+
+  var body: some View {
+    switch content {
+    case .words(let words): TooltipBubble(words)
+    case .card(let model): DetailCard(model)
     }
   }
 }
@@ -216,7 +272,8 @@ struct TooltipCarrier: ViewModifier {
       .anchorPreference(key: TooltipAnchors.self, value: .bounds) { anchor in
         guard !words.isEmpty, forced || resting else { return [] }
         return [
-          TooltipRequest(words: words, align: align, forced: forced, anchor: anchor)
+          TooltipRequest(
+            content: .words(words), align: align, forced: forced, anchor: anchor)
         ]
       }
   }

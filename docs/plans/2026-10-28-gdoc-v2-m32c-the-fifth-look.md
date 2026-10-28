@@ -395,7 +395,7 @@ the branch.
   `RowMenu.held`), `UIState.swift` (`forcedCard`),
   `presence/Tests/PresenceUITests/ControlTests.swift`, `Scenes.swift`
 
-- [ ] the plate. `DetailCard` draws the model on the tooltip's surface,
+- [x] the plate. `DetailCard` draws the model on the tooltip's surface,
       edge and shadow, at `Grid.controlRadius`, 8 pt padding, the title in
       `Typography.rowTitle` wrapped whole, the other lines in
       `Typography.caption` in the secondary ink, the hint in the tertiary
@@ -407,7 +407,7 @@ the branch.
       `Grid.quietInset` from the panel's edge; its right edge is the column
       every value ends on. It takes no clicks, which the layer already
       refuses for everything it draws
-- [ ] the layer draws it. `TooltipRequest` carries a content, the words it
+- [x] the layer draws it. `TooltipRequest` carries a content, the words it
       carries today or a `DetailCardModel`, and `tooltipLayer()` draws
       `TooltipBubble` for the one and `DetailCard` for the other, placed by
       `Tooltip.place` with `.leading` and the same flip above the anchor
@@ -415,12 +415,12 @@ the branch.
       function, `Tooltip.chosen(_ requests:)`, the forced one else the
       last; `ControlTests.testAnIconsTooltipWinsOverTheCard` states it with
       a title's card request before an icon's words request
-- [ ] when it shows is a pure function. `CardRest` takes events, enter,
+- [x] when it shows is a pure function. `CardRest` takes events, enter,
       rested, leave, heldPress, click, and answers whether the card is
       drawn: shown only after rested; leave ends it; heldPress and click end
       it until the next enter. `ControlTests.testTheCardShowsAfterTheRestAndGoesOnLeaveHeldPressOrClick`
       walks the five
-- [ ] where its state lives and who feeds it. `RowView` owns
+- [x] where its state lives and who feeds it. `RowView` owns
       `@State private var rest: CardRest`, beside its `pointerInside`, and
       hands a `Binding` to a `.detailCard(_:rest:forced:)` carrier on its
       middle column, the title and the sub-line together, with the same
@@ -433,13 +433,13 @@ the branch.
       `CardTests.testTheHeldPressOpensTheSystemMenuWithTheRowsOwnWords`
       calls `menu.held` synchronously and stays as it is. A DOCUMENTS row
       hands its card and no `titleTip`
-- [ ] renders can show it. `UIState.forcedCard: String?`, a document id,
+- [x] renders can show it. `UIState.forcedCard: String?`, a document id,
       the shape of `forcedTooltip`; the carrier treats it as forced. Scene
       e1 forces the card on its second row, the first of the five under
       the pin, with `cardHintSeen: false` so the fourth line is in the
       picture, and its caption says what the card is and what each of its
       four lines is. The eighteen scenes stay eighteen
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 6: the renders, once
 
