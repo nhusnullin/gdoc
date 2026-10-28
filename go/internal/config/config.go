@@ -86,6 +86,21 @@ func LastCheckPath() (string, error) {
 	return filepath.Join(d, "update-check.json"), nil
 }
 
+// CompletionPath is where gdoc's own shell completion file sits:
+// completion.zsh in the config dir. It is the file release/install.sh writes
+// and a person sources from .zshrc, and `gdoc update` replaces it with the
+// loader when it is gdoc's own, so a Tab follows the binary that is installed.
+// It lives beside the token because both are per-user state this machine
+// keeps, and it is never a credential: what is in it is a rendering of gdoc's
+// own command table, or the few lines that ask for one.
+func CompletionPath() (string, error) {
+	d, err := Dir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(d, "completion.zsh"), nil
+}
+
 // LoginPendingPath is where a sign-in waiting for a browser writes itself
 // down: login-pending.json in the config dir, in the shape internal/auth
 // reads and writes. It sits beside the token because it is about the token:

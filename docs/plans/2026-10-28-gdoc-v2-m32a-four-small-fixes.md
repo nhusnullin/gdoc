@@ -332,36 +332,39 @@ the installer and `update` write the same bytes.
 **Files:** `go/cmd/gdoc/update.go`, `go/cmd/gdoc/update_test.go`,
 `go/cmd/gdoc/doc.go`
 
-- [ ] test first: `TestAnUpdateReplacesGdocsStaticCompletionWithTheLoader`:
+- [x] test first: `TestAnUpdateReplacesGdocsStaticCompletionWithTheLoader`:
       a config dir whose `completion.zsh` opens with the static script's first
       line; after an update that installed, it holds the loader bytes and the
       result's data names the path
-- [ ] test: `TestAnUpdateLeavesAFileItDidNotWriteAlone`: a `completion.zsh`
+- [x] test: `TestAnUpdateLeavesAFileItDidNotWriteAlone`: a `completion.zsh`
       that opens with any other line is byte-identical after the run and a
       warning names it; so is one that opens `#compdef gdoc` followed by any
       line but the static header's second and third
-- [ ] test: `TestAnUpdateLeavesASymlinkedCompletionAlone`: a symlink at that
+- [x] test: `TestAnUpdateLeavesASymlinkedCompletionAlone`: a symlink at that
       path, to a gdoc-headed file, is left as it is, target unchanged, with a
       warning
-- [ ] test: `TestAnUpdateWritesNothingOverTheLoaderItself`: a file that is
+- [x] test: `TestAnUpdateWritesNothingOverTheLoaderItself`: a file that is
       already the loader byte for byte is not written and the result has no
       `completion` field
-- [ ] test: `TestAnUpdateWithNoCompletionFileWritesNone`
-- [ ] test: `TestAnUpdateThatInstalledNothingTouchesNoCompletion`
-- [ ] run them red
-- [ ] every new test uses `installedAt`, which sets `GDOC_CONFIG_DIR`, so no
+- [x] test: `TestAnUpdateWithNoCompletionFileWritesNone`
+- [x] test: `TestAnUpdateThatInstalledNothingTouchesNoCompletion`
+- [x] run them red
+- [x] every new test uses `installedAt`, which sets `GDOC_CONFIG_DIR`, so no
       test can touch the real `~/.config/gdoc-agent/completion.zsh`
-- [ ] `config.CompletionPath()` beside `LastCheckPath()`, with its test
-- [ ] the step, `os.Lstat` first, header bytes only, through `atomicfile`,
+- [x] `config.CompletionPath()` beside `LastCheckPath()`, with its test
+- [x] the step, `os.Lstat` first, header bytes only, through `atomicfile`,
       only after a run that installed
-- [ ] if the recorded update screens change, regenerate them; the commit says
-      the diff
-- [ ] the rule and its tests go in `update.go`'s file comment
-- [ ] the line in `docs/backlog/release-pipeline-needs-a-rethink.md` near :67
+- [x] if the recorded update screens change, regenerate them; the commit says
+      the diff (they do not change: the clause under the box is said only on a
+      run whose object carries `completion`, and `installedData()` in
+      `updatescreen_test.go` carries none, so the six records stay
+      byte-identical)
+- [x] the rule and its tests go in `update.go`'s file comment
+- [x] the line in `docs/backlog/release-pipeline-needs-a-rethink.md` near :67
       that names the removed file says the completion now follows the
       installed gdoc
-- [ ] `git rm docs/backlog/update-leaves-the-completion-stale.md`
-- [ ] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test` green
+- [x] `git rm docs/backlog/update-leaves-the-completion-stale.md`
+- [x] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test` green
 
 ### Task 6: the colleague's installer writes the loader
 

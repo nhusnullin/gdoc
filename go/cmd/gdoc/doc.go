@@ -104,7 +104,9 @@
 //     Doc. internal/publish.
 //   - update [--check] [--major] [--nightly] [--rollback]: this binary
 //     replaced by a newer release of it. internal/update, and the one reach
-//     that carries no credential, gapi.Plain.
+//     that carries no credential, gapi.Plain. A run that installed also
+//     replaces gdoc's own completion file beside the token with the loader,
+//     and leaves any other file at that path alone.
 //   - mcp: this binary as a stdio server for Claude
 //     Desktop, one JSON-RPC message per line. internal/mcp, with mcp.go for
 //     the wiring. The one command route sends past run. It offers eight tools,

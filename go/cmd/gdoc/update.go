@@ -105,6 +105,39 @@
 // TestTheUpdateObjectIsWhatTheSkillsRead and
 // TestRollbackPutsTheEarlierBinaryBack.
 //
+// # The completion beside the token follows the installed gdoc
+//
+// A run that installed a binary replaces one more file: gdoc's own shell
+// completion beside the token, config.CompletionPath(), with the loader
+// `completion zsh --loader` writes. The file release/install.sh wrote is a
+// snapshot of the commands of the gdoc that wrote it, so an update used to
+// leave a Tab offering the commands of the day somebody installed. The loader
+// asks the installed gdoc at every new shell instead, which is also why the
+// gdoc running an update does not have to know the new commands.
+//
+// gdoc writes there only where it wrote before. The path is Lstat'd first, so
+// a symlink, a FIFO or a directory is left as it is rather than written
+// through; then its first bytes, and a file that does not open with the static
+// script's first three lines or with the loader's own first line is left as it
+// is with a warning naming it. A file that is already the loader is not
+// written at all. Everything that goes wrong here is a warning and never a
+// refusal, as it is for the extension and the app: the binary has already
+// landed, and gdoc does not take a release back because a file beside the
+// token was somebody else's.
+//
+// The object's completion field names the file only on a run that changed it,
+// so the field means one thing, that this run changed what a terminal opened
+// from now on completes, and the line under the box says that in a clause on
+// those runs alone. --rollback writes none: it put an earlier gdoc back, whose
+// commands are the ones the file already there was written for.
+// TestAnUpdateReplacesGdocsStaticCompletionWithTheLoader,
+// TestAnUpdateLeavesAFileItDidNotWriteAlone,
+// TestAnUpdateLeavesASymlinkedCompletionAlone,
+// TestAnUpdateWritesNothingOverTheLoaderItself,
+// TestAnUpdateWithNoCompletionFileWritesNone,
+// TestAnUpdateThatInstalledNothingTouchesNoCompletion and
+// TestTheStaticHeaderIsTheTemplatesFirstThreeLines.
+//
 // # The update draws its steps on stderr
 //
 // A person who types `gdoc update` sees what it is doing while it does it: a
@@ -178,6 +211,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -187,6 +221,8 @@ import (
 	"strings"
 	"time"
 
+	"gdoc/internal/atomicfile"
+	"gdoc/internal/config"
 	"gdoc/internal/emit"
 	"gdoc/internal/gapi"
 	"gdoc/internal/guard"
@@ -312,6 +348,13 @@ type updateData struct {
 	// extension step: it wrote none, or it wrote one and the open failed, and
 	// the warnings say which.
 	ExtensionOpened bool `json:"extension_opened,omitempty"`
+	// Completion is the shell completion file this run replaced with the
+	// loader, and it is absent on every other run: a file that was already
+	// the loader, a file gdoc did not write, no file at all, a rollback and a
+	// run that installed nothing all leave it unwritten. So the field means
+	// one thing, that this run changed what a terminal opened from now on
+	// completes.
+	Completion string `json:"completion,omitempty"`
 	// The menu bar app, on a run that installed one or took one back.
 	// Presence is where the bundle is, PresenceVersion what its own plist
 	// says it is, PresenceSHA256 the sum of the whole folder, and
@@ -805,6 +848,7 @@ func installDecided(ctx context.Context, reach plain, chosen update.Release, des
 	data.Verified = true
 	data.SHA256 = got.res.Sum
 	data.Previous = got.res.Previous
+	data, warns = withCompletion(data, warns)
 	if desktop {
 		data, warns = withExtension(got.template, chosen.Version.String(), data, warns, pr)
 	} else if extensionChanged(got.template, data.Path, chosen.Version.String()) {
@@ -814,6 +858,103 @@ func installDecided(ctx context.Context, reach plain, chosen update.Release, des
 		data, warns = withPresence(got, chosen, data, warns, pr)
 	}
 	return emit.Result{OK: true, Data: data, Warnings: reachWarnings(reach, warns)}
+}
+
+// withCompletion puts the loader where gdoc's own completion file is, so a
+// terminal opened after this run completes the commands of the gdoc that was
+// just installed.
+//
+// It runs only after a run that installed a binary, which is this path and no
+// other: a rollback put an earlier gdoc back, whose commands are the ones the
+// file already there was written for, and a run with nothing to take changed
+// no command at all.
+//
+// The file is the one beside the token, config.CompletionPath(), because that
+// is the file release/install.sh writes and a person sources from .zshrc. A
+// checkout's file is bin/gdoc.zsh in a repository the binary must not assume
+// exists, and install.sh rewrites that one on every make build.
+//
+// gdoc writes there only where it wrote before. Lstat first, so a symlink, a
+// FIFO or a directory is left as it is rather than written through; then the
+// first bytes, which is all the question needs, and a header that is not one
+// of gdoc's two leaves the file alone. Everything that goes wrong is a warning
+// and never a refusal: the binary has already been replaced, and gdoc does not
+// take a release back because a file beside the token was somebody else's.
+//
+// TestAnUpdateReplacesGdocsStaticCompletionWithTheLoader,
+// TestAnUpdateLeavesAFileItDidNotWriteAlone,
+// TestAnUpdateLeavesASymlinkedCompletionAlone,
+// TestAnUpdateWritesNothingOverTheLoaderItself,
+// TestAnUpdateWithNoCompletionFileWritesNone and
+// TestAnUpdateThatInstalledNothingTouchesNoCompletion.
+func withCompletion(data updateData, warns []string) (updateData, []string) {
+	path, err := config.CompletionPath()
+	if err != nil {
+		return data, append(warns, fmt.Sprintf("gdoc cannot say where its completion file is, so the completion is as it was: %v", err))
+	}
+	info, err := os.Lstat(path)
+	if os.IsNotExist(err) {
+		// Nothing is sourced from there, so there is nothing to keep fresh,
+		// and a file written unasked is a file nobody asked for.
+		return data, warns
+	}
+	if err != nil {
+		return data, append(warns, fmt.Sprintf("%s could not be looked at, so gdoc left it alone: %v", tildePath(path), err))
+	}
+	if !info.Mode().IsRegular() {
+		return data, append(warns, fmt.Sprintf("%s is not a regular file, so gdoc left it alone. A terminal opened from now on completes what that file says, which may be the commands of an earlier gdoc.", tildePath(path)))
+	}
+	head, err := fileHead(path, len(zshLoader)+1)
+	if err != nil {
+		return data, append(warns, fmt.Sprintf("%s could not be read, so gdoc left it alone: %v", tildePath(path), err))
+	}
+	if string(head) == zshLoader {
+		// Already the loader, byte for byte. It names no version, so this
+		// release moved nothing in it and there is nothing to write.
+		return data, warns
+	}
+	if !gdocWroteCompletion(head) {
+		return data, append(warns, fmt.Sprintf("%s is not a file gdoc wrote, so gdoc left it alone. `gdoc completion zsh --loader --out %s --force` is how to have gdoc write the loader there.", tildePath(path), tildePath(path)))
+	}
+	if err := atomicfile.Replace(path, []byte(zshLoader), atomicfile.ModeOf(path, completionMode)); err != nil {
+		return data, append(warns, fmt.Sprintf("the completion loader could not be written to %s, so that file is as it was: %v", tildePath(path), err))
+	}
+	data.Completion = path
+	return data, warns
+}
+
+// gdocWroteCompletion is the question the step turns on: does this file open
+// the way a file gdoc wrote opens. Two headers, because gdoc has written two
+// kinds of file there, the static script and the loader.
+func gdocWroteCompletion(head []byte) bool {
+	return bytes.HasPrefix(head, []byte(staticCompletionHeader())) ||
+		bytes.HasPrefix(head, []byte(loaderFirstLine+"\n"))
+}
+
+// staticCompletionHeader is the first three lines of the script gdoc writes
+// for zsh, read off the template in completion.go rather than typed again
+// here, so the two cannot drift apart. Three lines and not one, because
+// `#compdef gdoc` is zsh's standard first line and says nothing about who
+// wrote the file: TestTheStaticHeaderIsTheTemplatesFirstThreeLines states all
+// three as a literal.
+func staticCompletionHeader() string {
+	lines := strings.SplitN(zshTemplate, "\n", 4)
+	if len(lines) < 4 {
+		return zshTemplate
+	}
+	return strings.Join(lines[:3], "\n") + "\n"
+}
+
+// fileHead is the first n bytes of a file, and never the whole of one. The
+// static completion script is tens of kilobytes of generated zsh, and the
+// question being asked of it is what it opens with.
+func fileHead(path string, n int) ([]byte, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return io.ReadAll(io.LimitReader(f, int64(n)))
 }
 
 // withPresence installs the menu bar app out of the same verified zip the
@@ -1160,7 +1301,13 @@ func extensionLine(d updateData) string {
 func actionLine(d updateData) string {
 	switch update.Action(d.Action) {
 	case update.Updated:
-		return fmt.Sprintf("gdoc %s installed. gdoc update --rollback goes back.", d.To)
+		line := fmt.Sprintf("gdoc %s installed. gdoc update --rollback goes back.", d.To)
+		if d.Completion == "" {
+			return line
+		}
+		// Said only where the file was changed, because a sentence about Tab
+		// on a run that wrote no completion would be a line nobody can act on.
+		return line + " A terminal opened from now on completes its commands."
 	case update.MajorAvailable:
 		return fmt.Sprintf("gdoc %s is a major release, so it was not installed. %s installs it.", d.To, d.Run)
 	case update.Unreachable:
