@@ -384,19 +384,22 @@ completion file
 
 ### Task 7: Verify acceptance criteria
 
-- [ ] `make test`, `make vet`, `make app-test`, `make app-lint` green, live
-      variables unset
-- [ ] `sh release/test-completion.sh` and `sh release/test-desktop.sh` pass
-- [ ] a built binary: `completion zsh --loader --out <tmp>/c.zsh` writes the
+- [x] `make test`, `make vet`, `make app-test`, `make app-lint` green, live
+      variables unset (363 Swift tests, 0 failures; gofmt and vet clean)
+- [x] `sh release/test-completion.sh` and `sh release/test-desktop.sh` pass
+      (seven checks and sixteen, all ok)
+- [x] a built binary: `completion zsh --loader --out <tmp>/c.zsh` writes the
       loader; under `zsh -f`, after `autoload -U compinit && compinit -u`,
       sourcing it with that binary first on PATH makes `whence -w _gdoc` say
-      function
-- [ ] `release/install.sh` names `--loader` in its completion call
-- [ ] the three backlog files are gone, and the only other backlog file
-      touched is the one line in `release-pipeline-needs-a-rethink.md`
-- [ ] `TestOnlyTheWaitTrapsTheSignal` passes untouched, and the boundary suite
+      function (it says `_gdoc: function`)
+- [x] `release/install.sh` names `--loader` in its completion call (line 423,
+      with the fallback without it on 425)
+- [x] the three backlog files are gone, and the only other backlog file
+      touched is the one line in `release-pipeline-needs-a-rethink.md` (item 8,
+      which now says the completion follows the installed gdoc)
+- [x] `TestOnlyTheWaitTrapsTheSignal` passes untouched, and the boundary suite
       passes, tightened only by the ban on `os.StartProcess` and syscall's
-      exec calls
+      exec calls (`main_test.go` has no diff against main)
 
 ### Task 8: [Final] Update documentation
 
