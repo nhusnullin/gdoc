@@ -126,10 +126,13 @@
 // and TestNoColorKeepsTheRedrawAndDropsTheColour. A window under fifty columns
 // is the plain band of internal/panel's width rule here as everywhere, so it
 // reads the plain lines rather than a box whose detail cell is one column
-// wide: TestANarrowWindowGetsThePlainStepLines. Auto-wrap is off while the
-// list moves and back on when it settles, because a wrapped line would make
-// the redraw move up too few rows in a narrow terminal; a plain list writes
-// neither code: TestALiveListTurnsWrapOffAndBackOn. The list settles on every
+// wide: TestANarrowWindowGetsThePlainStepLines. Auto-wrap is off only while a
+// draw writes its lines, because a wrapped line would make the redraw move up
+// too few rows in a narrow terminal, and on again after the last line of every
+// draw. So a Ctrl-C, which lands between two draws because a draw is one
+// write, leaves the terminal wrapping; a plain list writes neither code:
+// TestEachDrawTurnsWrapOffBeforeItMovesAndOnAfterItsLines and
+// TestWrapIsOnBetweenEveryTwoDraws. The list settles on every
 // way out of the run, a panic included, so no redraw lands on the crash text
 // and no result line claims a run that did not finish:
 // TestAPanicInAnUpdateStopsTheSpinner.

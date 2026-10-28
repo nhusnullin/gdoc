@@ -326,12 +326,19 @@ func TestTheTopBorderNamesTheVersionsOfTheRun(t *testing.T) {
 // lastScreen is the frame a person is left reading: everything the run wrote
 // after the last clear, which is the final draw of the box and the lines under
 // it. The frames before it are the redraw rubbing itself out.
+//
+// The one wrap code in there is dropped. Every draw ends by turning the
+// terminal's auto-wrap back on, so a Ctrl-C between two draws leaves it
+// wrapping: TestEachDrawTurnsWrapOffBeforeItMovesAndOnAfterItsLines. That code
+// changes the terminal's state and draws no character, so the screen a person
+// reads is the same bytes without it, and the records of
+// TestTheUpdateScreensAreTheirRecordedBytes stay what they were.
 func lastScreen(s string) string {
 	at := strings.LastIndex(s, tty.ClearBelow)
 	if at < 0 {
 		return s
 	}
-	return s[at+len(tty.ClearBelow):]
+	return strings.Replace(s[at+len(tty.ClearBelow):], tty.WrapOn, "", 1)
 }
 
 // The label on a real run is the run's own, which the half above cannot see:

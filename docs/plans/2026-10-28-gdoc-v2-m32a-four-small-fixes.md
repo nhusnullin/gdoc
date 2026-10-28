@@ -221,31 +221,31 @@ the installer and `update` write the same bytes.
 **Files:** `go/cmd/gdoc/progress.go`, `go/cmd/gdoc/progress_test.go`,
 `go/cmd/gdoc/update.go`
 
-- [ ] test first: `TestWrapIsOnBetweenEveryTwoDraws`, a live list with three
+- [x] test first: `TestWrapIsOnBetweenEveryTwoDraws`, a live list with three
       draws: after every write, the last wrap code in the output so far is
       `WrapOn`
-- [ ] `TestALiveListTurnsWrapOffAndBackOn` becomes
+- [x] `TestALiveListTurnsWrapOffAndBackOn` becomes
       `TestEachDrawTurnsWrapOffBeforeItMovesAndOnAfterItsLines`: every
       `WrapOff` comes before that draw's `Up` and `ClearBelow`, every `WrapOn`
       after that draw's last line; a plain list writes neither
-- [ ] in `TestWrapIsOnBetweenEveryTwoDraws`, stop the spinner the way
+- [x] in `TestWrapIsOnBetweenEveryTwoDraws`, stop the spinner the way
       `TestTheStepMarksAreTheirRolesOnATerminal` does, so the draws are
       exactly the ones the test makes
-- [ ] `lastScreen()` in `go/cmd/gdoc/updatescreen_test.go` drops one trailing
+- [x] `lastScreen()` in `go/cmd/gdoc/updatescreen_test.go` drops one trailing
       `tty.WrapOn`, with a comment saying why, so the six records of
       `TestTheUpdateScreensAreTheirRecordedBytes` stay byte-identical and
       `TestALongReasonWrapsInsideTheBoxAndIsNeverShortened` keeps its eighty
       columns. Both are named in the commit
-- [ ] run them red
-- [ ] `draw` writes `WrapOff` at its start and `WrapOn` at its end, every time;
+- [x] run them red
+- [x] `draw` writes `WrapOff` at its start and `WrapOn` at its end, every time;
       drop the `unwrapped` field if nothing else reads it
-- [ ] `go/internal/tty/style.go`'s comment on `WrapOff`/`WrapOn` ("for the
+- [x] `go/internal/tty/style.go`'s comment on `WrapOff`/`WrapOn` ("for the
       life of a moving list") says off while a draw writes, on between draws
-- [ ] the `update.go` comment says wrap is off only while a draw writes, so a
+- [x] the `update.go` comment says wrap is off only while a draw writes, so a
       Ctrl-C between two draws leaves it on, and names both tests
-- [ ] `TestOnlyTheWaitTrapsTheSignal` passes untouched
-- [ ] `git rm docs/backlog/ctrl-c-during-update-leaves-auto-wrap-off.md`
-- [ ] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test` green
+- [x] `TestOnlyTheWaitTrapsTheSignal` passes untouched
+- [x] `git rm docs/backlog/ctrl-c-during-update-leaves-auto-wrap-off.md`
+- [x] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test` green
 
 ### Task 3: a backslash escape publishes as the character
 

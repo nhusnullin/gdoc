@@ -89,12 +89,9 @@ type progress struct {
 	// the result line is written.
 	settled  bool
 	finished bool
-	// unwrapped is set once auto-wrap is turned off, so the last draw knows
-	// to turn it back on.
-	unwrapped bool
-	stop      chan struct{}
-	stopped   chan struct{}
-	stopOnce  sync.Once
+	stop     chan struct{}
+	stopped  chan struct{}
+	stopOnce sync.Once
 }
 
 // newProgress is the list for the command called name on w, live when w is a
@@ -315,26 +312,26 @@ func (p *progress) redraw() {
 // one row on the screen, because the box wrapped them itself, so the count it
 // moves back over next time is the count of the lines it wrote.
 //
-// The first draw turns auto-wrap off and the last turns it back on, so a
-// window narrower than the box cannot turn one row into two while the list is
-// still moving.
+// Every draw turns auto-wrap off before it moves the cursor and on again after
+// its last line, so a window narrower than the box cannot turn one row into
+// two while the list is being written. Off once at the start and on once at
+// the end would do the same for the drawing, but `gdoc update` traps no
+// signal: a Ctrl-C lands between two draws, and a terminal left there has to
+// be wrapping. The draw is one write, so nothing is read from the terminal in
+// between: TestEachDrawTurnsWrapOffBeforeItMovesAndOnAfterItsLines and
+// TestWrapIsOnBetweenEveryTwoDraws.
 func (p *progress) draw(last bool) {
 	var b strings.Builder
-	if !last && !p.unwrapped {
-		b.WriteString(tty.WrapOff)
-		p.unwrapped = true
-	}
+	b.WriteString(tty.WrapOff)
 	if p.drawn > 0 {
 		b.WriteString(tty.Up(p.drawn) + "\r")
-	}
-	if last && p.unwrapped {
-		b.WriteString(tty.WrapOn)
 	}
 	b.WriteString(tty.ClearBelow)
 	lines := p.boxLines(last)
 	for _, l := range lines {
 		b.WriteString(l + "\n")
 	}
+	b.WriteString(tty.WrapOn)
 	p.drawn = len(lines)
 	io.WriteString(p.out, b.String())
 }
