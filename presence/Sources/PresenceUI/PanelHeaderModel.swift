@@ -132,10 +132,14 @@ extension PanelModel {
     // release waiting. The number it would take is on the tooltip, and
     // nowhere else.
     //
-    // Not on the line, because it does not fit: 320 pt holds the mark, the
-    // name, one version, the glyph, the account's own glyph, its address
-    // and Sign out with 4 pt to spare, and a second version squeezes the
-    // address from 98 pt to 49, which is "nail@ex…" on every screen.
+    // Not on the line, because the line is not where a number belongs: at
+    // 360 pt the seven pieces take 252 pt of the 344 the panel gives the
+    // header, so one version, the glyph, the account's own glyph, its
+    // address and Sign out all sit at the width they ask for; a second
+    // version takes the version slot from 37.5 pt to 89.5 and squeezes the
+    // address from 98 pt to 90.5, which is an address with its end cut on
+    // every screen. On the narrower panel it went to 49, so the squeeze is
+    // milder now and still a squeeze.
     // testTheHeaderIs36WithTheMarkTheNameTheVersionAndTheAccount measures
     // both.
     //

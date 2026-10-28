@@ -61,9 +61,9 @@ final class ControlTests: XCTestCase {
     XCTAssertFalse(under.above)
 
     // `.acts [data-tip]::after{right:0}`: an action's tooltip ends on the
-    // panel's own right inset, which is how five icons in 136 pt keep their
+    // panel's own right inset, which is how four icons in 108 pt keep their
     // words inside the panel whichever of them the pointer is on.
-    let action = CGRect(x: 280, y: 100, width: 24, height: 24)
+    let action = CGRect(x: 320, y: 100, width: 24, height: 24)
     let trailing = Tooltip.place(anchor: action, size: bubble, in: panel, align: .trailing)
     XCTAssertEqual(trailing.origin.x + bubble.width, panel.width - Tooltip.actionMargin)
 
@@ -98,7 +98,7 @@ final class ControlTests: XCTestCase {
       try png(TooltipBubble("Open in Google Docs"), scheme: .light))
   }
 
-  // The third of five icons in a document row. Its words are drawn under
+  // The third of four icons in a document row. Its words are drawn under
   // the icon the pointer is on and end where the icons themselves end, so
   // the bubble of the third icon is the bubble of the fourth one place up: a
   // plate that hung off each icon's own edge stepped left across the row
@@ -108,7 +108,7 @@ final class ControlTests: XCTestCase {
   // put the bubble 12 pt right of the icon it belonged to and over the
   // scroll thumb, which is the one thing a bubble about a row may not cover.
   func testAnActionTooltipSitsUnderItsIconAndEndsOnTheIconColumn() throws {
-    // The document row's icons: 136 pt of column against the panel's right
+    // The document row's icons: 108 pt of column against the panel's right
     // inset, four 24 pt icons with 4 pt between them.
     let panel = CGSize(width: Grid.panelWidth, height: 420)
     let columnEnd = Grid.panelWidth - Grid.unit - Grid.rowInset
@@ -156,7 +156,7 @@ final class ControlTests: XCTestCase {
     }
 
     // Where the header draws it: the mark, gdoc and v2.14.0 come first, so
-    // the icon sits about a third of the way across a 320 pt panel.
+    // the icon sits about a quarter of the way across a 360 pt panel.
     let panel = CGSize(width: Grid.panelWidth, height: 600)
     let icon = CGRect(x: 96, y: 8, width: Grid.actionSize, height: Grid.actionSize)
     let bubble = CGSize(width: 118, height: 20)
@@ -268,9 +268,19 @@ final class ControlTests: XCTestCase {
       title: "Sign out?", sub: "2 live watches and 1 hold will stop.", danger: .signOut)
     let measured = try probes(row, scheme: .dark)
     XCTAssertEqual(
-      measured["row.two"]?.height, 56,
-      "the sentence beside the pair wraps to a second line rather than being cut, "
-        + "which is the grid's 44 and one 12 pt line of caption under it")
+      measured["row.two"]?.height, 44,
+      "the sentence beside the pair is one line at 360 pt, which is the grid's own 44")
+
+    // And a longer consequence than that one still wraps rather than being
+    // cut: the grid's 44 and one 12 pt line of caption under it. The
+    // sign-out sentence itself measured 56 at 320 pt, which is what this
+    // test held until the panel was widened.
+    let longer = ConfirmRow(
+      title: "Sign out?", sub: "2 live watches, 1 hold and 1 publish will stop.",
+      danger: .signOut)
+    XCTAssertEqual(
+      try probes(longer, scheme: .dark)["row.two"]?.height, 56,
+      "a consequence too long for the line beside the pair wraps rather than being cut")
     XCTAssertEqual(measured["confirm.danger"]?.height, 20)
     XCTAssertEqual(measured["confirm.keep"]?.height, 20)
     XCTAssertEqual(TextButton.height(.compact), 20)
@@ -423,7 +433,7 @@ final class ControlTests: XCTestCase {
         // row carries its actions and the only place a bubble that hangs
         // off its own right edge lands under it:
         // testTheSheetDrawsEachTooltipUnderItsOwnIcon.
-        ActionButton(.gdocs, tip: tips.live, forcedTooltip: true)
+        ActionButton(.link, tip: tips.live, forcedTooltip: true)
           .metricProbe("sheet.icon")
           .padding(.trailing, Grid.unit)
           .frame(width: Grid.panelWidth, height: Self.tooltipBand, alignment: .topTrailing)
@@ -462,7 +472,7 @@ final class ControlTests: XCTestCase {
     let tips = try SheetPieces.tips()
     for (words, state) in [(tips.live, ActionState.live), (tips.dead.words, tips.dead.state)] {
       let band =
-        ActionButton(.gdocs, tip: words, state: state, forcedTooltip: true)
+        ActionButton(.link, tip: words, state: state, forcedTooltip: true)
         .metricProbe("sheet.icon")
         .padding(.trailing, Grid.unit)
         .frame(width: Grid.panelWidth, height: Self.tooltipBand, alignment: .topTrailing)
@@ -490,6 +500,183 @@ final class ControlTests: XCTestCase {
         bubble.origin.x + bubble.size.width, icon.origin.x,
         "and ends left of it")
     }
+  }
+
+  // MARK: the card
+
+  // The plate a rested pointer brings up over a document row. It is the two
+  // edges the fifth look's design note names: the title's own left edge,
+  // 44 pt in, and the column every value, every time and every icon in the
+  // panel ends on, 20 pt from the right. On the 360 pt panel that is 296.
+  //
+  // Stated as a literal and read back off the drawing, because a card as
+  // wide as its longest line would be a different shape on every row of
+  // one list.
+  func testTheCardSpansFromTheTitleToTheValueColumn() throws {
+    XCTAssertEqual(DetailCard.width, 296, "the title's edge to the value column")
+    XCTAssertEqual(
+      DetailCard.width, Grid.panelWidth - Grid.quietInset - Grid.unit - Grid.rowInset,
+      "which is 360 less the 44 the title starts at and the 20 the values end on")
+    XCTAssertEqual(DetailCard.padding, 8)
+
+    let model = DetailCardModel(
+      title: "Northwind, Altery and a wallet partner call: screening quota and conversion rate",
+      when: "commented Wed 28 Oct 2026, 12:08",
+      note: "~/hub/partners/northwind-call.md",
+      hint: "Click opens in Google Docs")
+    let card = DetailCard(model)
+
+    for scheme in [ColorScheme.dark, .light] {
+      let measured = try probes(card, scheme: scheme)
+      XCTAssertEqual(
+        measured["card"]?.width, 296, "the card's own width in \(scheme)")
+      XCTAssertGreaterThan(
+        measured["card"]?.height ?? 0, 60,
+        "four lines, and the long title wrapped rather than cut, in \(scheme)")
+    }
+
+    // A pinned-only row says nothing about a moment and the hint is gone
+    // after the first click, so the same plate draws two lines and is
+    // shorter. Nothing on it is ever cut, so nothing on it is ever padded
+    // out either.
+    let bare = DetailCardModel(
+      title: "Wallet note: the partner shortlist", when: nil,
+      note: "No note paired yet", hint: nil)
+    let short = try probes(DetailCard(bare), scheme: .dark)
+    XCTAssertEqual(short["card"]?.width, 296, "the width is the two edges and not the words")
+    XCTAssertLessThan(
+      short["card"]?.height ?? 0, try XCTUnwrap(probes(card, scheme: .dark)["card"]?.height),
+      "two lines are shorter than four")
+
+    // It is ink in both appearances, and the two are not one drawing.
+    for scheme in [ColorScheme.dark, .light] {
+      XCTAssertGreaterThan(
+        try inkedPixels(card, scheme: scheme, side: Grid.panelWidth), 1_000,
+        "the card drew nothing in \(scheme)")
+    }
+    XCTAssertNotEqual(try png(card, scheme: .dark), try png(card, scheme: .light))
+  }
+
+  // Which of the requests under the panel the layer draws. A row's tree
+  // puts its middle column before its trailing icons, so the title's card
+  // is an earlier request than any icon's words, and the last request wins:
+  // the pointer is on the icon, and what the icon does is what it is
+  // asking.
+  func testAnIconsTooltipWinsOverTheCard() throws {
+    let model = DetailCardModel(
+      title: "Partner bank setup", when: "restyled Wed 28 Oct 2026, 10:12",
+      note: "~/hub/partners/partner-bank.md", hint: nil)
+    let card = Ask(content: .card(model), forced: false)
+    let words = Ask(content: .words(Tips.copyLink), forced: false)
+
+    let chosen = try XCTUnwrap(Tooltip.chosen([card, words]))
+    guard case .words(let drawn) = chosen.content else {
+      return XCTFail("the icon's words came later and the layer drew the card")
+    }
+    XCTAssertEqual(drawn, Tips.copyLink)
+
+    // One request on its own is that request, and nothing at all is
+    // nothing: a panel nobody is pointing at draws no plate.
+    guard case .card = try XCTUnwrap(Tooltip.chosen([card])).content else {
+      return XCTFail("the one request was the card")
+    }
+    XCTAssertNil(Tooltip.chosen([Ask]()))
+
+    // A forced one wins wherever it stands, which is how a still of the
+    // card is drawn: scene e1 forces one and points at nothing.
+    let forcedCard = Ask(content: .card(model), forced: true)
+    guard case .card = try XCTUnwrap(Tooltip.chosen([forcedCard, words])).content else {
+      return XCTFail("a forced request is the one the layer draws")
+    }
+  }
+
+  /// A request without a box, so the rule can be stated over the two
+  /// contents: an `Anchor` is made by the tree and by nothing else.
+  private struct Ask: TooltipChoice {
+    let content: TooltipContent
+    let forced: Bool
+  }
+
+  // When the card is up, as the pure function it is. The rest and not the
+  // entry, as the tooltip's own rule is; and the two presses that put
+  // something else over the same words take it away until the pointer
+  // leaves and comes back.
+  func testTheCardShowsAfterTheRestAndGoesOnLeaveHeldPressOrClick() throws {
+    XCTAssertEqual(
+      CardRestEvent.allCases.map(\.rawValue),
+      ["enter", "rested", "leave", "heldPress", "click"],
+      "the five events, and no sixth")
+
+    var rest = CardRest()
+    XCTAssertFalse(rest.isShowing, "nothing is pointed at")
+    rest.after(.enter)
+    XCTAssertFalse(rest.isShowing, "the entry is not the rest")
+    rest.after(.rested)
+    XCTAssertTrue(rest.isShowing, "half a second still, and the card is up")
+
+    // The pointer leaves.
+    rest.after(.leave)
+    XCTAssertFalse(rest.isShowing)
+    rest.after(.rested)
+    XCTAssertFalse(rest.isShowing, "a rest with the pointer gone is nobody resting")
+
+    // The held press: the system's menu is coming up over these words, so
+    // the card goes and stays gone under this pointer.
+    rest.after(.enter)
+    rest.after(.rested)
+    XCTAssertTrue(rest.isShowing)
+    rest.after(.heldPress)
+    XCTAssertFalse(rest.isShowing, "the menu and the card are never up together")
+    rest.after(.rested)
+    XCTAssertFalse(rest.isShowing, "and it does not come back under the same pointer")
+    rest.after(.enter)
+    rest.after(.rested)
+    XCTAssertTrue(rest.isShowing, "the next pointer in is a new question")
+
+    // The click: a browser tab is coming up, so the plate explaining that
+    // goes with it.
+    rest.after(.click)
+    XCTAssertFalse(rest.isShowing)
+    rest.after(.rested)
+    XCTAssertFalse(rest.isShowing, "and stays away until the pointer leaves and returns")
+    rest.after(.leave)
+    rest.after(.enter)
+    rest.after(.rested)
+    XCTAssertTrue(rest.isShowing)
+  }
+
+  // A row with no card leaves the title's own words standing. The carrier
+  // sits on every middle column in the panel, and `anchorPreference` sets
+  // the preference rather than adding to what is under it, so a carrier
+  // answering "no card" over a title that was asking for its bubble took
+  // the bubble away with it: NOW's live rows say what a click on them does,
+  // and the card is DOCUMENTS' own.
+  func testACardlessRowKeepsItsTitlesOwnTooltip() throws {
+    let title =
+      Text("Chapter 5 storyline")
+      .metricProbe("row.title")
+      .tooltip("Open in Google Docs", align: .leading, forced: true)
+
+    let cardless =
+      VStack(alignment: .leading, spacing: 0) { title }
+      .detailCard(nil, rest: .constant(CardRest()), forced: false)
+      .tooltipLayer()
+    let withoutACard = try probes(cardless, scheme: .dark)
+    XCTAssertNotNil(withoutACard["row.title"], "the row itself drew")
+    XCTAssertNotNil(
+      withoutACard["tooltip"],
+      "a row that carries no card still says what a click on it does")
+
+    // And the row that has one draws it, which is the same tree with a
+    // model in it and the one request the layer is left with.
+    let model = DetailCardModel(
+      title: "Partner bank setup", when: "restyled Wed 28 Oct 2026, 10:12",
+      note: "~/hub/partners/partner-bank.md", hint: nil)
+    let carded =
+      VStack(alignment: .leading, spacing: 0) { title }
+      .detailCard(model, rest: .constant(CardRest()), forced: true)
+      .tooltipLayer()
+    XCTAssertNotNil(try probes(carded, scheme: .dark)["card"], "the card the row carries")
   }
 
   // MARK: the scan

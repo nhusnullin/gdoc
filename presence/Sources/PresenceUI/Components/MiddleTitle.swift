@@ -35,21 +35,21 @@ import SwiftUI
 /// One row's title.
 public struct MiddleTitle: View {
   /// The narrowest title column in the panel: the document row's middle
-  /// cell. 320 less the panel's 8 either side, less the row's 12 either
-  /// side, less the 16 pt glyph, the two 8 pt gaps and the 136 pt action
+  /// cell. 360 less the panel's 8 either side, less the row's 12 either
+  /// side, less the 16 pt glyph, the two 8 pt gaps and the 108 pt action
   /// column.
   public static let narrowestColumn: CGFloat =
     Grid.panelWidth - 2 * Grid.unit - 2 * Grid.rowInset - Grid.glyphSize - 2 * Grid.columnGap
     - Grid.actionColumn
 
   /// The room a NOW row's title has, which is what a line with a verb in
-  /// front of it is measured against: 320 less the panel's 8 either side,
+  /// front of it is measured against: 360 less the panel's 8 either side,
   /// the row's 12 either side, the 16 pt glyph, the two 8 pt gaps and the
   /// one 24 pt action a live row carries, that action's 4 pt of overhang
-  /// given back. 228 pt.
+  /// given back. 268 pt.
   ///
   /// A watch that cannot be stopped draws no action and has 24 pt more than
-  /// this. It is measured at the same 228 all the same: a name that read one
+  /// this. It is measured at the same 268 all the same: a name that read one
   /// way while Stop was there and another way once it went would be the
   /// panel saying two things about one document.
   public static let nowColumn: CGFloat =

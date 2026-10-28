@@ -82,9 +82,9 @@ public struct JobCard: View {
   public static let topPadding: CGFloat = 4
   public static let bottomPadding: CGFloat = Grid.unit
 
-  /// The room the job's title has: 320 less the panel's 8 either side, the
+  /// The room the job's title has: 360 less the panel's 8 either side, the
   /// card's 12 either side, the 28 pt ring and the 12 pt gap after it.
-  /// 240 pt.
+  /// 280 pt.
   public static let titleColumn: CGFloat =
     Grid.panelWidth - 2 * Grid.unit - 2 * Grid.rowInset - Grid.ringLarge - columnGap
 

@@ -1,15 +1,16 @@
-// What the app remembers between two launches, and the eight keys it keeps it
+// What the app remembers between two launches, and the nine keys it keeps it
 // under.
 //
 // The record is the whole of what gdoc did, and it is the Go binary's file.
-// This app writes nothing into it, ever. What it does write down is eight
+// This app writes nothing into it, ever. What it does write down is nine
 // things about itself: the cards a person hid, the hub folder they chose,
-// whether the five labels under the first document row have been read, their
-// launch-at-login answer, the last self-relaunch it did, the address it
-// last saw signed in, and the documents they pinned and hid. Nothing else
-// persists, which is the specification's own row, and a source scan in
-// PresenceCoreTests holds the word UserDefaults to this file so a ninth key
-// cannot appear while something else is being fixed.
+// whether the four labels under the first document row have been read,
+// whether the card's one hint has been read, their launch-at-login answer,
+// the last self-relaunch it did, the address it last saw signed in, and the
+// documents they pinned and hid. Nothing else persists, which is the
+// specification's own row, and a source scan in PresenceCoreTests holds the
+// word UserDefaults to this file so a tenth key cannot appear while
+// something else is being fixed.
 //
 // A dismissal names a run and a call, or a hold's own id, and nothing about
 // the document: a title or a document id in UserDefaults would be a word of
@@ -26,7 +27,7 @@
 // Sixty-two days is what prunes the two keys that are about a moment, the
 // dismissals and the relaunch stamp: the tail reads two month files, so a
 // key older than that is about a line this app can no longer see. The other
-// six are answers rather than moments, and an answer does not go stale: the
+// seven are answers rather than moments, and an answer does not go stale: the
 // launch-at-login key is the person's own answer, kept because it is theirs,
 // and nothing in this app reads it to decide anything. What starts the app at
 // login is the login item macOS holds, and the switch shows what macOS says.
@@ -64,7 +65,7 @@ public enum LoginItemChoice: String, Sendable, Equatable, CaseIterable {
 /// Unchecked Sendable: the store is reached under a lock, because a dismissal
 /// comes off the panel and a relaunch stamp off a watcher.
 public final class Preferences: @unchecked Sendable {
-  /// The eight keys. A ninth is a decision in `docs/v2/DECISIONS.md`, never
+  /// The nine keys. A tenth is a decision in `docs/v2/DECISIONS.md`, never
   /// a line added here.
   public enum Key: String, CaseIterable, Sendable {
     case dismissed
@@ -75,14 +76,15 @@ public final class Preferences: @unchecked Sendable {
     case lastAccount
     case pinned
     case hidden
+    case cardHintSeen
   }
 
   /// How long the two keys that are about a moment are kept: sixty-two
   /// days, which is past both month files the tail reads. It is the
   /// dismissals and the relaunch stamp, and no other key: the hub, the
-  /// strip, the launch-at-login answer, the last account and the two lists
-  /// of documents are answers rather than moments, and nothing prunes an
-  /// answer.
+  /// strip, the card's hint, the launch-at-login answer, the last account
+  /// and the two lists of documents are answers rather than moments, and
+  /// nothing prunes an answer.
   public static let keepFor: TimeInterval = 62 * 24 * 60 * 60
 
   private let store: DefaultsStore
@@ -130,7 +132,7 @@ public final class Preferences: @unchecked Sendable {
     set { write(newValue, .hubPath) }
   }
 
-  /// Whether the five labels under the first document row have been read.
+  /// Whether the four labels under the first document row have been read.
   public var stripSeen: Bool {
     get {
       lock.lock()
@@ -141,6 +143,26 @@ public final class Preferences: @unchecked Sendable {
       lock.lock()
       defer { lock.unlock() }
       store.set(newValue, forKey: Key.stripSeen.rawValue)
+    }
+  }
+
+  /// Whether the card's one hint has been read: the line that says a click
+  /// on a document row opens the document.
+  ///
+  /// The strip's own rule, on the press the fifth look made. It is the
+  /// person's own first press of a document row that puts it away, so a
+  /// hint nobody has read survives a quit, and one that was read does not
+  /// come back: the decision of 2026-10-28 is the ninth key's.
+  public var cardHintSeen: Bool {
+    get {
+      lock.lock()
+      defer { lock.unlock() }
+      return store.object(forKey: Key.cardHintSeen.rawValue) as? Bool ?? false
+    }
+    set {
+      lock.lock()
+      defer { lock.unlock() }
+      store.set(newValue, forKey: Key.cardHintSeen.rawValue)
     }
   }
 

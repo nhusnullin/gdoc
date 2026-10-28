@@ -118,6 +118,39 @@ final class WordsTests: XCTestCase {
       "in the person's own zone, as every other moment is")
   }
 
+  /// The whole moment, which is the one place in the panel a year is
+  /// written.
+  ///
+  /// A row's own line says "Tue" or "12:08", because the row is a line in a
+  /// list a person is reading now. The card under a rested pointer is the
+  /// row uncut, and the one thing a cut line loses is which day it was: a
+  /// weekday inside the week names one day and a weekday outside it names
+  /// two, so the card writes the day, the date, the year and the clock and
+  /// leaves nothing to count back.
+  func testTheFullMomentCarriesTheDayDateAndClock() throws {
+    let calendar = try utc()
+
+    XCTAssertEqual(
+      Words.fullMoment(try moment("2026-10-28T12:08:00Z"), calendar: calendar),
+      "Wed 28 Oct 2026, 12:08")
+    XCTAssertEqual(
+      Words.fullMoment(try moment("2026-01-04T09:05:00Z"), calendar: calendar),
+      "Sun 4 Jan 2026, 09:05",
+      "the day of the month is never padded, as every other date here is not")
+    XCTAssertEqual(
+      Words.fullMoment(try moment("2025-12-31T23:59:00Z"), calendar: calendar),
+      "Wed 31 Dec 2025, 23:59",
+      "and a moment in another year says that year")
+
+    var amsterdam = Calendar(identifier: .gregorian)
+    amsterdam.timeZone = try XCTUnwrap(TimeZone(identifier: "Europe/Amsterdam"))
+    amsterdam.locale = Locale(identifier: "en_US_POSIX")
+    XCTAssertEqual(
+      Words.fullMoment(try moment("2026-10-28T23:30:00Z"), calendar: amsterdam),
+      "Thu 29 Oct 2026, 00:30",
+      "in the person's own zone, which is the day the panel is read in")
+  }
+
   /// `quiet 52 min`, `quiet 2 h`, `quiet 1 h 20 min`, `5 h 45 min`.
   func testDurationsAreMinutesAndHours() {
     XCTAssertEqual(Words.duration(52 * 60), "52 min")

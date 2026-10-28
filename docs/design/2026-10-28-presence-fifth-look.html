@@ -1,0 +1,246 @@
+<title>Presence fifth look</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one proposal, four scenes; each scene is a light macOS panel mock at 1x and a short caption. The panel palette is the app's own light set. */
+:root{
+  --bg:#f3f3f0; --card:#ffffff; --fg:#1b1b1d; --muted:#6a6a70; --line:#dcdcd8; --accent:#3b5f8a; --wall:#7e93ad;
+  --font:"IBM Plex Sans",-apple-system,"Segoe UI",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --mf:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+  /* the app's light palette */
+  --s0:#ffffff; --s2:#ececef; --t1:#111113; --t2:#6b6b70; --t3:#96969c; --hair:#0000001a; --hair-strong:#00000029;
+  --ok:#1b9e4b; --bad:#e0312e; --act:#7b7b81; --r:6px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#1a1a1c; --card:#242427; --fg:#ebebe6; --muted:#9d9da3; --line:#36363a; --accent:#8fb3dc; --wall:#3b4352; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1a1a1c; --card:#242427; --fg:#ebebe6; --muted:#9d9da3; --line:#36363a; --accent:#8fb3dc; --wall:#3b4352; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;line-height:1.5;margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 64px}
+.wrap{max-width:860px;margin:0 auto}
+header.top{padding:22px 0 14px;border-bottom:1px solid var(--line)}
+.top h1{font-size:22px;font-weight:600;margin:0 0 4px;letter-spacing:-0.01em;text-wrap:balance}
+.top p{margin:0 0 6px;color:var(--muted);font-size:14px;max-width:70ch}
+.scene{margin-top:44px}
+.scene h2{font-size:18px;font-weight:600;margin:0 0 4px;letter-spacing:-0.01em;text-wrap:balance}
+.scene .story{margin:0 0 14px;max-width:70ch;font-size:14.5px}
+.cap{font-size:13px;color:var(--muted);margin:10px 0 0;max-width:70ch}
+.cap b{color:var(--fg);font-weight:600}
+.pair{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}
+.pair>div{min-width:0}
+.lbl{font:500 11px/1 var(--font);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.foot{margin-top:40px;color:var(--muted);font-size:13px;max-width:62ch}
+
+/* ---------- the panel, light ---------- */
+.screen{background:var(--wall);border-radius:12px;padding:14px 12px 22px;overflow:hidden;position:relative;-webkit-font-smoothing:antialiased;display:inline-block;max-width:100%}
+.panel{position:relative;width:360px;max-width:100%;padding:8px;background:var(--s0);border-radius:12px;
+  box-shadow:0 0 0 .5px #00000029,0 1px 2px #0000001f,0 12px 36px #00000029;font:400 13px/16px var(--mf);letter-spacing:-.006em;color:var(--t1)}
+.panel.w320{width:320px}
+.ph{display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;margin-bottom:4px}
+.ph .mark{font-size:16px;font-weight:500}
+.ph .name{font-weight:500}
+.ph .ver{color:var(--t2);font-size:12px}
+.ph .account{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--t2)}
+.ph svg{width:16px;height:16px;fill:none;stroke:var(--act);stroke-width:1.25;stroke-linecap:round;stroke-linejoin:round;display:block}
+.ph .ok{stroke:var(--ok)}
+.section{margin-top:8px;padding-top:4px;border-top:.5px solid var(--hair)}
+.section:first-of-type{margin-top:0;padding-top:0;border-top:0}
+.sl{height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;font:600 11px/1 var(--mf);letter-spacing:.06em;text-transform:uppercase;color:var(--t2)}
+.row{display:grid;grid-template-columns:16px minmax(0,1fr) auto;column-gap:8px;align-items:start;min-height:44px;padding:6px 12px;border-radius:var(--r);position:relative}
+.row.one{align-items:center;min-height:32px;padding:0 12px}
+.row.hov{background:var(--s2)}
+.gl{grid-column:1;width:16px;height:16px}
+.gl.bad{position:relative;color:var(--bad)}
+.gl.bad::before{content:"";position:absolute;inset:0;border:1.5px solid currentColor;border-radius:50%}
+.gl.bad::after{content:"!";position:absolute;inset:0;text-align:center;font:600 10px/16px var(--mf)}
+.rt{grid-column:2;grid-row:1;display:flex;min-width:0;color:var(--t1)}
+.rt .head{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rt .tail{flex:none;white-space:pre}
+.rs{grid-column:2;grid-row:2;font-size:11px;line-height:14px;letter-spacing:0;color:var(--t3);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.acts{grid-column:3;grid-row:1/3;align-self:center;display:flex;gap:4px;margin-right:-4px}
+.act{width:24px;height:24px;display:grid;place-items:center;color:var(--act)}
+.act.off{opacity:.38}
+.act svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.25;stroke-linecap:round;stroke-linejoin:round}
+.strip{display:flex;justify-content:flex-end;gap:4px;padding:0 12px 6px 44px;font:400 10px/12px var(--mf);letter-spacing:0;color:var(--t3)}
+.strip span{width:24px;text-align:center}
+.val{grid-column:3;font-size:12px;color:var(--t2);font-variant-numeric:tabular-nums}
+.switch{grid-column:3;position:relative;width:26px;height:16px;border-radius:8px;background:rgba(0,0,0,.12);justify-self:end}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+/* the detail card: the tooltip's plate, panel wide less the row inset */
+.card{position:absolute;left:12px;right:12px;top:calc(100% + 4px);z-index:3;padding:8px 10px;border-radius:6px;background:#f6f6f7;color:var(--t1);
+  box-shadow:0 0 0 .5px rgba(0,0,0,.14),0 2px 8px rgba(0,0,0,.14);font:400 11px/14px var(--mf);letter-spacing:0;display:grid;gap:4px}
+.card .ct{font:500 13px/16px var(--mf);letter-spacing:-.006em;white-space:normal}
+.card .cp{font:400 11px/14px var(--mono);color:var(--t2);word-break:break-all}
+.card .cd{color:var(--t2);font-variant-numeric:tabular-nums}
+.card .ch{color:var(--t3);margin-top:2px}
+.cursor{position:absolute;width:14px;height:20px;z-index:4;filter:drop-shadow(0 1px 1px rgba(0,0,0,.4))}
+/* the maker's mark at the foot, stand-in only */
+.makers{height:28px;display:flex;align-items:center;gap:6px;padding:0 12px;margin-top:8px;border-top:.5px solid var(--hair);color:var(--t3)}
+.makers svg{width:12px;height:12px;display:block;fill:currentColor}
+.makers span{font:500 11px/1 var(--mf);letter-spacing:.04em;text-transform:uppercase}
+.sl .makers{margin:0;padding:0;border:0;height:auto}
+.ph .makers{margin:0;padding:0;border:0;height:auto}
+.note-box{margin-top:12px;padding:12px 14px;background:var(--card);border:1px solid var(--line);border-radius:10px;font-size:14px;max-width:70ch}
+.note-box ol{margin:6px 0 0;padding-left:20px}
+</style>
+
+<div class="wrap">
+<header class="top">
+  <h1>gdoc in the menu bar: the fifth look</h1>
+  <p>2026-10-28. One page with four scenes, from the sentences of today: a detail card when the pointer rests on a document, the whole row opens the document, a wider panel, and where a firm's mark could go. The panels are drawn light, as the screenshot was. Titles and paths are stand-ins of the same length.</p>
+</header>
+
+<section class="scene">
+  <h2>1. Today, and after</h2>
+  <p class="story">Left: the panel as v2.24.0 draws it, 320 wide, five icons on every row. Right: 360 wide, the Google Docs icon gone because the row itself opens the document, so the title has 180 instead of 112 to say its name in.</p>
+  <div class="pair">
+    <div><p class="lbl">Today, 320</p>
+    <div class="screen"><div class="panel w320">
+      <div class="ph"><span class="mark">⁘</span><span class="name">gdoc</span><span class="ver">v2.24.0</span>
+        <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5"/><path d="M8 5v6M5.5 8.5 8 11l2.5-2.5"/></svg>
+        <span class="account"><svg class="ok" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5"/><path d="m5 8 2 2 4-4"/></svg>nail@example.com</span>
+        <svg viewBox="0 0 16 16"><path d="M6 3H3.5v10H6M9 11l3-3-3-3M12 8H6"/></svg></div>
+      <div class="section"><div class="sl">Documents</div>
+        <div class="row"><span class="gl"></span><div class="rt"><span class="head">Supplier review for the</span><span class="tail"> platform</span></div><div class="rs">published 12:08 · ~/src/altery/Altery-Pla…</div>
+          <div class="acts">ICON5</div></div>
+        <div class="row"><span class="gl"></span><div class="rt"><span class="head">Supplier review for the</span><span class="tail"> platform</span></div><div class="rs">exported 11:01 · ~/src/altery/Altery-Platfor…</div><div class="acts">ICON5</div></div>
+        <div class="row"><span class="gl"></span><div class="rt"><span class="head">M32 follow live</span><span class="tail"> check</span></div><div class="rs">live stopped 08:14 · no note</div><div class="acts">ICON5OFF</div></div>
+        <div class="row"><span class="gl"></span><div class="rt"><span class="head">Embedded card</span><span class="tail"> limits</span></div><div class="rs">live stopped Mon · ~/src/altery/Altery-Pla…</div><div class="acts">ICON5</div></div>
+        <div class="row"><span class="gl"></span><div class="rt"><span class="head">Embedded retail</span><span class="tail"> terms</span></div><div class="rs">commented Thu · ~/src/altery/Altery-Pla…</div><div class="acts">ICON5</div></div>
+      </div>
+      <div class="section"><div class="sl">Settings</div>
+        <div class="row one"><span class="gl"></span><div class="rt"><span class="head">Launch at login</span></div><span class="switch"></span></div>
+        <div class="row one"><span class="gl"></span><div class="rt"><span class="head">Quit</span></div><span class="val">⌘Q</span></div>
+      </div>
+    </div></div></div>
+    <div><p class="lbl">After, 360</p>
+    <div class="screen"><div class="panel">
+      <div class="ph"><span class="mark">⁘</span><span class="name">gdoc</span><span class="ver">v2.25.0</span>
+        <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5"/><path d="M8 5v6M5.5 8.5 8 11l2.5-2.5"/></svg>
+        <span class="account"><svg class="ok" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5"/><path d="m5 8 2 2 4-4"/></svg>nail@example.com</span>
+        <svg viewBox="0 0 16 16"><path d="M6 3H3.5v10H6M9 11l3-3-3-3M12 8H6"/></svg></div>
+      <div class="section"><div class="sl">Documents</div>
+        <div class="row"><span class="gl"></span><div class="rt"><span class="head">Supplier review for the platform</span><span class="tail"> team</span></div><div class="rs">published 12:08 · ~/src/altery/Altery-Platform/notes/…</div><div class="acts">ICON4</div></div>
+        <div class="row"><span class="gl"></span><div class="rt"><span class="head">Supplier review for the platform</span><span class="tail"> team</span></div><div class="rs">exported 11:01 · ~/src/altery/Altery-Platform/notes/…</div><div class="acts">ICON4</div></div>
+        <div class="row"><span class="gl"></span><div class="rt"><span class="head">M32 follow live check</span></div><div class="rs">live stopped 08:14 · no note</div><div class="acts">ICON4OFF</div></div>
+        <div class="row"><span class="gl"></span><div class="rt"><span class="head">Embedded card limits</span></div><div class="rs">live stopped Mon · ~/src/altery/Altery-Platform/notes/…</div><div class="acts">ICON4</div></div>
+        <div class="row"><span class="gl"></span><div class="rt"><span class="head">Embedded retail terms</span></div><div class="rs">commented Thu · ~/src/altery/Altery-Platform/notes/…</div><div class="acts">ICON4</div></div>
+      </div>
+      <div class="section"><div class="sl">Settings</div>
+        <div class="row one"><span class="gl"></span><div class="rt"><span class="head">Launch at login</span></div><span class="switch"></span></div>
+        <div class="row one"><span class="gl"></span><div class="rt"><span class="head">Quit</span></div><span class="val">⌘Q</span></div>
+      </div>
+    </div></div></div>
+  </div>
+  <p class="cap"><b>What changed.</b> 40 pt wider. Four icons: note, chat, copy link, pin. The blank column before each title stays, so every title in the panel starts on one edge; it carries a red mark only when the last run on that document failed. The right side of the DOCUMENTS label stays empty on purpose (scene 4 shows the mark options).</p>
+</section>
+
+<section class="scene">
+  <h2>2. The pointer rests on a row</h2>
+  <p class="story">Half a second after the pointer stops on a title or its second line, a detail card drops under the row, inside the panel. Three lines, each a fact the row already shows cut short: the whole name, the last action with its full date and time, the whole note path. It goes the moment the pointer leaves the row, moves onto an icon, or presses anything. A click on the row opens the document in Google Docs.</p>
+  <div class="screen"><div class="panel">
+      <div class="ph"><span class="mark">⁘</span><span class="name">gdoc</span><span class="ver">v2.25.0</span>
+        <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5"/><path d="M8 5v6M5.5 8.5 8 11l2.5-2.5"/></svg>
+        <span class="account"><svg class="ok" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5"/><path d="m5 8 2 2 4-4"/></svg>nail@example.com</span>
+        <svg viewBox="0 0 16 16"><path d="M6 3H3.5v10H6M9 11l3-3-3-3M12 8H6"/></svg></div>
+      <div class="section"><div class="sl">Documents</div>
+        <div class="row hov"><span class="gl"></span><div class="rt"><span class="head">Supplier review for the platform</span><span class="tail"> team</span></div><div class="rs">published 12:08 · ~/src/altery/Altery-Platform/notes/…</div><div class="acts">ICON4</div>
+          <svg class="cursor" style="left:150px;top:22px" viewBox="0 0 14 20"><path d="M1 1v15l4-3.5 2.5 5.5 2.5-1.2-2.5-5.3H13z" fill="#fff" stroke="#000" stroke-width="1"/></svg>
+          <div class="card">
+            <div class="ct">Supplier review for the platform team, Q4 2026 draft</div>
+            <div class="cd">published Wed 28 Oct 2026, 12:08</div>
+            <div class="cp">~/src/altery/Altery-Platform/notes/suppliers/platform-review-q4.md</div>
+            <div class="ch">Click opens in Google Docs</div>
+          </div></div>
+        <div class="row"><span class="gl"></span><div class="rt"><span class="head">Supplier review for the platform</span><span class="tail"> team</span></div><div class="rs">exported 11:01 · ~/src/altery/Altery-Platform/notes/…</div><div class="acts">ICON4</div></div>
+        <div class="row"><span class="gl"></span><div class="rt"><span class="head">M32 follow live check</span></div><div class="rs">live stopped 08:14 · no note</div><div class="acts">ICON4OFF</div></div>
+        <div class="row"><span class="gl"></span><div class="rt"><span class="head">Embedded card limits</span></div><div class="rs">live stopped Mon · ~/src/altery/Altery-Platform/notes/…</div><div class="acts">ICON4</div></div>
+        <div class="row"><span class="gl bad"></span><div class="rt"><span class="head">Embedded retail terms</span></div><div class="rs">publish failed Thu · ~/src/altery/Altery-Platform/notes/…</div><div class="acts">ICON4</div></div>
+      </div>
+      <div class="section"><div class="sl">Settings</div>
+        <div class="row one"><span class="gl"></span><div class="rt"><span class="head">Launch at login</span></div><span class="switch"></span></div>
+        <div class="row one"><span class="gl"></span><div class="rt"><span class="head">Quit</span></div><span class="val">⌘Q</span></div>
+      </div>
+  </div></div>
+  <p class="cap"><b>The card covers the row under it</b>, the way an icon's tooltip already does; moving the pointer down takes the card away and the next row is there. <b>The last grey line</b>, "Click opens in Google Docs", is shown until the first click on any row, then never again, the way the four labels under the icons work today. <b>Not on the card:</b> the link (copy link gives it), who edited, counts of anything. The card is the row uncut, never the row plus. The last row shows the one mark that stays: a run that failed.</p>
+</section>
+
+<section class="scene">
+  <h2>3. Right-click, hold, and the icons</h2>
+  <p class="story">Nothing else moves. A right-click or a half-second hold on the title still opens the system menu with Hide, and a press takes the card away first, so the menu and the card are never up together. The four icons keep their own clicks and their own tooltips; while the pointer is over an icon the card is not shown. On the first open after the update the four labels under the first row name the icons.</p>
+  <div class="screen"><div class="panel">
+      <div class="section"><div class="sl">Documents</div>
+        <div class="row"><span class="gl"></span><div class="rt"><span class="head">Supplier review for the platform</span><span class="tail"> team</span></div><div class="rs">published 12:08 · ~/src/altery/Altery-Platform/notes/…</div><div class="acts">ICON4</div></div>
+        <div class="strip"><span>Note</span><span>Chat</span><span>Link</span><span>Pin</span></div>
+        <div class="row"><span class="gl"></span><div class="rt"><span class="head">Supplier review for the platform</span><span class="tail"> team</span></div><div class="rs">exported 11:01 · ~/src/altery/Altery-Platform/notes/…</div><div class="acts">ICON4</div></div>
+      </div>
+  </div></div>
+  <p class="cap"><b>Open in Google Docs</b> is the row now. Keeping the icon as well would be two controls for one action, and the NOW rows already open with no icon.</p>
+</section>
+
+<section class="scene">
+  <h2>4. Where a firm's mark could go</h2>
+  <p class="story">The mark drawn here is a stand-in shape, not the firm's logo: the repository is public and carries no logo by decision. The real one would be the file gdoc already keeps beside its token after the first publish, drawn in one grey, with nothing drawn at all on a machine that never published. Three places; the designers advise the foot.</p>
+  <div class="pair">
+    <div><p class="lbl">A. Beside DOCUMENTS (your red box)</p>
+    <div class="screen"><div class="panel">
+      <div class="section"><div class="sl">Documents <span class="makers"><svg viewBox="0 0 12 12"><path d="M6 0 12 6 6 12 0 6z"/></svg><span>Altery</span></span></div>
+        <div class="row"><span class="gl"></span><div class="rt"><span class="head">Supplier review for the platform</span><span class="tail"> team</span></div><div class="rs">published 12:08 · ~/src/altery/Altery-Platform/notes/…</div><div class="acts">ICON4</div></div>
+      </div>
+      <div class="section"><div class="sl">Settings</div>
+        <div class="row one"><span class="gl"></span><div class="rt"><span class="head">Quit</span></div><span class="val">⌘Q</span></div>
+      </div>
+    </div></div>
+    <p class="cap">Reads as "Altery's documents", which is only half true, and puts a picture in a row that has no colour and no action.</p></div>
+    <div><p class="lbl">B. A maker's mark at the foot</p>
+    <div class="screen"><div class="panel">
+      <div class="section"><div class="sl">Documents</div>
+        <div class="row"><span class="gl"></span><div class="rt"><span class="head">Supplier review for the platform</span><span class="tail"> team</span></div><div class="rs">published 12:08 · ~/src/altery/Altery-Platform/notes/…</div><div class="acts">ICON4</div></div>
+      </div>
+      <div class="section"><div class="sl">Settings</div>
+        <div class="row one"><span class="gl"></span><div class="rt"><span class="head">Quit</span></div><span class="val">⌘Q</span></div>
+      </div>
+      <div class="makers"><svg viewBox="0 0 12 12"><path d="M6 0 12 6 6 12 0 6z"/></svg><span>Altery</span></div>
+    </div></div>
+    <p class="cap">One quiet 28 pt row under the last hairline, the way an About line sits. No claim about any row above it. Absent, with no gap, when there is no file.</p></div>
+    <div><p class="lbl">C. In the header, beside the account</p>
+    <div class="screen"><div class="panel">
+      <div class="ph"><span class="mark">⁘</span><span class="name">gdoc</span><span class="ver">v2.25.0</span>
+        <svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5"/><path d="M8 5v6M5.5 8.5 8 11l2.5-2.5"/></svg>
+        <span class="account"><span class="makers"><svg viewBox="0 0 12 12"><path d="M6 0 12 6 6 12 0 6z"/></svg></span><svg class="ok" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5"/><path d="m5 8 2 2 4-4"/></svg>nail@example.com</span>
+        <svg viewBox="0 0 16 16"><path d="M6 3H3.5v10H6M9 11l3-3-3-3M12 8H6"/></svg></div>
+      <div class="section"><div class="sl">Documents</div>
+        <div class="row"><span class="gl"></span><div class="rt"><span class="head">Supplier review for the platform</span><span class="tail"> team</span></div><div class="rs">published 12:08 · ~/src/altery/Altery-Platform/notes/…</div><div class="acts">ICON4</div></div>
+      </div>
+    </div></div>
+    <p class="cap">Fits the 36 pt line but competes with the account, which is the one thing the header is for.</p></div>
+  </div>
+  <div class="note-box"><b>What a mark costs, whichever place.</b> The app reads three things today and nothing else; this would be a fourth, and the trust guardian signs exactly one way in: gdoc names the file's path in the answer the app already asks it for, the app reads that one path, and draws nothing when the file is missing or is not a picture. That is a Go change and a Swift change, and a line in the rules, so it is its own small milestone rather than a line in this one.</div>
+</section>
+
+<p class="foot">Drawn by the lead with the product owner, the visual designer, the iconographer, the macOS platform designer and the trust guardian, 2026-10-28. Nothing here is built. The decision is Nail's; the how is in <code>docs/design/2026-10-28-presence-fifth-look.md</code>.</p>
+</div>
+
+<script>
+// The icon sets, drawn once and stamped where the markup says ICON4 / ICON5 / ICON4OFF / ICON5OFF.
+(function(){
+  var ic={
+    doc:'<path d="M9 3h4v4M13 3 7.5 8.5M11 9.5V13H3V5h3.5"/>',
+    note:'<rect x="3" y="2.5" width="10" height="11" rx="1.5"/><path d="M5.5 6h5M5.5 8.5h5M5.5 11h3"/>',
+    chat:'<path d="M3 3.5h10v7H7l-3 2.5v-2.5H3z"/><path d="M8 5.5v3M6.5 7h3"/>',
+    link:'<rect x="5.5" y="5.5" width="8" height="8" rx="1.5"/><path d="M10.5 5.5V3.5a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2"/>',
+    pin:'<path d="M5 3h6M6 3v4.5L4.5 9.5h7L10 7.5V3M8 9.5V14"/>'
+  };
+  function act(k,off){return '<span class="act'+(off?' off':'')+'"><svg viewBox="0 0 16 16">'+ic[k]+'</svg></span>';}
+  var sets={
+    ICON5:act('doc')+act('note')+act('chat')+act('link')+act('pin'),
+    ICON5OFF:act('doc')+act('note',true)+act('chat')+act('link')+act('pin'),
+    ICON4:act('note')+act('chat')+act('link')+act('pin'),
+    ICON4OFF:act('note',true)+act('chat')+act('link')+act('pin')
+  };
+  document.querySelectorAll('.acts').forEach(function(el){
+    var k=el.textContent.trim(); if(sets[k]) el.innerHTML=sets[k];
+  });
+})();
+</script>

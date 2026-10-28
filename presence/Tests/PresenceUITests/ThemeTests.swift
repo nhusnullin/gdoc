@@ -171,7 +171,7 @@ final class ThemeTests: XCTestCase {
   // MARK: the grid
 
   func testTheGridIsTheScreens() {
-    XCTAssertEqual(Grid.panelWidth, 320)
+    XCTAssertEqual(Grid.panelWidth, 360)
     XCTAssertEqual(Grid.unit, 8)
     XCTAssertEqual(Grid.panelRadius, 12)
     XCTAssertEqual(Grid.headerHeight, 36)
@@ -179,7 +179,7 @@ final class ThemeTests: XCTestCase {
     XCTAssertEqual(Grid.rowHeight, 32)
     XCTAssertEqual(Grid.twoLineRowHeight, 44)
     XCTAssertEqual(Grid.compactRowHeight, 28)
-    XCTAssertEqual(Grid.actionColumn, 136)
+    XCTAssertEqual(Grid.actionColumn, 108)
     XCTAssertEqual(Grid.glyphSize, 16)
     XCTAssertEqual(Grid.actionSize, 24)
     XCTAssertEqual(Grid.controlRadius, 6)

@@ -1,8 +1,8 @@
 // A document title cut in the middle: a head that may be shortened and a
 // tail that never is.
 //
-// A panel 320 px wide has 140 pt for a document's title, which is about
-// twenty characters, and the names in the hub end in the part that tells
+// A panel 360 px wide has 180 pt for a document's title, which is close to
+// thirty characters, and the names in the hub end in the part that tells
 // them apart: "…quarterly close call" and "…quarterly close plan" differ in
 // their last word. Cutting the end off would hide the one word a person is
 // looking for, so the last word is kept and the middle is what goes.

@@ -9,7 +9,13 @@ import CoreGraphics
 /// The sizes the panel is laid out on.
 public enum Grid {
   /// `.panel`'s width, its padding and its corner.
-  public static let panelWidth: CGFloat = 320
+  ///
+  /// It was narrower until the fifth look widened it (docs/v2/DECISIONS.md,
+  /// 2026-10-28), so the panel is drawn from
+  /// docs/design/2026-10-28-presence-fifth-look.html where that file has a
+  /// screen and from docs/design/2026-10-17-presence-screens-v3.html
+  /// everywhere else: testThePanelIs360PointsWide.
+  public static let panelWidth: CGFloat = 360
   public static let unit: CGFloat = 8
   public static let panelRadius: CGFloat = 12
 
@@ -23,9 +29,14 @@ public enum Grid {
   public static let twoLineRowHeight: CGFloat = 44
   public static let compactRowHeight: CGFloat = 28
 
-  /// The document row's third column, wide enough for the five icons: the
-  /// four that open or copy something and the pin at the end of them.
-  public static let actionColumn: CGFloat = 136
+  /// The document row's third column, wide enough for the four icons: the
+  /// three that open or copy something and the pin at the end of them.
+  ///
+  /// It was 136 until the fifth look (docs/v2/DECISIONS.md, 2026-10-28).
+  /// The Google Docs icon went when the row itself became that press, and
+  /// the 28 pt it held went to the title:
+  /// testTheDocRowActionColumnIs108.
+  public static let actionColumn: CGFloat = 108
 
   /// The glyph, an action button and the radius they share.
   public static let glyphSize: CGFloat = 16

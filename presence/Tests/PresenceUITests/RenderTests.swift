@@ -70,7 +70,7 @@ final class RenderTests: XCTestCase {
     for scene in Scenes.all {
       let sizes = try probes(try scene.view(), scheme: .dark, width: Grid.panelWidth)
       let panel = try XCTUnwrap(sizes["panel"], "\(scene.id) drew no panel")
-      XCTAssertEqual(panel.width, Grid.panelWidth, "\(scene.id) is not 320 wide")
+      XCTAssertEqual(panel.width, Grid.panelWidth, "\(scene.id) is not 360 wide")
 
       if let header = sizes["header"] {
         XCTAssertGreaterThanOrEqual(
@@ -245,7 +245,7 @@ final class RenderTests: XCTestCase {
   /// is out: testTheSignOutQuestionPinsNothing.
   func testSettingsIsPinnedWhileASignInIsInFlight() throws {
     let waiting = try XCTUnwrap(Scenes.all.first { $0.id == "e8" }).model()
-    let empty = DocumentsSectionModel(rows: [], empty: nil, showsStrip: false)
+    let empty = DocumentsSectionModel(rows: [], empty: nil, showsStrip: false, forcedCard: nil)
     XCTAssertEqual(
       waiting.sections.map(\.id),
       [PanelSection.settings([]).id, PanelSection.documents(empty).id],
@@ -711,8 +711,8 @@ final class RenderTests: XCTestCase {
           <figure><img src="\(scene.id)-bar-light.png" width="140"><figcaption>light</figcaption></figure>
         </div>
         <div class="pair">
-          <figure><img src="\(scene.id)-dark.png" width="320"><figcaption>dark</figcaption></figure>
-          <figure><img src="\(scene.id)-light.png" width="320"><figcaption>light</figcaption></figure>
+          <figure><img src="\(scene.id)-dark.png" width="\(Int(Grid.panelWidth))"><figcaption>dark</figcaption></figure>
+          <figure><img src="\(scene.id)-light.png" width="\(Int(Grid.panelWidth))"><figcaption>light</figcaption></figure>
         </div>
         <p class="about">drawn at \(scene.moment) · the scene is about the \(appearance) one</p>
       </section>
@@ -725,8 +725,8 @@ final class RenderTests: XCTestCase {
       <figure>
         <figcaption>\(escaped(page.name)) · \(escaped(page.about))</figcaption>
         <div class="pair">
-          <img src="\(page.name)-dark.png" width="320">
-          <img src="\(page.name)-light.png" width="320">
+          <img src="\(page.name)-dark.png" width="\(Int(Grid.panelWidth))">
+          <img src="\(page.name)-light.png" width="\(Int(Grid.panelWidth))">
         </div>
       </figure>
     """

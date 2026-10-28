@@ -1,11 +1,11 @@
 // What a press in the panel means.
 //
-// One function over the twenty kinds, and nothing else in the app turns a
-// press into anything. Each case is one line of the specification's decision
-// table: the two icons that open something, the one that copies, the pin
-// either way round, the one that dismisses a card, the one signal, sign in
-// and sign out, the update and the extension, the switch, quit, and the one
-// word of a document row's own menu.
+// One function over the twenty-one kinds, and nothing else in the app turns
+// a press into anything. Each case is one line of the specification's
+// decision table: the row's own press and the two icons that open something,
+// the one that copies, the pin either way round, the one that dismisses a
+// card, the one signal, sign in and sign out, the update and the extension,
+// the switch, quit, and the one word of a document row's own menu.
 //
 // Nothing here judges. A dismissal hides a card and rewrites no row, a stop
 // is refused by the process check and not by this file, and a sign-out stops
@@ -29,6 +29,13 @@ extension Session {
     case .openDoc:
       opener.openDocument(target)
       sawTheStrip()
+    case .openRow:
+      // A document row's own press, which opens the document through the
+      // one room that opens documents and leaves the labels alone: a click
+      // on a row is not a click on an icon, so the four words under the
+      // first row wait for one: testARowPressOpensTheDocumentAndLeavesTheStrip.
+      opener.openDocument(target)
+      readTheHint()
     case .openNote:
       openTheNote(target)
       sawTheStrip()
@@ -70,10 +77,14 @@ extension Session {
     }
   }
 
-  // MARK: the five icons on a row
+  // MARK: the row's own press, and the four icons on it
 
-  /// The five labels under the first document row go after the first click
+  /// The four labels under the first document row go after the first click
   /// on any icon and never come back.
+  ///
+  /// A press on the row is not one of them: it opens the document and says
+  /// nothing about whether the labels have been read, which is the fifth
+  /// look's own answer (docs/v2/DECISIONS.md, 2026-10-28).
   private func sawTheStrip() {
     guard !ui.stripSeen else {
       changed()
@@ -81,6 +92,24 @@ extension Session {
     }
     ui = ui.afterAnIconClick()
     preferences.stripSeen = true
+    changed()
+  }
+
+  /// The card's one hint goes after the person's own first press of a
+  /// document row, and never comes back.
+  ///
+  /// The row's press alone. A NOW row and the stuck card open a document
+  /// through `.openDoc`, and the hint is about the rows of DOCUMENTS: it
+  /// says a click on one of them opens the document, which is the fifth
+  /// look's own press (docs/v2/DECISIONS.md, 2026-10-28):
+  /// testTheFirstRowPressPutsTheHintAway.
+  private func readTheHint() {
+    guard !ui.cardHintSeen else {
+      changed()
+      return
+    }
+    ui = ui.afterARowOpened()
+    preferences.cardHintSeen = true
     changed()
   }
 

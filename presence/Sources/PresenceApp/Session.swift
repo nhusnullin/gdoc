@@ -246,7 +246,8 @@ public final class Session {
 
     self.ui = UIState(
       dismissed: preferences.dismissals(now: clock()), stripSeen: preferences.stripSeen,
-      pinned: preferences.pins, hidden: preferences.hides)
+      cardHintSeen: preferences.cardHintSeen, pinned: preferences.pins,
+      hidden: preferences.hides)
     self.facts = Facts.launching(appVersion: places.version)
     self.drawn = Drawn([], now: clock(), dismissed: [], alive: alive)
     forgotten.answer { [weak self] id in

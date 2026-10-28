@@ -419,10 +419,14 @@ enum SheetPieces {
   /// The words on two of a document row's icons, one live and one with
   /// nothing to open: scene e6's first two rows, which is where the panel
   /// holds a tooltip open of its own accord.
+  ///
+  /// The live one was Open in Google Docs until the fifth look took that
+  /// icon off the row: the words are Copy link's now, which is the first
+  /// icon a document row carries that is live on every row there is.
   static func tips() throws -> (live: String, dead: (words: String, state: ActionState)) {
     let rows = try documentRows()
     let open = try XCTUnwrap(
-      rows[0].actions.first { $0.kind == .openDoc }, "no row opens a document")
+      rows[0].actions.first { $0.kind == .copyLink }, "no row copies a link")
     let note = try XCTUnwrap(
       rows[1].actions.first { $0.kind == .openNote }, "no row opens a note")
     guard case .off(let reason) = note.state else {
@@ -508,7 +512,7 @@ func panelVocabulary() throws -> Set<String> {
     }
   }
   // The words that belong to no row and no record: the two buttons of the
-  // hold card, the five labels of the strip once, and the one sentence a
+  // hold card, the four labels of the strip once, and the one sentence a
   // machine with no token is met with.
   words.formUnion(ButtonWord.allCases.map(\.rawValue))
   words.formUnion(StripLabel.allCases.map(\.rawValue))

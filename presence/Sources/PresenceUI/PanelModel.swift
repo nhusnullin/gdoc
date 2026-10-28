@@ -28,6 +28,13 @@ import PresenceCore
 /// was about, and Tasks 17 to 21 give that function a body.
 public enum ActionKind: String, Sendable, Equatable, CaseIterable {
   case openDoc
+  /// A document row's own press, which opens the document the row names.
+  ///
+  /// It reaches `Opener.openDocument` as `openDoc` does, and it is a kind of
+  /// its own because the two presses are not the same press: a click on a
+  /// row is not a click on an icon, so it leaves the four labels under the
+  /// first row where they are: testARowPressOpensTheDocumentAndLeavesTheStrip.
+  case openRow
   case openNote
   case openChat
   case copyLink
@@ -45,8 +52,9 @@ public enum ActionKind: String, Sendable, Equatable, CaseIterable {
   /// The safe half of every confirm, which does nothing but put the
   /// question away.
   case keep
-  /// A pin, taking it back, and a hide. The first two are the row's fifth
-  /// icon since the third look; the hide is the one word of its menu.
+  /// A pin, taking it back, and a hide. The first two are the last of the
+  /// row's four icons since the third look; the hide is the one word of its
+  /// menu.
   case pinDoc
   case unpinDoc
   case hideDoc
@@ -144,26 +152,6 @@ public enum NowItem: Sendable, Equatable, Identifiable {
   }
 }
 
-/// One document's row.
-public struct DocumentRowModel: Sendable, Equatable, Identifiable {
-  public let doc: String
-  public let title: String
-  public let sub: String
-  public let glyph: GlyphKind
-  public let tone: GlyphTone
-  /// The document is in the trash. The v1 record never says so, so this is
-  /// false until M24b.
-  public let gone: Bool
-  /// Whether the person pinned it, which the row draws as the state of its
-  /// fifth icon: the tack is filled on a pinned row and hollow on the rest.
-  public let isPinned: Bool
-  public let actions: [ActionModel]
-  /// The row's own menu: Hide from the list, and nothing on a pinned row.
-  public let menu: [MenuItemModel]
-
-  public var id: String { doc }
-}
-
 /// A question asked in place of a row: the words, what follows from them,
 /// and the word on the loud half of the pair. The quiet half is always Keep.
 public struct QuestionModel: Sendable, Equatable {
@@ -209,15 +197,6 @@ public struct SettingsRowModel: Sendable, Equatable, Identifiable {
     self.isOn = isOn
     self.select = select
   }
-}
-
-/// DOCUMENTS: its rows, every one of which is drawn.
-public struct DocumentsSectionModel: Sendable, Equatable {
-  public let rows: [DocumentRowModel]
-  /// The one line a panel with no documents says instead.
-  public let empty: String?
-  /// Whether the five labels are drawn under the first row.
-  public let showsStrip: Bool
 }
 
 /// The address said once at its full size, for five seconds after a sign-in.
@@ -517,12 +496,13 @@ extension PanelModel {
     return items
   }
 
-  /// The document a NOW row opens, out of the one the record named.
+  /// The document a row opens, out of the id the record named.
   ///
-  /// It is the DOCUMENTS row's own rule, in the one place NOW needs it: an
-  /// id Drive could not have written opens nothing, because `Opener` would
-  /// refuse to build a URL out of it anyway and a row that offers a press
-  /// doing nothing is worse than a row that offers none.
+  /// One rule for both sections: an id Drive could not have written opens
+  /// nothing, because `Opener` would refuse to build a URL out of it anyway
+  /// and a row that offers a press doing nothing is worse than a row that
+  /// offers none. NOW has followed it since the fourth look and DOCUMENTS
+  /// since the fifth, where the row became the press its first icon was.
   private static func opens(_ doc: String?) -> String? {
     guard let doc, LinkLine.isDocumentID(doc) else { return nil }
     return doc
@@ -644,14 +624,15 @@ extension PanelModel {
         tone: glyph(for: row.state).tone,
         gone: false,
         isPinned: row.isPinned,
+        opens: opens(row.doc),
         actions: [
-          openDoc(row.doc, forced: ui.forcedTooltip),
           openNote(row.doc, facts: facts, ui: ui, forced: ui.forcedTooltip),
           openChat(row.doc, facts: facts, forced: ui.forcedTooltip),
           copyLink(row.doc, ui: ui, now: words.now),
           pin(row),
         ],
-        menu: menu(row))
+        menu: menu(row),
+        card: words.documentCard(row, ui: ui))
     }
     return DocumentsSectionModel(
       rows: rows,
@@ -660,14 +641,15 @@ extension PanelModel {
       // them to do the thing they are doing, so the line is the quiet one
       // until that write names a document.
       empty: rows.isEmpty ? (busy ? Sentences.nothingYet : Sentences.noDocuments) : nil,
-      showsStrip: !ui.stripSeen && !rows.isEmpty)
+      showsStrip: !ui.stripSeen && !rows.isEmpty,
+      forcedCard: ui.forcedCard)
   }
 
   /// A row's own menu: the hide, on a row that is not pinned.
   ///
   /// Pin left it at the third look. It was the one way to pin a document and
-  /// Nail never found it, so it is the row's fifth icon now, and Hide is
-  /// what the menu is for.
+  /// Nail never found it, so it is the last of the row's icons now, and Hide
+  /// is what the menu is for.
   ///
   /// A pinned row offers nothing, so it opens no menu. A pin is the louder
   /// answer and is never away, whatever a hide of it says, so the press
@@ -729,15 +711,16 @@ extension PanelModel {
     return facts.newerRecord ? "gdoc is newer than this app" : nil
   }
 
-  // MARK: the five document icons
+  // MARK: the icons a document row and a stuck card carry
 
   /// Open in Google Docs, greyed where the id is not one Drive could have
   /// written.
   ///
-  /// `Opener` refuses to build a URL out of it, so the press opens nothing
-  /// either way; what the state adds is the row saying why before the click
-  /// rather than after it. A line carrying an id of that shape is a line
-  /// gdoc did not write: testAnIdDriveCouldNotHaveWrittenGreysItsTwoIcons.
+  /// It is the stuck card's icon in NOW since the fifth look: a document row
+  /// opens on a press of the row, and a card is not a row. `Opener` refuses
+  /// to build a URL out of an id of another shape, so the press opens
+  /// nothing either way; what the state adds is the card saying why before
+  /// the click rather than after it.
   private static func openDoc(_ doc: String, forced: String? = nil) -> ActionModel {
     ActionModel(
       .openDoc, icon: .gdocs, tip: Tips.openDoc, state: documentState(doc, missing: Tips.noDoc),

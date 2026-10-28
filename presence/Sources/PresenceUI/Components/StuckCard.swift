@@ -70,7 +70,7 @@ public struct StuckCard: View {
   public static let reasonCeiling = 80
   /// `-webkit-line-clamp:2`.
   public static let reasonLines = 2
-  /// The reason's own width: the panel's 320 less its 8 either side, less
+  /// The reason's own width: the panel's 360 less its 8 either side, less
   /// the card's 12 either side, less the glyph and the gap after it. It is
   /// `grid-column:2/4`, so the icons above do not narrow it.
   public static let reasonColumn: CGFloat =

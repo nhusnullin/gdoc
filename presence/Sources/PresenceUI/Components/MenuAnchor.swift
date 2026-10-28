@@ -15,11 +15,14 @@
 // menu reaches the screen, which is `NSMenu` in the app and a recorder in a
 // test. `MenuAnchorView` is where it pops up from: a view behind the row's
 // title whose `hitTest` is nil, so a click meant for the row or for one of
-// its five icons goes where it was going.
+// its four icons goes where it was going.
 //
 // The gesture itself is the title area's, through `RowView.titleHeld`: it
 // sat on the whole row, icons included, so a slow click on an icon both did
-// the icon's thing and opened the menu.
+// the icon's thing and opened the menu. The row's own click sits on that
+// same view since the fifth look, because a long press swallows the click
+// under it: two views would leave the name of a row with a menu opening
+// nothing.
 //
 // CardTests holds the words the press offers and that the anchor catches
 // nothing; SourceRulesTests holds that no file under Sources opens a window
@@ -85,8 +88,8 @@ final class MenuTarget: NSObject {
 /// The view a row's menu is measured from, which catches nothing.
 final class MenuAnchorView: NSView {
   /// Nothing lands here. The anchor is a place to put a menu and never a
-  /// control, so the row behind it keeps its hover and its five icons keep
-  /// their presses.
+  /// control, so the row behind it keeps its hover, its own press and the
+  /// presses of its four icons.
   override func hitTest(_ point: NSPoint) -> NSView? {
     nil
   }

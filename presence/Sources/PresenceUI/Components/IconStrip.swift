@@ -1,4 +1,4 @@
-// The five labels under the first document row, once.
+// The four labels under the first document row, once.
 //
 // `.strip` in docs/design/2026-10-17-presence-screens-v3.html is words in
 // 10 pt, each 24 pt wide, sitting under the icons of the document row above.
@@ -8,16 +8,15 @@
 //
 // The labels are an enum, because one word under each icon is a thing that
 // stays as long as the icons do. It was four words until the third look
-// added the pin (docs/v2/DECISIONS.md, 2026-10-18).
+// added the pin (docs/v2/DECISIONS.md, 2026-10-18), five until the fifth
+// look took Doc off with the icon it named: the row is that press now.
 //
 // CardTests states the words and the cell width.
 
 import SwiftUI
 
-/// The five words, in the order the icons stand in.
+/// The four words, in the order the icons stand in.
 public enum StripLabel: String, Sendable, CaseIterable {
-  /// Open in Google Docs.
-  case doc = "Doc"
   /// Open the note in Obsidian.
   case note = "Note"
   /// Continue with Claude.
@@ -39,7 +38,7 @@ public struct IconStrip: View {
   /// is drawn under a strip of actions that is pulled 4 pt out over the
   /// content edge, because an action's 16 pt of artwork sits in a 24 pt
   /// box. A label that keeps the row's own 12 is a word 4 pt left of the
-  /// icon it names, which the third look made plain by adding a fifth:
+  /// icon it names, which the third look made plain by adding a label:
   /// testEachLabelIsCentredOnTheIconItNames.
   public static let leadingInset: CGFloat = Grid.quietInset
   public static let bottomPadding: CGFloat = 6

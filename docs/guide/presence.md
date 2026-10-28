@@ -44,7 +44,7 @@ in a word.
 
 ## The panel
 
-Click the glyph and the panel opens under it. It is 320 points wide and as
+Click the glyph and the panel opens under it. It is 360 points wide and as
 tall as what is in it. Press Escape or click elsewhere and it closes. Nothing
 in it is a window, there is no dock icon, and the settings in it are the
 switch for launching at login and Quit.
@@ -85,9 +85,12 @@ place would lie for a few seconds. A press that found nothing to install leaves 
 check for one second and goes quiet again.
 
 The published version is on the tooltip and nowhere else. Not on the line:
-320 points hold the mark, the name, one version, the glyph and the account
-with four points to spare, and a second version squeezes the address to
-"nail@ex…" on every screen. And not under the header, where it was a quiet
+the seven pieces of the header take 252 of the 344 points the line has, so
+one version, both glyphs, the address and Sign out each sit at the width
+they ask for. A second version takes the version slot from 37.5 points to
+89.5 and squeezes the address from 98 to 90.5, which is an address with its
+end cut on every screen. The narrower panel cut it harder, so the squeeze is
+milder now and still a squeeze. And not under the header, where it was a quiet
 line until this release: the dot is what catches the eye, and the same thing
 again in words is a line you read past.
 
@@ -170,6 +173,27 @@ document. Each row says what the last action was, when, and where the note
 paired with it is, or "no note". A document leaves the list fourteen days
 after its last action, unless it is pinned.
 
+A click on a row opens its document in your browser, the way a click on a
+Now row does: the title, the second line and the gaps around them are one
+press, and the four icons keep their own. The Google Docs icon was the only
+way in until the fifth look, and a row that is a link to one document does
+not need an icon saying the same thing. A row whose id is not one Drive
+could have written carries no press at all, so a click on it opens nothing.
+
+Rest the pointer on a row's words for half a second and a card appears under
+the row, inside the panel, on the same plate an icon's words use. It holds
+three lines, every one of them the row's own: the whole title, which the row
+cuts to fit; what happened and when, with the day, the date and the clock
+written out, "commented Wed 28 Oct 2026, 12:08" where the row says
+"commented Wed"; and the path of the note, or that no note is paired with the
+document. Nothing on the card is measured off the document, and nothing on it
+is cut. A fourth line, "Click opens in Google Docs", is there until the first
+time you click a document row, and then it is gone for good, on that launch
+and every one after it. The card takes no click of its own: it comes on the
+rest, and it goes the moment the pointer leaves, or under a held press or a
+click, so the system's menu and the card are never up together. An icon's own
+words win over it while the pointer is in the icon column.
+
 One mark can stand before a title, a red exclamation, and it means one thing:
 the last run on that document failed. Every other state draws nothing there,
 and the blank keeps the column, so every title starts on the same left edge.
@@ -180,7 +204,7 @@ line was already saying it, and it says it in words you can read: "reply
 failed Tue" against "live stopped 12:26". A write whose read-back did not
 confirm is a run that worked, so it has no mark and keeps the word it had.
 
-A pin holds a document in the list. The pin is the row's fifth icon, at the
+A pin holds a document in the list. The pin is the row's last icon, at the
 end of the strip: an outline while the document is not pinned, filled while
 it is, and the words on it are "Pin" and "Unpin". It was a menu word until
 the third look, where Nail had pins and never found the menu. Pinned
@@ -193,7 +217,7 @@ in it. Right-click a row, or hold a press on it for half a second. Both ways
 open one menu, the system's own, drawn from behind the row's title, and the
 panel stays open the whole time it is up: there is no second window for the
 panel to lose to. The held press is the title's and not the whole row's, so
-a slow click on one of the five icons does the icon's work and opens no
+a slow click on one of the four icons does the icon's work and opens no
 menu. It takes
 the document out of Documents, and rewrites nothing: the record is the
 record. There is no "Unhide". The next thing gdoc finishes on that document
@@ -205,27 +229,28 @@ there again.
 The pins and the hides are the app's own, kept beside your other settings and
 never written into the record.
 
-Five icons sit on the right of every document row, always visible:
+Four icons sit on the right of every document row, always visible:
 
 | Icon | Does |
 |---|---|
-| Google Docs | Opens `https://docs.google.com/document/d/<id>/edit` in your browser |
 | md | Opens the note paired with the document in Obsidian |
 | Branch | Brings Claude Desktop to the front |
 | Link | Copies the document's link, and turns into a green check for a second |
 | Pin | Pins the document, or takes the pin back |
 
 An icon with nothing to do is greyed, and resting the pointer on it says why:
-"No Google Doc yet", "No link yet", "No note is paired with this document",
+"No link yet", "No note is paired with this document",
 "Two notes name this document",
-"Note moved or deleted", "Install the Desktop extension in Settings". The first
-two are one case: a row whose id is not one Drive could have written has no
-document to open and no link to copy. "Note moved or deleted"
+"Note moved or deleted", "Install the Desktop extension in Settings". "No
+link yet" is the row whose id is not one Drive could have written: there is
+nothing to copy, which is the same reason a click on that row opens nothing.
+"Note moved or deleted"
 is the one a click produces: Obsidian refused the note the finder named.
 A greyed icon cannot be clicked, so that one lasts as long as the panel is up,
 and the next time you open the panel it is live again. The first time Documents
-has a row, five labels appear under it once, naming the icons, and they go the
-first time you click one.
+has a row, four labels appear under it once, naming the icons, and they go the
+first time you click one. A click on the row is not a click on an icon, so
+the labels wait for an icon.
 
 Continue with Claude, the branch icon, activates Claude Desktop and nothing
 more: no argument, no file and no URL. Open chat on a hold card is the same
@@ -466,17 +491,18 @@ What the app never does, and no button in it offers:
   and `auth status` every ten minutes while a live watch is open. Both are
   questions. Nothing it does on a timer writes anything, anywhere.
 
-What it remembers between launches is eight things, in its own preferences:
-the cards you hid, the `hubPath` override, whether the five icon labels have been
-read, your launch-at-login answer, its last self-relaunch, the last address
+What it remembers between launches is nine things, in its own preferences:
+the cards you hid, the `hubPath` override, whether the four icon labels have
+been read, whether the card's hint has been read, your launch-at-login
+answer, its last self-relaunch, the last address
 it saw signed in, the documents you pinned and the documents you hid. The two
 that are about a moment, the hidden cards and the relaunch,
 are dropped once they are older than sixty-two days, because the app reads two
 month files and a stamp older than that is about a line it can no longer see.
-The other six are answers and are kept until you change them, because your
+The other seven are answers and are kept until you change them, because your
 answer is yours. The launch-at-login one drives nothing: what starts the app at
 login is the login item macOS holds, and the switch shows what macOS says. A
-ninth key is a decision somebody writes down, not a line somebody adds.
+tenth key is a decision somebody writes down, not a line somebody adds.
 
 ## The note beside the document
 

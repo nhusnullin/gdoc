@@ -24,21 +24,39 @@ final class RowTests: XCTestCase {
   private let eighty =
     "Second-quarter liquidity and settlement reviews for the Amsterdam trading office"
 
-  // The title column is 112 pt in a document row, which is the narrowest the
+  // The panel is 360 points wide since the fifth look, the width Nail chose
+  // of the four he was offered (docs/v2/DECISIONS.md, 2026-10-28). It was
+  // 320 from M23 to v2.24.0, and the number is read back out of a row rather
+  // than out of the constant, because a window that opens at another width
+  // passes any test that reads the constant.
+  func testThePanelIs360PointsWide() throws {
+    XCTAssertEqual(Grid.panelWidth, 360)
+
+    let row = RowView(
+      .doc, glyph: .check, tone: .ok, title: twenty, sub: "Proposed · verified",
+      trailing: { EmptyView() })
+    XCTAssertEqual(
+      try probes(row, scheme: .dark)["row.doc"]?.width, 360,
+      "a document row is drawn at a width other than the panel's")
+  }
+
+  // The title column is 180 pt in a document row, which is the narrowest the
   // panel has, and the head never falls under eight characters in it: a
   // title whose last word is wide enough to squeeze it drops the tail and
-  // goes in whole instead. It was 140 pt until the pin became the row's
-  // fifth icon and took 28 pt of the row for it.
+  // goes in whole instead. It was 112 pt until the fifth look, which took
+  // the Google Docs icon off the row for 28 pt of it and widened the panel
+  // for the other 40.
   func testNoHeadUnderEightCharactersAtPanelWidth() {
     XCTAssertEqual(
-      MiddleTitle.narrowestColumn, 112,
-      "320 less the panel's 8 twice, the row's 12 twice, the 16 pt glyph, two 8 pt gaps "
-        + "and the 136 pt action column")
+      MiddleTitle.narrowestColumn, 180,
+      "360 less the panel's 8 twice, the row's 12 twice, the 16 pt glyph, two 8 pt gaps "
+        + "and the 108 pt action column")
 
     // The ellipsis is part of what the column carries. Scene r9's second
     // document is the title that proved it: a tail the counted rule admits,
-    // a head the room admits, and seven characters of head once the row has
-    // drawn the three dots after them.
+    // a head the room admits, and seven characters of head in the 112 pt
+    // column once the row had drawn the three dots after them. It shows
+    // fourteen in the 180 the fifth look left it.
     let ellipsisEater = "B2B2C payment card concept: the frozen vocabulary"
 
     for title in [twenty, forty, sixty, eighty, ellipsisEater] {
@@ -50,8 +68,13 @@ final class RowTests: XCTestCase {
     // A tail the counted rule admits but the column cannot carry: thirteen
     // characters and a space, after a head that starts wide. The measured
     // floor drops it, so the row draws the whole title with an ellipsis
-    // rather than eight characters and a word.
-    let wideTail = "Treasury reconciliation runbook for the announcements"
+    // rather than nine characters and a word.
+    //
+    // The head has to start wide for the 180 pt column to refuse the tail:
+    // " announcements" is 99 pt of it, "AMS/MUC a…" is 82, and 181 is one pt
+    // more than the column has. The same tail after "Treasury " was refused
+    // at 140 pt and is carried at 180.
+    let wideTail = "AMS/MUC and the Munich announcements"
     XCTAssertEqual(Titles.split(wideTail).tail, " announcements", "the counted rule takes it")
     XCTAssertNil(
       MiddleTitle.fitted(wideTail).tail, "the measured floor gives it back")
@@ -74,20 +97,26 @@ final class RowTests: XCTestCase {
   // dot after it are one piece now, drawn whole, and the name is measured in
   // what is left of the row.
   func testAPrefixTakesItsRoomAndTheFloorCountsTheName() throws {
-    let name = "Ch 5. Commercial Model v0.1"
+    // The name is longer than the one the backlog item was written about,
+    // because the 268 pt a NOW row has at 360 carries "Ch 5. Commercial
+    // Model v0.1" whole with the verb in front of it, and a line that fits
+    // proves nothing about the room a verb takes. This one is cut in both
+    // columns, so the two measurements can be told apart.
+    let name = "Ch 5. Commercial Model and its appendices v0.1"
     let verb = "Live stopped"
 
     // The verb is drawn whole, separator and all, and the two pieces put
     // back together are the line a reader sees.
     XCTAssertEqual(MiddleTitle.lede(verb), "Live stopped · ")
     XCTAssertEqual(
-      MiddleTitle.whole(prefix: verb, name: name), "Live stopped · Ch 5. Commercial Model v0.1")
+      MiddleTitle.whole(prefix: verb, name: name),
+      "Live stopped · Ch 5. Commercial Model and its appendices v0.1")
     XCTAssertEqual(MiddleTitle.whole(prefix: nil, name: name), name, "a name is a line of its own")
 
-    // A NOW row's own room: the panel's 320 less its 8 either side, the
+    // A NOW row's own room: the panel's 360 less its 8 either side, the
     // row's 12 either side, the 16 pt glyph, the two 8 pt gaps and the one
     // 24 pt action, that action's 4 pt of overhang given back.
-    XCTAssertEqual(MiddleTitle.nowColumn, 228)
+    XCTAssertEqual(MiddleTitle.nowColumn, 268)
     let row = LiveRow(model: LiveRowModel(prefix: verb, name: name, sub: "since 13:10"))
     let inPanel = Grid.panelWidth - 2 * Grid.unit
     XCTAssertEqual(
@@ -111,19 +140,33 @@ final class RowTests: XCTestCase {
       "the verb was measured as though it took no room")
 
     // And it is why a row that opens with a verb is measured in its own
-    // room rather than the document row's 112: there, the verb leaves the
-    // name under the floor.
-    XCTAssertLessThan(
-      MiddleTitle.headCharacters(name, prefix: verb), Titles.headFloor,
-      "the document row's column has room for the verb after all")
+    // room rather than the document row's 180: there, the verb takes the
+    // name's one telling word away.
+    //
+    // At 320 the claim was the floor itself, six characters of head in the
+    // 140 pt column against a floor of eight. 180 pt holds eleven, so the
+    // floor is no longer what breaks; what breaks is the tail. The verb
+    // leaves 92 pt, the tail " v0.1" wants 27 of it and the floor after it
+    // wants 73, so the tail is dropped and the name loses the v0.1 that
+    // tells it from the draft beside it, which the same column gives it
+    // whole with no verb in front.
+    XCTAssertNil(
+      MiddleTitle.fitted(name, prefix: verb).tail,
+      "the document row's column has room for the verb and the tail after all")
+    XCTAssertEqual(MiddleTitle.fitted(name).tail, " v0.1", "which it keeps with no verb")
+    XCTAssertEqual(MiddleTitle.headCharacters(name, prefix: verb), 11)
+    XCTAssertEqual(
+      MiddleTitle.headCharacters(name), 20,
+      "the verb costs the name nine characters of its head in this column")
 
     // The job card is the same rule at the card's own width and weight, so
     // a publish's name is cut in the middle like every other name in the
-    // panel and not at its tail: 320 less the panel's 8 either side, the
+    // panel and not at its tail: 360 less the panel's 8 either side, the
     // card's 12 either side, the 28 pt ring and the 12 pt gap after it.
-    XCTAssertEqual(JobCard.titleColumn, 240)
+    XCTAssertEqual(JobCard.titleColumn, 280)
     let card = JobCardModel(prefix: "Publishing", name: name, sub: "started 09:03")
-    XCTAssertEqual(card.title, "Publishing · Ch 5. Commercial Model v0.1")
+    XCTAssertEqual(
+      card.title, "Publishing · Ch 5. Commercial Model and its appendices v0.1")
     let job = MiddleTitle.fitted(
       name, prefix: "Publishing", role: Typography.titleEmphasis, column: JobCard.titleColumn)
     XCTAssertEqual(job.tail, " v0.1", "the card cut the name at its tail")
@@ -135,11 +178,14 @@ final class RowTests: XCTestCase {
       try probes(JobCard(model: card), scheme: .dark, width: inPanel)["job.title"],
       "the card draws its title somewhere other than through MiddleTitle")
 
-    // A name with no verb measures as it did: the document row's column,
-    // the counted split, and the head the ellipsis leaves room for.
+    // A name with no verb measures in the document row's column, by the
+    // counted split and the head the ellipsis leaves room for: the head is
+    // the whole of the name less its last word, and twenty characters of it
+    // are drawn in the 180 pt column.
     XCTAssertEqual(MiddleTitle.fitted(name).tail, " v0.1")
-    XCTAssertEqual(MiddleTitle.fitted(name).head, "Ch 5. Commercial Model")
-    XCTAssertEqual(MiddleTitle.headCharacters(name), 10)
+    XCTAssertEqual(
+      MiddleTitle.fitted(name).head, "Ch 5. Commercial Model and its appendices")
+    XCTAssertEqual(MiddleTitle.headCharacters(name), 20)
   }
 
   // `.row{min-height:32px}`, `.row.two{min-height:44px}`,
@@ -188,10 +234,10 @@ final class RowTests: XCTestCase {
     let measured = try probes(row, scheme: .dark)
 
     // The column the sentence is drawn in, read off the drawing: the panel's
-    // 320 less the row's 12 either side, the 16 pt glyph and the 8 pt gap
+    // 360 less the row's 12 either side, the 16 pt glyph and the 8 pt gap
     // after it.
     let column = try XCTUnwrap(measured["row.sub"]?.width)
-    XCTAssertEqual(column, 272)
+    XCTAssertEqual(column, 312)
     XCTAssertEqual(
       lines(held, role: Typography.caption, width: column), 2,
       "the sentence fits one line at this width, so this row proves nothing")
@@ -216,16 +262,16 @@ final class RowTests: XCTestCase {
     XCTAssertEqual(height, 56)
   }
 
-  // `.row.docrow{grid-template-columns:16px minmax(0,1fr) 136px}`: five
-  // icons in 136 pt since the pin joined them, so every document row in a
-  // list breaks its title at the same place.
-  func testTheDocRowActionColumnIs136() throws {
-    XCTAssertEqual(Grid.actionColumn, 136)
-    XCTAssertEqual(RowShape.doc.trailingColumn, 136)
+  // `.row.docrow{grid-template-columns:16px minmax(0,1fr) 108px}`: four
+  // icons in 108 pt since the fifth look took the Google Docs icon off the
+  // row, so every document row in a list breaks its title at the same place.
+  func testTheDocRowActionColumnIs108() throws {
+    XCTAssertEqual(Grid.actionColumn, 108)
+    XCTAssertEqual(RowShape.doc.trailingColumn, 108)
     XCTAssertNil(RowShape.plain.trailingColumn, "every other row is as wide as it asks for")
 
-    // Five 24 pt icons and four 4 pt gaps are 136 pt, which is the number.
-    XCTAssertEqual(5 * Grid.actionSize + 4 * Grid.actionGap, 136)
+    // Four 24 pt icons and three 4 pt gaps are 108 pt, which is the number.
+    XCTAssertEqual(4 * Grid.actionSize + 3 * Grid.actionGap, 108)
 
     // The row is scene e6's own, so the words under the measurement are
     // words the panel draws: a count beside a verb is one of the things
@@ -235,7 +281,6 @@ final class RowTests: XCTestCase {
       .doc, glyph: drawn.glyph, tone: drawn.tone, title: drawn.title, sub: drawn.sub,
       trailing: {
         HStack(spacing: Grid.actionGap) {
-          ActionButton(.gdocs, tip: Tips.openDoc)
           ActionButton(.md, tip: Tips.openNote)
           ActionButton(.branch, tip: Tips.openChat)
           ActionButton(.link, tip: Tips.copyLink)
@@ -243,7 +288,7 @@ final class RowTests: XCTestCase {
         }
       })
     let measured = try probes(row, scheme: .dark)
-    XCTAssertEqual(measured["row.trailing"]?.width, 136)
+    XCTAssertEqual(measured["row.trailing"]?.width, 108)
 
     // `.row.is-busy .acts{display:none}`: a busy row carries no action at
     // all, so the column goes with them.
@@ -260,7 +305,7 @@ final class RowTests: XCTestCase {
   /// A document row kept 8 pt in front of its glyph for the pin until the
   /// third look, and the rows under a pinned one kept it empty, so DOCUMENTS
   /// stood right of its own section label and of every other row in the
-  /// panel. The pin is the row's fifth icon now, at the trailing edge where
+  /// panel. The pin is the row's last icon, at the trailing edge where
   /// the other four are, and the leading column is the glyph's own 16 pt in
   /// every shape there is.
   func testEveryRowShapeKeepsTheGlyphsOwnLeadingColumn() throws {
@@ -301,7 +346,6 @@ final class RowTests: XCTestCase {
       .doc, glyph: drawn.glyph, tone: drawn.tone, title: drawn.title, sub: drawn.sub,
       trailing: {
         HStack(spacing: Grid.actionGap) {
-          ActionButton(.gdocs, tip: Tips.openDoc)
           ActionButton(.md, tip: Tips.openNote)
           ActionButton(.branch, tip: Tips.openChat)
           ActionButton(.link, tip: Tips.copyLink)
@@ -440,9 +484,10 @@ final class RowTests: XCTestCase {
   // its update, and the account with its glyph and its one action.
   //
   // Everything the header holds is on one 36 pt line, and the line is what
-  // the panel gives it: 320 pt less the panel's own 8 twice. Seven pieces
-  // at that width leave 4 pt over, so the test measures the address against
-  // the width it wants. A stack that spent 8 of those pt on a gap drew
+  // the panel gives it: 360 pt less the panel's own 8 twice. The seven
+  // pieces take 252 pt of that at the widths they ask for, so the test
+  // measures the address against the width it wants and never against what
+  // is left over. A stack that spent 8 of those pt on a gap drew
   // "nail@example…" on every screen.
   func testTheHeaderIs36WithTheMarkTheNameTheVersionAndTheAccount() throws {
     XCTAssertEqual(Grid.headerHeight, 36)
@@ -482,9 +527,9 @@ final class RowTests: XCTestCase {
       "the address is squeezed on the line, so nobody can read the end of it")
 
     // A newer release is the same icon with the accent dot over it, and no
-    // second number on this line: both of them here squeeze the address to
-    // half, which is the one thing the morning of the same day was about.
-    // The number is on the tooltip.
+    // second number on this line: both of them here cut the address, which
+    // is the one thing the morning of the same day was about. The number is
+    // on the tooltip.
     let behind = try probes(
       PanelHeader(
         model: HeaderModel(
@@ -503,7 +548,9 @@ final class RowTests: XCTestCase {
       "and the address is whole, which is what the line has room for")
 
     // The measurement that decided it: both versions in the version slot
-    // take the address down to half of itself.
+    // take the address down from the whole 98 pt to 90.5, which is an
+    // address with its end cut. At 320 it went to 49, and the number it
+    // would take is on the tooltip either way.
     let crowded = try probes(
       PanelHeader(
         model: HeaderModel(
@@ -513,10 +560,11 @@ final class RowTests: XCTestCase {
           account: account, glyph: .check, tone: .ok,
           actions: [ActionModel(.signOut, icon: .signout, tip: Tips.signOut, target: "auth")])),
       scheme: .dark, width: line)
+    XCTAssertEqual(try XCTUnwrap(crowded["header.account"]?.width), 90.5)
     XCTAssertLessThan(
       try XCTUnwrap(crowded["header.account"]?.width),
-      try XCTUnwrap(wanted["alone"]?.width) / 2 + 1,
-      "which is nail@ex… on every screen, and why the number is on the tooltip")
+      try XCTUnwrap(wanted["alone"]?.width),
+      "which is an address with its end cut, and why the number is on the tooltip")
 
     // The mark is a setting and may be empty, and the empty mark draws
     // nothing rather than a gap.

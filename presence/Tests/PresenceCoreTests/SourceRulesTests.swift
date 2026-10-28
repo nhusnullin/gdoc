@@ -41,6 +41,9 @@ final class SourceRulesTests: XCTestCase {
   /// Where the one room that touches this machine's login items is.
   private static let loginItem = "Sources/PresenceApp/LoginItem.swift"
 
+  /// Where the window the panel is drawn in is.
+  private static let window = "Sources/Presence/Panel.swift"
+
   /// The executable target, which is the shell: the status item, the
   /// window, and the one signal between them.
   private static let shell = "Presence"
@@ -177,17 +180,20 @@ final class SourceRulesTests: XCTestCase {
   /// One file writes anything down, so "nothing else persists" is a rule
   /// somebody can read rather than a review.
   ///
-  /// The app's own eight keys are the whole of what outlives the process. A
-  /// ninth key, or a second file writing one, is a decision in
+  /// The app's own nine keys are the whole of what outlives the process. A
+  /// tenth key, or a second file writing one, is a decision in
   /// `docs/v2/DECISIONS.md`: everything else this app knows comes out of the
   /// record, which is gdoc's file and not the app's.
   ///
-  /// Eight since the second morning, and the two that were added are the
-  /// reason this count is written down: the pins and the hides name
+  /// Eight since the second morning, and the two that were added then are
+  /// the reason this count is written down: the pins and the hides name
   /// somebody's documents, which every other key refuses to, and a pin
   /// keeps the last title as well, because a pinned document whose lines
   /// are past the horizon has its name nowhere else. That is the decision of
-  /// 2026-10-18, and a ninth key is the next one.
+  /// 2026-10-18. The ninth is the card's own hint, which goes after the
+  /// person's first press of a document row and must not come back after a
+  /// quit: the decision of 2026-10-28, the fifth look. A tenth is the next
+  /// one.
   func testOnlyThePreferencesPersist() throws {
     let store = "User" + "Defaults"
 
@@ -323,6 +329,23 @@ final class SourceRulesTests: XCTestCase {
     XCTAssertTrue(
       text.contains("SMAppService.openSystemSettingsLoginItems()"),
       "the approval row opens the pane through the register and not through a URL")
+  }
+
+  /// The window the panel opens in takes its width from the grid.
+  ///
+  /// The width is the layout's, and the window only has to agree with it.
+  /// The fifth look moved it from 320 to 360 and found the old number
+  /// written twice in this one file, once in the window's own rectangle and
+  /// once in the floor its fitting size is held to, so the agreement is a
+  /// scan rather than a review.
+  func testThePanelWindowTakesItsWidthFromTheGrid() throws {
+    let text = try String(
+      contentsOf: packageRoot().appendingPathComponent(Self.window), encoding: .utf8)
+    XCTAssertTrue(
+      text.contains("Grid.panelWidth"), "\(Self.window) does not read the grid's own width")
+    for own in ["320", "360"] {
+      XCTAssertFalse(text.contains(own), "\(Self.window) writes the width \(own) itself")
+    }
   }
 
   /// Two schemes and two hosts in the whole of the sources.

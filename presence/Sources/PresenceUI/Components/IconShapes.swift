@@ -5,7 +5,7 @@
 // that file holds and turned into a Path here. The last two are the pin,
 // which the file has no shape for: it is a pair, the outline and the filled,
 // and both are written here in the same grammar so they can be read beside
-// the others. They are not SF Symbols: five of them stand side by side in a
+// the others. They are not SF Symbols: four of them stand side by side in a
 // document row, their weights have to match, and a system symbol is whatever
 // the platform ships this year.
 //
@@ -47,7 +47,7 @@ public enum Icon: String, Sendable, CaseIterable {
   case x
   /// Dismiss, bare: the stuck card's last icon.
   case xmark
-  /// Pin this document: the fifth icon of a document row, with its head
+  /// Pin this document: the last icon of a document row, with its head
   /// hollow because the document is not pinned.
   case pin
   /// Unpin it: the same tack with its head filled, which is the whole of
@@ -67,7 +67,7 @@ public enum Icon: String, Sendable, CaseIterable {
   /// A pair of shapes, one outlined and one filled, is how a row says pinned
   /// without a word and without moving anything. Filling is the pin's own
   /// because an action icon is a 1.25 pt line everywhere else, and a line is
-  /// the one weight the five icons of a row share:
+  /// the one weight the four icons of a row share:
   /// testThePinIsOutlinedAndFilledAndNeitherIsACircle.
   var solidParts: [IconPart] {
     guard self == .pinOn else { return [] }

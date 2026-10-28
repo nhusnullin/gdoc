@@ -33,7 +33,7 @@ public enum Tips {
   /// there is no document to open.
   public static let noLink = "No link yet"
   public static let copied = "Copied"
-  /// The fifth icon of a document row, in its two states. They are the words
+  /// The last icon of a document row, in its two states. They are the words
   /// the menu carried until the third look, on the icon that replaced it.
   public static let pin = "Pin"
   public static let unpin = "Unpin"
@@ -59,7 +59,7 @@ public enum Tips {
 }
 
 /// The word of a document row's own menu, which is one word since the third
-/// look: the pin is the row's fifth icon and Hide is what is left.
+/// look: the pin is the last of the row's icons and Hide is what is left.
 public enum Menus {
   /// The one way out of the list. The way back is gdoc doing something on
   /// the document again, which the guide says and no menu word can.
@@ -98,6 +98,15 @@ public enum Sentences {
   /// A document row with no note behind it. It named the hub until the
   /// third look, and there is no hub to name.
   public static let noNoteYet = "no note"
+
+  /// The one line of the card that is not about the document: what a click
+  /// on the row under it does.
+  ///
+  /// The row carried a Google Docs icon until the fifth look, and the icon
+  /// was the whole of the label. The row is the press now, so the words for
+  /// it are on the card, and they go the way the icon strip's four words
+  /// go: the person's own first click on a row is the proof they were read.
+  public static let clickOpens = "Click opens in Google Docs"
 
   /// What the header's quiet line says about an update that installed
   /// nothing, and what the Claude Desktop row says about an install that
@@ -295,7 +304,7 @@ struct Phrases {
   /// A watch's one line of facts.
   ///
   /// A watch that is not getting through says so and nothing else: the row
-  /// is one line at 320 pt, and since and quiet pushed the one thing that
+  /// is one line at 360 pt, and since and quiet pushed the one thing that
   /// is wrong off the end of it. Scene r8 is that line, and it carries no
   /// word for why, because the record has none.
   func liveRow(_ session: LiveSession) -> LiveRowModel {
@@ -363,25 +372,56 @@ struct Phrases {
   /// is. The state of an open action is one word, because the record has
   /// none and a person reading the list wants the state and not the verb.
   func documentSub(_ row: DocumentRow) -> String {
-    let note = facts.note(for: row.doc).map { Sentences.shortPath($0, home: facts.home) }
-    return sentence([state(row), note ?? Sentences.noNoteYet])
+    sentence([state(row, moment: clockInSentence), notePath(row) ?? Sentences.noNoteYet])
+  }
+
+  /// The card under a rested pointer: the same row, with nothing measured
+  /// off it.
+  ///
+  /// Every piece is the row's own. The one difference is the moment, which
+  /// is written whole here and near in the row: a card is read once and a
+  /// row is read in a list, so "Tue" is the piece a card has the room to
+  /// say properly. The hint is the one line that is not about the document,
+  /// and a row no press would open never carries it:
+  /// StateTests.testTheCardIsTheRowUncutAndNeverTheRowPlus.
+  func documentCard(_ row: DocumentRow, ui: UIState) -> DetailCardModel {
+    DetailCardModel(
+      title: row.title ?? row.doc,
+      when: state(row, moment: fullMoment),
+      note: notePath(row) ?? Sentences.noNoteYet,
+      hint: !ui.cardHintSeen && LinkLine.isDocumentID(row.doc) ? Sentences.clickOpens : nil)
+  }
+
+  /// Where the row's note is, in the one form both lines write it in, or
+  /// nothing where no note is paired with the document.
+  private func notePath(_ row: DocumentRow) -> String? {
+    facts.note(for: row.doc).map { Sentences.shortPath($0, home: facts.home) }
   }
 
   /// What the row says about the last thing that happened, or nothing at
   /// all for a row that is only in the list because it is pinned: the pin is
   /// not an action, and a sentence about one would be invented.
-  private func state(_ row: DocumentRow) -> String? {
+  ///
+  /// How a moment is written is the caller's, and it is the one thing the
+  /// row's line and the card's differ by: a second copy of these eight
+  /// answers would have the two drift the first time a word changed.
+  private func state(_ row: DocumentRow, moment: (Date) -> String) -> String? {
     switch row.state {
     case .hold: return "hold"
     case .running: return (Words.running(row.command) ?? "running").lowercased()
     case .live: return "live"
-    case .liveStopped: return "live stopped \(clockInSentence(row.at))"
+    case .liveStopped: return "live stopped \(moment(row.at))"
     case .done:
-      return "\(Words.verb(row.command)?.past ?? row.command) \(clockInSentence(row.at))"
-    case .failed: return "\(Words.failure(row.command)) \(clockInSentence(row.at))"
-    case .unknown: return "outcome unknown · \(clockInSentence(row.at))"
+      return "\(Words.verb(row.command)?.past ?? row.command) \(moment(row.at))"
+    case .failed: return "\(Words.failure(row.command)) \(moment(row.at))"
+    case .unknown: return "outcome unknown · \(moment(row.at))"
     case .pinnedOnly: return nil
     }
+  }
+
+  /// One moment whole, in this panel's own calendar.
+  private func fullMoment(_ at: Date) -> String {
+    Words.fullMoment(at, calendar: calendar)
   }
 
   // MARK: the two small pieces

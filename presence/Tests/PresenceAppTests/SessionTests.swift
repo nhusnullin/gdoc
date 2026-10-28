@@ -22,7 +22,7 @@ final class SessionTests: XCTestCase {
   private var root: URL!
   private var session: Session?
 
-  /// One document, in the Drive shape, so its row carries the five icons.
+  /// One document, in the Drive shape, so its row carries the four icons.
   private static let doc = "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789"
 
   /// A second document, for the tests that need two.
@@ -456,6 +456,70 @@ final class SessionTests: XCTestCase {
     session.perform(.openNote, Self.doc)
     XCTAssertEqual(desk.opened.count, 1, "the note icon opened nothing")
     XCTAssertEqual(session.ui.noteFault[Self.doc], .notPaired, "and the click kept why")
+  }
+
+  /// A press on a document row opens the document, and leaves the four
+  /// labels where they are.
+  ///
+  /// The row is the press since the fifth look (docs/v2/DECISIONS.md,
+  /// 2026-10-28), through the one room that opens documents. The labels say
+  /// what the icons are, and a click on a row is not a click on an icon: a
+  /// person who has opened a document by clicking its row has read nothing
+  /// about the four icons beside it, so the strip waits for a click on one.
+  func testARowPressOpensTheDocumentAndLeavesTheStrip() throws {
+    try writeTheRecord([line(kind: "start", command: "reply", call: 1, doc: Self.doc)])
+    let store = Store()
+    let desk = FakeDesk()
+    let session = made(preferences: Preferences(store: store), desk: desk)
+    answered(session)
+    XCTAssertFalse(session.ui.stripSeen, "the labels have not been read yet")
+
+    session.perform(.openRow, Self.doc)
+    XCTAssertEqual(
+      desk.opened.map(\.absoluteString),
+      ["https://docs.google.com/document/d/\(Self.doc)/edit"],
+      "the row opens the document through the one room that opens documents")
+    XCTAssertFalse(session.ui.stripSeen, "a click on a row is not a click on an icon")
+    XCTAssertNil(
+      store.object(forKey: Preferences.Key.stripSeen.rawValue),
+      "and nothing is written down about labels nobody has read")
+
+    // The first click on an icon is still what retires them.
+    session.perform(.openChat, Self.doc)
+    XCTAssertTrue(session.ui.stripSeen, "the first click on an icon is the labels read")
+  }
+
+  /// The card's hint is taught once: the person's own first press of a
+  /// document row puts it away, and it never comes back.
+  ///
+  /// The ninth key is the whole of what that costs (docs/v2/DECISIONS.md,
+  /// 2026-10-28). A press of a NOW row or the stuck card is `.openDoc` and
+  /// writes nothing: the hint says a click on a document row opens the
+  /// document, and the rows of NOW have never needed telling.
+  func testTheFirstRowPressPutsTheHintAway() throws {
+    try writeTheRecord([line(kind: "start", command: "reply", call: 1, doc: Self.doc)])
+    let store = Store()
+    let session = made(preferences: Preferences(store: store))
+    answered(session)
+    XCTAssertFalse(
+      session.ui.cardHintSeen, "the launch state reads the store, where nothing is written yet")
+
+    // A NOW row is not a document row, and the hint is not about it.
+    session.perform(.openDoc, Self.doc)
+    XCTAssertFalse(session.ui.cardHintSeen, "a NOW row's press teaches nothing about a row")
+    XCTAssertNil(
+      store.object(forKey: Preferences.Key.cardHintSeen.rawValue),
+      "and writes nothing down")
+
+    session.perform(.openRow, Self.doc)
+    XCTAssertTrue(session.ui.cardHintSeen, "the person's own first row press is the hint read")
+    XCTAssertEqual(
+      store.object(forKey: Preferences.Key.cardHintSeen.rawValue) as? Bool, true,
+      "and the store keeps it, so a later launch shows no hint")
+
+    // The next launch off the same store starts with it away.
+    let again = made(preferences: Preferences(store: store))
+    XCTAssertTrue(again.ui.cardHintSeen, "a hint read once stays read")
   }
 
   /// A fault on Open md greys the icon, and a greyed icon cannot be pressed,
@@ -1242,12 +1306,12 @@ final class SessionTests: XCTestCase {
       session.tookTheScan(2, new), "a walk that found what is already there redraws nothing")
   }
 
-  /// The fifth icon on a row pins the document and takes the pin back, and
-  /// it retires the labels like the other four.
+  /// The last icon on a row pins the document and takes the pin back, and
+  /// it retires the labels like the other three.
   ///
   /// Pin was a word in the row's menu until the third look, and Nail never
-  /// found the menu. The strip of labels now has five words, so the press
-  /// that reads the fifth one is the press that takes them away.
+  /// found the menu. The strip of labels now has four words, so the press
+  /// that reads the last one is the press that takes them away.
   func testThePinIconPinsTheDocumentAndRetiresTheStrip() throws {
     try writeTheRecord([line(kind: "start", command: "reply", call: 1, doc: Self.doc)])
     let store = Store()
@@ -1257,7 +1321,7 @@ final class SessionTests: XCTestCase {
 
     session.perform(.pinDoc, Self.doc)
     XCTAssertEqual(session.ui.pinned.map(\.doc), [Self.doc], "the pin is written down")
-    XCTAssertTrue(session.ui.stripSeen, "and the fifth icon is an icon, so the labels go")
+    XCTAssertTrue(session.ui.stripSeen, "and the pin is an icon, so the labels go")
     XCTAssertTrue(
       store.object(forKey: Preferences.Key.stripSeen.rawValue) as? Bool ?? false,
       "once and for every later launch")

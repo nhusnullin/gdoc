@@ -193,6 +193,10 @@ func TestThePublishingPageSaysAPencilIsAComment(t *testing.T) {
 // the note, and the update glyph is always there in three states. A page that
 // walks the old panel sends somebody scrolling for a section that is not
 // there.
+//
+// The fifth look of 2026-10-28 is in it too: the row is the press that opens
+// its document, the Google Docs icon went with it, the panel is 360 points
+// wide, and a rested pointer draws the card.
 func TestThePresencePageWalksTheThirdLooksPanel(t *testing.T) {
 	text := guidePage(t, "presence.md")
 	for _, want := range []string{
@@ -210,8 +214,14 @@ func TestThePresencePageWalksTheThirdLooksPanel(t *testing.T) {
 		"the newest pin first",
 		// The two answers a person gives about one document: the icon
 		// that pins it, and the one word the menu is left with.
-		"the row's fifth icon",
+		"the row's last icon",
 		"Hide from the list",
+		// The fifth look: the row itself is the press that opens the
+		// document, the panel is wider, and the card under a rested
+		// pointer carries the one hint that retires itself.
+		"A click on a row opens its document",
+		"360 points wide",
+		"Click opens in Google Docs",
 		// The note beside the document, which is found and not
 		// configured, and the override for a machine Spotlight does not
 		// index.
@@ -223,8 +233,8 @@ func TestThePresencePageWalksTheThirdLooksPanel(t *testing.T) {
 		// that nobody opens that link today.
 		"the Claude Code session",
 		"claude://code/continue?session=",
-		// The app's own preferences, which the pins and the hides joined.
-		"eight things",
+		// The app's own preferences, which the card's hint joined.
+		"nine things",
 	} {
 		if !strings.Contains(text, want) {
 			t.Errorf("docs/guide/presence.md never says %q, and somebody reading it walks a panel that is not there", want)
