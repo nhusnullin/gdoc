@@ -1363,12 +1363,13 @@ func (e *emitter) runs(rs []docs.Run) {
 // rather than the export; a label it does define grows a second reference to a
 // note the document never had, and the words the author typed go with it.
 //
-// A backslash is not the answer, for the reason cannotCarry gives: internal/body
-// hands goldmark's text through as it stands and never unescapes a punctuation
-// mark, and body's own line scan reads the mark through the backslash anyway.
-// docs/backlog/build-never-unescapes-a-backslash.md is where that stands. Until
-// then the words go home as the document holds them and the loss is named,
-// which is what a mark that cannot carry its syntax already does.
+// A backslash is not the answer. internal/body resolves an escape in the text
+// of a run, so the backslash itself would not reach the document, but the file
+// is refused before that: body reads the marks off the source lines with a
+// regexp that matches "[^n]" through the backslash in front of it, so an
+// escaped mark refuses the file all the same. The words go home as the
+// document holds them and the loss is named, which is what a mark that cannot
+// carry its syntax already does.
 var footnoteMark = regexp.MustCompile(`\[\^[^\]\n]+\]`)
 
 // oldPencilSpan is the spelling the grey mark had before milestone 20, the
@@ -1775,11 +1776,12 @@ func (e *emitter) cannotOpenHere(m *Mark, words []docs.Run) string {
 // TestAMarkWhoseWordsHoldAnotherMarksSyntaxComesHomeAsWords and
 // TestAPencilWhoseWordsHoldAHighlightComesHomeInTheComment are the two pins.
 //
-// A backslash is not the answer. internal/body hands goldmark's text through as
-// it stands and never unescapes a punctuation mark, so a backslash written into
-// the file reaches the document as a backslash. A colour nobody can see in the
-// file is better than a file that will not build, and better than a backslash
-// nobody typed in the document. internal/export's
+// A backslash is not what this projection writes. internal/body resolves an
+// escape in the text of a run, so one written here would not reach the
+// document as a backslash, but writing a mark's syntax escaped changes what
+// every exported document carries, which is a decision and not a refinement of
+// this projection. A colour nobody can see in the file is better than a file
+// that will not build. internal/export's
 // TestAMarkWhoseWordsCannotCarryItsSyntaxComesHomeAsWordsAndIsNamed is the pin.
 func (e *emitter) cannotCarry(m *Mark, rs []docs.Run) string {
 	words, allText := writtenWords(rs)

@@ -532,6 +532,32 @@
 // leaves one block out of the document; a marker puts words into it that the
 // author never wrote and that nothing downstream would name.
 //
+// # An entity reference and a backslash escape are the characters they stand for
+//
+// "&amp;" reaches the document as an ampersand and "\[" as a bracket. goldmark
+// leaves both in the source text and resolves them in its HTML renderer, where
+// they are already correct. In a w:t neither is: the XML escape doubles an
+// entity, so a document explaining escaping says "&amp;amp;", and the backslash
+// of an escape is a character nobody typed. The escape is CommonMark's and
+// pandoc's reading too, and it is what makes internal/view's escaping a round
+// trip: a document whose link text holds a bracket exports as "[a\]b](url)"
+// and publishes back with the bracket.
+//
+// decodeEntities in inline.go walks the bytes of a text node once rather than
+// running two passes, because goldmark reads the escape and the reference
+// together: "\&amp;" is the literal "&amp;" there, and two passes make it an
+// ampersand in either order. An escape writes the byte behind the backslash, a
+// reference shape is handed to goldmark's resolvers on its own, and a backslash
+// in front of anything that is not ASCII punctuation is a backslash.
+// TestABackslashEscapeIsTheCharacter, TestAnEscapedPipeInACellIsTheCharacter,
+// TestAnExportedLinkTextRoundTrips and
+// TestEntitiesAreDecodedRatherThanCarriedAsText are the pins.
+//
+// Code is the other side. A code span is read off the source by nodeText with
+// nothing resolved, so a span showing "\[x\]" shows both backslashes:
+// TestCodeKeepsItsBackslashes. A code block reaches no run at all, by Nail's
+// decision that code stays out of the house style.
+//
 // # An email autolink carries the mailto: scheme, and the label does not
 //
 // goldmark puts the scheme on in its HTML renderer and never in AutoLink.URL,

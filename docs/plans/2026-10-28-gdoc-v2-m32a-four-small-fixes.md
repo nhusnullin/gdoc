@@ -252,26 +252,33 @@ the installer and `update` write the same bytes.
 **Files:** `go/internal/body/inline.go`, `go/internal/body/inline_test.go`,
 `go/internal/body/doc.go`, `go/internal/view/text.go`, `go/internal/view/doc.go`
 
-- [ ] test first, `TestABackslashEscapeIsTheCharacter`, table of literals:
+- [x] test first, `TestABackslashEscapeIsTheCharacter`, table of literals:
       `A \[bracket\] here.` gives `A [bracket] here.`; `A \*star\* here.`
       gives `A *star* here.`; `A \{+ marker here.` gives `A {+ marker here.`;
       `\\` gives `\`; `\&amp;` gives `&amp;`; `&amp;` gives `&`; `&#8212;`
       gives `"\u2014"`; `\a` (not punctuation) gives `\a`; `a\\` at a line
       end gives `a\`; a table cell `\|` gives `|`
-- [ ] test: `TestCodeKeepsItsBackslashes`, a code span `` `\[x\]` `` and a
-      fenced block keep both backslashes
-- [ ] test: `TestAnExportedLinkTextRoundTrips`, link text `a\]b` from
-      `internal/view`'s escaping builds as `a]b`
-- [ ] run them red
-- [ ] the one-pass writer in `decodeEntities`, as in Technical Details; its
+- [x] test: `TestCodeKeepsItsBackslashes`, a code span `` `\[x\]` `` keeps both
+      backslashes; a fenced block reaches no run at all, by Nail's decision
+      that code stays out of the house style, so
+      `TestACodeBlockWarnsAndIsLeftOut` is that half and the test names it
+- [x] test: `TestAnExportedLinkTextRoundTrips`, link text `a\]b` from
+      `internal/view`'s escaping builds as `a]b`, and
+      `TestAnEscapedPipeInACellIsTheCharacter` for the escaped pipe in a cell
+- [x] run them red
+- [x] the one-pass writer in `decodeEntities`, as in Technical Details; its
       comment says why one pass and not two
-- [ ] `internal/body/doc.go` states the rule and names the tests
-- [ ] the comments at `go/internal/view/text.go` near :1366 and
+- [x] `internal/body/doc.go` states the rule and names the tests
+- [x] the comments at `go/internal/view/text.go` near :1366 and
       `go/internal/view/doc.go` near :244 stop saying body never unescapes a
       punctuation mark and stop naming the backlog file; the footnote half
-      stays
-- [ ] `git rm docs/backlog/build-never-unescapes-a-backslash.md`
-- [ ] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test` green
+      stays, measured: body's line scan still refuses an escaped `\[^1]`. The
+      same false claim in `cannotCarry`, `text.go` near :1777 and `doc.go`
+      near :556, is corrected too: measured, an escaped `\==` now publishes as
+      `==`, so writing the syntax escaped is a decision for Nail rather than
+      something the build refuses
+- [x] `git rm docs/backlog/build-never-unescapes-a-backslash.md`
+- [x] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test` green
 
 ### Task 4: `gdoc completion zsh --loader`
 
