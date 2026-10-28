@@ -464,13 +464,13 @@ the branch.
 **Files:**
 - Modify: this plan
 
-- [ ] every row of the Acceptance table at the foot of this plan names a
+- [x] every row of the Acceptance table at the foot of this plan names a
       test that exists and passes; a test a task named differently is
       renamed here, not in the code
-- [ ] `git diff --name-only main...HEAD`: nothing under `go/`, `CLAUDE.md`
+- [x] `git diff --name-only main...HEAD`: nothing under `go/`, `CLAUDE.md`
       and `docs/v2/` not in the list, nothing under `docs/backlog/`
       deleted or added
-- [ ] `grep -rn "320" presence/Sources` prints nothing;
+- [x] `grep -rn "320" presence/Sources` prints nothing;
       `grep -rn "NSWorkspace\|NSPasteboard" presence/Sources` names
       `Opener.swift` and `Relauncher.swift` only;
       `grep -rn "popover(" presence/Sources` prints nothing;
@@ -478,7 +478,7 @@ the branch.
       and `wc -l presence/Sources/PresenceApp/Session.swift` under 920:
       both are over the 800 ceiling already, and this plan adds a field,
       a case and their comments, nothing more
-- [ ] `make app-lint`, `make app-test`, `make app`
+- [x] `make app-lint`, `make app-test`, `make app`
 
 ### Task 8: [Final] Update documentation
 
