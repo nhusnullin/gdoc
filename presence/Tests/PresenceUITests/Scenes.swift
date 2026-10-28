@@ -171,8 +171,8 @@ enum Scenes {
       "rows",
       "The header with the version, the account and Sign out, drawn four times for the "
         + "four ways the update glyph is: a release to take, which is r8's own header, so "
-        + "the line under it is that screen's press of Update and not the version "
-        + "published; nothing newer known; the second after a press that "
+        + "the line under it is that screen's press of Update, and the version is in the "
+        + "glyph's tooltip; nothing newer known; the second after a press that "
         + "installed nothing; and the ring while the child is up. Then the four row "
         + "shapes, the quiet line, and the two labels as pieces."
     ),
@@ -326,9 +326,9 @@ enum Scenes {
         + "word. The row says the moment and that word, and SETTINGS says the same thing "
         + "about the machine: the app opens no connection, so Google not answering is "
         + "only ever something gdoc wrote down. The check of 17:05 found v2.15.0, so the "
-        + "update glyph is in the accent ink with a dot. The quiet line under the version "
-        + "is the press of 17:04 instead of that number: GitHub did not answer it either, "
-        + "and a button pressed is owed what the run did. It stays there until the next "
+        + "update glyph is in the accent ink with a dot, and v2.15.0 is in its tooltip. The "
+        + "quiet line under the header is the press of 17:04, whose answer was a miss: "
+        + "GitHub did not answer it either, and a button pressed is owed what the run did. It stays there until the next "
         + "press of Update or of Install extension.",
       fixture: "r8", moment: "2026-10-17T17:05:00Z", alive: [],
       facts: machine(
