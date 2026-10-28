@@ -163,7 +163,8 @@ enum Scenes {
     (
       "icons",
       "The action icons at 16 px, live and dimmed, and the Copy check. The last two "
-        + "are the pin, which the third look made the fifth icon of a document row: the "
+        + "are the pin, the fourth and last icon of a document row since the fifth look "
+        + "took the Google Docs one away: the "
         + "outline a document carries while it is not pinned, and the filled tack it "
         + "carries while it is."
     ),
@@ -179,7 +180,7 @@ enum Scenes {
     (
       "cards",
       "The hold card asking and offering, the stuck card, the live row, the job card; "
-        + "then the hint strip of five labels, the sign-in URL on its plate, the "
+        + "then the hint strip of four labels, the sign-in URL on its plate, the "
         + "signed-in account with its one sentence, and the SETTINGS rows, which are "
         + "the machine's own facts, Launch at login and Quit."
     ),
@@ -350,11 +351,12 @@ enum Scenes {
       id: "e1", title: "Twelve documents, the pinned one and the last five",
       caption:
         "The record holds twelve documents and the panel draws six: the pin, and then "
-        + "the five gdoc touched last. Nothing scrolls and nothing opens, so the list "
+        + "the five gdoc touched last. Nothing scrolls and no row unfolds, so the list "
         + "is the whole of what DOCUMENTS has to say. The first row is the wallet note, "
         + "pinned two days ago and worked on eight days ago: without the pin it would "
-        + "be one of the five the list leaves out. The pin is the fifth icon of every "
-        + "row: the filled tack on the pinned one, the outline on the five under it, "
+        + "be one of the five the list leaves out. The pin is the fourth and last icon "
+        + "of every row: the filled tack on the pinned one, the outline on the five "
+        + "under it, "
         + "and pressing it is how a document is pinned or let go. Hide is the row's "
         + "own menu, which no still can show. One row carries a mark: the reply on "
         + "Chapter 5 failed at 11:40, and a run that failed is the one thing the mark "
@@ -430,7 +432,7 @@ enum Scenes {
     Scene(
       id: "e6", title: "Icons with nothing to open, and the first hint",
       caption:
-        "An unpaired document greys its note icon and says why. The strip of five labels "
+        "An unpaired document greys its note icon and says why. The strip of four labels "
         + "is shown once under the first row. A document in the trash keeps its row: no "
         + "field says it is gone, so it is not struck through. The Claude Desktop row "
         + "carries the other half of the fourth look: Install extension was pressed at "

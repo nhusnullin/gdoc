@@ -447,16 +447,16 @@ the branch.
 - Modify: `presence/Tests/PresenceUITests/Scenes.swift` (captions only, if
   the check below finds one stale)
 
-- [ ] read every caption in `Scenes.swift` as text against Tasks 1 to 5,
+- [x] read every caption in `Scenes.swift` as text against Tasks 1 to 5,
       and fix any caption that says five icons, a fifth icon, five labels,
       320, or that the first icon opens the document. The eighteen scenes
       stay eighteen
-- [ ] `rm -rf "$HOME/gdoc-m32c-board/shots"`, then
+- [x] `rm -rf "$HOME/gdoc-m32c-board/shots"`, then
       `PRESENCE_SHOTS="$HOME/gdoc-m32c-board/shots" make app-test`, once
-- [ ] check with `ls` and nothing else: each of the 18 scene ids has its
+- [x] check with `ls` and nothing else: each of the 18 scene ids has its
       `<id>-dark.png`, and `index.html` is there. Open no PNG. The design
       reviewer reads them after the run
-- [ ] the commit message names the folder as an absolute path, which the
+- [x] the commit message names the folder as an absolute path, which the
       lead hands to `gdoc-design-reviewer`
 
 ### Task 7: Verify acceptance criteria
