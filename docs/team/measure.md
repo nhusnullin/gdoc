@@ -203,6 +203,22 @@ The lead ran the suites by hand after the run and changed nothing. Nail sent
 three messages for the run: the go, "feel free to start", and the merge and
 release. The lead's own context at the end of the day was not read.
 
+## 2026-10-28: M32a on Claude
+
+| Run | Task iterations | Tasks, total | Per task iteration | Biggest iteration | Review rounds | Review, total | Per review round | Whole worktree | Sessions |
+|---|---|---|---|---|---|---|---|---|---|
+| M32a, four small fixes (Claude) | 8 | 28.9M | 3.6M | 7.0M | 1 | 0.2M | 0.2M | 29.1M | 9 |
+
+- M32a's tasks pass at 3.6M, under the bar of 4.9M. Eight tasks ran in eight
+  iterations, with no relaunch, in 44 minutes.
+- Its review passes at 0.2M against the bar of 6.6M. The Claude pass found
+  nothing to fix, and weighing the codex peer's findings took 0.1M. 28.0M of
+  the run's 29.1M were cache reads.
+
+After the run the lead fixed two captions in the panel's test scenes, which
+the design review had named, and changed nothing else. Nail sent two messages
+for the run: "do fixes" and the release.
+
 ## Nail's confirmation
 
 The method and the baseline above are the lead's reading. They are not settled
