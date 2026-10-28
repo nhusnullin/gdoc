@@ -237,3 +237,24 @@ from 3.8M to 4.9M per task iteration and from 2.0M to 6.6M per review round. A
 review round that fans out to subagents was always costing what it costs; only
 the measurement changed. If the intent was the absolute numbers rather than the
 third, the review bar is the one to say so about.
+
+## 2026-10-28: M32b on Claude
+
+| Run | Task iterations | Tasks, total | Per task iteration | Biggest iteration | Review rounds | Review, total | Per review round | Whole worktree | Sessions |
+|---|---|---|---|---|---|---|---|---|---|
+| M32b, the logo at its old size (Claude) | 3 | 7.5M | 2.5M | 5.1M | 1 | 0.1M | 0.1M | 7.6M | 4 |
+
+- M32b's tasks pass at 2.5M, under the bar of 4.9M. Three tasks ran in three
+  iterations, with no relaunch, in 12 minutes.
+- Its review passes at 0.1M against the bar of 6.6M. The codex peer found
+  nothing, and Claude weighing it took under 0.1M. 7.3M of the run's 7.6M were
+  cache reads.
+
+The plan reviewer found two blocking gaps in the lead's first draft before the
+run, a task that could not end green on its own and a test fixture that named
+the row the run makes known, and the lead folded both in; the run then needed
+no relaunch. The lead ran the suites and the offline build by hand after the
+run and changed nothing. Nail sent four messages for the run: the go, a
+question on how the logo moves, "merged", and the tag step, which he ran
+himself because the guard refused it to the lead. The lead's own context at
+the end of the day was not read.
