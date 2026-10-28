@@ -76,19 +76,24 @@ The update glyph is always there, after the version, in three states.
 Quiet is the icon in the caption grey: nothing newer is known, and
 pressing it runs `gdoc update`, which asks GitHub itself and installs
 whatever is newer or answers that this is the newest release. Available is
-the icon in the accent ink with a small dot, and the published version is
-the quiet line under the header, "v2.19.0 is published": `help --json` named
-a newer stable release, and the press is the same command. Running is a
+the icon in the accent ink with a small dot: `help --json` named a newer
+stable release, and the press is the same command. Rest the pointer on the
+icon and the tooltip names the version, "Update to v2.19.0". Running is a
 ring, while the update child is up, with the version still installed beside
-it, because a header that said the new number before the bytes were in place
-would lie for a few seconds. A press that found nothing to install leaves a
+it, because a header that said the new number before the bytes were in
+place would lie for a few seconds. A press that found nothing to install leaves a
 check for one second and goes quiet again.
 
-The published version is a line under the header rather than a second number
-on the line, which is what the decision of the third look asked for. It does
-not fit: 320 points hold the mark, the name, one version, the glyph and the
-account with four points to spare, and a second version squeezes the address
-to "nail@ex…" on every screen.
+The published version is on the tooltip and nowhere else. Not on the line:
+320 points hold the mark, the name, one version, the glyph and the account
+with four points to spare, and a second version squeezes the address to
+"nail@ex…" on every screen. And not under the header, where it was a quiet
+line until this release: the dot is what catches the eye, and the same thing
+again in words is a line you read past.
+
+The line under the header is for the answer to a press: where `gdoc update`
+installed nothing, it says why, and "A press that installed nothing says why"
+below holds the three sentences.
 
 Where the binary was not found the version reads "not found" and says
 underneath where it was looked for.

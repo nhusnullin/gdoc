@@ -20,10 +20,11 @@ const (
 	// ClearLine wipes from the cursor to the end of its line, which is what a
 	// single waiting line redrawn with a carriage return needs.
 	ClearLine = "\x1b[K"
-	// WrapOff and WrapOn turn the terminal's auto-wrap off for the life of a
-	// moving list and back on when it settles. A wrapped line is two rows on
-	// the screen and one in the count a redraw moves up by, so in a narrow
-	// terminal the list would crawl down the screen.
+	// WrapOff and WrapOn turn the terminal's auto-wrap off while a draw writes
+	// its lines and back on after the last of them, so between two draws the
+	// terminal wraps. A wrapped line is two rows on the screen and one in the
+	// count a redraw moves up by, so in a narrow terminal the list would crawl
+	// down the screen.
 	WrapOff = "\x1b[?7l"
 	WrapOn  = "\x1b[?7h"
 

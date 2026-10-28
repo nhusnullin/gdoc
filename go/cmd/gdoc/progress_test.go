@@ -190,27 +190,46 @@ func TestSizesAreMegabytes(t *testing.T) {
 }
 
 // A terminal narrower than a line would wrap it, and a wrapped line is two
-// rows on the screen and one in the count the next redraw moves up by. So a
-// live list turns auto-wrap off before its first frame and back on when it
-// settles, and a plain list writes neither.
-func TestALiveListTurnsWrapOffAndBackOn(t *testing.T) {
+// rows on the screen and one in the count the next redraw moves up by. So
+// every draw turns auto-wrap off before it moves the cursor and on again after
+// its last line, and a plain list writes neither code.
+func TestEachDrawTurnsWrapOffBeforeItMovesAndOnAfterItsLines(t *testing.T) {
 	var live bytes.Buffer
-	p := newLiveProgress(&live, "update", sixteen)
+	p := stillProgress(t, &live, sixteen)
 	p.Plan("read releases", "choose release")
 	p.Start("read releases", "")
 	p.Fail(errors.New("offline"))
 	p.Finish("")
 
 	got := live.String()
-	off, on := strings.Index(got, tty.WrapOff), strings.LastIndex(got, tty.WrapOn)
-	if off < 0 || off > strings.Index(got, tty.ClearBelow) {
-		t.Errorf("auto-wrap must go off before the first frame: %q", got)
+	// Every draw opens with the wrap-off, so splitting on it is splitting the
+	// run into its draws. The four are Plan, Start, and the two Fail makes:
+	// the step marked, and the list settled.
+	draws := strings.Split(got, tty.WrapOff)
+	if draws[0] != "" {
+		t.Errorf("a draw opens with the wrap-off, and this run wrote %q before one: %q", draws[0], got)
 	}
-	if on < 0 || on < strings.LastIndex(got, tty.WrapOff) || on > strings.LastIndex(got, tty.ClearBelow) {
-		t.Errorf("auto-wrap must come back on in the last draw, before its lines: %q", got)
+	if len(draws)-1 != 4 {
+		t.Fatalf("this run draws four times, and it turned wrap off %d times: %q", len(draws)-1, got)
 	}
-	if strings.Count(got, tty.WrapOff) != 1 || strings.Count(got, tty.WrapOn) != 1 {
-		t.Errorf("auto-wrap goes off once and on once: %q", got)
+	for i, draw := range draws[1:] {
+		on := strings.Index(draw, tty.WrapOn)
+		if on < 0 {
+			t.Fatalf("draw %d must turn auto-wrap back on: %q", i, draw)
+		}
+		if strings.Count(draw, tty.WrapOn) != 1 {
+			t.Errorf("draw %d turns auto-wrap on once: %q", i, draw)
+		}
+		clear := strings.Index(draw, tty.ClearBelow)
+		if clear < 0 || clear > on {
+			t.Errorf("draw %d must clear below the cursor before it writes its lines: %q", i, draw)
+		}
+		if up := cursorUp.FindStringIndex(draw); up != nil && up[0] > clear {
+			t.Errorf("draw %d must move the cursor up before it clears: %q", i, draw)
+		}
+		if !strings.HasSuffix(draw[:on], "\n") {
+			t.Errorf("draw %d turns auto-wrap on after its last line: %q", i, draw)
+		}
 	}
 
 	var plain bytes.Buffer
@@ -222,6 +241,44 @@ func TestALiveListTurnsWrapOffAndBackOn(t *testing.T) {
 	if strings.Contains(plain.String(), "\x1b[") {
 		t.Errorf("a plain list writes no escape code: %q", plain.String())
 	}
+}
+
+// `gdoc update` traps no signal, so a Ctrl-C during the download kills the
+// process where it stands. That is between two draws, because a draw is one
+// write, so the terminal a person is left with must be wrapping: the last wrap
+// code the run has written at any moment between two draws is the wrap-on.
+func TestWrapIsOnBetweenEveryTwoDraws(t *testing.T) {
+	var buf bytes.Buffer
+	p := stillProgress(t, &buf, sixteen)
+	for _, c := range []struct {
+		what string
+		draw func()
+	}{
+		{"the plan", func() { p.Plan("read releases", "choose release") }},
+		{"a step starting", func() { p.Start("read releases", "") }},
+		{"a step done", func() { p.Done("30 listed") }},
+		{"the next step starting", func() { p.Start("choose release", "") }},
+		{"a step failing", func() { p.Fail(errors.New("offline")) }},
+	} {
+		c.draw()
+		got := buf.String()
+		if strings.LastIndex(got, tty.WrapOn) < strings.LastIndex(got, tty.WrapOff) {
+			t.Errorf("after %s the terminal must be wrapping again: %q", c.what, got)
+		}
+	}
+}
+
+// stillProgress is the live list with a spinner that never turns, which is how
+// a test gets exactly the draws it makes: the list is handed the two channels
+// Start would have made itself, with the stopped one already closed, so no
+// goroutine draws under the test. It is updatescreen_test.go's liveUpdate
+// without the recorded width and colour.
+func stillProgress(t *testing.T, w io.Writer, style tty.Style) *progress {
+	t.Helper()
+	p := newLiveProgress(w, "update", style)
+	p.stop, p.stopped = make(chan struct{}), make(chan struct{})
+	close(p.stopped)
+	return p
 }
 
 // The width rule decides too, and not only the driver: a window with no room

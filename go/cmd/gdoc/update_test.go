@@ -1352,3 +1352,225 @@ func wantOneOpen(t *testing.T, rec *opened, bundle string) {
 		t.Errorf("the run asked for %+v, and one run opens the app once, after the bundle moved: %+v", rec.calls, want)
 	}
 }
+
+// The first three lines of the script gdoc writes for zsh, as a reader of the
+// file sees them. The code reads them off the template rather than typing them
+// again, so this literal is the other half: a change that moves those lines
+// fails here, where somebody has to decide what `gdoc update` recognises.
+//
+// `#compdef gdoc` on its own is zsh's standard first line and says nothing
+// about who wrote the file, which is why three lines are the header and not
+// one.
+const staticCompletionFirstLines = "#compdef gdoc\n#\n# zsh completion for gdoc, written by gdoc itself:\n"
+
+// completionAt writes a completion file in the config dir installedAt made,
+// and answers its path. Nothing here can reach the real
+// ~/.config/gdoc-agent/completion.zsh, because installedAt points
+// GDOC_CONFIG_DIR at a directory of this test's own.
+func completionAt(t *testing.T, body string) string {
+	t.Helper()
+	dir := os.Getenv("GDOC_CONFIG_DIR")
+	if dir == "" {
+		t.Fatal("the test must call installedAt first, which is what points the config dir somewhere safe")
+	}
+	path := filepath.Join(dir, "completion.zsh")
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+// takesRelease is the stub for a run with one release to take.
+func takesRelease(t *testing.T) *stubPlain {
+	t.Helper()
+	return &stubPlain{listing: listing("v2.1.0"), files: published(t, "v2.1.0", []byte("new"))}
+}
+
+// The file the installer wrote is a snapshot of the commands of the gdoc that
+// wrote it, so an update leaves it behind. The run that installed replaces it
+// with the loader, which asks the installed gdoc at every new shell, and the
+// object names the file it wrote.
+func TestAnUpdateReplacesGdocsStaticCompletionWithTheLoader(t *testing.T) {
+	pl := takesRelease(t)
+	installedAt(t, "v2.0.0", []byte("old"), pl)
+	file := completionAt(t, staticCompletionFirstLines+"#\n# fourteen commands ago\n")
+
+	got, code := runJSON(t, "update")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("the update must answer: %v (exit %d)", got, code)
+	}
+	if text := fileText(t, file); text != zshLoader {
+		t.Errorf("the completion at %s must be the loader, and holds:\n%s", file, text)
+	}
+	if data := updateObject(t, got); data["completion"] != file {
+		t.Errorf("completion must name the file this run changed, %s: %v", file, data["completion"])
+	}
+}
+
+// A file at that path gdoc did not write is somebody's own, and not knowing
+// never resolves to overwrite: it is left byte for byte as it was, and the run
+// says so rather than going quiet about it.
+func TestAnUpdateLeavesAFileItDidNotWriteAlone(t *testing.T) {
+	for _, body := range []string{
+		"#!/usr/bin/env zsh\n# my own completion\ncompdef _mine gdoc\n",
+		// zsh's own first line, and nothing after it that gdoc wrote: the
+		// header is three lines for this case.
+		"#compdef gdoc\ncompdef _mine gdoc\n",
+	} {
+		pl := takesRelease(t)
+		installedAt(t, "v2.0.0", []byte("old"), pl)
+		file := completionAt(t, body)
+
+		got, code := runJSON(t, "update")
+		if code != 0 || got["ok"] != true {
+			t.Fatalf("the update must answer: %v (exit %d)", got, code)
+		}
+		if text := fileText(t, file); text != body {
+			t.Errorf("%q is not a file gdoc wrote, so it must be untouched, and holds:\n%s", body, text)
+		}
+		if data := updateObject(t, got); data["completion"] != nil {
+			t.Errorf("nothing was written, so no completion field: %v", data["completion"])
+		}
+		if warns := warningsOf(t, got); !hasWarning(warns, "completion.zsh") {
+			t.Errorf("a file left alone is named in a warning: %v", warns)
+		}
+	}
+}
+
+// A symlink there is a person's arrangement, whatever it points at: gdoc
+// writes through no link, so the link and its target are both as they were.
+func TestAnUpdateLeavesASymlinkedCompletionAlone(t *testing.T) {
+	pl := takesRelease(t)
+	installedAt(t, "v2.0.0", []byte("old"), pl)
+	body := staticCompletionFirstLines + "#\n# written by gdoc, kept elsewhere\n"
+	target := filepath.Join(t.TempDir(), "completion.zsh")
+	if err := os.WriteFile(target, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	file := filepath.Join(os.Getenv("GDOC_CONFIG_DIR"), "completion.zsh")
+	if err := os.Symlink(target, file); err != nil {
+		t.Fatal(err)
+	}
+
+	got, code := runJSON(t, "update")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("the update must answer: %v (exit %d)", got, code)
+	}
+	info, err := os.Lstat(file)
+	if err != nil || info.Mode()&os.ModeSymlink == 0 {
+		t.Errorf("%s must still be the symlink it was: %v, %v", file, info.Mode(), err)
+	}
+	if text := fileText(t, target); text != body {
+		t.Errorf("the file the link points at must be untouched, and holds:\n%s", text)
+	}
+	if data := updateObject(t, got); data["completion"] != nil {
+		t.Errorf("nothing was written, so no completion field: %v", data["completion"])
+	}
+	if warns := warningsOf(t, got); !hasWarning(warns, "completion.zsh") {
+		t.Errorf("a link left alone is named in a warning: %v", warns)
+	}
+}
+
+// The loader is version-free, so the second update has nothing to change. The
+// file is not written at all, and the field that means this run changed what
+// new terminals do is absent.
+func TestAnUpdateWritesNothingOverTheLoaderItself(t *testing.T) {
+	pl := takesRelease(t)
+	installedAt(t, "v2.0.0", []byte("old"), pl)
+	file := completionAt(t, zshLoader)
+	before, err := os.Stat(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got, code := runJSON(t, "update")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("the update must answer: %v (exit %d)", got, code)
+	}
+	after, err := os.Stat(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !after.ModTime().Equal(before.ModTime()) {
+		t.Errorf("the file was already the loader, so it must not be written: %v then %v", before.ModTime(), after.ModTime())
+	}
+	if text := fileText(t, file); text != zshLoader {
+		t.Errorf("the loader must still be the loader:\n%s", text)
+	}
+	if data := updateObject(t, got); data["completion"] != nil {
+		t.Errorf("nothing was written, so no completion field: %v", data["completion"])
+	}
+}
+
+// Nobody sourced a completion, so there is nothing to keep fresh. gdoc writes
+// no file a person did not ask for.
+func TestAnUpdateWithNoCompletionFileWritesNone(t *testing.T) {
+	pl := takesRelease(t)
+	installedAt(t, "v2.0.0", []byte("old"), pl)
+	file := filepath.Join(os.Getenv("GDOC_CONFIG_DIR"), "completion.zsh")
+
+	got, code := runJSON(t, "update")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("the update must answer: %v (exit %d)", got, code)
+	}
+	if _, err := os.Lstat(file); !os.IsNotExist(err) {
+		t.Errorf("no file was there, so none is written: %v", err)
+	}
+	if data := updateObject(t, got); data["completion"] != nil {
+		t.Errorf("nothing was written, so no completion field: %v", data["completion"])
+	}
+	if warns := warningsOf(t, got); hasWarning(warns, "completion.zsh") {
+		t.Errorf("a missing file is nothing to say: %v", warns)
+	}
+}
+
+// The step belongs to the run that installed a binary. A run with nothing to
+// take and a rollback both leave the completion exactly as they found it: the
+// first changed no commands, and the second put an earlier gdoc back, whose
+// own completion is the file that is already there.
+func TestAnUpdateThatInstalledNothingTouchesNoCompletion(t *testing.T) {
+	body := staticCompletionFirstLines + "#\n# the commands of the gdoc that is here\n"
+	t.Run("nothing newer to install", func(t *testing.T) {
+		pl := &stubPlain{listing: listing("v2.1.0")}
+		installedAt(t, "v2.1.0", []byte("old"), pl)
+		file := completionAt(t, body)
+
+		got, code := runJSON(t, "update")
+		if code != 0 || got["ok"] != true {
+			t.Fatalf("the update must answer: %v (exit %d)", got, code)
+		}
+		if text := fileText(t, file); text != body {
+			t.Errorf("nothing was installed, so the completion is as it was, and holds:\n%s", text)
+		}
+		if data := updateObject(t, got); data["completion"] != nil {
+			t.Errorf("nothing was written, so no completion field: %v", data["completion"])
+		}
+	})
+	t.Run("a rollback", func(t *testing.T) {
+		pl := &stubPlain{}
+		path := installedAt(t, "v2.1.0", []byte("new"), pl)
+		if err := os.WriteFile(path+".previous", []byte("old"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		file := completionAt(t, body)
+
+		got, code := runJSON(t, "update", "--rollback")
+		if code != 0 || got["ok"] != true {
+			t.Fatalf("the rollback must answer: %v (exit %d)", got, code)
+		}
+		if text := fileText(t, file); text != body {
+			t.Errorf("a rollback changes no completion, and the file holds:\n%s", text)
+		}
+		if data := updateObject(t, got); data["completion"] != nil {
+			t.Errorf("nothing was written, so no completion field: %v", data["completion"])
+		}
+	})
+}
+
+// The header `gdoc update` recognises is the template's own first three lines,
+// read off it rather than typed twice.
+func TestTheStaticHeaderIsTheTemplatesFirstThreeLines(t *testing.T) {
+	if got := staticCompletionHeader(); got != staticCompletionFirstLines {
+		t.Errorf("the header is %q, and the file a reader opens starts %q", got, staticCompletionFirstLines)
+	}
+}

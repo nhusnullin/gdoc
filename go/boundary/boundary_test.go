@@ -566,10 +566,25 @@ func importedPackages(f *ast.File) map[string]string {
 // decision 18 of the M14 specification.
 const desktopFile = "cmd/gdoc/desktop.go"
 
+// startsAProgram is every call that starts a program without os/exec, as a
+// package name and the function on it. os/exec is the easy door and is banned
+// by import; these are the ones underneath it, and nothing in the tree calls
+// any of them today. syscall is imported for a lock, a terminal size and an
+// open flag, so the import cannot be banned and the call is what is read.
+var startsAProgram = map[string]map[string]bool{
+	"os":      {"StartProcess": true},
+	"syscall": {"Exec": true, "ForkExec": true, "StartProcess": true},
+}
+
 // TestNothingRunsAnExternalProgram makes the rule true rather than stating it.
 // gdoc runs no external programs but the one above: that is what lets the login
 // flow print a URL instead of opening a browser, and it is why the binary is one
 // file.
+//
+// Two halves. os/exec and syscall/js are banned as imports, everywhere but the
+// one file. And the calls that start a program with neither of them are banned
+// by name, so a completion loader, a shell test or anything else that wants to
+// run zsh cannot slip in under a lower door: see startsAProgram above.
 func TestNothingRunsAnExternalProgram(t *testing.T) {
 	banned := map[string]bool{"os/exec": true, "syscall/js": true}
 	err := walkGo("..", func(rel, path string, f *ast.File) error {
@@ -585,6 +600,32 @@ func TestNothingRunsAnExternalProgram(t *testing.T) {
 		}
 		return nil
 	}, parser.ImportsOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = walkGo("..", func(_, path string, f *ast.File) error {
+		ast.Inspect(f, func(n ast.Node) bool {
+			call, ok := n.(*ast.CallExpr)
+			if !ok {
+				return true
+			}
+			sel, ok := call.Fun.(*ast.SelectorExpr)
+			if !ok {
+				return true
+			}
+			pkg, ok := sel.X.(*ast.Ident)
+			if !ok {
+				return true
+			}
+			if startsAProgram[pkg.Name][sel.Sel.Name] {
+				t.Errorf("%s calls %s.%s, which starts a program; v2 runs no external programs but the one %s runs",
+					path, pkg.Name, sel.Sel.Name, desktopFile)
+			}
+			return true
+		})
+		return nil
+	}, parser.SkipObjectResolution)
 	if err != nil {
 		t.Fatal(err)
 	}

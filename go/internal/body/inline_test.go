@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/yuin/goldmark/ast"
+	east "github.com/yuin/goldmark/extension/ast"
 	"github.com/yuin/goldmark/text"
 )
 
@@ -204,5 +206,83 @@ func TestAWebAutolinkKeepsItsOwnScheme(t *testing.T) {
 	got := runCarrying(t, runs, "https://example.com/h")
 	if got.Link != "https://example.com/h" {
 		t.Errorf("link = %q, want the destination untouched", got.Link)
+	}
+}
+
+// A backslash in front of ASCII punctuation is CommonMark's escape, and the
+// character it escapes is what the document says. goldmark leaves the escape
+// in the source text and resolves it in its HTML renderer, so this package
+// resolves it itself, in the one pass that resolves an entity reference.
+//
+// The table states every case as a literal, the entity half among them: the
+// two readings must not run in an order that makes "\&amp;" an ampersand.
+func TestABackslashEscapeIsTheCharacter(t *testing.T) {
+	for _, c := range []struct{ note, want string }{
+		{`A \[bracket\] here.`, "A [bracket] here."},
+		{`A \*star\* here.`, "A *star* here."},
+		{`A \{+ marker here.`, "A {+ marker here."},
+		{`\\`, `\`},
+		{`\&amp;`, "&amp;"},
+		{`&amp;`, "&"},
+		{`&#8212;`, "—"},
+		{`\a`, `\a`},
+		{"a\\\\", `a\`},
+	} {
+		if got := joined(firstBlockRuns(t, c.note+"\n")); got != c.want {
+			t.Errorf("%q built %q, want %q", c.note, got, c.want)
+		}
+	}
+}
+
+// A pipe the author escaped inside a table cell is the character too. The
+// table extension splits the row on the pipes it is not escaped, and the cell
+// keeps the escape, so the cell is read the same way a paragraph is.
+func TestAnEscapedPipeInACellIsTheCharacter(t *testing.T) {
+	source := "| head |\n|---|\n" + `| a \| b |` + "\n"
+	bytes := []byte(source)
+	root := parse().Parser().Parse(text.NewReader(bytes))
+	var cells []string
+	ast.Walk(root, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+		if _, ok := node.(*east.TableCell); ok {
+			cells = append(cells, joined(inlineRuns(node, bytes, nil, markTable{})))
+		}
+		return ast.WalkContinue, nil
+	})
+	if len(cells) != 2 || cells[1] != "a | b" {
+		t.Errorf("cells = %q, want the second to be %q", cells, "a | b")
+	}
+}
+
+// Code keeps its backslashes. A code span is another node, read by nodeText
+// off the source with nothing resolved, so a span showing an escape shows it.
+// A fenced block reaches no run at all: Nail's decision keeps code out of the
+// house style and TestACodeBlockWarnsAndIsLeftOut is the pin.
+func TestCodeKeepsItsBackslashes(t *testing.T) {
+	runs := firstBlockRuns(t, "write "+"`"+`\[x\]`+"`"+" for a bracket\n")
+
+	got := runCarrying(t, runs, `\[x\]`)
+	if !got.Mono {
+		t.Errorf("code run = %#v, want it mono", got)
+	}
+	if got.Text != `\[x\]` {
+		t.Errorf("code run text = %q, want both backslashes kept", got.Text)
+	}
+}
+
+// internal/view escapes a bracket inside a link's words, so a document whose
+// link text holds one exports as "[a\]b](url)". The escape is read back here,
+// which is what makes that route a round trip.
+func TestAnExportedLinkTextRoundTrips(t *testing.T) {
+	runs := firstBlockRuns(t, `see [a\]b](https://example.com/h) for more`+"\n")
+
+	got := runCarrying(t, runs, "a]b")
+	if got.Text != "a]b" {
+		t.Errorf("link text = %q, want %q", got.Text, "a]b")
+	}
+	if got.Link != "https://example.com/h" {
+		t.Errorf("link = %q, want the destination to survive", got.Link)
 	}
 }

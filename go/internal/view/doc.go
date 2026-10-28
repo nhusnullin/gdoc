@@ -241,12 +241,12 @@
 // that shape are read by the next build as a mark of gdoc's: a label the file
 // does not define refuses the file by line, and a label it does define grows a
 // second reference to a note the document never had. The escaping cannot carry
-// it, because internal/body never unescapes a punctuation mark and reads the
-// mark through a backslash anyway, so the words go home as the document holds
-// them and the warning says what the next build will make of them.
+// it: internal/body reads the marks off the source lines with a regexp that
+// matches the shape through a backslash in front of it, so an escaped mark
+// refuses the file all the same. The words go home as the document holds them
+// and the warning says what the next build will make of them.
 // internal/export's TestWordsThatWouldReadAsAFootnoteMarkAreNamedAsALoss and
-// TestProseWithNoFootnoteMarkIsNotWarnedAboutOne are the pins, and
-// docs/backlog/build-never-unescapes-a-backslash.md is the escaping.
+// TestProseWithNoFootnoteMarkIsNotWarnedAboutOne are the pins.
 //
 // The opener a mark's comment is written with, <!--, is the second shape and
 // is asked for the same reason. It comes off the palette rather than being a
@@ -552,9 +552,11 @@
 // around: a highlight's own delimiter inside the words, which closes the mark
 // early, or one half of it against either end, which lengthens it; and, for a
 // mark written as a comment, that comment's closer, which shuts it early and
-// leaves the words after it in the file as prose. A backslash is no answer:
-// internal/body hands goldmark's text through as it stands and never unescapes
-// a punctuation mark, so one written here reaches the document as a backslash.
+// leaves the words after it in the file as prose. A backslash is not what this
+// projection writes: internal/body resolves an escape in the text of a run, so
+// one written here would not reach the document as a backslash, but writing a
+// mark's syntax escaped changes what every exported document carries, which is
+// a decision and not a refinement.
 // internal/export's
 // TestAMarkWhoseWordsCannotCarryItsSyntaxComesHomeAsWordsAndIsNamed is the pin.
 //

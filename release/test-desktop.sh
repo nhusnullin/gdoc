@@ -35,6 +35,11 @@ ok() {
 
 # A gdoc that answers the three calls an installer makes of it: the version out
 # of help, the completion script, and the sign-in state at the end.
+#
+# Every completion call is appended to $GDOC_FAKE_CALLS, one line of arguments,
+# so the test can say what the installer asked for. With GDOC_FAKE_NO_LOADER
+# set it refuses --loader the way a release that predates the flag does, which
+# is what the installer's fallback is for.
 fake_gdoc() {
     cat > "$1" <<'FAKE'
 #!/bin/sh
@@ -43,13 +48,20 @@ case "$1" in
         printf '{"ok":true,"data":{"commands":[]},"version":"v9.9.9"}\n'
         ;;
     completion)
+        printf '%s\n' "$*" >> "${GDOC_FAKE_CALLS:-/dev/null}"
         out=""
+        loader=0
         while [ $# -gt 0 ]; do
             case "$1" in
                 --out) out="$2"; shift 2 ;;
+                --loader) loader=1; shift ;;
                 *) shift ;;
             esac
         done
+        if [ -n "${GDOC_FAKE_NO_LOADER:-}" ] && [ "$loader" -eq 1 ]; then
+            printf '{"ok":false,"error":"unknown flag --loader"}\n' >&2
+            exit 1
+        fi
         [ -n "$out" ] || exit 1
         printf '# fake completion\n' > "$out"
         printf '{"ok":true}\n'
@@ -143,6 +155,7 @@ before_cwd="$(listing "$cwd")"
 
 run_release() {
     ( cd "$cwd" && HOME="$home" GDOC_DESKTOP_OPEN="$work/opener" \
+        GDOC_FAKE_CALLS="$work/calls-$1.txt" \
         bash "$stage/install.sh" --desktop ) > "$work/release-$1.log" 2>&1 ||
         fail "the release installer exited non-zero on run $1: $(cat "$work/release-$1.log")"
 }
@@ -156,6 +169,19 @@ if [ ! -f "$mcpb" ]; then
 else
     ok "the release installer wrote gdoc.mcpb beside the binary"
     check_manifest "the release installer" "$(manifest_from_mcpb "$mcpb" "$work/ext1")" "$installed" "9.9.9"
+fi
+
+# The completion the installer asks for is the loader, so the next release
+# reaches Tab without anybody running this script again.
+completion="$home/.config/gdoc-agent/completion.zsh"
+if [ ! -f "$work/calls-1.txt" ]; then
+    fail "the release installer asked for no completion at all"
+elif ! grep -q -- '--loader' "$work/calls-1.txt"; then
+    fail "the completion call carries no --loader: $(cat "$work/calls-1.txt")"
+elif [ ! -f "$completion" ]; then
+    fail "the release installer wrote no $completion"
+else
+    ok "the release installer asks for the loader"
 fi
 
 if [ "$(listing "$stage")" != "$before_stage" ]; then
@@ -194,6 +220,38 @@ if [ -f "$mcpb" ]; then
     else
         ok "a second run gives the same manifest"
     fi
+fi
+
+# The line a person is told to add is the same one as before the loader: the
+# file is written again, never its name changed.
+if ! grep -qF "source $completion" "$work/release-1.log"; then
+    fail "the run does not print the source line for $completion: $(cat "$work/release-1.log")"
+else
+    ok "the run prints the same source line as before"
+fi
+
+# A binary that does not know --loader. The one-liner fetches this script from
+# main and installs the newest stable release, so this is the machine of
+# anybody who installs before the release that added the flag.
+old="$work/home-old"
+mkdir -p "$old"
+if ( cd "$cwd" && HOME="$old" GDOC_DESKTOP_OPEN="$work/opener" \
+        GDOC_FAKE_CALLS="$work/calls-old.txt" GDOC_FAKE_NO_LOADER=1 \
+        bash "$stage/install.sh" --desktop ) > "$work/old.log" 2>&1; then
+    old_completion="$old/.config/gdoc-agent/completion.zsh"
+    if [ ! -f "$old_completion" ]; then
+        fail "a binary that refuses --loader was left with no completion: $(cat "$work/old.log")"
+    elif [ "$(grep -c -- '--loader' "$work/calls-old.txt")" -ne 1 ]; then
+        fail "the installer asked for the loader $(grep -c -- '--loader' "$work/calls-old.txt") times, want 1: $(cat "$work/calls-old.txt")"
+    elif [ "$(wc -l < "$work/calls-old.txt")" -ne 2 ]; then
+        fail "the installer made $(wc -l < "$work/calls-old.txt") completion calls, want 2: $(cat "$work/calls-old.txt")"
+    elif ! grep -qF "source $old_completion" "$work/old.log"; then
+        fail "the fallback run does not print the source line: $(cat "$work/old.log")"
+    else
+        ok "a binary that refuses --loader falls back to the static script"
+    fi
+else
+    fail "the installer exited non-zero against a binary that refuses --loader: $(cat "$work/old.log")"
 fi
 
 # A release that carries no template refuses --desktop, and refuses it before

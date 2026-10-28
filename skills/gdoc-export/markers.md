@@ -90,8 +90,11 @@ marker hands that marker to the document.
 
 So when you resolve a marker, you also unescape the text around it: take one
 backslash off each escaped pair, and halve every run of backslashes. A file left
-with its escapes is a file whose text is not the document's text, and `publish`
-would put the backslashes into a document.
+with its escapes is a file whose text is not the document's text, which is what
+anybody reading the note reads. The backslashes do not reach a document:
+`build` and `publish` read an escape in front of a punctuation mark as that
+mark alone, so an escaped marker left in the file publishes as the marker's
+characters. The note is still wrong to leave as it is.
 
 Inside a link's words a `[` is escaped as well, because an unescaped one there
 breaks the link. Inside a table row a `|` the author typed is escaped, because an

@@ -29,6 +29,10 @@ func TestEnvOverrideWins(t *testing.T) {
 	if l != filepath.Join(dir, "login-pending.json") {
 		t.Fatalf("login pending path: %q", l)
 	}
+	comp, _ := CompletionPath()
+	if comp != filepath.Join(dir, "completion.zsh") {
+		t.Fatalf("completion path: %q", comp)
+	}
 }
 
 func TestPlatformDefault(t *testing.T) {

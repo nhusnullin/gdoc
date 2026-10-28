@@ -69,6 +69,7 @@ make dist    # bin/gdoc-darwin-arm64, -darwin-amd64, -windows-amd64.exe
 bin/gdoc help              # every command, one sentence each
 bin/gdoc help propose      # the words one command takes, its flags, an example
 bin/gdoc completion zsh --out ~/.gdoc-completion.zsh
+bin/gdoc completion zsh --loader --out ~/.gdoc-completion.zsh --force
 ```
 
 `help` prints the command table: the words each command takes, every flag with
@@ -95,6 +96,17 @@ command, because scoping that to the one arm offering file names needs
 `compopt` and macOS ships bash 3.2, which has none. So a command word that
 matches a directory in the folder you are standing in gets a trailing slash,
 and the binary then refuses it by name.
+
+`--loader` writes something else at that path: a few lines of zsh that ask the
+gdoc on PATH for its completion at every new shell, and source what it wrote
+beside them. It is zsh only, and it is refused for `bash` by name. A loader
+names no version and no command but that one call, so it never goes stale: the
+script it sources is written again each time by the binary that is installed,
+which is what a Tab should offer. That is why `gdoc update` puts the loader in
+place of gdoc's own completion file beside the token, and why the colleague's
+installer writes a loader rather than a script. From a checkout you need
+neither: `install.sh` rewrites `bin/gdoc.zsh` on every run, so the script is
+already the table the binary you just built reads.
 
 ## Moving the config
 

@@ -543,6 +543,7 @@ func commands() []command {
 			flags: []flag{
 				{"--out", kindFile, needRequired, "the file to write the completion script to"},
 				{"--force", kindNone, needOptional, "replace the out file if something is already there"},
+				{loaderFlag, kindNone, needOptional, "write a loader that asks the gdoc on PATH for its completion at every new shell, instead of the script itself"},
 			},
 			summary: "Write the completion script for one shell, and say the line that turns it on.",
 			example: "gdoc completion zsh --out ~/.gdoc-completion.zsh",

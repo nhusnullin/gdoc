@@ -69,10 +69,40 @@
 // TestCompletionArgumentsAreStrict, with
 // TestCompletionBashWritesTheFileAndNamesBashrc over the second row's report.
 //
-// No test sources the script in a real shell, because the one program anything
-// under go/ runs is the opener below, and TestNothingRunsAnExternalProgram holds
-// that over the test files too. The script is checked structurally here, and a
-// person types Tab at it once per milestone.
+// # The loader, and why the refresh comes from the shell
+//
+// A script written today names the commands of the binary that wrote it. The
+// gdoc running an update is the old binary, so it cannot write the script the
+// new one needs, and the file it leaves behind is a Tab that has gone quiet
+// about whatever the release added. The first moment anything can ask the
+// installed binary is a new shell, so that is where the asking happens.
+//
+// gdoc completion zsh --loader --out <path> writes a loader instead of the
+// script: a few lines that ask the gdoc on PATH for its own completion and
+// source it. Version-free text, owned by the binary, so the installer and
+// `gdoc update` write the same bytes and neither has to know what is in them.
+// zsh alone, because the two things it leans on, the sourced file's own path
+// and the commands array, are zsh's; bash is refused by name. --out is
+// required for it and freeToWrite is asked first, like every write here.
+// TestTheLoaderOpensWithItsOwnFirstLine,
+// TestTheLoaderNamesNoVersionAndNoOtherCommand, TestTheLoaderIsQuietWithoutGdoc,
+// TestTheLoaderIsRefusedForBash, TestTheLoaderNeedsOut and
+// TestTheLoaderRefusesAnExistingOutUnlessForced are the pins, and the loader's
+// own comment above the constant says why each line is the way it is.
+//
+// The loader runs this command at every new shell, which makes two other rules
+// matter here. It asks GitHub nothing, whatever the stamp says: help and mcp
+// are the two commands that ask unasked and this is not a third, which
+// TestCompletionNeverReachesTheCheck holds. And it writes no presence event,
+// because completion is not in the reports table:
+// TestOnlyTheReadBackWritersCarryVerified reads that table as literals.
+//
+// No Go test sources either file in a real shell, because the one program
+// anything under go/ runs is the opener below, and
+// TestNothingRunsAnExternalProgram holds that over the test files too. Both are
+// checked structurally here. The loader is sourced in a real zsh by
+// release/test-completion.sh, which is a shell test for the same reason, and a
+// person types Tab at the script once per milestone.
 //
 
 package main
@@ -97,6 +127,46 @@ var bashTemplate string
 // completionMode is the mode a new script is written with. An existing file
 // keeps its own, which is atomicfile.ModeOf's rule.
 const completionMode = 0o644
+
+// loaderFlag asks for the loader instead of the script. It is named here
+// because two readers take it, the parser from the table entry and
+// cmdCompletion.
+const loaderFlag = "--loader"
+
+// loaderFirstLine is the comment the loader opens with, and one of the two
+// ways `gdoc update` knows the completion file at that path is gdoc's own.
+const loaderFirstLine = "# gdoc completion loader"
+
+// loaderScriptName is the file the loader has gdoc write the script into,
+// beside the loader itself.
+const loaderScriptName = "completion-script.zsh"
+
+// zshLoader is the loader, and every byte of it is a decision.
+//
+// It names no version and no command but the one call it makes, because it is
+// written once and sourced by every shell from then on: anything in it that a
+// later release moves is a line that goes stale where nobody is looking.
+// TestTheLoaderNamesNoVersionAndNoOtherCommand is the pin.
+//
+// The path is the loader's own directory, which `${${(%):-%x}:A:h}` is zsh's
+// way of saying, so the two files stay together wherever a person put them.
+//
+// Two guards, and they are separate on purpose. The call happens only when
+// gdoc is on PATH, and both its streams go to /dev/null, because a new shell
+// is not a place to print. The source happens whenever the file is readable,
+// which does not depend on that guard: a .zshrc that adds ~/.local/bin to PATH
+// after the source line still gets the completion it already had.
+// TestTheLoaderIsQuietWithoutGdoc is the pin.
+const zshLoader = loaderFirstLine + `
+# Written by gdoc. At every new shell it asks the gdoc on PATH for its own
+# completion, so a Tab offers what the installed binary takes and never what an
+# older one took.
+
+_gdoc_completion="${${(%):-%x}:A:h}/` + loaderScriptName + `"
+(( $+commands[gdoc] )) && gdoc completion zsh --out "$_gdoc_completion" --force >/dev/null 2>&1
+[[ -r "$_gdoc_completion" ]] && source "$_gdoc_completion"
+unset _gdoc_completion
+`
 
 // shell is one shell gdoc writes a completion for: the word a caller types,
 // the rendering of the table for it, and the key the report says the line to
@@ -151,7 +221,7 @@ func cmdCompletion(a *args) emit.Result {
 	if err := freeToWrite(out, a.has("--force")); err != nil {
 		return failed(err)
 	}
-	script, err := sh.render(commands())
+	script, err := completionText(sh, a.has(loaderFlag))
 	if err != nil {
 		return failed(err)
 	}
@@ -160,6 +230,20 @@ func cmdCompletion(a *args) emit.Result {
 	}
 	path := absolute(out)
 	return emit.Result{OK: true, Data: completionReport(sh, path)}
+}
+
+// completionText is what --out gets: the loader when --loader was typed, and
+// the table as a script otherwise. The loader is zsh alone, because %x and the
+// commands array are zsh's, and the refusal names the shell that was asked for
+// as well as the one gdoc writes a loader for.
+func completionText(sh shell, loader bool) (string, error) {
+	if !loader {
+		return sh.render(commands())
+	}
+	if sh.name != "zsh" {
+		return "", fmt.Errorf("%s writes a zsh loader, and %q is not zsh", loaderFlag, sh.name)
+	}
+	return zshLoader, nil
 }
 
 // oneShell reads the one word this command takes. The count is checked here

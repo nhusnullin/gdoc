@@ -104,7 +104,9 @@
 //     Doc. internal/publish.
 //   - update [--check] [--major] [--nightly] [--rollback]: this binary
 //     replaced by a newer release of it. internal/update, and the one reach
-//     that carries no credential, gapi.Plain.
+//     that carries no credential, gapi.Plain. A run that installed also
+//     replaces gdoc's own completion file beside the token with the loader,
+//     and leaves any other file at that path alone.
 //   - mcp: this binary as a stdio server for Claude
 //     Desktop, one JSON-RPC message per line. internal/mcp, with mcp.go for
 //     the wiring. The one command route sends past run. It offers eight tools,
@@ -148,8 +150,11 @@
 //   - help [<command>|marks]: the table itself, as an object and as words.
 //     help.go. marks is the one word it answers that names no command, and it
 //     has its own file, helpmarks.go.
-//   - completion <shell> --out [--force]: the table as a shell script, written
-//     to a file. completion.go, with the template beside it.
+//   - completion <shell> --out [--force] [--loader]: the table as a shell
+//     script, written to a file. completion.go, with the template beside it.
+//     --loader writes a loader instead, a few lines of zsh that ask the gdoc on
+//     PATH for its completion at every new shell, so a Tab follows the binary
+//     that is installed rather than the one that wrote the file.
 //
 // The usage line names every command that exists, because it is joined from
 // the table. Three tests hold the table and the usage line together.

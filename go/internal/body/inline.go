@@ -15,14 +15,79 @@ import (
 	"github.com/yuin/goldmark/util"
 )
 
-// decodeEntities turns "&amp;" into "&" and "&#8212;" into an em dash.
+// decodeEntities is the text of a run as the document says it: "&amp;" is an
+// ampersand, "&#8212;" an em dash, and a backslash in front of ASCII
+// punctuation is that punctuation.
 //
-// goldmark leaves entity references in the source text and resolves them in its
-// HTML renderer, because in HTML they are already correct. Written into a w:t
-// they are not: the XML escape then doubles them, and a document explaining
-// escaping ends up saying "&amp;amp;".
+// goldmark leaves both in the source text and resolves them in its HTML
+// renderer, because in HTML they are already correct. Written into a w:t they
+// are not: the XML escape doubles an entity, so a document explaining escaping
+// ends up saying "&amp;amp;", and the backslash of an escape reaches the page
+// as a backslash nobody typed.
+//
+// One pass, not two. goldmark reads the escape and the reference in a single
+// pass, so "\&amp;" is the literal "&amp;" there, and it is an ampersand
+// whichever order two passes run in: the escape pass would hand "&amp;" to the
+// entity pass, or the entity pass would hand "\&" to the escape pass. So the
+// bytes are walked once, an escape is written from the byte behind the
+// backslash, and a reference is handed to goldmark's resolvers on its own.
+// TestABackslashEscapeIsTheCharacter and
+// TestAnEscapedPipeInACellIsTheCharacter are the pins, and
+// TestCodeKeepsItsBackslashes is the other side: a code span is another node
+// and keeps what it shows.
 func decodeEntities(source []byte) string {
-	return string(util.ResolveEntityNames(util.ResolveNumericReferences(source)))
+	var b strings.Builder
+	b.Grow(len(source))
+	for i := 0; i < len(source); {
+		switch {
+		case source[i] == '\\' && i+1 < len(source) && util.IsPunct(source[i+1]):
+			b.WriteByte(source[i+1])
+			i += 2
+		case source[i] == '&':
+			end := referenceEnd(source, i)
+			if end == i {
+				b.WriteByte('&')
+				i++
+				continue
+			}
+			b.Write(util.ResolveEntityNames(util.ResolveNumericReferences(source[i:end])))
+			i = end
+		default:
+			b.WriteByte(source[i])
+			i++
+		}
+	}
+	return b.String()
+}
+
+// referenceEnd is the index just past the entity reference that starts at the
+// "&" at i, or i itself where none starts there.
+//
+// The shape is read here rather than by handing the resolvers a window of the
+// text, because a window ends at the next ";" and may hold an escape: handing
+// "& \[x\] &amp;" over whole would carry the brackets' backslashes past this
+// walk. A name goldmark does not know, "&bogus;", is a reference by shape and
+// resolves to itself, which is the bytes the author typed.
+func referenceEnd(source []byte, i int) int {
+	j := i + 1
+	start := j
+	digits := util.IsAlphaNumeric
+	if j < len(source) && source[j] == '#' {
+		j++
+		digits = util.IsNumeric
+		if j < len(source) && (source[j] == 'x' || source[j] == 'X') {
+			j++
+			digits = util.IsHexDecimal
+		}
+		start = j
+	}
+	for j < len(source) && digits(source[j]) {
+		j++
+	}
+	if j == start || j == len(source) || source[j] != ';' {
+		return i
+	}
+	return j + 1
 }
 
 // Run is one stretch of text and the marks on it.

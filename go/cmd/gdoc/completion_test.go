@@ -4,8 +4,12 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
+	"time"
+
+	"gdoc/internal/lastcheck"
 )
 
 // The script is the command table in another language, so the table is what
@@ -526,4 +530,242 @@ func flagKinds(t *testing.T, table []command) map[string]kind {
 		}
 	}
 	return kinds
+}
+
+// --loader writes a loader instead of the table: a few lines of zsh that ask
+// the gdoc on PATH for its own completion at every new shell. The gdoc running
+// an update is the old binary and cannot know the commands the new one takes,
+// so the refresh comes from the installed binary at the first moment it can.
+//
+// The first line is fixed, because it is one of the two ways `gdoc update`
+// knows the file at that path is gdoc's own and not somebody else's.
+func TestTheLoaderOpensWithItsOwnFirstLine(t *testing.T) {
+	noSession(t)
+	dir := t.TempDir()
+	out := filepath.Join(dir, "completion.zsh")
+
+	got, code := runJSON(t, "completion", "zsh", "--loader", "--out", out)
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("completion zsh --loader: %v (exit %d)", got, code)
+	}
+	data, ok := got["data"].(map[string]any)
+	if !ok {
+		t.Fatalf("no data object: %v", got)
+	}
+	if data["shell"] != "zsh" {
+		t.Errorf("shell: %v", data["shell"])
+	}
+	if data["wrote"] != out {
+		t.Errorf("wrote: got %v, want %s", data["wrote"], out)
+	}
+	if want := "source " + out; data["add_to_zshrc"] != want {
+		t.Errorf("add_to_zshrc: got %v, want %q", data["add_to_zshrc"], want)
+	}
+
+	written, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first := head(string(written)); first != "# gdoc completion loader" {
+		t.Errorf("the loader must open with its own line: %q", first)
+	}
+	if strings.Contains(string(written), "#compdef") {
+		t.Errorf("the loader is not the script: %q", written)
+	}
+}
+
+// loaderText is the loader as a shell gets it, read back off the file the
+// command wrote. Every assertion below reads it from there rather than from
+// the constant, because the file is what is sourced.
+func loaderText(t *testing.T) string {
+	t.Helper()
+	noSession(t)
+	out := filepath.Join(t.TempDir(), "completion.zsh")
+	got, code := runJSON(t, "completion", "zsh", "--loader", "--out", out)
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("completion zsh --loader: %v (exit %d)", got, code)
+	}
+	written, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(written)
+}
+
+// everyFlagName is every flag name a caller can type, over the table and the
+// setting flags, the experimental one included: a loader naming any of them
+// but --out and --force would go stale the day that flag moved.
+func everyFlagName() []string {
+	var names []string
+	for _, c := range commands() {
+		for _, f := range c.flags {
+			names = append(names, f.name)
+		}
+	}
+	for _, f := range settingFlags() {
+		names = append(names, f.flag.name)
+	}
+	return names
+}
+
+// The loader is version-free and command-free on purpose: it is written once
+// and sourced by every shell from then on, so anything in it that a later
+// release moves is a line that goes stale where nobody is looking. The one
+// call it makes is `gdoc completion zsh`, with --out and --force.
+func TestTheLoaderNamesNoVersionAndNoOtherCommand(t *testing.T) {
+	text := loaderText(t)
+
+	if v := regexp.MustCompile(`v[0-9]+\.[0-9]+`).FindString(text); v != "" {
+		t.Errorf("the loader names %q, and a version in it goes stale: %q", v, text)
+	}
+	for _, c := range commands() {
+		for _, word := range c.nameWords() {
+			if word == "completion" {
+				continue
+			}
+			if regexp.MustCompile(`\b` + regexp.QuoteMeta(word) + `\b`).MatchString(text) {
+				t.Errorf("the loader names the command word %q: %q", word, text)
+			}
+		}
+	}
+	for _, name := range everyFlagName() {
+		if name == "--out" || name == "--force" {
+			continue
+		}
+		if strings.Contains(text, name) {
+			t.Errorf("the loader names %s, and the one call it makes takes --out and --force: %q", name, text)
+		}
+	}
+	if !strings.Contains(text, "gdoc completion zsh --out") {
+		t.Errorf("the loader must ask gdoc for its own completion: %q", text)
+	}
+}
+
+// A new shell is not a place to print, and a shell with no gdoc on PATH is a
+// shell where nothing happens. Two guards, and they are separate on purpose: a
+// .zshrc that adds ~/.local/bin to PATH after the source line still sources
+// the completion it already had.
+//
+// Read as bytes, never run: no file under go/ starts zsh or any program, which
+// TestNothingRunsAnExternalProgram holds over the test files too. Sourcing it
+// in a real shell is release/test-completion.sh.
+func TestTheLoaderIsQuietWithoutGdoc(t *testing.T) {
+	text := loaderText(t)
+
+	var call, sourced string
+	for _, line := range strings.Split(text, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), "#") {
+			continue
+		}
+		if strings.Contains(line, "gdoc completion zsh") {
+			call = line
+		}
+		if strings.Contains(line, "source ") {
+			sourced = line
+		}
+	}
+	if call == "" {
+		t.Fatalf("the loader asks gdoc nothing: %q", text)
+	}
+	if sourced == "" {
+		t.Fatalf("the loader sources nothing: %q", text)
+	}
+	if !strings.Contains(call, "$+commands[gdoc]") {
+		t.Errorf("the call must be guarded by a check that gdoc is on PATH: %q", call)
+	}
+	if !strings.Contains(call, ">/dev/null 2>&1") {
+		t.Errorf("both streams go to /dev/null: a new shell is not a place to print: %q", call)
+	}
+	if !strings.Contains(sourced, "[[ -r ") {
+		t.Errorf("the source must be guarded by a readable-file check: %q", sourced)
+	}
+	if strings.Contains(sourced, "commands[gdoc]") {
+		t.Errorf("sourcing must not depend on gdoc being on PATH: %q", sourced)
+	}
+}
+
+// The loader is zsh, and the refusal says so by naming the shell that was
+// asked for. bash has no %x and no commands array, and a loader written for it
+// would be a file that does nothing.
+func TestTheLoaderIsRefusedForBash(t *testing.T) {
+	noSession(t)
+	out := filepath.Join(t.TempDir(), "completion.bash")
+
+	got, code := runJSON(t, "completion", "bash", "--loader", "--out", out)
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("a bash loader must be refused: %v (exit %d)", got, code)
+	}
+	msg, _ := got["error"].(string)
+	if !strings.Contains(msg, "bash") || !strings.Contains(msg, "zsh") {
+		t.Errorf("the refusal must name the shell asked for and the one it writes: %q", msg)
+	}
+	if _, err := os.Stat(out); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("the refused run wrote %s anyway", out)
+	}
+}
+
+// The loader is a file like the script is, so --out is required for it too.
+func TestTheLoaderNeedsOut(t *testing.T) {
+	noSession(t)
+
+	got, code := runJSON(t, "completion", "zsh", "--loader")
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("--loader without --out must be refused: %v (exit %d)", got, code)
+	}
+	if msg, _ := got["error"].(string); !strings.Contains(msg, "--out") {
+		t.Errorf("the refusal must name the missing flag: %q", msg)
+	}
+}
+
+// And the file already there is somebody's, whichever of the two this run
+// writes. Not knowing never resolves to overwrite.
+func TestTheLoaderRefusesAnExistingOutUnlessForced(t *testing.T) {
+	noSession(t)
+	out := filepath.Join(t.TempDir(), "already.zsh")
+	if err := os.WriteFile(out, []byte("not a loader"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	got, code := runJSON(t, "completion", "zsh", "--loader", "--out", out)
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("an existing file must be refused: %v (exit %d)", got, code)
+	}
+	msg, _ := got["error"].(string)
+	if !strings.Contains(msg, out) || !strings.Contains(msg, "--force") {
+		t.Errorf("the error must name the file and the way to say yes: %q", msg)
+	}
+	if kept, _ := os.ReadFile(out); string(kept) != "not a loader" {
+		t.Fatalf("the refused run must leave the file alone: %q", kept)
+	}
+
+	got, code = runJSON(t, "completion", "zsh", "--loader", "--out", out, "--force")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("--force replaces it: %v (exit %d)", got, code)
+	}
+	if replaced, _ := os.ReadFile(out); head(string(replaced)) != "# gdoc completion loader" {
+		t.Errorf("the file was replaced by the loader: %q", head(string(replaced)))
+	}
+}
+
+// completion runs at every new shell now, so it must stay as offline from
+// GitHub as every command but help and mcp: a stale stamp and a reach that
+// fails the test make no request and leave the stamp where it was. The twin is
+// TestReadNeverReachesTheCheck, and the reason this one exists is that nothing
+// else in the suite runs this command once a terminal.
+func TestCompletionNeverReachesTheCheck(t *testing.T) {
+	noSession(t)
+	path := checking(t, "v2.2.0", &refusingPlain{t: t})
+	stampedAt(t, path, 30*24*time.Hour, lastcheck.Stamp{LatestStable: "v2.3.0"})
+	out := filepath.Join(t.TempDir(), "completion.zsh")
+
+	got, code := runJSON(t, "completion", "zsh", "--loader", "--out", out)
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("completion zsh --loader: %v (exit %d)", got, code)
+	}
+	if _, ok := dataOf(t, got)["update"]; ok {
+		t.Errorf("completion says nothing about releases: %v", got["data"])
+	}
+	if after := stampOnDisk(t, path); after.LatestStable != "v2.3.0" {
+		t.Errorf("completion touched the stamp: %+v", after)
+	}
 }

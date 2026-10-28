@@ -115,11 +115,16 @@ func TestEveryFlagIsReadTheWayItsKindSays(t *testing.T) {
 
 	for _, c := range commands() {
 		for _, f := range c.flags {
-			// help's two flags are read through the constants their
-			// readers share, the parser here and helpWords for --help and
-			// -h, so a literal would be two spellings of one flag: see
-			// jsonFlag and briefFlag.
-			named := map[string]string{jsonFlag: "a.has(jsonFlag)", briefFlag: "a.has(briefFlag)"}
+			// Three flags are read through the constants their readers
+			// share, so a literal would be two spellings of one flag:
+			// help's two, the parser here and helpWords for --help and -h,
+			// and completion's --loader, the parser and cmdCompletion. See
+			// jsonFlag, briefFlag and loaderFlag.
+			named := map[string]string{
+				jsonFlag:   "a.has(jsonFlag)",
+				briefFlag:  "a.has(briefFlag)",
+				loaderFlag: "a.has(loaderFlag)",
+			}
 			presence := strings.Contains(source, `a.has("`+f.name+`")`) ||
 				(named[f.name] != "" && strings.Contains(source, named[f.name]))
 			value := strings.Contains(source, `a.flags["`+f.name+`"]`) ||

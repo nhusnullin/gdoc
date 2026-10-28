@@ -109,6 +109,7 @@ replaced it)`, or `measured`. Nothing else.
 | 2026-10-26 | The fixes: a cover line and the footer keep their own look, a logo of any size fits by width, six points after the two top headings, Russian heading ids keep their letters, the guard refuses an empty leaf in a style mask, export keeps code and repeated headings apart | holds | DECISIONS.md |
 | 2026-10-26 | The fourth look: every document on the panel opens on a click, a mark only for a failed run, names that survive, buttons that say what happened, a panel that stays open, a bounded hub | holds | DECISIONS.md |
 | 2026-10-27 | Week one of whole jobs: a watch that wakes a session only for marked work, a short help, live review in its own session, and a stopwatch on every comment | holds | DECISIONS.md |
+| 2026-10-28 | Four small fixes: the panel drops the published number, a cancelled update leaves the terminal wrapping, a backslash escape publishes as the character, and Tab completion follows the installed gdoc | holds | DECISIONS.md |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -1387,3 +1388,78 @@ and `TestStdoutCarriesOnlyJSONRPC`. The hold reads the marker and the mark and
 drops nothing, because a follow's cursor moves only when a line is printed.
 
 The plan is `docs/plans/2026-10-27-gdoc-v2-m32-the-quiet-watch.md`.
+
+## 2026-10-28. Four small fixes: the panel drops the published number, a cancelled update leaves the terminal wrapping, a backslash escape publishes as the character, and Tab completion follows the installed gdoc.
+
+Nail looked at the panel after v2.22.0 and wrote: "feedback: no need to show
+exact published version number, blue icon is enough". The lead put that beside
+three backlog items marked worth fixing, as what he sees before and after, and
+asked whether to do all of them. Nail answered "all 4". The lead first sent
+the same questions in terms of flags, tests and rules, and Nail answered "даже
+на русском ничего не понял" (even in Russian I understood nothing), which is
+why `docs/team/lead.md` now has "How to write to Nail". Serves principles 1 and
+4.
+
+**The panel drops the published number.** When a newer release is published,
+the header shows the update glyph in the accent ink with its dot, and nothing
+under the header. The number stays in the glyph's tooltip. The line under the
+header is kept for one thing: the answer to a press of the glyph that installed
+nothing, such as a release that needs `gdoc update --major`, because that is
+the answer to what the person just did. This replaces the "v2.19.0 is
+published" line of the third look.
+
+**A cancelled update leaves the terminal wrapping.** `gdoc update` turns the
+terminal's line wrap off while its live list moves, and Ctrl-C used to kill it
+with wrap still off. Each draw now turns wrap back on when it ends, so a
+process killed between two draws leaves wrap on. No signal is trapped, so the
+rule that only the comment wait traps a signal holds. Closes
+`docs/backlog/ctrl-c-during-update-leaves-auto-wrap-off.md`.
+
+**A backslash escape publishes as the character.** A note that says `\[`,
+`\*` or `\{+` publishes as `[`, `*` or `{+`, the way CommonMark and pandoc read
+it. One pass over a text run: a backslash before ASCII punctuation writes the
+punctuation alone, an `&` starts an entity as before, and anything else is
+itself. `\&amp;` is the literal `&amp;`. Code keeps its backslashes. This makes
+true what `docs/guide/exporting.md` and `skills/gdoc-export/markers.md`
+already say, and lets a link text `export` escaped round-trip. A note that held
+a backslash on purpose before ASCII punctuation now needs two. Closes
+`docs/backlog/build-never-unescapes-a-backslash.md`.
+
+**Tab completion follows the installed gdoc.** The completion file the
+installer writes beside the token becomes a loader of a few lines: at each new
+shell it asks the `gdoc` on PATH to write its own completion into a second file
+beside it, and sources that. The gdoc doing an update is the old one and cannot
+know the new one's commands, so the refresh has to come from the new binary,
+and a new shell is the first moment it can. It costs one start of gdoc per new
+shell, about 20 to 60 ms, with no network. After this update, a shell that
+loads the file starts the `gdoc` on PATH once per new terminal, which it did
+not do before; `update` makes that change on a machine where nobody asked for
+it, and the `completion` field in its result is where it says so.
+`gdoc completion zsh --loader --out <path>` writes the loader. `gdoc update`
+replaces the completion file beside the token with the loader when it is a
+plain file that opens with the header gdoc writes, and leaves any other file
+there alone, so
+not knowing still never resolves to overwrite; the write goes through
+`internal/atomicfile`. The checkout's `install.sh` and bash keep the static
+script they write today. Closes
+`docs/backlog/update-leaves-the-completion-stale.md`.
+
+**Out.** Removing `propose`'s ignored `--folder` flag, because a caller may
+still send it. A line break that `read` hides, because its fix needs a design
+first. Both stay in `docs/backlog/`.
+
+Trust guardian, 2026-10-28: signed. No URL, grant, scope, host, argv list or
+presence field is added, and the app's three reads are unchanged: the panel
+loses a line of text. The binary still runs no program: the loader is shell
+text, the person's shell starts the `gdoc` on PATH, and no file under `go/`
+starts zsh, held by `TestNothingRunsAnExternalProgram`, now also refusing
+`os.StartProcess` and syscall's exec calls, and `TestOnlyDesktopRunsAProgram`.
+`completion` stays offline and unrecorded, so a new shell is not a third command
+that asks unasked: `TestCompletionNeverReachesTheCheck` and the reports table in
+`TestOnlyTheReadBackWritersCarryVerified`. `update` replaces one file,
+`completion.zsh` beside the token, only after a run that installed, only when it
+is a regular file that opens with the header gdoc writes or the loader's own
+line, through `internal/atomicfile`; anything else is left alone with a warning,
+so not knowing still resolves to refusing: `TestAnUpdateLeavesAFileItDidNotWriteAlone`
+and `TestAnUpdateLeavesASymlinkedCompletionAlone`. Wrap goes back on with no
+signal trapped, so `TestOnlyTheWaitTrapsTheSignal` holds as it is.
