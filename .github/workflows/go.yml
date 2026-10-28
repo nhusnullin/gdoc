@@ -16,10 +16,11 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go/go.mod
+          cache-dependency-path: go/go.sum
       - name: gofmt
         run: cd go && test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
       - name: vet
@@ -69,7 +70,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: the toolchain
         run: |

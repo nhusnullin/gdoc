@@ -38,7 +38,7 @@ jobs:
     steps:
       # The full history and every tag, because the next version is counted
       # from the last one.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
