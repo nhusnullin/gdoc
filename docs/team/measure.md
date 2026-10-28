@@ -258,3 +258,29 @@ run and changed nothing. Nail sent four messages for the run: the go, a
 question on how the logo moves, "merged", and the tag step, which he ran
 himself because the guard refused it to the lead. The lead's own context at
 the end of the day was not read.
+
+## 2026-10-28: M32c on Claude
+
+| Run | Task iterations | Tasks, total | Per task iteration | Biggest iteration | Review rounds | Review, total | Per review round | Whole worktree | Sessions |
+|---|---|---|---|---|---|---|---|---|---|
+| M32c, the fifth look (Claude) | 9 | 47.9M | 5.3M | 12.5M | 1 | 3.1M | 3.1M | 51.0M | 10 |
+
+- M32c's tasks fail at 5.3M against the bar of 4.9M. Eight tasks ran in nine
+  iterations in 67 minutes: the ninth was a closing pass that found every box
+  ticked and cost 0.4M. The biggest iteration, 12.5M, was Task 5, the card
+  itself, which wired the rest machine, the carrier and the forced scene in
+  one task. Without the closing pass the eight iterations average 5.9M, so
+  the miss is the size of the tasks and not the extra iteration.
+- Its review passes at 3.1M against the bar of 6.6M. The codex peer found
+  two things and fixed one, a title's tooltip lost under a row with no card,
+  and Claude weighing it took 1.2M. 49.6M of the run's 51.0M were cache reads.
+
+The plan reviewer ran twice before the run and found, among other gaps, that
+a click and a held press sat on two different views, so a click on a name
+could open nothing; the lead folded it in and the run needed no relaunch. The
+design reviewer found nothing blocking and two should-fix items, a render
+that hides the rows under the forced card and an open icon on the stuck-run
+card, and the lead changed nothing after the run. Nail sent three messages
+for the run: the go on the recommendation, "did you finish?", and the GO for
+v2.25.0, which the lead ran this time. The lead's own context at the end of
+the day was not read.
