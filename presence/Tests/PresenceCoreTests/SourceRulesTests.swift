@@ -180,17 +180,20 @@ final class SourceRulesTests: XCTestCase {
   /// One file writes anything down, so "nothing else persists" is a rule
   /// somebody can read rather than a review.
   ///
-  /// The app's own eight keys are the whole of what outlives the process. A
-  /// ninth key, or a second file writing one, is a decision in
+  /// The app's own nine keys are the whole of what outlives the process. A
+  /// tenth key, or a second file writing one, is a decision in
   /// `docs/v2/DECISIONS.md`: everything else this app knows comes out of the
   /// record, which is gdoc's file and not the app's.
   ///
-  /// Eight since the second morning, and the two that were added are the
-  /// reason this count is written down: the pins and the hides name
+  /// Eight since the second morning, and the two that were added then are
+  /// the reason this count is written down: the pins and the hides name
   /// somebody's documents, which every other key refuses to, and a pin
   /// keeps the last title as well, because a pinned document whose lines
   /// are past the horizon has its name nowhere else. That is the decision of
-  /// 2026-10-18, and a ninth key is the next one.
+  /// 2026-10-18. The ninth is the card's own hint, which goes after the
+  /// person's first press of a document row and must not come back after a
+  /// quit: the decision of 2026-10-28, the fifth look. A tenth is the next
+  /// one.
   func testOnlyThePreferencesPersist() throws {
     let store = "User" + "Defaults"
 

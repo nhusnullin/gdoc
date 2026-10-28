@@ -6,11 +6,11 @@
 // person did, and a still of any of those states must be renderable from a
 // literal.
 //
-// Five of these outlive the process, in the app's own store, which is
+// Six of these outlive the process, in the app's own store, which is
 // PresenceApp/Preferences and the one room that writes anything down: the
-// dismissals, whether the icon strip has been seen, the hub, and the pinned
-// and hidden documents. The rest die with the panel, which is what they are
-// for.
+// dismissals, whether the icon strip has been seen, whether the card's hint
+// has been seen, the hub, and the pinned and hidden documents. The rest die
+// with the panel, which is what they are for.
 
 import Foundation
 import PresenceCore
@@ -110,6 +110,19 @@ public struct UIState: Sendable, Equatable {
     guard !stripSeen else { return self }
     var next = self
     next.stripSeen = true
+    return next
+  }
+
+  /// The same state with the card's hint gone.
+  ///
+  /// The hint is there to be read once. The person's own first press of a
+  /// document row is the proof they read it, so it goes then and never
+  /// comes back, and the app's store keeps the flag so a later launch does
+  /// not show it again. It is `afterAnIconClick`'s rule on the other press.
+  public func afterARowOpened() -> UIState {
+    guard !cardHintSeen else { return self }
+    var next = self
+    next.cardHintSeen = true
     return next
   }
 

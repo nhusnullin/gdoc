@@ -489,6 +489,39 @@ final class SessionTests: XCTestCase {
     XCTAssertTrue(session.ui.stripSeen, "the first click on an icon is the labels read")
   }
 
+  /// The card's hint is taught once: the person's own first press of a
+  /// document row puts it away, and it never comes back.
+  ///
+  /// The ninth key is the whole of what that costs (docs/v2/DECISIONS.md,
+  /// 2026-10-28). A press of a NOW row or the stuck card is `.openDoc` and
+  /// writes nothing: the hint says a click on a document row opens the
+  /// document, and the rows of NOW have never needed telling.
+  func testTheFirstRowPressPutsTheHintAway() throws {
+    try writeTheRecord([line(kind: "start", command: "reply", call: 1, doc: Self.doc)])
+    let store = Store()
+    let session = made(preferences: Preferences(store: store))
+    answered(session)
+    XCTAssertFalse(
+      session.ui.cardHintSeen, "the launch state reads the store, where nothing is written yet")
+
+    // A NOW row is not a document row, and the hint is not about it.
+    session.perform(.openDoc, Self.doc)
+    XCTAssertFalse(session.ui.cardHintSeen, "a NOW row's press teaches nothing about a row")
+    XCTAssertNil(
+      store.object(forKey: Preferences.Key.cardHintSeen.rawValue),
+      "and writes nothing down")
+
+    session.perform(.openRow, Self.doc)
+    XCTAssertTrue(session.ui.cardHintSeen, "the person's own first row press is the hint read")
+    XCTAssertEqual(
+      store.object(forKey: Preferences.Key.cardHintSeen.rawValue) as? Bool, true,
+      "and the store keeps it, so a later launch shows no hint")
+
+    // The next launch off the same store starts with it away.
+    let again = made(preferences: Preferences(store: store))
+    XCTAssertTrue(again.ui.cardHintSeen, "a hint read once stays read")
+  }
+
   /// A fault on Open md greys the icon, and a greyed icon cannot be pressed,
   /// so the panel going away is the one thing that ends it. Without that, a
   /// note written after the click would leave the icon grey until the app

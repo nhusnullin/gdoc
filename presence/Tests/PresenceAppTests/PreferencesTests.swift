@@ -4,7 +4,7 @@
 // write, or a hold's own id, and nothing about the document: a title or a
 // document id in UserDefaults would be a word of somebody's document kept
 // outside the record. A dismissal older than sixty-two days is gone, because
-// the record it was about is gone. And the store writes eight keys, which is
+// the record it was about is gone. And the store writes nine keys, which is
 // the whole of what this app remembers between two launches.
 //
 // The two keys of the second morning are the one written-down exception to
@@ -170,14 +170,14 @@ final class PreferencesTests: XCTestCase {
       "two hundred days on, a document somebody took away is still away")
   }
 
-  // MARK: the eight keys
+  // MARK: the nine keys
 
-  func testOnlyTheEightKeysPersist() {
+  func testOnlyTheNineKeysPersist() {
     XCTAssertEqual(
       Preferences.Key.allCases.map(\.rawValue),
       [
         "dismissed", "hubPath", "stripSeen", "loginItem.choice", "relaunch", "lastAccount",
-        "pinned", "hidden",
+        "pinned", "hidden", "cardHintSeen",
       ])
 
     let now = Self.at("2026-10-17T09:30:00Z")
@@ -192,6 +192,7 @@ final class PreferencesTests: XCTestCase {
     preferences.lastAccount = "someone@example.com"
     preferences.pin("1AbCdEfGhIjK", title: "Q3 plan", at: now)
     preferences.hide("1ZzYyXxWwVvU", at: now)
+    preferences.cardHintSeen = true
 
     XCTAssertEqual(store.keys, Set(Preferences.Key.allCases.map(\.rawValue)))
 
@@ -206,6 +207,7 @@ final class PreferencesTests: XCTestCase {
       preferences.pins, [DocumentChoice(doc: "1AbCdEfGhIjK", at: now, title: "Q3 plan")])
     XCTAssertEqual(
       preferences.hides, [DocumentChoice(doc: "1ZzYyXxWwVvU", at: now, title: nil)])
+    XCTAssertTrue(preferences.cardHintSeen)
   }
 
   // MARK: a store of its own

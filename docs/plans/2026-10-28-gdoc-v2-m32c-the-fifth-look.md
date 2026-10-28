@@ -365,25 +365,25 @@ the branch.
   `presence/Tests/PresenceAppTests/PreferencesTests.swift`,
   `SessionTests.swift`, `presence/Tests/PresenceCoreTests/SourceRulesTests.swift`
 
-- [ ] `Preferences.cardHintSeen`, false until written, the shape of
+- [x] `Preferences.cardHintSeen`, false until written, the shape of
       `stripSeen`. `PreferencesTests.testOnlyTheEightKeysPersist` becomes
       `testOnlyTheNineKeysPersist` with `cardHintSeen` in its list;
       `SourceRulesTests`' comment counts nine and names the 2026-10-28
       entry as the decision for the ninth
-- [ ] the first `.openRow` sets it: `UIState.afterARowOpened()`, called by
+- [x] the first `.openRow` sets it: `UIState.afterARowOpened()`, called by
       `Session.perform` on `.openRow` and written to the store, the shape
       of `sawTheStrip`. A `.openDoc` from a NOW row or the stuck card does
       not set it, which is the decision's "first click on any document
       row". `SessionTests.testTheFirstRowPressPutsTheHintAway` presses a
       row once and reads the flag in the store and in the state, and
       presses a NOW row to read that nothing changed
-- [ ] the launch state reads it: where `Session` builds its first
+- [x] the launch state reads it: where `Session` builds its first
       `UIState` from the store (`stripSeen: preferences.stripSeen`, about
       line 247) it passes `cardHintSeen: preferences.cardHintSeen` too, or
       the state's default of true means the hint never shows in the app.
       `testTheFirstRowPressPutsTheHintAway` asserts the flag is false
       before the press
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 5: the card under a rested pointer
 
