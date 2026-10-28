@@ -22,12 +22,12 @@ and make, so take it only when you want to change gdoc:
 
 ## Add the skills to Claude Code
 
-gdoc does the work. Five Claude Code skills drive it: `gdoc-review`,
-`gdoc-publish`, `gdoc-restyle`, `gdoc-export` and `gdoc-align`. Take the first
-recipe that works.
+gdoc does the work. Five skills drive it: `gdoc-review`, `gdoc-publish`,
+`gdoc-restyle`, `gdoc-export` and `gdoc-align`. Take the first recipe that works.
 
-**1. Plugins are allowed.** In Claude Code, type these two lines. It asks
-whether you want them everywhere or in this project only.
+**1. Plugins are allowed.** In Claude Code, type these two lines, for every
+project or this one only. Then turn on updates, which Claude Code leaves off for
+every marketplace but Anthropic's: `/plugin`, Marketplaces, gdoc, Enable auto-update.
 
 ```
 /plugin marketplace add nhusnullin/gdoc
@@ -43,8 +43,8 @@ curl -fsSL https://raw.githubusercontent.com/nhusnullin/gdoc/main/release/instal
 
 **3. Your administrator locks plugins.** Send them
 https://github.com/nhusnullin/gdoc and two keys for `managed-settings.json`:
-`extraKnownMarketplaces` naming `nhusnullin/gdoc`, and `enabledPlugins` turning
-`altery@gdoc` on.
+`extraKnownMarketplaces` naming `nhusnullin/gdoc` with `"autoUpdate": true`, and
+`enabledPlugins` turning `altery@gdoc` on.
 
 ## Claude Code runs gdoc for you
 
@@ -168,8 +168,8 @@ yours is behind. It downloads nothing: installing is yours to type.
 `gdoc update` takes the newest stable release, `gdoc update --check` says what a
 run would take and writes nothing, and `gdoc update --rollback` puts the binary
 that was here before back. `--major` and `--nightly` are in `gdoc help update`.
-Plugin skills update through Claude Code, copied skills when you run the
-`--skills` line again.
+Plugin skills update when Claude Code starts, once auto-update is on, and copied
+skills when you run the `--skills` line again.
 
 ## A problem report needs four things
 

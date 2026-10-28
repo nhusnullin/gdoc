@@ -27,18 +27,18 @@ func TestTheFirstPageHeaderCarriesTheLogoWhereTheHouseAnchorsIt(t *testing.T) {
 	if extent == nil {
 		t.Fatal("the anchor carries no extent")
 	}
-	if got := extent.SelectAttrValue("cx", ""); got != "1857375" {
-		t.Errorf("logo cx = %q, want 1857375 EMU (146.25pt)", got)
+	if got := extent.SelectAttrValue("cx", ""); got != "1419225" {
+		t.Errorf("logo cx = %q, want 1419225 EMU (111.75pt)", got)
 	}
-	if got := extent.SelectAttrValue("cy", ""); got != "675077" {
-		t.Errorf("logo cy = %q, want 675077 EMU (53.156pt)", got)
+	if got := extent.SelectAttrValue("cy", ""); got != "515828" {
+		t.Errorf("logo cy = %q, want 515828 EMU (40.616pt)", got)
 	}
 	h := anchor.SelectElement("wp:positionH")
 	if got := h.SelectAttrValue("relativeFrom", ""); got != "column" {
 		t.Errorf("positionH relativeFrom = %q, want column", got)
 	}
-	if got := h.SelectElement("wp:posOffset").Text(); got != "5133975" {
-		t.Errorf("logo left offset = %q, want 5133975 EMU (404.25pt)", got)
+	if got := h.SelectElement("wp:posOffset").Text(); got != "5353050" {
+		t.Errorf("logo left offset = %q, want 5353050 EMU (421.5pt)", got)
 	}
 	v := anchor.SelectElement("wp:positionV")
 	if got := v.SelectAttrValue("relativeFrom", ""); got != "paragraph" {
@@ -66,11 +66,11 @@ func TestTheLogoHeightFollowsThePicturesRatio(t *testing.T) {
 		if extent == nil {
 			t.Fatalf("%s is missing", path)
 		}
-		if got := extent.SelectAttrValue("cx", ""); got != "1857375" {
-			t.Errorf("%s cx = %q, want 1857375", path, got)
+		if got := extent.SelectAttrValue("cx", ""); got != "1419225" {
+			t.Errorf("%s cx = %q, want 1419225", path, got)
 		}
-		if got := extent.SelectAttrValue("cy", ""); got != "464344" {
-			t.Errorf("%s cy = %q, want 464344", path, got)
+		if got := extent.SelectAttrValue("cy", ""); got != "354806" {
+			t.Errorf("%s cy = %q, want 354806", path, got)
 		}
 	}
 }

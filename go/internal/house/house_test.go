@@ -252,8 +252,8 @@ func TestTheLogoStatesItsMimeWidthAndPlacement(t *testing.T) {
 	if cfg.Logo.Mime != "image/png" {
 		t.Errorf("logo.mime = %q, want image/png", cfg.Logo.Mime)
 	}
-	if cfg.Logo.WidthPt != 146.25 {
-		t.Errorf("logo.width_pt = %v, want 146.25", cfg.Logo.WidthPt)
+	if cfg.Logo.WidthPt != 111.75 {
+		t.Errorf("logo.width_pt = %v, want 111.75", cfg.Logo.WidthPt)
 	}
 	raw, err := cfg.LogoBytes()
 	if err != nil {
@@ -266,9 +266,44 @@ func TestTheLogoStatesItsMimeWidthAndPlacement(t *testing.T) {
 	if img.Width != 509 || img.Height != 185 {
 		t.Errorf("logo is %dx%d px, want 509x185", img.Width, img.Height)
 	}
-	if cfg.Logo.Anchor.OffsetXPt != 404.25 || cfg.Logo.Anchor.OffsetYPt != -5.15 {
-		t.Errorf("logo anchor offsets = %v, %v, want 404.25, -5.15",
+	if cfg.Logo.Anchor.OffsetXPt != 421.5 || cfg.Logo.Anchor.OffsetYPt != -5.15 {
+		t.Errorf("logo anchor offsets = %v, %v, want 421.5, -5.15",
 			cfg.Logo.Anchor.OffsetXPt, cfg.Logo.Anchor.OffsetYPt)
+	}
+}
+
+// TestTheMarkSitsInTheMarginAndOnThePaper reads the mark's width and its left
+// offset out of the house that ships, and states every other number as a
+// literal. Nail's decision of 2026-10-28: the mark is drawn at its own width,
+// 111.75 pt at 421.5 pt from the column's left edge, which is where the firm's
+// template put the ink of the old padded picture. Two things stay true of that
+// pair. The mark is wholly on the paper, and it reaches past the text into the
+// right margin, which is the look the template had.
+func TestTheMarkSitsInTheMarginAndOnThePaper(t *testing.T) {
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	width, offset := cfg.Logo.WidthPt, cfg.Logo.Anchor.OffsetXPt
+
+	// The left margin, then the offset, then the mark: 51.05 + 421.5 + 111.75
+	// is 584.3 points, inside A4's 595.28, so Docs draws the mark whole.
+	onPaper := 51.05 + offset + width
+	if math.Abs(onPaper-584.3) > 0.005 {
+		t.Errorf("the mark's right side is %v points from the paper's left edge, want 584.3", onPaper)
+	}
+	if onPaper >= 595.2755905511811 {
+		t.Errorf("the mark reaches %v points, past A4's 595.2755905511811, so the paper's edge cuts it", onPaper)
+	}
+
+	// And it is not held inside the text: 421.5 + 111.75 is 533.25 points,
+	// over the column's 493.18, so the mark sits out in the right margin.
+	right := offset + width
+	if math.Abs(right-533.25) > 0.005 {
+		t.Errorf("the mark's right side is %v points from the column's left edge, want 533.25", right)
+	}
+	if right <= 493.18 {
+		t.Errorf("the mark reaches %v points, inside the column's 493.18, so it no longer reaches into the margin", right)
 	}
 }
 

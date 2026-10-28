@@ -23,6 +23,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -504,10 +505,32 @@ func acceptance(t *testing.T, values []drift.Value, rows []drift.Row) {
 	}
 	held("logo present")
 	held("logo mode")
-	held("logo width (pt)")
-	held("logo height (pt)")
-	held("logo leftOffset (pt)")
 	held("logo topOffset (pt)")
+
+	// The mark's width, its height and its left offset are not asked of the
+	// master. Nail's decision of 2026-10-28: the house draws the mark at its
+	// own width, 111.75 pt at 421.5 pt, where the master's padded picture put
+	// its ink, and the height follows the 2026-10-26 picture's ratio. So the
+	// master reads 146.25 pt at 404.25 pt and 72.75 pt high, and these three
+	// rows differ from it on purpose, which is what drift.Known says. What has
+	// to survive the import is the value itself, so it is stated here.
+	for _, c := range []struct {
+		name string
+		want float64
+	}{
+		{"logo width (pt)", 111.75},
+		{"logo height (pt)", 40.616},
+		{"logo leftOffset (pt)", 421.5},
+	} {
+		got, ok := read[c.name].(float64)
+		if !ok {
+			t.Errorf("the published document reads %v for %q, and it reads a measurement", read[c.name], c.name)
+			continue
+		}
+		if math.Abs(got-c.want) > 0.005 {
+			t.Errorf("the published document reads %v for %q, want %v", got, c.name, c.want)
+		}
+	}
 
 	// The live contents list. house.yaml states the field instruction and the
 	// writer emits the field, so what has to survive the import is a contents

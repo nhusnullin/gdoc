@@ -42,6 +42,7 @@ earlier sections are frozen in [MEASURED-archive.md](MEASURED-archive.md).
 | 2026-10-18 | What Spotlight answers for a document id | MEASURED.md |
 | 2026-10-18 | What the header line holds, and what a second version costs it | MEASURED.md |
 | 2026-10-26 | Drive's import of a Russian heading and a link to it | MEASURED.md |
+| 2026-10-28 | The logo's frame and its ink | MEASURED.md |
 
 A measurement is never edited to match a later reading; a different answer is a
 new section in this file rather than a change in the archive, and the old one
@@ -873,3 +874,35 @@ name outside it is repaired rather than refused (`go/internal/body/body.go`,
 
 Recheck when Google's docx import changes, or before a bookmark name leaves
 ASCII.
+
+## The logo's frame and its ink
+
+Measured 2026-10-28 by the team lead, before M32b was planned, after Nail asked
+whether the logo width was fixed. Two pictures were decoded with a throwaway
+script, never committed: the 195 by 97 px PNG that `house.yaml` carried as
+`logo.base64` until 2026-10-17 (commit `db635d2`), and the 509 by 185 px PNG
+cached from Drive under `assets/1J3uh6poVAneP_V_Pc5FuNI4-Gahlab0s`. For each,
+the script counted the columns and rows holding ink, a pixel with alpha above
+40 whose red, green and blue sum under 600.
+
+| Picture | Size | Ink columns | Ink rows | Ink at 146.25 pt wide |
+|---|---|---|---|---|
+| old, in the tree until 2026-10-17 | 195 by 97 | 23 to 171 | 4 to 95 | 111.75 pt, 3.9 cm, starting 17.25 pt in |
+| new, in Drive since 2026-10-26 | 509 by 185 | 0 to 508 | 0 to 184 | 146.25 pt, 5.2 cm, starting at the frame |
+
+The arithmetic, with A4 at 595.28 pt and the house margins of 51.05 pt: the
+column is 493.18 pt wide, and the paper's right edge is 544.23 pt from the
+column's left edge. The frame starts 404.25 pt in and is 146.25 pt wide, so its
+right side is 550.5 pt in, 6.3 pt past the paper. With the old picture the ink
+ended 533.25 pt in: 40 pt past the text, 1.4 cm, and 11 pt short of the paper,
+4 mm. With the new picture the ink is the frame, and Docs cuts the last 6 pt.
+
+The screenshot Nail sent confirms it. Docs at 100 % zoom drew the ruler at 65
+px per centimetre; the mark began 14.3 cm from the column's left edge, which is
+404.25 pt, and ran to the page's border with the last letter cut. The document
+is `1TOZwoKIuwSgBkHk9Ud9QK74URI3cM7lXVrt84C7kKQg`, published with v2.23.0.
+
+What follows for M32b: a `width_pt` of 111.75 at an `offset_x_pt` of 421.5
+draws the new picture's ink exactly where the old picture's ink was. Its
+height at the new ratio is 40.6 pt, against the old ink's 68 pt, because the
+2026-10-26 picture is a wider mark.

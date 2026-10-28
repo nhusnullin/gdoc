@@ -303,6 +303,25 @@ func TestTheReleaseREADMENamesEveryRouteToTheSkills(t *testing.T) {
 	}
 }
 
+// TestThePluginRouteTurnsOnItsUpdates asks that every place naming the plugin
+// route also turns on its updates. Claude Code leaves auto-update off for any
+// marketplace that is not Anthropic's, so a colleague who types only the two
+// `/plugin` lines keeps the skills of the day they installed while their gdoc
+// moves on. Nail's own plugin sat at v2.4.0 for five weeks that way.
+func TestThePluginRouteTurnsOnItsUpdates(t *testing.T) {
+	for name, text := range map[string]string{
+		"README.md":          releaseREADME(t),
+		"release/install.sh": releaseInstaller(t),
+	} {
+		if !strings.Contains(text, "Enable auto-update") {
+			t.Errorf("%s names the plugin route and never says Enable auto-update", name)
+		}
+	}
+	if !strings.Contains(releaseREADME(t), `"autoUpdate": true`) {
+		t.Errorf("README.md gives an administrator the marketplace without \"autoUpdate\": true")
+	}
+}
+
 // TestTheIssueTemplateAsksForTheFourFacts holds the report form. A report
 // missing the version is a report nobody can place against a release, and a
 // report missing the object gdoc printed is a guess about what happened.

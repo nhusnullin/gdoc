@@ -684,8 +684,12 @@ that is not the PNG the house states, because an unbranded document in the
 firm's name is the wrong answer and a wrong file in Drive is somebody's to
 fix now. `base64` stays for a test house and for a firm that embeds, and
 `--house <file>` is the only override. A logo in the footer is refused by
-name. Decided 2026-10-17, DECISIONS.md, and the pin on exact pixels replaced
-2026-10-26.
+name. `width_pt` and `offset_x_pt` state the mark itself, 111.75 pt wide at
+421.5 pt from the column's left edge, the ink box of the firm's template,
+because the picture in Drive carries no padding since 2026-10-26: the mark's
+right side ends 1.4 cm past the text in the margin and 4 mm from the paper's
+edge, as the template drew it. Decided 2026-10-17, DECISIONS.md, the pin on
+exact pixels replaced 2026-10-26, and the width made the mark's own 2026-10-28.
 
 **Every value a block states reaches the page.** A cover line's `align`,
 `italic`, `color` and `line_spacing`, the footer paragraph's alignment and
