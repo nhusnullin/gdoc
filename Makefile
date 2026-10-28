@@ -95,7 +95,8 @@ tag:
 	@git rev-parse -q --verify "refs/tags/$(VERSION)" >/dev/null && { echo "make tag: $(VERSION) is already a tag."; exit 1; } || true
 	sed -e 's|"version": "[^"]*"|"version": "$(VERSION)"|' .claude-plugin/plugin.json > .claude-plugin/plugin.json.new
 	mv .claude-plugin/plugin.json.new .claude-plugin/plugin.json
-	git add .claude-plugin/plugin.json
+	for f in skills/*/SKILL.md; do sed -e 's|^  release: .*|  release: $(VERSION)|' "$$f" > "$$f.new" && mv "$$f.new" "$$f"; done
+	git add .claude-plugin/plugin.json skills/*/SKILL.md
 	git commit -m "chore: version $(VERSION)"
 	git tag "$(VERSION)"
 	git push origin HEAD

@@ -110,6 +110,7 @@ replaced it)`, or `measured`. Nothing else.
 | 2026-10-26 | The fourth look: every document on the panel opens on a click, a mark only for a failed run, names that survive, buttons that say what happened, a panel that stays open, a bounded hub | holds | DECISIONS.md |
 | 2026-10-27 | Week one of whole jobs: a watch that wakes a session only for marked work, a short help, live review in its own session, and a stopwatch on every comment | holds | DECISIONS.md |
 | 2026-10-28 | Four small fixes: the panel drops the published number, a cancelled update leaves the terminal wrapping, a backslash escape publishes as the character, and Tab completion follows the installed gdoc | holds | DECISIONS.md |
+| 2026-10-28 | The skills say when they are older than gdoc, and the plugin route turns on its updates | holds | DECISIONS.md |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -1463,3 +1464,36 @@ line, through `internal/atomicfile`; anything else is left alone with a warning,
 so not knowing still resolves to refusing: `TestAnUpdateLeavesAFileItDidNotWriteAlone`
 and `TestAnUpdateLeavesASymlinkedCompletionAlone`. Wrap goes back on with no
 signal trapped, so `TestOnlyTheWaitTrapsTheSignal` holds as it is.
+
+## 2026-10-28. The skills say when they are older than gdoc, and the plugin route turns on its updates.
+
+Nail ran a live review and the chat sat on "Running a command 14m", the
+foreground wait that M32 replaced. He asked: "i thought we did changes in how
+live review works". The session had run `/altery:gdoc-review`, the plugin copy,
+and the plugin on his Mac was v2.4.0 from 2026-09-21 beside a v2.23.0 binary.
+Claude Code turns plugin auto-update on only for Anthropic's own marketplaces,
+and nothing had turned it on for gdoc's. He asked "why its not update
+automatically?", then: "Yes: make the install steps turn on plugin auto-update
+for colleagues", and "Yes: make each skill notice when it is older than gdoc and
+tell the person what to type to update it."
+
+**The plugin route turns on its updates.** The README's first route says to
+choose Enable auto-update for the gdoc marketplace in `/plugin`, the
+administrator's route puts `"autoUpdate": true` on the marketplace entry, and
+the release installer's closing note says the same:
+`TestThePluginRouteTurnsOnItsUpdates`.
+
+**Each skill carries the release it shipped in.** A `release` line under
+`metadata`, beside `needs`, which `make tag` writes with plugin.json's version
+and commits with it: `TestEverySkillCarriesTheReleaseItShippedIn` and
+`TestMakeTagRefusesAVersionThatIsNotAMinor`. When the `version` that `help`
+prints is a later major or minor, the skill says so once and gives one line to
+type, by the folder it was loaded from: `claude plugin update altery@gdoc` for
+the plugin, the `--skills` installer line for a copy. It is a remark and never a
+gate, the session never runs the line, and no `release` line or no `version`
+says nothing: `TestEverySkillSaysWhatToTypeWhenItIsOlderThanGdoc`.
+
+What it cannot reach. A copy installed before this release has neither the line
+nor the paragraph, so it says nothing. The first warning lands for a colleague
+on the release after the one that ships this, and the README is what reaches
+anyone older.

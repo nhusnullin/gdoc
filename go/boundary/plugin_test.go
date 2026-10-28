@@ -169,10 +169,15 @@ func TestMakeTagRefusesAVersionThatIsNotAMinor(t *testing.T) {
 	if !ok {
 		t.Fatal("the Makefile holds no tag target")
 	}
-	for _, want := range []string{"v[0-9]", `\.0$`, "plugin.json", "git tag", "git push"} {
+	for _, want := range []string{"v[0-9]", `\.0$`, "plugin.json", "skills/*/SKILL.md", "git tag", "git push"} {
 		if !strings.Contains(recipe, want) {
-			t.Errorf("the tag target does not mention %q; it refuses a version that is not x.y.0, writes it into plugin.json, tags and pushes", want)
+			t.Errorf("the tag target does not mention %q; it refuses a version that is not x.y.0, writes it into plugin.json and every skill's release line, tags and pushes", want)
 		}
+	}
+	// The skills' release lines are committed with plugin.json, or the tag
+	// carries skills that still name the release before it.
+	if stamp, commit := strings.Index(recipe, "release:"), strings.Index(recipe, "git commit"); stamp < 0 || stamp > commit {
+		t.Error("the tag target does not write the skills' release: line before its commit")
 	}
 	// The refusal comes before anything is written, or a rejected version
 	// leaves plugin.json edited and the tree dirty.

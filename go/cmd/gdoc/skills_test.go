@@ -795,6 +795,71 @@ func TestNoSkillNeedsAReleaseNobodyCut(t *testing.T) {
 	}
 }
 
+// A skill and a binary travel apart in the other direction too. Claude Code
+// leaves plugin updates off for any marketplace that is not Anthropic's, so a
+// colleague's gdoc moves on through `gdoc update` while the skills stay at the
+// day they were installed. Nail's sat at v2.4.0 for five weeks beside a v2.23.0
+// binary. Each skill therefore carries the release it shipped in, on its
+// `release` line, which `make tag` writes beside plugin.json's version, and
+// compares it with the version `help` prints.
+func TestEverySkillCarriesTheReleaseItShippedIn(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join(skillsDir, "..", ".claude-plugin", "plugin.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var plugin struct {
+		Version string `json:"version"`
+	}
+	if err := json.Unmarshal(b, &plugin); err != nil {
+		t.Fatalf("reading plugin.json: %v", err)
+	}
+	files, err := skillFiles(skillsDir)
+	if err != nil {
+		t.Fatalf("looking for the skills: %v", err)
+	}
+	if len(files) == 0 {
+		t.Fatalf("no SKILL.md under %s. A moved skills directory is a failure, not an empty pass", skillsDir)
+	}
+	for _, file := range files {
+		src, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatalf("reading %s: %v", file, err)
+		}
+		if got := skillFrontMatterValue(string(src), "release"); got != plugin.Version {
+			t.Errorf("%s carries release %q and plugin.json says %q. `make tag` writes both, so a skill can tell when the gdoc beside it is newer", file, got, plugin.Version)
+		}
+	}
+}
+
+// The person cannot act on "your skills are old" without the line to type, and
+// the line depends on how the skills arrived: through the plugin, or copied by
+// the release installer. Every skill names both and says how to tell them apart.
+func TestEverySkillSaysWhatToTypeWhenItIsOlderThanGdoc(t *testing.T) {
+	files, err := skillFiles(skillsDir)
+	if err != nil {
+		t.Fatalf("looking for the skills: %v", err)
+	}
+	if len(files) == 0 {
+		t.Fatalf("no SKILL.md under %s. A moved skills directory is a failure, not an empty pass", skillsDir)
+	}
+	for _, file := range files {
+		src, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatalf("reading %s: %v", file, err)
+		}
+		for _, want := range []string{
+			"`release` line",
+			"claude plugin update altery@gdoc",
+			"release/install.sh | bash -s -- --skills",
+			"Enable auto-update",
+		} {
+			if !strings.Contains(string(src), want) {
+				t.Errorf("%s never says %q, so a person whose skills are older than their gdoc is told nothing they can type", file, want)
+			}
+		}
+	}
+}
+
 func TestANeedsLineAheadOfTheCutReleaseIsCaughtAndNamed(t *testing.T) {
 	// Arrange
 	src := "---\nname: gdoc-export\nneeds: v2.4.0\n---\n\n# A skill\n"

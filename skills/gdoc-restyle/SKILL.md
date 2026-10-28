@@ -4,6 +4,7 @@ description: Use when the request gives a link to a Google Doc gdoc did not writ
 compatibility: Requires the gdoc binary on PATH, signed in with gdoc auth login, and network access to Google Docs and Drive.
 metadata:
   needs: v2.11.0
+  release: v2.23.0
 ---
 
 # Restyle a document where it stands
@@ -61,6 +62,16 @@ and nothing else: no `$` prompt, no comment, no second command. That line is
 `gdoc update`, or `gdoc update --major` when the first of the three numbers is
 the one that is ahead, because a major release is one a person asks for by
 name. The block is for the person to run. The session never runs it.
+
+The `release` line under `metadata` names the release these skills shipped
+in. When `version` is a later major or minor, the skills are older than this
+gdoc: say so once with both, give one line in a `bash` block as above, and
+carry on. A skill loaded from under `.claude/plugins/` gets
+`claude plugin update altery@gdoc`, applied on restart, and
+Enable auto-update for gdoc in `/plugin` keeps it current. Any other folder gets
+`curl -fsSL https://raw.githubusercontent.com/nhusnullin/gdoc/main/release/install.sh | bash -s -- --skills global`,
+or `local` inside the hub. With no `release` line or no `version`, say
+nothing. The session never runs the line.
 
 One root, `$ROOT`, and it is `$PWD`. It is the hub: where a cover value may be
 found, and the only place a note is read from or written to. Scratch output, the
