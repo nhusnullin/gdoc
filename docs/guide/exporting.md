@@ -78,7 +78,10 @@ written as markdown.
 A backslash makes the one character after it the document's own. So `\{+` is
 text somebody typed into the document and `{+` is gdoc's marker. That rule has
 no exceptions and runs across the whole file, so you can undo the markers by
-reading the backslashes and nothing else.
+reading the backslashes and nothing else. The next build reads those
+backslashes the same way: an escape in front of a punctuation mark publishes as
+the mark alone, so `\{+` reaches the document as `{+` and `\\` as one
+backslash. A code span keeps what it shows.
 
 **A file carrying a marker cannot become a document.** `build`, `publish`,
 `propose`, `reply` and `annotate` all refuse a file carrying one of those

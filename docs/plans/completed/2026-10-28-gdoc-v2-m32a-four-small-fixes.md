@@ -403,12 +403,16 @@ completion file
 
 ### Task 8: [Final] Update documentation
 
-- [ ] `docs/guide/` page that walks `gdoc completion` (if any) names the
-      loader
-- [ ] `docs/guide/exporting.md` and `skills/gdoc-export/markers.md` lose any
-      hedge that the backslash reaches the document
-- [ ] do not edit `CLAUDE.md`, `docs/v2/SPEC.md` or `docs/v2/DECISIONS.md`
-- [ ] move this plan to `docs/plans/completed/`
+- [x] `docs/guide/from-a-checkout.md` is that page: its completion section
+      names `--loader`, says it is zsh only, and says why the refresh comes
+      from the installed binary
+- [x] `docs/guide/exporting.md` and `skills/gdoc-export/markers.md` lose any
+      hedge that the backslash reaches the document (markers.md said `publish`
+      would put the backslashes into a document; both pages now say an escape
+      publishes as the character, and exporting.md names the code span as the
+      other side)
+- [x] do not edit `CLAUDE.md`, `docs/v2/SPEC.md` or `docs/v2/DECISIONS.md`
+- [x] move this plan to `docs/plans/completed/`
 
 ## Post-Completion
 
