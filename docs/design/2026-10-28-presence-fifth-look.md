@@ -45,7 +45,7 @@ and carries no controls. It flips above the row when there is no room under.
 Three lines, each a fact the row already draws and cuts:
 
 1. The whole title, wrapped.
-2. The last action with its full moment: "published Tue 28 Oct 2026, 12:08",
+2. The last action with its full moment: "published Wed 28 Oct 2026, 12:08",
    in the second line's own verb.
 3. The whole note path, home shortened to `~`, or "no note".
 

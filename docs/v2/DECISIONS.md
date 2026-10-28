@@ -1566,7 +1566,7 @@ recommendation, and Nail answered: "ok, run with the recommendation: 1 yes,
 **The card.** When the pointer rests on a document row's title or second
 line for the tooltip's half second, a card appears under the row, inside the
 panel, and goes when the pointer leaves. It is the row uncut: the whole
-title, wrapped; the last action with its full moment, "published Tue 28 Oct
+title, wrapped; the last action with its full moment, "published Wed 28 Oct
 2026, 12:08", in the second line's own verb; and the whole note path with the
 home as `~`, or the row's own "no note". It takes no click and carries no
 control. Until the first click on any document row a fourth quiet line says
