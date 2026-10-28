@@ -213,6 +213,22 @@ public enum Words {
     written("HH:mm", moment, calendar)
   }
 
+  /// One moment whole: the day, the date, the year and the clock.
+  ///
+  /// It is the card's own moment and nothing else writes it. A row is one
+  /// line in a list somebody is reading now, so "Tue" and "12:08" are
+  /// enough for it; the card is that row uncut, and the thing a near word
+  /// leaves out is which day it names. "Tue" inside the week is one day and
+  /// "Tue" outside it is two, so the card says the whole of it and leaves
+  /// nobody counting back.
+  ///
+  /// The year is here for the same reason, and it is the one place in the
+  /// panel a year is written: a pinned document is in the list however old
+  /// it is. WordsTests.testTheFullMomentCarriesTheDayDateAndClock.
+  public static func fullMoment(_ moment: Date, calendar: Calendar) -> String {
+    written("EEE d MMM yyyy, HH:mm", moment, calendar)
+  }
+
   /// One stretch of time: minutes under an hour, then hours, with the minutes
   /// beside them where there are any.
   ///

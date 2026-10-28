@@ -46,6 +46,16 @@ public struct UIState: Sendable, Equatable {
   /// Whether the four labels under the first document row have been seen.
   /// They go after the first click on any icon and never come back.
   public var stripSeen: Bool
+  /// Whether the card's one hint has been seen: the line that says a click
+  /// on a document row opens the document. It goes after the person's own
+  /// first click on a row and never comes back.
+  ///
+  /// It is the strip's rule on the press the fifth look made: the row is
+  /// the way into a document now, and the words for it are the card's. True
+  /// here, as `stripSeen` is, so a card built from a literal says nothing
+  /// about a hint nobody asked for; the store is where the false lives,
+  /// until the first press writes it.
+  public var cardHintSeen: Bool
   /// Why the last Open md on a document did not open anything, by document.
   /// A click that went nowhere is the one route to "Note moved or deleted":
   /// the index is rebuilt on a file event, but a note Obsidian would not
@@ -71,6 +81,7 @@ public struct UIState: Sendable, Equatable {
     questionAt: Date? = nil,
     forcedTooltip: String? = nil,
     stripSeen: Bool = true,
+    cardHintSeen: Bool = true,
     noteFault: [String: NoteFault] = [:],
     pinned: [DocumentChoice] = [],
     hidden: [DocumentChoice] = []
@@ -83,6 +94,7 @@ public struct UIState: Sendable, Equatable {
     self.questionAt = questionAt
     self.forcedTooltip = forcedTooltip
     self.stripSeen = stripSeen
+    self.cardHintSeen = cardHintSeen
     self.noteFault = noteFault
     self.pinned = pinned
     self.hidden = hidden

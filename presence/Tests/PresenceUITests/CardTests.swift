@@ -443,7 +443,8 @@ final class CardTests: XCTestCase {
     // than a row that offers none.
     let planted = DocumentRowModel(
       doc: "not-a-drive-id", title: row.title, sub: row.sub, glyph: row.glyph, tone: row.tone,
-      gone: row.gone, isPinned: row.isPinned, opens: nil, actions: row.actions, menu: row.menu)
+      gone: row.gone, isPinned: row.isPinned, opens: nil, actions: row.actions, menu: row.menu,
+      card: row.card)
     XCTAssertNil(
       DocumentPress.open(planted, actions: actions),
       "a row with no document to open carries no press")

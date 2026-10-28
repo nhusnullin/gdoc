@@ -176,6 +176,10 @@ public struct DocumentRowModel: Sendable, Equatable, Identifiable {
   public let actions: [ActionModel]
   /// The row's own menu: Hide from the list, and nothing on a pinned row.
   public let menu: [MenuItemModel]
+  /// The row uncut, which a rested pointer brings up over it. It is built
+  /// for every row and drawn for the one the pointer is on, so a still of
+  /// any row's card is renderable from the model alone.
+  public let card: DetailCardModel
 
   public var id: String { doc }
 }
@@ -668,7 +672,8 @@ extension PanelModel {
           copyLink(row.doc, ui: ui, now: words.now),
           pin(row),
         ],
-        menu: menu(row))
+        menu: menu(row),
+        card: words.documentCard(row, ui: ui))
     }
     return DocumentsSectionModel(
       rows: rows,

@@ -675,6 +675,89 @@ final class StateTests: XCTestCase {
     XCTAssertTrue(try scene.model().now.isEmpty, "with the failure's own card dismissed")
   }
 
+  /// The card under a rested pointer is the row uncut, and never the row
+  /// plus.
+  ///
+  /// Four fields and no fifth: the document's name, what happened to it and
+  /// when, where its note is, and the one hint that retires itself. Each is
+  /// a fact the row beside it already draws. The card draws them whole,
+  /// where the row has one line of 360 points and cuts; the one thing it
+  /// adds is the moment's own day, date and year, which is what a cut line
+  /// has no room for and what the row's "Sat" or "17:00" cannot say.
+  ///
+  /// The table is `DocumentState.allCases` through the same records the
+  /// mark's table is built from, so a ninth state cannot be added without
+  /// an answer here, and the words are the second line's own.
+  func testTheCardIsTheRowUncutAndNeverTheRowPlus() throws {
+    let table: [(DocumentState, String?)] = [
+      (.hold, "hold"),
+      (.running, "replying"),
+      (.live, "live"),
+      (.liveStopped, "live stopped Sat 17 Oct 2026, 17:05"),
+      (.done, "replied Sat 17 Oct 2026, 17:00"),
+      (.failed, "reply failed Sat 17 Oct 2026, 17:00"),
+      (.unknown, "outcome unknown · Sat 17 Oct 2026, 17:00"),
+      (.pinnedOnly, nil),
+    ]
+    XCTAssertEqual(
+      table.map(\.0), DocumentState.allCases, "every state a row can be in has a card")
+
+    for (state, expected) in table {
+      let made = try record(for: state)
+      let panel = try drawn(made.events, at: drawnAt, ui: made.ui, alive: made.alive)
+      let row = try XCTUnwrap(panel.documents?.rows.first, "\(state) draws a row")
+      let card = row.card
+
+      XCTAssertEqual(
+        Mirror(reflecting: card).children.compactMap(\.label),
+        ["title", "when", "note", "hint"], "four fields and no fifth")
+      XCTAssertEqual(card.title, row.title, "\(state): the card's name is the row's name")
+      XCTAssertEqual(card.when, expected, "\(state): the second line's words, uncut")
+      XCTAssertEqual(
+        card.note, "~/hub/falcon/chapters/04.md",
+        "\(state): the whole path, with the home as a tilde")
+      XCTAssertNil(card.hint, "\(state): the hint is away once a row has been opened")
+    }
+
+    // A record that named the document is the name on the card, and a
+    // record that named none is the id on both: the card never knows a name
+    // the row does not.
+    let unnamed = try drawn(
+      try record(for: .live).events, at: drawnAt, ui: UIState(), alive: [7101])
+    XCTAssertEqual(try XCTUnwrap(unnamed.documents?.rows.first).card.title, chapter4)
+
+    // A document with no note says so in the row's own words, which is the
+    // one place the card is shorter than the path it would have written.
+    let nameless = try drawn(
+      [
+        event(
+          "2026-10-17T17:00:00Z", .end, command: "reply", doc: SceneDocuments.northwind,
+          title: "Northwind", ok: true)
+      ], at: drawnAt)
+    XCTAssertEqual(try XCTUnwrap(nameless.documents?.rows.first).card.note, "no note")
+
+    // The hint is the one line on the card that is not about the document.
+    // It stands until the person's own first click on a row, and it is
+    // never on a row a click would not open.
+    let events = [
+      event(
+        "2026-10-17T17:00:00Z", .end, command: "reply", doc: chapter4, title: "Ch 4", ok: true)
+    ]
+    let first = try drawn(events, at: drawnAt, ui: UIState(cardHintSeen: false))
+    XCTAssertEqual(
+      try XCTUnwrap(first.documents?.rows.first).card.hint, "Click opens in Google Docs")
+
+    let forged = try drawn(
+      [
+        event(
+          "2026-10-17T17:00:00Z", .end, command: "reply", doc: "not-a-drive-id", title: "Ch 4",
+          ok: true)
+      ], at: drawnAt, ui: UIState(cardHintSeen: false))
+    let planted = try XCTUnwrap(forged.documents?.rows.first)
+    XCTAssertNil(planted.opens, "an id Drive could not have written opens nothing")
+    XCTAssertNil(planted.card.hint, "so the card never offers the words for a press")
+  }
+
   /// A run that failed and a watch that was stopped read as two different
   /// things, in the words as well as in the mark.
   ///

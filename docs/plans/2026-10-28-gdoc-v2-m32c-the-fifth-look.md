@@ -335,10 +335,10 @@ the branch.
   (`DocumentRowModel.card`, one line in `documentsSection`),
   `presence/Tests/PresenceUITests/WordsTests.swift`, `StateTests.swift`
 
-- [ ] `Words.fullMoment(_:calendar:)` writes "EEE d MMM yyyy, HH:mm":
+- [x] `Words.fullMoment(_:calendar:)` writes "EEE d MMM yyyy, HH:mm":
       `WordsTests.testTheFullMomentCarriesTheDayDateAndClock` states
       "Wed 28 Oct 2026, 12:08" as a literal
-- [ ] `DetailCardModel` has exactly four fields: `title`, the row's title
+- [x] `DetailCardModel` has exactly four fields: `title`, the row's title
       or its id; `when`, the second line's own state words with
       `fullMoment` where the second line has a clock ("published Wed 28 Oct
       2026, 12:08", "reply failed Wed 28 Oct 2026, 11:40", "live stopped
@@ -352,9 +352,9 @@ the branch.
       `DocumentRowModel` carries it as `card`. A table test over the eight
       `DocumentState`s: `StateTests.testTheCardIsTheRowUncutAndNeverTheRowPlus`,
       which also asserts the model has those four fields and no fifth
-- [ ] `UIState.cardHintSeen`, default true in `UIState` as `stripSeen` is,
+- [x] `UIState.cardHintSeen`, default true in `UIState` as `stripSeen` is,
       read here and written in Task 4
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 4: the ninth key
 
