@@ -42,7 +42,7 @@ final class Panel: NSObject, NSWindowDelegate {
 
   override init() {
     self.panel = KeyPanel(
-      contentRect: NSRect(x: 0, y: 0, width: 320, height: 1),
+      contentRect: NSRect(x: 0, y: 0, width: Grid.panelWidth, height: 1),
       styleMask: [.borderless, .nonactivatingPanel],
       backing: .buffered,
       defer: true)
@@ -116,7 +116,7 @@ final class Panel: NSObject, NSWindowDelegate {
   private func size() {
     host.layoutSubtreeIfNeeded()
     var fitting = host.fittingSize
-    fitting.width = max(fitting.width, 320)
+    fitting.width = max(fitting.width, Grid.panelWidth)
     panel.setContentSize(fitting)
   }
 

@@ -20,7 +20,7 @@ import XCTest
 
 @MainActor
 final class CardTests: XCTestCase {
-  /// The width a card is drawn at inside the panel: 320 less the panel's own
+  /// The width a card is drawn at inside the panel: 360 less the panel's own
   /// 8 pt either side.
   private let cardWidth = Grid.panelWidth - 2 * Grid.unit
 
@@ -208,8 +208,8 @@ final class CardTests: XCTestCase {
     XCTAssertEqual(StuckCard.reasonCeiling, 80)
     XCTAssertEqual(StuckCard.reasonLines, 2)
     XCTAssertEqual(
-      StuckCard.reasonColumn, 256,
-      "320 less the panel's 8 either side, the card's 12 either side, the glyph and its gap")
+      StuckCard.reasonColumn, 296,
+      "360 less the panel's 8 either side, the card's 12 either side, the glyph and its gap")
 
     // The two reasons the screens file writes, and one at the ceiling.
     let reasons = [
@@ -246,8 +246,8 @@ final class CardTests: XCTestCase {
   // document that stopped.
   func testALongStuckTitleGoesInWholeOnTwoLinesUnderTheIcons() throws {
     XCTAssertEqual(
-      StuckCard.titleColumn(actions: 3), 172,
-      "the reason's 256 less the 8 pt gap and three 24 pt icons with their two 4 pt gaps")
+      StuckCard.titleColumn(actions: 3), 212,
+      "the reason's 296 less the 8 pt gap and three 24 pt icons with their two 4 pt gaps")
     XCTAssertEqual(
       StuckCard.titleColumn(actions: 0), StuckCard.reasonColumn,
       "a card with no icon beside its title has the whole width for it")
@@ -492,7 +492,7 @@ final class CardTests: XCTestCase {
   ///
   /// The press sat on the whole row, action strip included, so a slow click
   /// on an icon both did the icon's thing and opened the menu. It is the
-  /// title area's now: the five icons are a column of their own and the
+  /// title area's now: the four icons are a column of their own and the
   /// gesture is not over them. The anchor is behind that title, and its
   /// `hitTest` is nil, so a click meant for the row or for one of its icons
   /// goes where it was going.
@@ -528,7 +528,7 @@ final class CardTests: XCTestCase {
     ]
     func row() -> some View {
       RowView(.doc, glyph: .blank, title: "Ch 4. Pricing", trailing: { EmptyView() })
-        .frame(width: 320, height: 44)
+        .frame(width: Grid.panelWidth, height: 44)
     }
     for scheme in [ColorScheme.dark, .light] {
       let withMenu = try png(

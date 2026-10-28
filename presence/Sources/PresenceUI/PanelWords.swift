@@ -295,7 +295,7 @@ struct Phrases {
   /// A watch's one line of facts.
   ///
   /// A watch that is not getting through says so and nothing else: the row
-  /// is one line at 320 pt, and since and quiet pushed the one thing that
+  /// is one line at 360 pt, and since and quiet pushed the one thing that
   /// is wrong off the end of it. Scene r8 is that line, and it carries no
   /// word for why, because the record has none.
   func liveRow(_ session: LiveSession) -> LiveRowModel {

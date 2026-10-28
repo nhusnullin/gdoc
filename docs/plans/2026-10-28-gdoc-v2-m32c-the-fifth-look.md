@@ -284,24 +284,24 @@ the branch.
   `ControlTests.swift`, `ThemeTests.swift`, `RenderTests.swift`,
   `presence/Tests/PresenceCoreTests/SourceRulesTests.swift`
 
-- [ ] `Grid.panelWidth` is 360, and its comment names
+- [x] `Grid.panelWidth` is 360, and its comment names
       `docs/design/2026-10-28-presence-fifth-look.html` beside the v3
       screens file. `RowTests.testThePanelIs360PointsWide` states 360 as a
       literal and reads a `.doc` row's drawn width back through its probe;
       `ThemeTests` line 174 says 360
-- [ ] `Panel.swift` reads `Grid.panelWidth` in both places and holds no
+- [x] `Panel.swift` reads `Grid.panelWidth` in both places and holds no
       width literal of its own.
       `SourceRulesTests.testThePanelWindowTakesItsWidthFromTheGrid` reads
       `Sources/Presence/Panel.swift` as text: `Grid.panelWidth` is in it,
       and neither `320` nor `360` is
-- [ ] the literals that only move: `MiddleTitle.narrowestColumn` 180 in
+- [x] the literals that only move: `MiddleTitle.narrowestColumn` 180 in
       `RowTests`, with the arithmetic rewritten as 360 less 8 twice, 12
       twice, 16, 8 twice and 108; `nowColumn` 268 and `JobCard.titleColumn`
       280; the sub-line's 312 at `RowTests` line 194; `CardTests` 296 at
       line 210 and 212 at line 248; `CardTests` line 482 framed at
       `Grid.panelWidth`; `RenderTests` line 73's message and the index
       page's four `width="320"` written from `Grid.panelWidth`
-- [ ] the premises that die at 360, each replaced and none loosened:
+- [x] the premises that die at 360, each replaced and none loosened:
       `testAPrefixTakesItsRoomAndTheFloorCountsTheName` takes a longer NOW
       name of the test's own, found by measurement, so the verb still takes
       room in 268 and still leaves the name under the floor in 180, both
@@ -315,16 +315,16 @@ the branch.
       with a longer consequence of the test's own that measures 56;
       `testATooltipAppearsAfterHalfASecondAndFlipsInsideThePanel` anchors
       at x 320 so the bubble still reaches the right margin
-- [ ] every comment under `presence/Sources` that says 320 for the panel
+- [x] every comment under `presence/Sources` that says 320 for the panel
       says 360: `PanelView.swift:3`, `PanelWords.swift:298`,
       `Components/JobCard.swift:85`, `Components/StuckCard.swift:73`,
       `Components/MiddleTitle.swift:38,46`, `PresenceCore/Titles.swift:4`;
       and `PanelHeaderModel.swift:135` is rewritten in words that are true
       at 360, measured, not a number swapped
-- [ ] the test-file comments and messages that say 320 for the panel say
+- [x] the test-file comments and messages that say 320 for the panel say
       360: `StateTests.swift:271`, `CardTests.swift:23,212`,
       `RowTests.swift:35,87,122,191,443`, `ControlTests.swift:159`
-- [ ] `make app-lint`, `make app-test`, `make app`
+- [x] `make app-lint`, `make app-test`, `make app`
 
 ### Task 3: the card's words
 

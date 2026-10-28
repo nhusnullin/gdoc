@@ -8,9 +8,9 @@
 // literals.
 //
 // The last two are the pin, which that file has no shape for: it is a pair,
-// the outline and the filled, since the third look made it the fifth icon of
-// a document row (docs/v2/DECISIONS.md, 2026-10-18), and both shapes are
-// written here in the same grammar.
+// the outline and the filled, since the third look put it on a document row
+// (docs/v2/DECISIONS.md, 2026-10-18), and both shapes are written here in
+// the same grammar.
 //
 // The sheet of all thirteen goes out as a PNG under PRESENCE_SHOTS, so the
 // shapes are looked at once rather than trusted from a pixel count.
@@ -72,7 +72,7 @@ final class IconTests: XCTestCase {
   /// The pin is a pair, the outline and the filled, and neither head is a
   /// circle.
   ///
-  /// It is the fifth icon of a document row since the third look
+  /// It is the last icon of a document row since the third look
   /// (docs/v2/DECISIONS.md, 2026-10-18), because a menu nobody finds is no
   /// affordance: Nail had pins and never saw them. Both halves draw the same
   /// tack at the same place, so a press changes the head and moves nothing,

@@ -9,7 +9,13 @@ import CoreGraphics
 /// The sizes the panel is laid out on.
 public enum Grid {
   /// `.panel`'s width, its padding and its corner.
-  public static let panelWidth: CGFloat = 320
+  ///
+  /// It was narrower until the fifth look widened it (docs/v2/DECISIONS.md,
+  /// 2026-10-28), so the panel is drawn from
+  /// docs/design/2026-10-28-presence-fifth-look.html where that file has a
+  /// screen and from docs/design/2026-10-17-presence-screens-v3.html
+  /// everywhere else: testThePanelIs360PointsWide.
+  public static let panelWidth: CGFloat = 360
   public static let unit: CGFloat = 8
   public static let panelRadius: CGFloat = 12
 

@@ -41,6 +41,9 @@ final class SourceRulesTests: XCTestCase {
   /// Where the one room that touches this machine's login items is.
   private static let loginItem = "Sources/PresenceApp/LoginItem.swift"
 
+  /// Where the window the panel is drawn in is.
+  private static let window = "Sources/Presence/Panel.swift"
+
   /// The executable target, which is the shell: the status item, the
   /// window, and the one signal between them.
   private static let shell = "Presence"
@@ -323,6 +326,23 @@ final class SourceRulesTests: XCTestCase {
     XCTAssertTrue(
       text.contains("SMAppService.openSystemSettingsLoginItems()"),
       "the approval row opens the pane through the register and not through a URL")
+  }
+
+  /// The window the panel opens in takes its width from the grid.
+  ///
+  /// The width is the layout's, and the window only has to agree with it.
+  /// The fifth look moved it from 320 to 360 and found the old number
+  /// written twice in this one file, once in the window's own rectangle and
+  /// once in the floor its fitting size is held to, so the agreement is a
+  /// scan rather than a review.
+  func testThePanelWindowTakesItsWidthFromTheGrid() throws {
+    let text = try String(
+      contentsOf: packageRoot().appendingPathComponent(Self.window), encoding: .utf8)
+    XCTAssertTrue(
+      text.contains("Grid.panelWidth"), "\(Self.window) does not read the grid's own width")
+    for own in ["320", "360"] {
+      XCTAssertFalse(text.contains(own), "\(Self.window) writes the width \(own) itself")
+    }
   }
 
   /// Two schemes and two hosts in the whole of the sources.

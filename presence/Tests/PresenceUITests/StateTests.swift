@@ -268,7 +268,7 @@ final class StateTests: XCTestCase {
     }
 
     // Each of them fits two lines in the room the panel has, which is its
-    // 320 less the 8 either side.
+    // 360 less the 8 either side.
     let room = Grid.panelWidth - Grid.unit * 2
     let one = try XCTUnwrap(probes(QuietLine("one line"), scheme: .dark, width: room))
     let line = try XCTUnwrap(one["quiet.text"]).height

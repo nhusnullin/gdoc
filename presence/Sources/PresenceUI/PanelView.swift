@@ -1,8 +1,9 @@
 // The panel, drawn.
 //
-// `.panel` in docs/design/2026-10-17-presence-screens-v3.html: 320 pt wide,
-// 8 pt of padding, a 12 pt corner, a half-pixel edge and two shadows. Inside
-// it the header, then the sections in the order the model put them in.
+// `.panel` in docs/design/2026-10-17-presence-screens-v3.html, 360 pt wide
+// since docs/design/2026-10-28-presence-fifth-look.html widened it: 8 pt of
+// padding, a 12 pt corner, a half-pixel edge and two shadows. Inside it the
+// header, then the sections in the order the model put them in.
 //
 // It draws the model and decides nothing. Every word on the screen came out
 // of PanelModel and every press leaves through PanelActions, so a row that

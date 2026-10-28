@@ -61,9 +61,9 @@ final class ControlTests: XCTestCase {
     XCTAssertFalse(under.above)
 
     // `.acts [data-tip]::after{right:0}`: an action's tooltip ends on the
-    // panel's own right inset, which is how five icons in 136 pt keep their
+    // panel's own right inset, which is how four icons in 108 pt keep their
     // words inside the panel whichever of them the pointer is on.
-    let action = CGRect(x: 280, y: 100, width: 24, height: 24)
+    let action = CGRect(x: 320, y: 100, width: 24, height: 24)
     let trailing = Tooltip.place(anchor: action, size: bubble, in: panel, align: .trailing)
     XCTAssertEqual(trailing.origin.x + bubble.width, panel.width - Tooltip.actionMargin)
 
@@ -98,7 +98,7 @@ final class ControlTests: XCTestCase {
       try png(TooltipBubble("Open in Google Docs"), scheme: .light))
   }
 
-  // The third of five icons in a document row. Its words are drawn under
+  // The third of four icons in a document row. Its words are drawn under
   // the icon the pointer is on and end where the icons themselves end, so
   // the bubble of the third icon is the bubble of the fourth one place up: a
   // plate that hung off each icon's own edge stepped left across the row
@@ -108,7 +108,7 @@ final class ControlTests: XCTestCase {
   // put the bubble 12 pt right of the icon it belonged to and over the
   // scroll thumb, which is the one thing a bubble about a row may not cover.
   func testAnActionTooltipSitsUnderItsIconAndEndsOnTheIconColumn() throws {
-    // The document row's icons: 136 pt of column against the panel's right
+    // The document row's icons: 108 pt of column against the panel's right
     // inset, four 24 pt icons with 4 pt between them.
     let panel = CGSize(width: Grid.panelWidth, height: 420)
     let columnEnd = Grid.panelWidth - Grid.unit - Grid.rowInset
@@ -156,7 +156,7 @@ final class ControlTests: XCTestCase {
     }
 
     // Where the header draws it: the mark, gdoc and v2.14.0 come first, so
-    // the icon sits about a third of the way across a 320 pt panel.
+    // the icon sits about a quarter of the way across a 360 pt panel.
     let panel = CGSize(width: Grid.panelWidth, height: 600)
     let icon = CGRect(x: 96, y: 8, width: Grid.actionSize, height: Grid.actionSize)
     let bubble = CGSize(width: 118, height: 20)
@@ -268,9 +268,19 @@ final class ControlTests: XCTestCase {
       title: "Sign out?", sub: "2 live watches and 1 hold will stop.", danger: .signOut)
     let measured = try probes(row, scheme: .dark)
     XCTAssertEqual(
-      measured["row.two"]?.height, 56,
-      "the sentence beside the pair wraps to a second line rather than being cut, "
-        + "which is the grid's 44 and one 12 pt line of caption under it")
+      measured["row.two"]?.height, 44,
+      "the sentence beside the pair is one line at 360 pt, which is the grid's own 44")
+
+    // And a longer consequence than that one still wraps rather than being
+    // cut: the grid's 44 and one 12 pt line of caption under it. The
+    // sign-out sentence itself measured 56 at 320 pt, which is what this
+    // test held until the panel was widened.
+    let longer = ConfirmRow(
+      title: "Sign out?", sub: "2 live watches, 1 hold and 1 publish will stop.",
+      danger: .signOut)
+    XCTAssertEqual(
+      try probes(longer, scheme: .dark)["row.two"]?.height, 56,
+      "a consequence too long for the line beside the pair wraps rather than being cut")
     XCTAssertEqual(measured["confirm.danger"]?.height, 20)
     XCTAssertEqual(measured["confirm.keep"]?.height, 20)
     XCTAssertEqual(TextButton.height(.compact), 20)

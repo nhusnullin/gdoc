@@ -512,7 +512,7 @@ func panelVocabulary() throws -> Set<String> {
     }
   }
   // The words that belong to no row and no record: the two buttons of the
-  // hold card, the five labels of the strip once, and the one sentence a
+  // hold card, the four labels of the strip once, and the one sentence a
   // machine with no token is met with.
   words.formUnion(ButtonWord.allCases.map(\.rawValue))
   words.formUnion(StripLabel.allCases.map(\.rawValue))
