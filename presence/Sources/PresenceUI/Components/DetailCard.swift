@@ -106,6 +106,12 @@ extension View {
 /// It is `TooltipCarrier` with the rest kept outside it, which is the one
 /// difference between the two: a bubble's rest is nobody's business but the
 /// bubble's, and a card's is ended by presses the carrier never sees.
+///
+/// A row with no card is handed back untouched, which is not a saving: the
+/// preference is set and not added to, so a carrier reporting no request
+/// over a title that was asking for its bubble would answer for it. NOW's
+/// live rows are that row:
+/// ControlTests.testACardlessRowKeepsItsTitlesOwnTooltip.
 struct DetailCardCarrier: ViewModifier {
   let model: DetailCardModel?
   @Binding var rest: CardRest
@@ -113,7 +119,16 @@ struct DetailCardCarrier: ViewModifier {
 
   @State private var hovers = 0
 
+  @ViewBuilder
   func body(content: Content) -> some View {
+    if let model {
+      carrying(content, model)
+    } else {
+      content
+    }
+  }
+
+  private func carrying(_ content: Content, _ model: DetailCardModel) -> some View {
     content
       .onHover { inside in
         hovers += 1
@@ -130,7 +145,7 @@ struct DetailCardCarrier: ViewModifier {
         }
       }
       .anchorPreference(key: TooltipAnchors.self, value: .bounds) { anchor in
-        guard let model, forced || rest.isShowing else { return [] }
+        guard forced || rest.isShowing else { return [] }
         return [
           TooltipRequest(
             content: .card(model), align: .leading, forced: forced, anchor: anchor)

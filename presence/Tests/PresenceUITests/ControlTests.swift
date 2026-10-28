@@ -645,6 +645,40 @@ final class ControlTests: XCTestCase {
     XCTAssertTrue(rest.isShowing)
   }
 
+  // A row with no card leaves the title's own words standing. The carrier
+  // sits on every middle column in the panel, and `anchorPreference` sets
+  // the preference rather than adding to what is under it, so a carrier
+  // answering "no card" over a title that was asking for its bubble took
+  // the bubble away with it: NOW's live rows say what a click on them does,
+  // and the card is DOCUMENTS' own.
+  func testACardlessRowKeepsItsTitlesOwnTooltip() throws {
+    let title =
+      Text("Chapter 5 storyline")
+      .metricProbe("row.title")
+      .tooltip("Open in Google Docs", align: .leading, forced: true)
+
+    let cardless =
+      VStack(alignment: .leading, spacing: 0) { title }
+      .detailCard(nil, rest: .constant(CardRest()), forced: false)
+      .tooltipLayer()
+    let withoutACard = try probes(cardless, scheme: .dark)
+    XCTAssertNotNil(withoutACard["row.title"], "the row itself drew")
+    XCTAssertNotNil(
+      withoutACard["tooltip"],
+      "a row that carries no card still says what a click on it does")
+
+    // And the row that has one draws it, which is the same tree with a
+    // model in it and the one request the layer is left with.
+    let model = DetailCardModel(
+      title: "Partner bank setup", when: "restyled Wed 28 Oct 2026, 10:12",
+      note: "~/hub/partners/partner-bank.md", hint: nil)
+    let carded =
+      VStack(alignment: .leading, spacing: 0) { title }
+      .detailCard(model, rest: .constant(CardRest()), forced: true)
+      .tooltipLayer()
+    XCTAssertNotNil(try probes(carded, scheme: .dark)["card"], "the card the row carries")
+  }
+
   // MARK: the scan
 
   /// Whether the text makes one, with the needle's first word standing on
