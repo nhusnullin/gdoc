@@ -18,8 +18,8 @@
 #   --skills local    copy them into ./.claude/skills
 #   --desktop         write the Claude Desktop extension and open it
 #
-# Skills normally arrive as a Claude Code plugin, which Claude Code updates when
-# a person asks it to:
+# Skills normally arrive as a Claude Code plugin, which Claude Code updates only
+# once the person chooses Enable auto-update for the gdoc marketplace in /plugin:
 #
 #   /plugin marketplace add nhusnullin/gdoc
 #   /plugin install altery@gdoc
@@ -521,9 +521,10 @@ if [ -n "$skills_where" ]; then
     done
     printf '    these are copies. Re-run this with --skills %s after a gdoc update.\n' "$skills_where"
 else
-    printf '    not touched. The plugin is the first route, and Claude Code updates it:\n'
+    printf '    not touched. The plugin is the first route:\n'
     printf '      /plugin marketplace add nhusnullin/gdoc\n'
     printf '      /plugin install altery@gdoc\n'
+    printf '    then in /plugin, Marketplaces, gdoc, choose Enable auto-update.\n'
     printf '    Where plugins are turned off, re-run this with --skills global.\n'
 fi
 
