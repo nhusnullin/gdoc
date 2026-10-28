@@ -16,7 +16,7 @@
 // refuses an empty one rather than writing a document with no mark in its
 // header: TestBuildRefusesALogoWithNoBytes.
 //
-// The house states the logo's width, and Build reads the PNG header so its
+// The house states the mark's own width, and Build reads the PNG header so its
 // height follows the picture's own ratio. Bytes that are not a PNG are refused
 // by name. TestTheLogoHeightFollowsThePicturesRatio,
 // TestBuildRefusesALogoThatIsNotAPNG and

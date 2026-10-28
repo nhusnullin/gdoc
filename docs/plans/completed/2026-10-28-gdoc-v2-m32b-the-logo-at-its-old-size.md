@@ -247,15 +247,15 @@ pins that stop them moving again unnoticed.
 
 ### Task 3: [Final] Update documentation
 
-- [ ] `docs/guide/publishing.md`, the paragraph at line 37: one sentence that
+- [x] `docs/guide/publishing.md`, the paragraph at line 37: one sentence that
       `width_pt` is the width of the mark itself, which the house draws 3.9 cm
       wide in the top right corner of page one, reaching 4 mm from the paper's
       edge
-- [ ] `go/internal/render/doc.go` lines 19 to 24: where it says the house
+- [x] `go/internal/render/doc.go` lines 19 to 24: where it says the house
       states the picture's width, it says the mark's width
-- [ ] do not edit `CLAUDE.md`, `docs/v2/SPEC.md`, `docs/v2/DECISIONS.md` or
+- [x] do not edit `CLAUDE.md`, `docs/v2/SPEC.md`, `docs/v2/DECISIONS.md` or
       `docs/v2/MEASURED.md`
-- [ ] move this plan to `docs/plans/completed/`
+- [x] move this plan to `docs/plans/completed/`
 
 ## Post-Completion
 
