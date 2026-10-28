@@ -406,14 +406,23 @@ esac
 # The completion
 # --------------------------------------------------------------------------
 #
-# Rendered by the binary that was just installed, so Tab offers that binary's
+# Written by the binary that was just installed, so Tab offers that binary's
 # table and never a flag the parser no longer takes. --force because this file
 # is gdoc's own. A warning rather than a failure: a missing completion is a
 # smaller loss than a person left without the tool.
+#
+# --loader asks for the loader instead of the script: a few lines that ask the
+# gdoc on PATH for its completion at every new shell, so the next release
+# reaches Tab without anybody running this script again. Then today's call
+# without it, because this script comes from main and the binary it installs is
+# the newest stable release, which may be older than the flag. Such a binary
+# refuses the flag and writes nothing, so the second call is the whole fallback.
 
 mkdir -p "$CONFIG_DIR"
 completion_written=0
-if reason="$("$installed" completion zsh --out "$COMPLETION" --force 2>&1)"; then
+if reason="$("$installed" completion zsh --loader --out "$COMPLETION" --force 2>&1)"; then
+    completion_written=1
+elif reason="$("$installed" completion zsh --out "$COMPLETION" --force 2>&1)"; then
     completion_written=1
 else
     warn "$installed wrote no completion to $COMPLETION: $reason"

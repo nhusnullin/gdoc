@@ -371,16 +371,16 @@ the installer and `update` write the same bytes.
 **Files:** `release/install.sh`, and `README.md` only if it describes the
 completion file
 
-- [ ] the completion step runs `"$installed" completion zsh --loader --out
+- [x] the completion step runs `"$installed" completion zsh --loader --out
       "$COMPLETION" --force`, and when that fails, today's call without
       `--loader`: the one-liner fetches this script from main but installs the
       newest stable binary, which may not know `--loader` yet. Its comment
       says both
-- [ ] `release/test-desktop.sh` still passes, run as `sh
+- [x] `release/test-desktop.sh` still passes, run as `sh
       release/test-desktop.sh`; add an assertion that the completion call
       carries `--loader`
-- [ ] the `source` line it prints is unchanged
-- [ ] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test` green
+- [x] the `source` line it prints is unchanged
+- [x] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test` green
 
 ### Task 7: Verify acceptance criteria
 
