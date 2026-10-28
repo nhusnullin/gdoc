@@ -29,7 +29,7 @@ public enum RowShape: String, Sendable, CaseIterable {
   case two
   /// `.row.compact`: one line, 28 pt, for a list of short facts.
   case compact
-  /// `.row.docrow`: a title, a sub-line of two, and 136 pt of actions.
+  /// `.row.docrow`: a title, a sub-line of two, and 108 pt of actions.
   case doc
 
   /// `min-height`.
@@ -62,7 +62,7 @@ public enum RowShape: String, Sendable, CaseIterable {
   public var leadingColumn: CGFloat { Grid.glyphSize }
 
   /// `grid-template-columns`' third column, where the document row is the
-  /// one shape that fixes it: five icons in 136 pt, so every document row
+  /// one shape that fixes it: four icons in 108 pt, so every document row
   /// in a list breaks its title at the same place.
   public var trailingColumn: CGFloat? {
     self == .doc ? Grid.actionColumn : nil
@@ -118,9 +118,17 @@ public struct RowView<Leading: View, Trailing: View>: View {
   /// in the Google Docs icon's own words: NowPress.tip.
   public let titleTip: String?
   /// What a press held on the title area does, where the row has a menu.
-  /// It is the title's and not the row's: the five icons are a column of
+  /// It is the title's and not the row's: the four icons are a column of
   /// their own, and a slow click on one of them is that icon's press alone.
   public let titleHeld: (() -> Void)?
+  /// A click on the title, which opens the document the row names.
+  ///
+  /// It sits on the title line with the held press, because a long press
+  /// swallows the click under it: a tap on one view and a hold on another
+  /// would make a click on the name of a row with a menu do nothing. The
+  /// quiet parts of the row press through the row's own box, which is
+  /// `opensDocument` in the list: DocumentPress.open.
+  public let titleTap: (() -> Void)?
   public let value: String?
   public let sub: String?
   /// The title's colour, where the row is not drawn on the panel's own
@@ -143,6 +151,7 @@ public struct RowView<Leading: View, Trailing: View>: View {
     titleColumn: CGFloat? = nil,
     titleTip: String? = nil,
     titleHeld: (() -> Void)? = nil,
+    titleTap: (() -> Void)? = nil,
     value: String? = nil,
     sub: String? = nil,
     titleInk: Swatch? = nil,
@@ -158,6 +167,7 @@ public struct RowView<Leading: View, Trailing: View>: View {
     self.titleColumn = titleColumn
     self.titleTip = titleTip
     self.titleHeld = titleHeld
+    self.titleTap = titleTap
     self.value = value
     self.sub = sub
     self.titleInk = titleInk
@@ -200,6 +210,7 @@ public struct RowView<Leading: View, Trailing: View>: View {
         .frame(minHeight: Typography.rowTitle.lineHeight)
         .metricProbe("row.title")
         .tooltip(titleTip ?? "", align: .leading)
+        .opensDocument(titleTap)
         .heldPress(titleHeld)
 
         if let sub {
@@ -260,6 +271,7 @@ extension RowView where Leading == StatusGlyph, Trailing == EmptyView {
     titleColumn: CGFloat? = nil,
     titleTip: String? = nil,
     titleHeld: (() -> Void)? = nil,
+    titleTap: (() -> Void)? = nil,
     value: String? = nil,
     sub: String? = nil,
     gone: Bool = false,
@@ -267,7 +279,7 @@ extension RowView where Leading == StatusGlyph, Trailing == EmptyView {
   ) {
     self.init(
       shape, title: title, titlePrefix: titlePrefix, titleColumn: titleColumn,
-      titleTip: titleTip, titleHeld: titleHeld, value: value,
+      titleTip: titleTip, titleHeld: titleHeld, titleTap: titleTap, value: value,
       sub: sub, gone: gone, hovering: hovering,
       leading: { StatusGlyph(glyph, tone: tone) }, trailing: { EmptyView() })
   }
@@ -285,6 +297,7 @@ extension RowView where Leading == StatusGlyph {
     titleColumn: CGFloat? = nil,
     titleTip: String? = nil,
     titleHeld: (() -> Void)? = nil,
+    titleTap: (() -> Void)? = nil,
     value: String? = nil,
     sub: String? = nil,
     titleInk: Swatch? = nil,
@@ -295,7 +308,7 @@ extension RowView where Leading == StatusGlyph {
   ) {
     self.init(
       shape, title: title, titlePrefix: titlePrefix, titleColumn: titleColumn,
-      titleTip: titleTip, titleHeld: titleHeld, value: value,
+      titleTip: titleTip, titleHeld: titleHeld, titleTap: titleTap, value: value,
       sub: sub, titleInk: titleInk, gone: gone,
       hovering: hovering, busy: busy,
       leading: { StatusGlyph(glyph, tone: tone) }, trailing: trailing)

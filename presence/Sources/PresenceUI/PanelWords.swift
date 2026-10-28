@@ -33,7 +33,7 @@ public enum Tips {
   /// there is no document to open.
   public static let noLink = "No link yet"
   public static let copied = "Copied"
-  /// The fifth icon of a document row, in its two states. They are the words
+  /// The last icon of a document row, in its two states. They are the words
   /// the menu carried until the third look, on the icon that replaced it.
   public static let pin = "Pin"
   public static let unpin = "Unpin"
@@ -59,7 +59,7 @@ public enum Tips {
 }
 
 /// The word of a document row's own menu, which is one word since the third
-/// look: the pin is the row's fifth icon and Hide is what is left.
+/// look: the pin is the last of the row's icons and Hide is what is left.
 public enum Menus {
   /// The one way out of the list. The way back is gdoc doing something on
   /// the document again, which the guide says and no menu word can.

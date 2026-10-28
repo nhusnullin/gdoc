@@ -24,16 +24,16 @@ final class RowTests: XCTestCase {
   private let eighty =
     "Second-quarter liquidity and settlement reviews for the Amsterdam trading office"
 
-  // The title column is 112 pt in a document row, which is the narrowest the
+  // The title column is 140 pt in a document row, which is the narrowest the
   // panel has, and the head never falls under eight characters in it: a
   // title whose last word is wide enough to squeeze it drops the tail and
-  // goes in whole instead. It was 140 pt until the pin became the row's
-  // fifth icon and took 28 pt of the row for it.
+  // goes in whole instead. It was 112 pt until the fifth look took the
+  // Google Docs icon off the row and gave the title the 28 pt back.
   func testNoHeadUnderEightCharactersAtPanelWidth() {
     XCTAssertEqual(
-      MiddleTitle.narrowestColumn, 112,
+      MiddleTitle.narrowestColumn, 140,
       "320 less the panel's 8 twice, the row's 12 twice, the 16 pt glyph, two 8 pt gaps "
-        + "and the 136 pt action column")
+        + "and the 108 pt action column")
 
     // The ellipsis is part of what the column carries. Scene r9's second
     // document is the title that proved it: a tail the counted rule admits,
@@ -135,11 +135,13 @@ final class RowTests: XCTestCase {
       try probes(JobCard(model: card), scheme: .dark, width: inPanel)["job.title"],
       "the card draws its title somewhere other than through MiddleTitle")
 
-    // A name with no verb measures as it did: the document row's column,
-    // the counted split, and the head the ellipsis leaves room for.
+    // A name with no verb measures in the document row's column, by the
+    // counted split and the head the ellipsis leaves room for. It showed
+    // ten characters of head in the 112 pt column and shows fourteen in the
+    // 140 the fifth look gave back.
     XCTAssertEqual(MiddleTitle.fitted(name).tail, " v0.1")
     XCTAssertEqual(MiddleTitle.fitted(name).head, "Ch 5. Commercial Model")
-    XCTAssertEqual(MiddleTitle.headCharacters(name), 10)
+    XCTAssertEqual(MiddleTitle.headCharacters(name), 14)
   }
 
   // `.row{min-height:32px}`, `.row.two{min-height:44px}`,
@@ -216,16 +218,16 @@ final class RowTests: XCTestCase {
     XCTAssertEqual(height, 56)
   }
 
-  // `.row.docrow{grid-template-columns:16px minmax(0,1fr) 136px}`: five
-  // icons in 136 pt since the pin joined them, so every document row in a
-  // list breaks its title at the same place.
-  func testTheDocRowActionColumnIs136() throws {
-    XCTAssertEqual(Grid.actionColumn, 136)
-    XCTAssertEqual(RowShape.doc.trailingColumn, 136)
+  // `.row.docrow{grid-template-columns:16px minmax(0,1fr) 108px}`: four
+  // icons in 108 pt since the fifth look took the Google Docs icon off the
+  // row, so every document row in a list breaks its title at the same place.
+  func testTheDocRowActionColumnIs108() throws {
+    XCTAssertEqual(Grid.actionColumn, 108)
+    XCTAssertEqual(RowShape.doc.trailingColumn, 108)
     XCTAssertNil(RowShape.plain.trailingColumn, "every other row is as wide as it asks for")
 
-    // Five 24 pt icons and four 4 pt gaps are 136 pt, which is the number.
-    XCTAssertEqual(5 * Grid.actionSize + 4 * Grid.actionGap, 136)
+    // Four 24 pt icons and three 4 pt gaps are 108 pt, which is the number.
+    XCTAssertEqual(4 * Grid.actionSize + 3 * Grid.actionGap, 108)
 
     // The row is scene e6's own, so the words under the measurement are
     // words the panel draws: a count beside a verb is one of the things
@@ -235,7 +237,6 @@ final class RowTests: XCTestCase {
       .doc, glyph: drawn.glyph, tone: drawn.tone, title: drawn.title, sub: drawn.sub,
       trailing: {
         HStack(spacing: Grid.actionGap) {
-          ActionButton(.gdocs, tip: Tips.openDoc)
           ActionButton(.md, tip: Tips.openNote)
           ActionButton(.branch, tip: Tips.openChat)
           ActionButton(.link, tip: Tips.copyLink)
@@ -243,7 +244,7 @@ final class RowTests: XCTestCase {
         }
       })
     let measured = try probes(row, scheme: .dark)
-    XCTAssertEqual(measured["row.trailing"]?.width, 136)
+    XCTAssertEqual(measured["row.trailing"]?.width, 108)
 
     // `.row.is-busy .acts{display:none}`: a busy row carries no action at
     // all, so the column goes with them.
@@ -301,7 +302,6 @@ final class RowTests: XCTestCase {
       .doc, glyph: drawn.glyph, tone: drawn.tone, title: drawn.title, sub: drawn.sub,
       trailing: {
         HStack(spacing: Grid.actionGap) {
-          ActionButton(.gdocs, tip: Tips.openDoc)
           ActionButton(.md, tip: Tips.openNote)
           ActionButton(.branch, tip: Tips.openChat)
           ActionButton(.link, tip: Tips.copyLink)

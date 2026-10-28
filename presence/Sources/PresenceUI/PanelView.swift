@@ -19,9 +19,11 @@
 // in the order the model put them in, each at its own height.
 //
 // A document row carries its own menu, with Hide from the list, on a
-// secondary click and on a press held half a second. Pin was in it until the
-// third look and is the row's fifth icon now, because Nail had pins and
-// never found the menu. A pinned row offers nothing, so it opens no menu.
+// secondary click and on a press held half a second. Pin was in it until
+// the third look and is the last of the row's four icons now, because Nail
+// had pins and never found the menu. A pinned row offers nothing, so it
+// opens no menu. A click on the row opens the document it names, which is
+// the fifth look: the Google Docs icon went with it.
 //
 // RenderTests draws every scene of the screens file through this view, in
 // both appearances, and reads its sizes back through the metric probes.
@@ -234,10 +236,16 @@ struct DocumentsList: View {
           // secondary click draws and the words the held press pops up are
           // the same list and the anchor is the row's own.
           let menu = RowMenu(items: row.menu, actions: actions)
+          // The row's own press, in the two places it lands: the title
+          // line, where it sits with the held press so one gesture
+          // decides between them, and the row's box for the sub-line and
+          // the gaps. The icons are drawn over it and take their own
+          // clicks.
+          let press = DocumentPress.open(row, actions: actions)
           VStack(alignment: .leading, spacing: 0) {
             RowView(
               .doc, glyph: row.glyph, tone: row.tone, title: row.title,
-              titleHeld: menu.held, sub: row.sub,
+              titleHeld: menu.held, titleTap: press, sub: row.sub,
               gone: row.gone,
               trailing: {
                 HStack(spacing: Grid.actionGap) {
@@ -250,6 +258,7 @@ struct DocumentsList: View {
                 }
               }
             )
+            .opensDocument(press)
             .rowMenu(menu)
             if model.showsStrip, row.id == model.rows.first?.id {
               IconStrip()

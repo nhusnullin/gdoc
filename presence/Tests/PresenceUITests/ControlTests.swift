@@ -423,7 +423,7 @@ final class ControlTests: XCTestCase {
         // row carries its actions and the only place a bubble that hangs
         // off its own right edge lands under it:
         // testTheSheetDrawsEachTooltipUnderItsOwnIcon.
-        ActionButton(.gdocs, tip: tips.live, forcedTooltip: true)
+        ActionButton(.link, tip: tips.live, forcedTooltip: true)
           .metricProbe("sheet.icon")
           .padding(.trailing, Grid.unit)
           .frame(width: Grid.panelWidth, height: Self.tooltipBand, alignment: .topTrailing)
@@ -462,7 +462,7 @@ final class ControlTests: XCTestCase {
     let tips = try SheetPieces.tips()
     for (words, state) in [(tips.live, ActionState.live), (tips.dead.words, tips.dead.state)] {
       let band =
-        ActionButton(.gdocs, tip: words, state: state, forcedTooltip: true)
+        ActionButton(.link, tip: words, state: state, forcedTooltip: true)
         .metricProbe("sheet.icon")
         .padding(.trailing, Grid.unit)
         .frame(width: Grid.panelWidth, height: Self.tooltipBand, alignment: .topTrailing)

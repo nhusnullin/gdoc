@@ -43,7 +43,7 @@ public struct UIState: Sendable, Equatable {
   /// One action's words, held open with no pointer. It is an `ActionModel`
   /// id, which is the target and the kind.
   public var forcedTooltip: String?
-  /// Whether the five labels under the first document row have been seen.
+  /// Whether the four labels under the first document row have been seen.
   /// They go after the first click on any icon and never come back.
   public var stripSeen: Bool
   /// Why the last Open md on a document did not open anything, by document.
@@ -90,7 +90,7 @@ public struct UIState: Sendable, Equatable {
 
   /// The same state with the icon strip gone.
   ///
-  /// The five labels under the first document row are there to be read once.
+  /// The four labels under the first document row are there to be read once.
   /// The first click on any icon is the proof they were read, so they go
   /// then and never come back, and the app's store keeps the flag so a later
   /// launch does not show them again.

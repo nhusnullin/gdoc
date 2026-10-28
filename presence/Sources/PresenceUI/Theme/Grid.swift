@@ -23,9 +23,14 @@ public enum Grid {
   public static let twoLineRowHeight: CGFloat = 44
   public static let compactRowHeight: CGFloat = 28
 
-  /// The document row's third column, wide enough for the five icons: the
-  /// four that open or copy something and the pin at the end of them.
-  public static let actionColumn: CGFloat = 136
+  /// The document row's third column, wide enough for the four icons: the
+  /// three that open or copy something and the pin at the end of them.
+  ///
+  /// It was 136 until the fifth look (docs/v2/DECISIONS.md, 2026-10-28).
+  /// The Google Docs icon went when the row itself became that press, and
+  /// the 28 pt it held went to the title:
+  /// testTheDocRowActionColumnIs108.
+  public static let actionColumn: CGFloat = 108
 
   /// The glyph, an action button and the radius they share.
   public static let glyphSize: CGFloat = 16

@@ -27,7 +27,7 @@ public enum TooltipAlign: String, Sendable, CaseIterable {
   /// centred under the anchor.
   case centred
   /// `.acts [data-tip]::after{left:auto;right:0}`: an action's bubble ends
-  /// where the icons themselves end, which is how five icons in 136 pt keep
+  /// where the icons themselves end, which is how four icons in 108 pt keep
   /// their words inside the panel. The icon it belongs to is the one it
   /// hangs under; a plate that ended on each icon's own edge stepped left
   /// across the row and read as four different plates.

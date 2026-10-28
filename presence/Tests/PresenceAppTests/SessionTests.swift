@@ -458,6 +458,37 @@ final class SessionTests: XCTestCase {
     XCTAssertEqual(session.ui.noteFault[Self.doc], .notPaired, "and the click kept why")
   }
 
+  /// A press on a document row opens the document, and leaves the four
+  /// labels where they are.
+  ///
+  /// The row is the press since the fifth look (docs/v2/DECISIONS.md,
+  /// 2026-10-28), through the one room that opens documents. The labels say
+  /// what the icons are, and a click on a row is not a click on an icon: a
+  /// person who has opened a document by clicking its row has read nothing
+  /// about the four icons beside it, so the strip waits for a click on one.
+  func testARowPressOpensTheDocumentAndLeavesTheStrip() throws {
+    try writeTheRecord([line(kind: "start", command: "reply", call: 1, doc: Self.doc)])
+    let store = Store()
+    let desk = FakeDesk()
+    let session = made(preferences: Preferences(store: store), desk: desk)
+    answered(session)
+    XCTAssertFalse(session.ui.stripSeen, "the labels have not been read yet")
+
+    session.perform(.openRow, Self.doc)
+    XCTAssertEqual(
+      desk.opened.map(\.absoluteString),
+      ["https://docs.google.com/document/d/\(Self.doc)/edit"],
+      "the row opens the document through the one room that opens documents")
+    XCTAssertFalse(session.ui.stripSeen, "a click on a row is not a click on an icon")
+    XCTAssertNil(
+      store.object(forKey: Preferences.Key.stripSeen.rawValue),
+      "and nothing is written down about labels nobody has read")
+
+    // The first click on an icon is still what retires them.
+    session.perform(.openChat, Self.doc)
+    XCTAssertTrue(session.ui.stripSeen, "the first click on an icon is the labels read")
+  }
+
   /// A fault on Open md greys the icon, and a greyed icon cannot be pressed,
   /// so the panel going away is the one thing that ends it. Without that, a
   /// note written after the click would leave the icon grey until the app

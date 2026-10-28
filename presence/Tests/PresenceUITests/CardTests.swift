@@ -400,6 +400,55 @@ final class CardTests: XCTestCase {
     XCTAssertTrue(LiveRow.showsRing(pending: true))
   }
 
+  /// A press on a document row opens the document it names, and the icons on
+  /// the row keep their own presses.
+  ///
+  /// The row was opened by its first icon until the fifth look
+  /// (docs/v2/DECISIONS.md, 2026-10-28): Nail asked for a click on the row,
+  /// and one control per action, so the icon went. The kind is `.openRow`
+  /// and not `.openDoc`, because a click on a row is not a click on an icon
+  /// and the four labels wait for one.
+  ///
+  /// The press is read here through a `PanelActions` that writes down what
+  /// it was handed, because this package has no offscreen click. Nail's hand
+  /// check after the run holds the gesture itself.
+  func testADocumentRowOpensAndItsIconsKeepTheirOwnPress() throws {
+    var pressed: [(kind: ActionKind, target: String?)] = []
+    let actions = PanelActions { kind, target in pressed.append((kind, target)) }
+
+    let row = try SheetPieces.documentRows()[0]
+    let doc = try XCTUnwrap(row.opens, "scene e6's first row names a document Drive wrote")
+    XCTAssertEqual(doc, row.doc)
+
+    let press = try XCTUnwrap(
+      DocumentPress.open(row, actions: actions), "the row opens the document it names")
+    press()
+    XCTAssertEqual(pressed.count, 1, "one press, one thing done")
+    XCTAssertEqual(pressed.first?.kind, .openRow, "and it is the row's own kind")
+    XCTAssertEqual(pressed.first?.target, doc)
+
+    // The icons are their own presses over the row's: four of them, and the
+    // first is the note and never a second way to open the document.
+    XCTAssertEqual(row.actions.map(\.kind), [.openNote, .openChat, .copyLink, .pinDoc])
+    for action in row.actions {
+      actions.perform(action.kind, action.target)
+    }
+    XCTAssertEqual(
+      pressed.filter { $0.kind == .openRow }.count, 1,
+      "an icon's press is its own and never the row's")
+
+    // A row naming an id Drive could not have written builds no press at
+    // all, which is the rule a NOW row follows: `Opener` refuses to build a
+    // URL out of it, and a row that offers a press doing nothing is worse
+    // than a row that offers none.
+    let planted = DocumentRowModel(
+      doc: "not-a-drive-id", title: row.title, sub: row.sub, glyph: row.glyph, tone: row.tone,
+      gone: row.gone, isPinned: row.isPinned, opens: nil, actions: row.actions, menu: row.menu)
+    XCTAssertNil(
+      DocumentPress.open(planted, actions: actions),
+      "a row with no document to open carries no press")
+  }
+
   /// The held press of a document row opens the system's own menu, with the
   /// words the model put in it and nothing else.
   ///
@@ -623,12 +672,12 @@ final class CardTests: XCTestCase {
   }
 
   // `.strip` is shown once, under the first document row, and says what the
-  // five icons above it are. It is the whole of the onboarding: one person
-  // does not need a tour, he needs to not guess once.
-  func testTheStripLabelsAreDocNoteChatLinkPin() throws {
-    XCTAssertEqual(
-      StripLabel.allCases.map(\.rawValue), ["Doc", "Note", "Chat", "Link", "Pin"])
-    XCTAssertEqual(StripLabel.allCases.count, 5, "one label per icon of the document row")
+  // four icons above it are. It is the whole of the onboarding: one person
+  // does not need a tour, he needs to not guess once. Doc left it at the
+  // fifth look with the icon it named: the row is that press now.
+  func testTheStripLabelsAreNoteChatLinkPin() throws {
+    XCTAssertEqual(StripLabel.allCases.map(\.rawValue), ["Note", "Chat", "Link", "Pin"])
+    XCTAssertEqual(StripLabel.allCases.count, 4, "one label per icon of the document row")
     XCTAssertEqual(IconStrip.cell, 24, "`.strip span{width:24px}`")
     XCTAssertEqual(IconStrip.gap, Grid.actionGap)
     XCTAssertEqual(IconStrip.leadingInset, Grid.quietInset, "`padding-left:44px`")
@@ -651,8 +700,9 @@ final class CardTests: XCTestCase {
   /// of artwork sits in a 24 pt box. So every word was drawn half a letter
   /// left of its icon, on the one element whose whole job is saying which
   /// word belongs to which icon. The third look made it worse by adding a
-  /// fifth: "Pin" under the gap beside the tack is the hint failing at the
-  /// icon Nail could not find.
+  /// fifth label: "Pin" under the gap beside the tack was the hint failing
+  /// at the icon Nail could not find. The strip is four words now, and the
+  /// pin is still the last of them.
   ///
   /// The two are measured in one tree here, because the claim is about one
   /// against the other and two separate renders agree on nothing.

@@ -222,7 +222,7 @@ the branch.
   `StateTests.swift`, `ThemeTests.swift`, `Shots.swift`,
   `presence/Tests/PresenceAppTests/SessionTests.swift`
 
-- [ ] `DocumentRowModel` carries `opens: String?`: the row's own id where
+- [x] `DocumentRowModel` carries `opens: String?`: the row's own id where
       `LinkLine.isDocumentID` accepts it, nothing otherwise, the rule a
       NOW row already follows. Its actions are four: the note, the chat,
       the link and the pin, in that order, and `openDoc` is no longer among
@@ -231,12 +231,12 @@ the branch.
       over a Drive-shaped id and one Drive could not have written, reading
       `opens` and the four kinds `[.openNote, .openChat, .copyLink, .pinDoc]`,
       `.unpinDoc` on a pinned row with its filled tack
-- [ ] `ActionKind.openRow`, the row's own press, which `Session.perform`
+- [x] `ActionKind.openRow`, the row's own press, which `Session.perform`
       routes to `Opener.openDocument` exactly as `.openDoc` and which does
       not call `sawTheStrip()`: a click on a row is not a click on an icon,
       so the four labels stay until an icon is clicked.
       `SessionTests.testARowPressOpensTheDocumentAndLeavesTheStrip`
-- [ ] `DocumentPress.open(_ row: DocumentRowModel, actions:) -> (() -> Void)?`
+- [x] `DocumentPress.open(_ row: DocumentRowModel, actions:) -> (() -> Void)?`
       in its own file, the shape of `NowPress.open`: a press sending one
       `.openRow` with the row's id, nil where `opens` is nil. `RowView`
       gains `titleTap: (() -> Void)?`, applied to the title line together
@@ -247,14 +247,14 @@ the branch.
       press over it. `CardTests.testADocumentRowOpensAndItsIconsKeepTheirOwnPress`
       through a recording `PanelActions`: the press sends one `.openRow`
       with the id and nothing else; a row with no `opens` builds no press
-- [ ] the three tests that read the first icon are restated:
+- [x] the three tests that read the first icon are restated:
       `testAnIdDriveCouldNotHaveWrittenGreysItsTwoIcons` asserts `opens`
       is nil and Copy link is off; `testAPinnedDocumentWithNoLinesDrawsThePinsOwnRow`
       asserts `opens` where it read the `openDoc` action.
       `SheetPieces.tips()` in `Shots.swift` takes another live icon of e6's
       first row, `.copyLink`, and the two sheet bands in `ControlTests` draw
       that icon where they drew `.gdocs`
-- [ ] `Grid.actionColumn` is 108: four 24 pt icons and three 4 pt gaps.
+- [x] `Grid.actionColumn` is 108: four 24 pt icons and three 4 pt gaps.
       `RowTests.testTheDocRowActionColumnIs136` becomes
       `testTheDocRowActionColumnIs108`, with `4 * 24 + 3 * 4` as its
       arithmetic; `ThemeTests.testTheGridIsTheScreens` says 108.
@@ -262,18 +262,18 @@ the branch.
       this commit (the panel is still 320 here; Task 2 moves it again), its
       message says 108, and the head count at `RowTests` line 142 states
       the new literal the 140 pt column gives
-- [ ] `StripLabel` is four words, Note, Chat, Link, Pin.
+- [x] `StripLabel` is four words, Note, Chat, Link, Pin.
       `CardTests.testTheStripLabelsAreDocNoteChatLinkPin` becomes
       `testTheStripLabelsAreNoteChatLinkPin` with the count 4, and the
       centring test over the labels still passes with four
-- [ ] every comment under `presence/Sources` that says five icons, a fifth
+- [x] every comment under `presence/Sources` that says five icons, a fifth
       icon or 136 for the column says four and 108: `IconStrip.swift`,
       `RowView.swift`, `TooltipLayer.swift:30`, `ActionButton.swift:5`,
       `MenuAnchor.swift:18,88`, `PanelModel.swift:48`
-- [ ] `ActionKind.openDoc`, `Icon.gdocs`, `Tips.openDoc` and the stuck
+- [x] `ActionKind.openDoc`, `Icon.gdocs`, `Tips.openDoc` and the stuck
       card's icon in NOW are untouched; the test at `CardTests` line 348
       still reads `.gdocs` first on the stuck card
-- [ ] `make app-lint`, `make app-test`
+- [x] `make app-lint`, `make app-test`
 
 ### Task 2: the panel is 360 points wide
 

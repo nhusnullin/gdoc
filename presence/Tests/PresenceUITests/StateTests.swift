@@ -418,10 +418,10 @@ final class StateTests: XCTestCase {
       "a hold whose life ran out is waiting for nobody, so the sign-out stops nothing")
   }
 
-  /// An id Drive could not have written is a line gdoc did not write. Both
-  /// icons that would build a URL out of it say so before the press, because
-  /// `Opener` refuses to build one and a live icon that does nothing says
-  /// nothing.
+  /// An id Drive could not have written is a line gdoc did not write. The
+  /// row carries no press and the icon that would build a URL out of it says
+  /// so before the press, because `Opener` refuses to build one and a press
+  /// that does nothing says nothing.
   func testAnIdDriveCouldNotHaveWrittenGreysItsTwoIcons() throws {
     let planted = "not-a-drive-id"
     let panel = try drawn(
@@ -430,9 +430,7 @@ final class StateTests: XCTestCase {
 
     let row = try XCTUnwrap(panel.documents?.rows.first, "the row is drawn, as the record says")
     XCTAssertEqual(row.doc, planted)
-    XCTAssertEqual(
-      row.actions.first { $0.kind == .openDoc }?.state, .off(Tips.noDoc),
-      "there is no document behind it to open")
+    XCTAssertNil(row.opens, "there is no document behind it to open")
     XCTAssertEqual(
       row.actions.first { $0.kind == .copyLink }?.state, .off(Tips.noLink),
       "and no link to copy")
@@ -441,8 +439,8 @@ final class StateTests: XCTestCase {
       [event("2026-10-17T09:00:00Z", .end, command: "reply", doc: chapter4, ok: true)],
       at: "2026-10-17T09:10:00Z")
     XCTAssertEqual(
-      real.documents?.rows.first?.actions.first { $0.kind == .openDoc }?.state, .live,
-      "an id of Drive's own shape is live")
+      real.documents?.rows.first?.opens, chapter4,
+      "an id of Drive's own shape is the press")
   }
 
   /// "Account changed" is a sentence about two addresses, so it is written
@@ -518,52 +516,65 @@ final class StateTests: XCTestCase {
       panel.header.question, "the header is the question while it is asked")
   }
 
-  /// A document row's five icons, in their order, and the pin's two states.
+  /// The row opens the document it names, and the four icons left on it are
+  /// the note, the chat, the link and the pin.
   ///
-  /// The pin is the fifth since the third look (docs/v2/DECISIONS.md,
-  /// 2026-10-18): it was a word in a menu Nail never found, and a menu
-  /// nobody finds is no affordance. The outline tack pins and says Pin, the
-  /// filled one takes it back and says Unpin, so the row says which it is
-  /// without a word.
-  func testADocumentRowsFifthIconIsThePinInItsTwoStates() throws {
-    let events = [
-      event(
-        "2026-10-17T09:00:00Z", .end, command: "reply", doc: chapter4, title: "Ch 4", ok: true)
-    ]
+  /// The Google Docs icon went at the fifth look (docs/v2/DECISIONS.md,
+  /// 2026-10-28): the row itself is the press, as a NOW row's has been
+  /// since the fourth, so the icon was a second control for one action. The
+  /// row carries the id it opens under its own rule, the one a NOW row
+  /// follows: an id Drive could not have written opens nothing, because
+  /// `Opener` refuses to build a URL out of it.
+  ///
+  /// The pin is the last of the four since the third look
+  /// (docs/v2/DECISIONS.md, 2026-10-18): it was a word in a menu Nail never
+  /// found, and a menu nobody finds is no affordance. The outline tack pins
+  /// and says Pin, the filled one takes it back and says Unpin, so the row
+  /// says which it is without a word.
+  func testADocumentRowOpensItselfAndCarriesFourIcons() throws {
+    for id in [chapter4, "not-a-drive-id"] {
+      let events = [
+        event("2026-10-17T09:00:00Z", .end, command: "reply", doc: id, title: "Ch 4", ok: true)
+      ]
 
-    let plain = try drawn(events, at: "2026-10-17T09:10:00Z")
-    let row = try XCTUnwrap(plain.documents?.rows.first)
-    XCTAssertFalse(row.isPinned, "nothing is pinned until somebody pins it")
-    XCTAssertEqual(
-      row.actions.map(\.icon), [.gdocs, .md, .branch, .link, .pin],
-      "the four it had, and the pin at the end")
-    XCTAssertEqual(
-      row.actions.map(\.kind), [.openDoc, .openNote, .openChat, .copyLink, .pinDoc])
-    let pin = try XCTUnwrap(row.actions.last)
-    XCTAssertEqual(pin.tip, "Pin")
-    XCTAssertEqual(pin.state, .live, "a pin is a press on every row there is")
-    XCTAssertEqual(pin.target, chapter4)
+      let plain = try drawn(events, at: "2026-10-17T09:10:00Z")
+      let row = try XCTUnwrap(plain.documents?.rows.first)
+      XCTAssertEqual(
+        row.opens, id == chapter4 ? chapter4 : nil,
+        "the row opens an id of Drive's own shape and nothing else")
+      XCTAssertFalse(row.isPinned, "nothing is pinned until somebody pins it")
+      XCTAssertEqual(
+        row.actions.map(\.icon), [.md, .branch, .link, .pin],
+        "the note, the chat, the link and the pin at the end")
+      XCTAssertEqual(row.actions.map(\.kind), [.openNote, .openChat, .copyLink, .pinDoc])
+      XCTAssertNil(
+        row.actions.first { $0.kind == .openDoc },
+        "the Google Docs icon went: the row is that press now")
+      let pin = try XCTUnwrap(row.actions.last)
+      XCTAssertEqual(pin.tip, "Pin")
+      XCTAssertEqual(pin.state, .live, "a pin is a press on every row there is")
+      XCTAssertEqual(pin.target, id)
 
-    let moment = try at("2026-10-17T09:05:00Z")
-    let pinned = try drawn(
-      events, at: "2026-10-17T09:10:00Z",
-      ui: UIState(pinned: [DocumentChoice(doc: chapter4, at: moment, title: "Ch 4")]))
-    let kept = try XCTUnwrap(pinned.documents?.rows.first)
-    XCTAssertTrue(kept.isPinned)
-    XCTAssertEqual(
-      kept.actions.map(\.icon), [.gdocs, .md, .branch, .link, .pinOn],
-      "the filled tack is the one thing that changes")
-    XCTAssertEqual(
-      kept.actions.map(\.kind), [.openDoc, .openNote, .openChat, .copyLink, .unpinDoc])
-    let unpin = try XCTUnwrap(kept.actions.last)
-    XCTAssertEqual(unpin.tip, "Unpin")
-    XCTAssertEqual(unpin.target, chapter4)
+      let moment = try at("2026-10-17T09:05:00Z")
+      let pinned = try drawn(
+        events, at: "2026-10-17T09:10:00Z",
+        ui: UIState(pinned: [DocumentChoice(doc: id, at: moment, title: "Ch 4")]))
+      let kept = try XCTUnwrap(pinned.documents?.rows.first)
+      XCTAssertTrue(kept.isPinned)
+      XCTAssertEqual(
+        kept.actions.map(\.icon), [.md, .branch, .link, .pinOn],
+        "the filled tack is the one thing that changes")
+      XCTAssertEqual(kept.actions.map(\.kind), [.openNote, .openChat, .copyLink, .unpinDoc])
+      let unpin = try XCTUnwrap(kept.actions.last)
+      XCTAssertEqual(unpin.tip, "Unpin")
+      XCTAssertEqual(unpin.target, id)
+    }
   }
 
   /// A document row's own menu is one word, and a pinned row has no menu.
   ///
-  /// Hide is the one thing left in it: the pin is the row's fifth icon since
-  /// the third look. A pinned row offers nothing, because the pin is the
+  /// Hide is the one thing left in it: the pin is the last of the row's four
+  /// icons since the third look. A pinned row offers nothing, because the pin is the
   /// louder answer and a hide of a pinned document hides nothing: the press
   /// would look dead and then take the row away at the unpin. There is no
   /// Unhide anywhere, because a hidden document has no row to open a menu on.
@@ -609,8 +620,7 @@ final class StateTests: XCTestCase {
       row.sub, "~/hub/falcon/chapters/04.md",
       "the sub-line says where the note is, with the home as a tilde, and "
         + "nothing about an action")
-    XCTAssertEqual(
-      row.actions.first { $0.kind == .openDoc }?.state, .live, "and its open action works")
+    XCTAssertEqual(row.opens, chapter4, "and the row itself opens it")
     XCTAssertEqual(panel.documents?.rows.count, 1, "and it is the whole of the list")
   }
 
