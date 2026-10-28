@@ -4,7 +4,7 @@ description: Use when the request gives a link to a Google Doc gdoc did not writ
 compatibility: Requires the gdoc binary on PATH, signed in with gdoc auth login, and network access to Google Docs and Drive.
 metadata:
   needs: v2.11.0
-  release: v2.23.0
+  release: v2.24.0
 ---
 
 # Restyle a document where it stands
