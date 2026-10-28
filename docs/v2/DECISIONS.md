@@ -112,6 +112,7 @@ replaced it)`, or `measured`. Nothing else.
 | 2026-10-28 | Four small fixes: the panel drops the published number, a cancelled update leaves the terminal wrapping, a backslash escape publishes as the character, and Tab completion follows the installed gdoc | holds | DECISIONS.md |
 | 2026-10-28 | The logo at its old size: the mark is drawn 3.9 cm wide where the firm's template put it, and the three other logo items stay as they are | holds | DECISIONS.md |
 | 2026-10-28 | The skills say when they are older than gdoc, and the plugin route turns on its updates | holds | DECISIONS.md |
+| 2026-10-28 | The fifth look: a card on a rested pointer, the row opens the document and the Google Docs icon goes, a wider panel, and the firm's mark at the foot as its own later milestone | holds | DECISIONS.md |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -1544,3 +1545,74 @@ What it cannot reach. A copy installed before this release has neither the line
 nor the paragraph, so it says nothing. The first warning lands for a colleague
 on the release after the one that ships this, and the README is what reaches
 anyone older.
+
+## 2026-10-28. The fifth look: a card on a rested pointer, the row opens the document and the Google Docs icon goes, a wider panel, and the firm's mark at the foot as its own later milestone.
+
+Nail looked at the panel of v2.24.0 and wrote: "when i have mouse there
+around document - i wanna see (how it names, screen?) with details, path,
+date etc... think taht else might apear and be there / also then i click on
+document i expect document to be openned / ask UX prodict owner to help you
+formulate customer journey / also, ask UI designer, icon manager to think do
+i need space (where prev was icon around dpcument) or we add smth stylish
+there / also lets do presense app a little big wider". Then, with the empty
+right side of the DOCUMENTS label marked in red: "what if somewhere around
+red plaholder we will have brand logo ? speak with designers, visualize your
+proposal for me". The seats answered the same day in
+`docs/design/2026-10-28-presence-fifth-look.md`, with the screens in
+`2026-10-28-presence-fifth-look.html`. The lead put five questions and a
+recommendation, and Nail answered: "ok, run with the recommendation: 1 yes,
+2 a, 3 360, 4 yes, 5 b after". Serves principles 4 and 1.
+
+**The card.** When the pointer rests on a document row's title or second
+line for the tooltip's half second, a card appears under the row, inside the
+panel, and goes when the pointer leaves. It is the row uncut: the whole
+title, wrapped; the last action with its full moment, "published Tue 28 Oct
+2026, 12:08", in the second line's own verb; and the whole note path with the
+home as `~`, or the row's own "no note". It takes no click and carries no
+control. Until the first click on any document row a fourth quiet line says
+"Click opens in Google Docs", the way the labels under the icons teach the
+icons once, and that first click is a ninth key in the app's own store. The
+rule for adding a line: the card is the row uncut, never the row plus. A new
+fact on it is a decision entry, not a line. Out, named: the Drive link,
+pinned-since, the Claude Code session, anything read from Drive, and a card
+on a NOW row.
+
+**The row opens the document, and the Google Docs icon goes.** A click on a
+document row opens its document in Google Docs, down the one path a NOW row
+already takes. The first icon went with it, because an icon that does what
+the row under it does is a second control for one action, and NOW rows open
+with no icon. Four icons stay: the note, the chat, the link and the pin, and
+the strip under the first row is four labels. A row whose id Drive could not
+have written opens nothing, as a NOW row does. The right-click and the held
+press keep the menu, and the held press takes the card away first. This
+supersedes one sentence of the fourth look: "a DOCUMENTS row keeps its icon
+and gains no row click". The rest of that entry holds.
+
+**The panel is 360 points wide**, from 320. The title column gains the
+icon's 28 and the width's 40, so a name shows about a third more.
+
+**The empty column stays empty.** The blank before each name is what makes
+every title start on one edge, and it carries the red mark of a failed run
+and nothing else. The space beside DOCUMENTS stays empty.
+
+**The firm's mark goes at the foot, in its own milestone after this one.**
+Of the three places drawn, beside DOCUMENTS, at the foot, and in the header,
+Nail chose the foot: a quiet row under the last hairline with a small
+monochrome mark, drawn from a template image in one grey, and nothing at
+all, no placeholder and no gap, on a machine that has no picture. It is
+after, not together, because it changes what the app may read: the app
+reads three things by invariant and the mark is a fourth. The trust guardian
+has already said which route it signs, `help --json` naming the cached
+file's path and the app reading that one path, and which two it vetoes, the
+app reading the cache on its own and the binary handing over bytes. That
+milestone gets its own entry, with the guardian's signature on it, when it
+is planned. `docs/backlog/the-panel-does-not-show-the-logo.md` stays open
+until then, with its place now settled.
+
+Trust guardian, 2026-10-28, on this milestone: no veto. No read, argv list,
+signal, URL or presence field is added; the card draws facts the row already
+draws, and the ninth key is the person's own click, like the strip's. It
+notes that the card shows a full home path without a click, which matters
+on a shared screen, and that the half-second rest is the answer to that.
+
+The plan is `docs/plans/2026-10-28-gdoc-v2-m32c-the-fifth-look.md`.

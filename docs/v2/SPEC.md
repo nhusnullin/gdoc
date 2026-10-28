@@ -191,6 +191,21 @@ Spotlight answer, one walk at a time, and Spotlight waits for that walk. A
 run of either update button that installed nothing says why in one fixed
 sentence on its row. Decided 2026-10-26, DECISIONS.md, the fourth look.
 
+**The fifth look.** The panel is 360 points wide. A click on a DOCUMENTS row
+opens its document, down the path a NOW row's click takes, and the Google
+Docs icon is gone: four icons stay, the note, the chat, the link and the
+pin, and the strip under the first row is four labels. When the pointer
+rests on a row's title or second line for the tooltip's half second, a card
+under the row shows the whole title, the last action with its full moment,
+and the whole note path or "no note"; it takes no click, carries no control,
+goes when the pointer leaves, and until the first click on any document row
+carries one more line, "Click opens in Google Docs", which is the ninth key
+in the app's store. The card is the row uncut, never the row plus. The blank
+column before each name stays and carries only the failed-run mark. The
+firm's mark at the foot of the panel is decided and not built: its own
+milestone, by the one route the trust guardian signs. Decided 2026-10-28,
+DECISIONS.md, the fifth look.
+
 `auth login` is a real desktop flow: a loopback redirect with PKCE, hand-rolled.
 
 **Two scopes:** Drive, and `https://www.googleapis.com/auth/documents`, the Docs
