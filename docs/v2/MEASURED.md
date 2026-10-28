@@ -42,6 +42,7 @@ earlier sections are frozen in [MEASURED-archive.md](MEASURED-archive.md).
 | 2026-10-18 | What Spotlight answers for a document id | MEASURED.md |
 | 2026-10-18 | What the header line holds, and what a second version costs it | MEASURED.md |
 | 2026-10-26 | Drive's import of a Russian heading and a link to it | MEASURED.md |
+| 2026-10-28 | The logo's frame and its ink | MEASURED.md |
 
 A measurement is never edited to match a later reading; a different answer is a
 new section in this file rather than a change in the archive, and the old one

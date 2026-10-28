@@ -1147,11 +1147,12 @@ heading_numbering:
   note: list numbering would renumber the ordinary paragraphs between headings
 logo:
   mime: image/png
-  width_pt: 146.25
+  # the mark's own width, the ink of the old picture on the firm's template. Nail, 2026-10-28
+  width_pt: 111.75
   anchor:
     in: first_page_header
     relative_h: column
-    offset_x_pt: 404.25
+    offset_x_pt: 421.5
     relative_v: paragraph
     offset_y_pt: -5.15
     wrap: square

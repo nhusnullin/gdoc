@@ -98,13 +98,16 @@ func TestUnexplainedIsWhatAGateFailsOn(t *testing.T) {
 		{Item: "logo topOffset (pt)", Verdict: Close},
 		{Item: "table count", Verdict: Different},
 		{Item: "HEADING_2 spaceAbove", Verdict: Different},
-		{Item: "logo width (pt)", Verdict: Missing},
+		// "logo layout", because the row has to be one Known does not
+		// explain. "logo width (pt)" stood here until 2026-10-28, when the
+		// mark's own width went into Known with Nail's decision beside it.
+		{Item: "logo layout", Verdict: Missing},
 	}
 	got := Unexplained(rows)
 	if len(got) != 2 {
 		t.Fatalf("two rows are unexplained and %d came back: %v", len(got), got)
 	}
-	if got[0].Item != "HEADING_2 spaceAbove" || got[1].Item != "logo width (pt)" {
+	if got[0].Item != "HEADING_2 spaceAbove" || got[1].Item != "logo layout" {
 		t.Errorf("the unexplained rows are %q and %q", got[0].Item, got[1].Item)
 	}
 }
@@ -171,7 +174,7 @@ func TestATypeMismatchIsABugRatherThanAnAnswer(t *testing.T) {
 
 // TestABugRowIsNeverExplainedAway. Known explains a difference between the two
 // documents. A row saying the fault is in this package is not that, so landing
-// on a name in Known must not drop it: ten of the twenty-five names carry rows
+// on a name in Known must not drop it: fifteen of the thirty names carry rows
 // that can go wrong this way, and the gate would pass in silence.
 func TestABugRowIsNeverExplainedAway(t *testing.T) {
 	rows := []Row{

@@ -97,10 +97,16 @@ type Row struct {
 // house.yaml states. One unit of blue in 255 is not a colour anybody can see,
 // and the live gate reads them as the same value.
 var Known = map[string]string{
-	// The firm replaced the logo in Drive on 2026-10-26 with a 509 by 185 px
-	// picture, and the house draws it 146.25 pt wide with its own ratio. The
-	// master still carries the old 195 by 97 mark at 72.75 pt high.
-	"logo height (pt)": "the logo in Drive is the 2026-10-26 picture, drawn at its own ratio; the master carries the old mark",
+	// The mark's own width and place, and the height that follows from them.
+	// Nail's decision of 2026-10-28: the house draws the mark at its own
+	// width, 111.75 pt at 421.5 pt, which is where the firm's template put the
+	// ink of the old padded picture. The master states the padded frame,
+	// 146.25 pt at 404.25 pt, and carries the old 195 by 97 mark 72.75 pt
+	// high; the 2026-10-26 picture in Drive is 509 by 185 and has no padding,
+	// so at 111.75 pt wide it is 40.6 pt high.
+	"logo width (pt)":      "Nail's decision of 2026-10-28: the mark is drawn at its own width, 111.75 pt, where the master states the padded frame's 146.25 pt",
+	"logo leftOffset (pt)": "Nail's decision of 2026-10-28: the mark starts at 421.5 pt, where the master's padded picture put its ink, and the master's frame starts at 404.25 pt",
+	"logo height (pt)":     "the logo in Drive is the 2026-10-26 picture, drawn at its own ratio at 40.6 pt; the master carries the old mark 72.75 pt high",
 
 	// The master declares the heading colour on the style and overrides it to
 	// the house navy on every heading paragraph.
@@ -325,7 +331,7 @@ func Unexplained(rows []Row) []Row {
 			continue
 		}
 		// Known explains a difference between the two documents. A row whose
-		// fault is in this package is not one, and ten of the names in Known
+		// fault is in this package is not one, and fifteen of the names in Known
 		// carry rows that can go wrong that way, so filtering on the name alone
 		// dropped them and the gate passed in silence.
 		if _, ok := Known[r.Item]; ok && !r.Bug {

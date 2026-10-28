@@ -174,54 +174,54 @@ pins that stop them moving again unnoticed.
 `go/internal/drift/compare_test.go`, `go/internal/drift/doc.go`,
 `go/internal/live/publish_test.go`
 
-- [ ] test first: `TestTheLogoStatesItsMimeWidthAndPlacement` wants
+- [x] test first: `TestTheLogoStatesItsMimeWidthAndPlacement` wants
       `width_pt` 111.75 and `offset_x_pt` 421.5, `offset_y_pt` still -5.15,
       the placeholder still 509 by 185
-- [ ] test: `TestTheMarkSitsInTheMarginAndOnThePaper` over `house.Load()`,
+- [x] test: `TestTheMarkSitsInTheMarginAndOnThePaper` over `house.Load()`,
       the house that ships. It reads `width_pt` and `offset_x_pt` from the
       config and states every other number as a literal: left margin 51.05 +
       offset + width = 584.3, under the page's 595.28 (the mark is on the
       paper), and offset + width = 533.25, over the column's 493.18 (the mark
       reaches past the text into the margin, as the firm's template drew it)
-- [ ] test: `TestTheFirstPageHeaderCarriesTheLogoWhereTheHouseAnchorsIt`
+- [x] test: `TestTheFirstPageHeaderCarriesTheLogoWhereTheHouseAnchorsIt`
       wants cx 1419225, cy 515828 and posOffset 5353050, the top offset
       -65405 and everything else unchanged, and its messages say 111.75pt,
       40.616pt and 421.5pt
-- [ ] test: `TestTheLogoHeightFollowsThePicturesRatio` wants cx 1419225 and
+- [x] test: `TestTheLogoHeightFollowsThePicturesRatio` wants cx 1419225 and
       cy 354806 on both elements
-- [ ] test: the three pins in `knownOffline` as literals, `logo width (pt)`
+- [x] test: the three pins in `knownOffline` as literals, `logo width (pt)`
       111.75 against 146.25, `logo leftOffset (pt)` 421.5 against 404.25,
       `logo height (pt)` 40.616 against 72.75
-- [ ] test: `TestUnexplainedIsWhatAGateFailsOn`'s `Missing` fixture names a
+- [x] test: `TestUnexplainedIsWhatAGateFailsOn`'s `Missing` fixture names a
       row that is not in Known, `logo layout`, and its assertions follow; a
       comment says why the row moved
-- [ ] test: `acceptance()` in `live/publish_test.go` drops the three `held`
+- [x] test: `acceptance()` in `live/publish_test.go` drops the three `held`
       calls for the logo width, height and left offset and states the built
       side's values as literals instead, 111.75, 40.616 and 421.5, with a
       comment naming this decision. This file is not run in this task (the
       live variables are unset); it compiles under `go vet ./...`
-- [ ] run the house, render and drift tests red
-- [ ] `house.yaml`: `width_pt: 111.75`, `offset_x_pt: 421.5`, and one line
+- [x] run the house, render and drift tests red
+- [x] `house.yaml`: `width_pt: 111.75`, `offset_x_pt: 421.5`, and one line
       saying the width is the mark's own, measured on the firm's template as
       the ink of the old picture, decided 2026-10-28, as a `note:` key if the
       logo block admits one, else a comment
-- [ ] `testdata/house-base64.yaml`: the same lines, byte for byte
-- [ ] `testdata/header2.xml`: 1857375 to 1419225, 675077 to 515828, 5133975
+- [x] `testdata/house-base64.yaml`: the same lines, byte for byte
+- [x] `testdata/header2.xml`: 1857375 to 1419225, 675077 to 515828, 5133975
       to 5353050, and the commit says the diff is those numbers
-- [ ] `compare.go`: `Known` gains `logo width (pt)` and
+- [x] `compare.go`: `Known` gains `logo width (pt)` and
       `logo leftOffset (pt)`, each with the reason: Nail's decision of
       2026-10-28, the mark is drawn at its own width, 111.75 pt at 421.5 pt,
       where the master's padded picture put its ink; the master's frame is
       146.25 pt at 404.25 pt. The `logo height (pt)` reason says 40.6 pt at
       the 2026-10-26 picture's ratio, and the comment above it stops saying
       146.25 pt
-- [ ] `doc.go` lines 81 and 114 and the `compare_test.go` comment at 174 say
+- [x] `doc.go` lines 81 and 114 and the `compare_test.go` comment at 174 say
       thirty; the worker counts the "ten of" again and the commit says the
       count
-- [ ] `house.go`'s package comment names
+- [x] `house.go`'s package comment names
       `TestTheMarkSitsInTheMarginAndOnThePaper` beside
       `TestTheLogoStatesItsMimeWidthAndPlacement`
-- [ ] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test` and `make vet`
+- [x] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test` and `make vet`
       green, one commit
 
 ### Task 2: Verify acceptance criteria
