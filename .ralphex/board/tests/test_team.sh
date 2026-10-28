@@ -218,6 +218,10 @@ if [[ $(grep -c '^[1-5]\. <' "$TEAM/lead.md" 2>/dev/null) -eq 5 ]]; then
 else
     bad "the lead's template does not hold five numbered questions"
 fi
+holds "the lead writes to Nail in what he sees" "$leadpage" \
+    "How to write to Nail"
+holds "the lead writes to Nail in what he sees" "$leadpage" \
+    "Now you see"
 holds "the lead knows who to call" "$leadpage" "gdoc-trust-guardian"
 holds "the lead knows who to call" "$leadpage" "planning:plan-review"
 holds "the lead knows who to call" "$leadpage" "gdoc-design-reviewer"

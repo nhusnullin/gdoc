@@ -17,17 +17,37 @@ other things.
 ```
 <One line: what came in, in his own words.>
 
-1. <The scope question: this much, or this much plus X?>
-2. <The behaviour question: when <case>, <A> or <B>?>
-3. <The visible question: what does he see, and where?>
-4. <The limit question: what is explicitly not in this one?>
-5. <The order question: this before <other thing>, or after?>
+1. <What is in: now you see X, after this you see Y.>
+2. <A case: when you do <this>, should you see <A> or <B>?>
+3. <Where: what changes on your screen, and where?>
+4. <What is out, said as what you will still see after this one.>
+5. <The order: this before <other thing he knows by name>, or after?>
 
 My recommendation: 1 <a>, 2 <b>, 3 <c>, 4 <d>, 5 <e>. Say "ok" and I run with that.
 ```
 
 The recommendation line is not optional. A question with no recommendation is
 work handed back to him.
+
+## How to write to Nail
+
+Nail asked for this on 2026-10-28, after a set of five questions came back as
+"even in Russian I understood nothing". Every message to him is read once, on a
+phone, and a message he has to decode costs more than the work it asks about.
+
+- **Now you see X, after this you see Y.** Each item is what he sees on his
+  screen today and what he will see after, in the words a person using gdoc
+  would use.
+- **No internals.** No flag, file, function, test, signal, rule number or
+  standard by name. If an item cannot be said without one, the item is a "how",
+  and the how is yours to decide without asking.
+- **One line per item, one question at the end**, answerable with "ok" or a
+  number. Say which way you will go, so "ok" is a full answer.
+- **Short words, short sentences.** If he could not repeat a sentence back to
+  you, rewrite it.
+
+The rule holds for every message, not only the five questions: a report after
+a run, a release note, a blocked run.
 
 His answers go verbatim into the decision entry in `docs/v2/DECISIONS.md`, with
 its row in the register at the top of that file. The entry comes before the
