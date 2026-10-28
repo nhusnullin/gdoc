@@ -175,7 +175,10 @@ Hide is in its menu; TODAY and Yesterday are gone. Open md finds the note
 through Spotlight and the `gdoc:` block, with `hubPath` as an override and
 no Hub row. The update glyph is always in the header, quiet, available or
 running, and the app asks `help --json` on open and every six hours.
-Decided 2026-10-18, DECISIONS.md, the third look.
+Decided 2026-10-18, DECISIONS.md, the third look. Since 2026-10-28 the
+published version is in the glyph's tooltip and nowhere under the header; the
+line under it answers only a press that installed nothing (DECISIONS.md, four
+small fixes).
 
 **The fourth look.** A NOW row that names a document opens it on a click of
 the row, down the same path a DOCUMENTS row's first icon takes, and Stop
@@ -842,7 +845,9 @@ installs the binary beside it; from `curl -fsSL .../release/install.sh | bash`
 it asks the releases API for the newest stable tag, downloads the zip for this
 machine and its checksum file, verifies it, and installs out of a temp dir.
 Either way it copies the binary to `~/.local/bin/gdoc`, strips quarantine,
-writes the completion into the config dir, prints the `source` line when
+writes a completion loader into the config dir, which asks the gdoc on PATH
+for its completion at each new shell so an update shows at the next Tab
+(2026-10-28, DECISIONS.md), prints the `source` line when
 `.zshrc` lacks it, prints the two `/plugin` commands, and ends with `gdoc auth
 status`. It asks nothing and it edits no shell file.
 
