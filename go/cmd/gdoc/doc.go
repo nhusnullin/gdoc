@@ -148,8 +148,11 @@
 //   - help [<command>|marks]: the table itself, as an object and as words.
 //     help.go. marks is the one word it answers that names no command, and it
 //     has its own file, helpmarks.go.
-//   - completion <shell> --out [--force]: the table as a shell script, written
-//     to a file. completion.go, with the template beside it.
+//   - completion <shell> --out [--force] [--loader]: the table as a shell
+//     script, written to a file. completion.go, with the template beside it.
+//     --loader writes a loader instead, a few lines of zsh that ask the gdoc on
+//     PATH for its completion at every new shell, so a Tab follows the binary
+//     that is installed rather than the one that wrote the file.
 //
 // The usage line names every command that exists, because it is joined from
 // the table. Three tests hold the table and the usage line together.

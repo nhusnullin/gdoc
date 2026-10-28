@@ -285,47 +285,47 @@ the installer and `update` write the same bytes.
 **Files:** `go/cmd/gdoc/completion.go`, `go/cmd/gdoc/commands.go`,
 `go/cmd/gdoc/completion_test.go`, `go/cmd/gdoc/doc.go`, help goldens
 
-- [ ] test first: `TestTheLoaderOpensWithItsOwnFirstLine` (the literal
+- [x] test first: `TestTheLoaderOpensWithItsOwnFirstLine` (the literal
       `# gdoc completion loader`), `TestTheLoaderNamesNoVersionAndNoOtherCommand`
       (the bytes hold no version, and no command name from the table except
       the one call `gdoc completion zsh`, and no flag but `--out` and
       `--force`, so they never go stale),
       `TestTheLoaderIsRefusedForBash`, `TestTheLoaderNeedsOut`,
       `TestTheLoaderRefusesAnExistingOutUnlessForced`
-- [ ] test: `TestTheLoaderIsQuietWithoutGdoc`, by reading the bytes: the call
+- [x] test: `TestTheLoaderIsQuietWithoutGdoc`, by reading the bytes: the call
       is guarded by a check that `gdoc` is on PATH and sends both streams to
       `/dev/null`, and `source` is guarded by a readable-file check that does
       not depend on that guard. No test runs the loader: no file under `go/` starts zsh or
       any program, by `os/exec`, `os.StartProcess` or `syscall`
-- [ ] test: `TestCompletionNeverReachesTheCheck`, copied from
+- [x] test: `TestCompletionNeverReachesTheCheck`, copied from
       `TestReadNeverReachesTheCheck`: a `completion zsh --loader` run with a
       month-old stamp and a reach that fails the test makes no request and
       leaves the stamp unchanged. `completion` runs at every new shell now, so
       this is what keeps it from being a third command that asks unasked
-- [ ] tighten `TestNothingRunsAnExternalProgram` in
+- [x] tighten `TestNothingRunsAnExternalProgram` in
       `go/boundary/boundary_test.go` to also refuse any call to
       `os.StartProcess`, `syscall.Exec`, `syscall.ForkExec` and
       `syscall.StartProcess`. Nothing in the tree calls them today
-- [ ] run them red
-- [ ] `--loader` in the `completion` table entry; the loader text as one
+- [x] run them red
+- [x] `--loader` in the `completion` table entry; the loader text as one
       constant in `completion.go`
-- [ ] regenerate `go/cmd/gdoc/testdata/pipe/help.stdout.golden`: `frozen()`
+- [x] regenerate `go/cmd/gdoc/testdata/pipe/help.stdout.golden`: `frozen()`
       never replaces a file, so delete it, run the test once (it writes and
       fails), read it, run again. The commit says the diff is the `--loader`
       line
-- [ ] `release/test-completion.sh`, outside `go/`: a fake `gdoc` that writes a
+- [x] `release/test-completion.sh`, outside `go/`: a fake `gdoc` that writes a
       script defining `_gdoc`, its own HOME, `autoload -U compinit && compinit
       -u`, source the loader, `whence -w _gdoc`; then with no `gdoc` on PATH,
       sourcing prints nothing and `_gdoc` is still defined. Skips when zsh is
       missing. One step in `.github/workflows/go.yml` beside the desktop
       extension's runs it
-- [ ] the rules live in `completion.go`'s file comment: say what the loader is
+- [x] the rules live in `completion.go`'s file comment: say what the loader is
       for; the paragraph "No test sources the script in a real shell" now says
       no Go test does, and names `release/test-completion.sh`. Name the tests, `TestCompletionNeverReachesTheCheck` among them, and
       `TestOnlyTheReadBackWritersCarryVerified`, whose reports table keeps
       completion out of the presence record. `cmd/gdoc/doc.go`'s completion
       bullet becomes `completion <shell> --out [--force] [--loader]`
-- [ ] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test` green
+- [x] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test` green
 
 ### Task 5: `gdoc update` puts the loader in place of gdoc's own file
 

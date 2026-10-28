@@ -336,7 +336,7 @@ func TestTheUsageLineMarksWhatIsOptionalAndWhatIsAnAlternative(t *testing.T) {
 		{[]string{"help", "build"}, "Usage: gdoc build --md <file> --out <file> [--house <file>] [--force]"},
 		{[]string{"help", "publish"}, "Usage: gdoc publish --md <file> --folder-id <folder id> [--house <file>]"},
 		{[]string{"help", "update"}, "Usage: gdoc update [--check] [--major] [--nightly] [--rollback] [--desktop]"},
-		{[]string{"help", "completion"}, "Usage: gdoc completion <shell> --out <file> [--force]"},
+		{[]string{"help", "completion"}, "Usage: gdoc completion <shell> --out <file> [--force] [--loader]"},
 		{[]string{"help", "auth", "status"}, "Usage: gdoc auth status"},
 	} {
 		_, prose, code := runHelp(t, want.words...)
