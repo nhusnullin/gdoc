@@ -226,17 +226,20 @@ pins that stop them moving again unnoticed.
 
 ### Task 2: Verify acceptance criteria
 
-- [ ] `make test` and `make vet` green, live variables unset
-- [ ] `make build`, then offline: `bin/gdoc build --md
+- [x] `make test` and `make vet` green, live variables unset
+- [x] `make build`, then offline: `bin/gdoc build --md
       release/example/first-note.md --out <tmp>/a.docx --house
       go/internal/house/testdata/house-base64.yaml`; then
       `unzip -p <tmp>/a.docx word/header2.xml` holds `cx="1419225"`,
       `cy="515828"` and `<wp:posOffset>5353050</wp:posOffset>`, and
       `unzip -p <tmp>/a.docx | grep -c "1857375\|5133975"` is 0 (the parts
-      are compressed, so the raw zip is never grepped)
-- [ ] the arithmetic in the commit message: 51.05 + 421.5 + 111.75 = 584.3
+      are compressed, so the raw zip is never grepped). The logo's PNG
+      bytes travel in that stream, so the count needs `grep -a` or a C
+      locale: without one grep calls the stream binary and prints no
+      count at all
+- [x] the arithmetic in the commit message: 51.05 + 421.5 + 111.75 = 584.3
       under 595.28
-- [ ] `grep -rn "146.25\|404.25" go/ docs/guide/` names only the files the
+- [x] `grep -rn "146.25\|404.25" go/ docs/guide/` names only the files the
       Context lists as staying: `xml_test.go`, the `logoBlock` fixture in
       `house_test.go`, `docsapi_test.go`, `docx_test.go`, the master
       assertions in `drift_test.go`, and the master's values in the pins and
