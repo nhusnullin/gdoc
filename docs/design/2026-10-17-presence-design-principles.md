@@ -681,3 +681,58 @@ press: Stop stops and opens nothing, and a hold asking its question opens
 nothing while it asks. The gesture itself is Nail's hand check, since no
 test sends a real click: `StateTests.testEveryNowRowThatNamesADocumentOpensIt`
 and `CardTests.testTheRowOpensAndOnlyStopStops`.
+
+## Amendments, 2026-10-28, the fifth look
+
+Nail looked at the panel of v2.24.0 and sent four sentences: details when
+the pointer is on a document, a click that opens it, a wider panel, and the
+firm's mark in the empty space beside the DOCUMENTS label. He answered the
+lead's five questions the same evening, "ok, run with the recommendation: 1
+yes, 2 a, 3 360, 4 yes, 5 b after". Three of them change a rule written
+above, and the fourth is a rule about a drawing nobody has drawn yet.
+
+- **A row that is about one document is the press that opens it, and one
+  action has one control.** Principle 3 says an action is an icon, and the
+  fourth look had already read it the other way round for NOW. DOCUMENTS
+  followed it here: the title, the second line and the gaps around them are
+  the row's own press, the Google Docs icon went with it, and the strip is
+  four icons and 108 pt instead of five and 136. Two controls for the same
+  opening is one too many, and the one that cost nothing to lose is the one
+  the row can do by itself. A row whose id is not one Drive could have
+  written carries no press, which is principle 4 for a whole row:
+  `StateTests.testADocumentRowOpensItselfAndCarriesFourIcons`,
+  `CardTests.testADocumentRowOpensAndItsIconsKeepTheirOwnPress` and
+  `RowTests.testTheDocRowActionColumnIs108`.
+- **The card is the row uncut, and never the row plus.** Principle 5 says
+  facts and not promises; the card says which facts. Every line on it is a
+  line the row already draws, with the cutting taken off: the whole title,
+  the same state words with the moment written out, the same note path. The
+  one line that is not about the document is the hint, and it goes after the
+  person's own first click on a row and never comes back. A new fact on the
+  card, a word the row does not already say, is a decision in
+  `docs/v2/DECISIONS.md` and not a line somebody adds to a model:
+  `StateTests.testTheCardIsTheRowUncutAndNeverTheRowPlus` and
+  `WordsTests.testTheFullMomentCarriesTheDayDateAndClock`. It is a rest and
+  not an entry, on the tooltip's own plate and placed by the one layer that
+  places tooltips, so an icon's words win over it and a held press or a
+  click takes it away before the menu or the tab arrives:
+  `ControlTests.testTheCardShowsAfterTheRestAndGoesOnLeaveHeldPressOrClick`,
+  `testTheCardSpansFromTheTitleToTheValueColumn` and
+  `testAnIconsTooltipWinsOverTheCard`.
+- **The panel is 360 points wide.** Principle 9 said 320, which is the
+  number the first screens were drawn at. 360 is Nail's own answer of the
+  three offered, and the grid is the one place it is written: the window
+  reads `Grid.panelWidth` and holds no width of its own, so a width is
+  changed in one line or not at all. Nothing was loosened to reach it. The
+  premises that were true only at 320, the head floor, the counted rule and
+  the header's crowding, were each re-measured and restated at 360:
+  `RowTests.testThePanelIs360PointsWide` and
+  `SourceRulesTests.testThePanelWindowTakesItsWidthFromTheGrid`.
+- **The firm's mark is decided for the foot of the panel, and not drawn
+  until its own milestone.** Nail's answer was "5 b after": the mark goes
+  below Settings and not beside the DOCUMENTS label, where it would sit in
+  the one column the fourth look keeps blank so every title starts on the
+  same left edge. An empty column is not a space for a picture; it is what
+  makes a list readable. Nothing in this branch draws or reads a picture,
+  and the day the mark is drawn is a milestone of its own with a decision
+  entry in front of it.

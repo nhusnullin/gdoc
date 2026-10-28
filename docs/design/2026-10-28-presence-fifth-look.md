@@ -7,10 +7,15 @@ it; the panel should be a little wider; and could the firm's mark sit in the
 empty space beside the DOCUMENTS label. He asked the product owner for the
 journey and the designers for the empty column and the mark.
 
+Decided the same day, in Nail's words: "ok, run with the recommendation: 1
+yes, 2 a, 3 360, 4 yes, 5 b after". It was built by
+`docs/plans/completed/2026-10-28-gdoc-v2-m32c-the-fifth-look.md`.
+
 The seats answered on the same day. This page is their answers and the
 lead's reading of them. The screens are
-`2026-10-28-presence-fifth-look.html`. Nothing here is built; the decision is
-Nail's and goes into `docs/v2/DECISIONS.md` in his words.
+`2026-10-28-presence-fifth-look.html`. Nothing here was built when it was
+written, and the decision was Nail's: it is in `docs/v2/DECISIONS.md` in his
+words.
 
 ## The journey of one pointer on a DOCUMENTS row
 

@@ -487,7 +487,7 @@ the branch.
   `docs/design/2026-10-17-presence-design-principles.md`,
   `docs/design/2026-10-28-presence-fifth-look.md`; move this plan
 
-- [ ] the guide, each place by line on `main`: 47, 360 points wide; 88 to
+- [x] the guide, each place by line on `main`: 47, 360 points wide; 88 to
       90, the header sentence rewritten in words true at 360, not a
       number swapped; "### Documents", a click on the row opens the
       document in your browser the way a Now row's does, and an id Drive
@@ -499,17 +499,17 @@ the branch.
       new paragraph on the card: what rests it, its three lines, the
       fourth that goes after your first click on a document row and never
       comes back, and that it takes no click. Nothing about the mark
-- [ ] the principles file gains "Amendments, 2026-10-28, the fifth look":
+- [x] the principles file gains "Amendments, 2026-10-28, the fifth look":
       the row is the press and one control per action; the card is the
       row uncut, never the row plus, a new fact on it is a decision; the
       panel is 360; the firm's mark is decided for the foot and not drawn
       until its own milestone
-- [ ] `docs/design/2026-10-28-presence-fifth-look.md` opens with one line
+- [x] `docs/design/2026-10-28-presence-fifth-look.md` opens with one line
       after its date: decided 2026-10-28 in Nail's words, and this plan's
       path
-- [ ] `CLAUDE.md` untouched
-- [ ] move this plan to `docs/plans/completed/`
-- [ ] `make app-lint`, `make app-test`
+- [x] `CLAUDE.md` untouched
+- [x] move this plan to `docs/plans/completed/`
+- [x] `make app-lint`, `make app-test`
 
 ## Acceptance
 

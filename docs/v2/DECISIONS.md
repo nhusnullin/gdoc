@@ -1615,4 +1615,4 @@ draws, and the ninth key is the person's own click, like the strip's. It
 notes that the card shows a full home path without a click, which matters
 on a shared screen, and that the half-second rest is the answer to that.
 
-The plan is `docs/plans/2026-10-28-gdoc-v2-m32c-the-fifth-look.md`.
+The plan is `docs/plans/completed/2026-10-28-gdoc-v2-m32c-the-fifth-look.md`.
