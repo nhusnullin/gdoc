@@ -184,33 +184,37 @@ the installer and `update` write the same bytes.
 `presence/Tests/PresenceUITests/StateTests.swift`,
 `presence/Tests/PresenceUITests/RowTests.swift`, `docs/guide/presence.md`
 
-- [ ] test first: `testAPublishedReleaseWritesNoLineUnderTheHeader`, a newer
+- [x] test first: `testAPublishedReleaseWritesNoLineUnderTheHeader`, a newer
       stable release and no press gives `header.quiet == []`
-- [ ] test: `testTheTooltipStillNamesThePublishedVersion`, the update action's
-      tip is the literal `Tips.updateTo` text for that version
-- [ ] test: a press that installed nothing still writes its fixed sentence
+- [x] test: `testTheTooltipStillNamesThePublishedVersion`, the update action's
+      tip is the literal `Tips.updateTo` text for that version (no separate
+      test: the literal `"Update to v2.15.0"` is asserted inside
+      `testAPublishedReleaseWritesNoLineUnderTheHeader` and at StateTests
+      :141 and :175, so a third copy would say the same thing again)
+- [x] test: a press that installed nothing still writes its fixed sentence
       under the header (the existing
       `testEachRunThatInstalledNothingSaysWhyInAFixedSentence` keeps passing)
-- [ ] run them red
-- [ ] drop `?? latest.map { "\($0) is published" }`; rewrite the comment above
+- [x] run them red
+- [x] drop `?? latest.map { "\($0) is published" }`; rewrite the comment above
       `published` to say why the number lives on the tooltip, naming the new
       tests
-- [ ] the three `StateTests` asserts expect `[]`; rename
+- [x] the three `StateTests` asserts expect `[]`; rename
       `testARunThatDidSomethingLeavesThePublishedLineWhereItWas`
       (StateTests.swift:265) to say what it now checks
-- [ ] `RowTests.swift`: the fixture near :485 drops `quiet: ["v2.17.0 is
+      (`testARunThatDidSomethingLeavesNoLineUnderTheHeader`)
+- [x] `RowTests.swift`: the fixture near :485 drops `quiet: ["v2.17.0 is
       published"]`, the message near :520 drops "why the number is under the
       line", and the comments near :616 and :690 stop describing the line
-- [ ] `PanelHeaderModel.swift`: rewrite the long comment above `look` as well
+- [x] `PanelHeaderModel.swift`: rewrite the long comment above `look` as well
       as the one above `published`, and rename `published`, which no longer
-      holds a published version
-- [ ] `testTheTooltipStillNamesThePublishedVersion` states the literal
-      `"Update to v2.15.0"`; drop it if the asserts at StateTests :141 and
-      :175 already pin exactly that
-- [ ] `docs/guide/presence.md`: the available glyph has its dot and the number
+      holds a published version (it is `answer` now)
+- [x] `testTheTooltipStillNamesThePublishedVersion` states the literal
+      `"Update to v2.15.0"`; dropped, because the asserts at StateTests :141
+      and :175 already pin exactly that
+- [x] `docs/guide/presence.md`: the available glyph has its dot and the number
       in its tooltip; the paragraph about the line under the header now says
       it is for the answer to a press
-- [ ] `make app-test`, `make app-lint` and `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test` green
+- [x] `make app-test`, `make app-lint` and `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test` green
 
 ### Task 2: wrap comes back on at the end of every draw
 

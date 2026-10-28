@@ -136,7 +136,7 @@ final class StateTests: XCTestCase {
     let behind = try drawn(
       [], at: "2026-10-17T09:00:00Z", facts: Scenes.machine(latestStable: "v2.15.0"))
     XCTAssertEqual(behind.header.version, "v2.14.0")
-    XCTAssertEqual(behind.header.quiet, ["v2.15.0 is published"])
+    XCTAssertEqual(behind.header.quiet, [], "and says nothing under the header about it")
     XCTAssertEqual(behind.header.updateLook, .available)
     XCTAssertEqual(behind.header.update?.tip, "Update to v2.15.0")
     let ahead = try drawn(
@@ -144,6 +144,26 @@ final class StateTests: XCTestCase {
     XCTAssertEqual(ahead.header.version, "v2.14.0", "the line names one version")
     XCTAssertEqual(
       ahead.header.updateLook, .quiet, "and the glyph offers a check and no release")
+  }
+
+  /// A published release writes no line under the header. The number is on
+  /// the glyph: its dot catches the eye and its tooltip says which version.
+  ///
+  /// It was a quiet line, "v2.15.0 is published", until 2026-10-28. Nail
+  /// used the panel for ten days and said he does not need it: the dot is
+  /// what he looks at, and a line that says the same thing in words is a
+  /// line he reads past. The line under the header is for the answer to a
+  /// press now, which is the one thing a person asked for words about:
+  /// testEachRunThatInstalledNothingSaysWhyInAFixedSentence.
+  func testAPublishedReleaseWritesNoLineUnderTheHeader() throws {
+    let panel = try drawn(
+      [], at: "2026-10-17T09:00:00Z", facts: Scenes.machine(latestStable: "v2.15.0"))
+    XCTAssertEqual(panel.header.version, "v2.14.0")
+    XCTAssertEqual(panel.header.quiet, [], "the release itself is not news in words")
+    XCTAssertEqual(panel.header.updateLook, .available, "the dot is what says it")
+    XCTAssertEqual(
+      panel.header.update?.tip, "Update to v2.15.0",
+      "and the tooltip is where the number lives")
   }
 
   /// The update glyph is on the line whenever there is a binary to update,
@@ -164,13 +184,13 @@ final class StateTests: XCTestCase {
     XCTAssertEqual(glyph.state, .live)
     XCTAssertEqual(glyph.tip, "Check for a new version")
 
-    // Available: `help --json` listed a newer stable, so the line carries
-    // both versions and the glyph takes the accent ink and its dot.
+    // Available: `help --json` listed a newer stable, so the glyph takes the
+    // accent ink and its dot, and the line names the one version installed.
     let available = try drawn([], at: when, facts: Scenes.machine(latestStable: "v2.15.0"))
     XCTAssertEqual(available.header.version, "v2.14.0", "the line names the one installed")
     XCTAssertEqual(
-      available.header.quiet, ["v2.15.0 is published"],
-      "and the one published is directly under it, because the line has no room for both")
+      available.header.quiet, [],
+      "and the one published is on the glyph's tooltip, not in words under the header")
     XCTAssertEqual(available.header.updateLook, .available)
     XCTAssertEqual(available.header.update?.tip, "Update to v2.15.0")
     XCTAssertEqual(available.header.update?.state, .live)
@@ -261,11 +281,12 @@ final class StateTests: XCTestCase {
 
   /// A run that did something says nothing: the version that moved and the
   /// check for a second are the answers to those two presses, and a
-  /// sentence beside either would be the panel saying it twice.
-  func testARunThatDidSomethingLeavesThePublishedLineWhereItWas() throws {
+  /// sentence beside either would be the panel saying it twice. So the line
+  /// under the header is empty until the next press that installs nothing.
+  func testARunThatDidSomethingLeavesNoLineUnderTheHeader() throws {
     let panel = try drawn(
       [], at: "2026-10-17T14:05:00Z", facts: Scenes.machine(latestStable: "v2.15.0"))
-    XCTAssertEqual(panel.header.quiet, ["v2.15.0 is published"])
+    XCTAssertEqual(panel.header.quiet, [])
 
     let handedOver = try drawn(
       [], at: "2026-10-17T14:05:00Z", facts: Scenes.machine(extensionState: .notInstalled))

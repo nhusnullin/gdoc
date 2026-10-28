@@ -128,28 +128,31 @@ extension PanelModel {
     }
 
     let latest = facts.versions.updateAvailable
-    // The published version is the line under the header and not a second
-    // number on it. Both of them on the line is what the decision of the
-    // third look asks for, and it does not fit: 320 pt holds the mark, the
+    // The dot on the glyph is the whole of what the header says about a
+    // release waiting. The number it would take is on the tooltip, and
+    // nowhere else.
+    //
+    // Not on the line, because it does not fit: 320 pt holds the mark, the
     // name, one version, the glyph, the account's own glyph, its address
     // and Sign out with 4 pt to spare, and a second version squeezes the
-    // address from 98 pt to 49, which is "nail@ex…" on every screen. That
-    // is the one thing the morning before this evening was about. So the
-    // number is directly under the one installed, the dot on the glyph is
-    // what catches an eye, and the address stays whole:
+    // address from 98 pt to 49, which is "nail@ex…" on every screen.
     // testTheHeaderIs36WithTheMarkTheNameTheVersionAndTheAccount measures
-    // both. Nail may still want it on the line, and that is his word to
-    // say.
+    // both.
+    //
+    // And not under the header either, where it was a quiet line until
+    // 2026-10-28. Nail used the panel for ten days and said he does not
+    // need it: the dot is what he looks at, and the same thing again in
+    // words is a line he reads past.
+    // StateTests.testAPublishedReleaseWritesNoLineUnderTheHeader.
     let look: UpdateLook = latest == nil ? .quiet : .available
-    // A press of the glyph that installed nothing takes that line. The two
-    // of them are about the same thing, and the one a person is owed is
-    // the answer to what they just pressed: the number that is published is
-    // still on the glyph's own dot and in its tooltip. The line goes at the
-    // next press of either button, and with the process.
-    // StateTests.testEachRunThatInstalledNothingSaysWhyInAFixedSentence.
-    let published =
-      facts.updateRun.map { Sentences.updateMiss($0, calendar: calendar) }
-      ?? latest.map { "\($0) is published" }
+    // So the line under the header is for one thing: the answer to a press
+    // of the glyph that installed nothing. That is the one case a person
+    // asked for words and is owed them, and the number that is published
+    // is still on the glyph's own dot and in its tooltip. The line goes at
+    // the next press of either button, and with the process.
+    // StateTests.testEachRunThatInstalledNothingSaysWhyInAFixedSentence
+    // and testARunThatDidSomethingLeavesNoLineUnderTheHeader.
+    let answer = facts.updateRun.map { Sentences.updateMiss($0, calendar: calendar) }
 
     // The second after a run that installed nothing. The check stands in
     // for the arrow, as a copied link's does, and it goes by itself.
@@ -158,19 +161,19 @@ extension PanelModel {
         text: version,
         update: ActionModel(
           .update, icon: .down, tip: Tips.newestRelease, state: .done, target: "gdoc"),
-        look: look, quiet: published)
+        look: look, quiet: answer)
     }
 
     guard let latest else {
       return VersionPieces(
         text: version,
         update: ActionModel(.update, icon: .down, tip: Tips.checkUpdate, target: "gdoc"),
-        look: .quiet, quiet: published)
+        look: .quiet, quiet: answer)
     }
     return VersionPieces(
       text: version,
       update: ActionModel(.update, icon: .down, tip: Tips.updateTo(latest), target: "gdoc"),
-      look: .available, quiet: published)
+      look: .available, quiet: answer)
   }
 
   private static func accountPieces(_ facts: Facts) -> AccountPieces {
