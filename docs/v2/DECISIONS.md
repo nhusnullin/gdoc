@@ -110,6 +110,7 @@ replaced it)`, or `measured`. Nothing else.
 | 2026-10-26 | The fourth look: every document on the panel opens on a click, a mark only for a failed run, names that survive, buttons that say what happened, a panel that stays open, a bounded hub | holds | DECISIONS.md |
 | 2026-10-27 | Week one of whole jobs: a watch that wakes a session only for marked work, a short help, live review in its own session, and a stopwatch on every comment | holds | DECISIONS.md |
 | 2026-10-28 | Four small fixes: the panel drops the published number, a cancelled update leaves the terminal wrapping, a backslash escape publishes as the character, and Tab completion follows the installed gdoc | holds | DECISIONS.md |
+| 2026-10-28 | The logo at its old size: the mark is drawn 3.9 cm wide where the firm's template put it, and the three other logo items stay as they are | holds | DECISIONS.md |
 | 2026-10-28 | The skills say when they are older than gdoc, and the plugin route turns on its updates | holds | DECISIONS.md |
 
 **An entry is never edited after this, except its status line.** A decision that
@@ -1464,6 +1465,52 @@ line, through `internal/atomicfile`; anything else is left alone with a warning,
 so not knowing still resolves to refusing: `TestAnUpdateLeavesAFileItDidNotWriteAlone`
 and `TestAnUpdateLeavesASymlinkedCompletionAlone`. Wrap goes back on with no
 signal trapped, so `TestOnlyTheWaitTrapsTheSignal` holds as it is.
+
+## 2026-10-28. The logo at its old size: the mark is drawn 3.9 cm wide where the firm's template put it, and the three other logo items stay as they are.
+
+Nail sent a screenshot of the header of a document published that morning,
+"Request to PCI DSS auditors, corporate cards for the company's own use", and
+asked: "team lead, did we fix logo width or not yet?". The wordmark was 5.2 cm
+wide and the "y" was cut at the paper's edge. The answer was not yet. Then:
+"i wanna ask you to plan fixing oversize logo issue, also you can plan all
+related to logo things". The lead put five questions with a recommendation,
+and Nail answered: "ok, run with the recommendation: 1 yes, 2 A, 3 you
+republish both, 4 all three stay out, 5 today." Serves principles 3 and 4: a
+document in the firm's name carries the firm's mark whole, and nothing is
+built that nobody asked to see.
+
+What happened. `width_pt` has been 146.25 since 2026-09-08, read off the
+firm's Word template, where the picture was 195 by 97 px with transparent
+padding: the mark itself filled 149 of the 195 columns, which is 111.75 pt or
+3.9 cm, starting 17.25 pt into the frame. The picture the firm put in Drive on
+2026-10-26, 509 by 185 px, has no padding, so the same frame draws a 5.2 cm
+mark, and the frame's right side lands 6 pt past the paper's edge, where Docs
+clips it. The 2026-10-26 fix removed the pin on exact pixels and never touched
+the width. Measured in MEASURED.md, "The logo's frame and its ink".
+
+**The mark is drawn 3.9 cm wide where it was.** `width_pt` becomes 111.75 and
+`offset_x_pt` 421.5, the ink box of the old picture. The mark's right side
+sits 1.4 cm past the text's right edge and 4 mm from the paper's edge, as on
+every document published before 26 October. Nail chose that over a mark that
+ends in line with the text (question 2, A). `offset_y_pt` stays at -5.15: the
+old mark's ink began 3 pt below its frame, one millimetre, not worth a second
+number. The height follows the picture's ratio, 40.6 pt. The drift gate's
+known list names the width and the left offset against the master with this
+entry as the reason, beside the height it already names.
+
+**Three things stay as they are** (question 4). A new logo picture needs no
+new gdoc: the firm replaces the picture inside the same Drive file, and every
+machine picks it up within a day under the stamp. Pointing gdoc at another
+file or folder stays in `docs/backlog/the-logo-drive-file-cannot-be-changed.md`.
+The panel shows no logo, `docs/backlog/the-panel-does-not-show-the-logo.md`.
+A restyled document gets no logo, because the Docs API writes no picture into
+a header, which `internal/restyle`'s manual list already says.
+
+**Where it lands** (questions 3 and 5). Every document built or published
+after the release. The two real documents published between 26 and 28 October
+with the big mark, "Embedded card: legal actions and Jira tickets" and the PCI
+DSS request, are the lead's to publish again after the release. The run is
+M32b, today, before Nail's hand checks and the week's stopwatch.
 
 ## 2026-10-28. The skills say when they are older than gdoc, and the plugin route turns on its updates.
 
