@@ -4,7 +4,7 @@ description: Use when the request gives a Google Doc link and asks for that docu
 compatibility: Requires the gdoc binary on PATH, signed in with gdoc auth login, and network access to Google Docs and Drive.
 metadata:
   needs: v2.11.0
-  release: v2.26.0
+  release: v2.27.0
 ---
 
 # Bring a document into the hub
