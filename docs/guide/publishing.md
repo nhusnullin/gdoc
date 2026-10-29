@@ -37,7 +37,8 @@ a style carrying its own bytes.
 The `logo` entry in a house file is strict: it states `mime`, `width_pt`, the
 anchor, and exactly one of `drive` or `base64`. `width_pt` is the width of the
 mark itself, which the house draws 3.9 cm wide in the top right corner of page
-one, reaching 4 mm from the paper's edge. An older custom house file must
+one, its right side in line with the text, with the label before it level with
+it. An older custom house file must
 remove `px` and `height_pt`; the rendered height now follows the PNG's own
 aspect ratio. The file is still bounded: neither image side may exceed 4096
 pixels.

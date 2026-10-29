@@ -281,12 +281,12 @@ that stop them moving again unnoticed.
 
 ### Task 3: [Final] Update documentation
 
-- [ ] `docs/guide/publishing.md`, the paragraph at line 37: the mark is
+- [x] `docs/guide/publishing.md`, the paragraph at line 37: the mark is
       drawn 3.9 cm wide in the top right corner of page one, its right side
       in line with the text, and the label before it sits level with it
-- [ ] do not edit `CLAUDE.md`, `docs/v2/SPEC.md`, `docs/v2/DECISIONS.md` or
+- [x] do not edit `CLAUDE.md`, `docs/v2/SPEC.md`, `docs/v2/DECISIONS.md` or
       `docs/v2/MEASURED.md`
-- [ ] move this plan to `docs/plans/completed/`
+- [x] move this plan to `docs/plans/completed/`
 
 ## Post-Completion
 
