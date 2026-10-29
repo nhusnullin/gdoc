@@ -271,14 +271,14 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] Every test named in the Acceptance table exists under
+- [x] Every test named in the Acceptance table exists under
       `presence/Tests` with that name.
-- [ ] `git diff --name-only main...HEAD` lists only this plan,
+- [x] `git diff --name-only main...HEAD` lists only this plan,
       `presence/Sources` and `presence/Tests`. Nothing under `go/`,
       `CLAUDE.md` or `docs/v2/`.
-- [ ] `grep -rn "gdocs" presence/Sources` prints nothing.
-- [ ] `make app-lint`, `make app-test`, `make app` green.
-- [ ] No commit unless something had to change, and then it says what.
+- [x] `grep -rn "gdocs" presence/Sources` prints nothing.
+- [x] `make app-lint`, `make app-test`, `make app` green.
+- [x] No commit unless something had to change, and then it says what.
 
 ### Task 5: [Final] Update documentation
 
