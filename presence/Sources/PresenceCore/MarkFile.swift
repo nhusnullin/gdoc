@@ -8,8 +8,11 @@
 // Three checks, in this order. The path is opened once with O_NOFOLLOW, so a
 // link at that name is refused by the kernel: the file named is the file
 // read, and nobody can point the one path this app opens at a file it never
-// named. The open descriptor is then asked what it is, so the answer is
-// about the bytes that will be read and not about a name a swap could
+// named. O_NONBLOCK rides along, because the open itself must answer: a pipe
+// at that name with nobody writing to it would hold a blocking open forever,
+// and this read runs inside the poller. The flag changes nothing about a
+// regular file. The open descriptor is then asked what it is, so the answer
+// is about the bytes that will be read and not about a name a swap could
 // outrun: a regular file, of at most `ceiling` bytes. Last, the bytes
 // themselves must open with the eight PNG bytes, because the panel draws one
 // shape and a view that had to guess would be guessing about somebody's
@@ -34,7 +37,7 @@ public enum MarkFile {
   /// The file's bytes, or nothing where there is no PNG of a sane size at
   /// that exact path.
   public static func read(at path: String) -> Data? {
-    let descriptor = Darwin.open(path, O_RDONLY | O_NOFOLLOW)
+    let descriptor = Darwin.open(path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK)
     guard descriptor >= 0 else { return nil }
     defer { Darwin.close(descriptor) }
 

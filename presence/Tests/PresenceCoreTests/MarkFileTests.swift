@@ -66,6 +66,24 @@ final class MarkFileTests: XCTestCase {
     XCTAssertNil(MarkFile.read(at: link.path))
   }
 
+  func testAPipeWithNoWriterComesBackRatherThanWaiting() throws {
+    let directory = try temporaryDirectory()
+
+    // A pipe nobody is writing to never answers a blocking open, and this
+    // read runs inside the poller: the answer must be nothing, now.
+    let pipe = directory.appendingPathComponent("logo.png")
+    XCTAssertEqual(mkfifo(pipe.path, 0o600), 0)
+
+    let answered = expectation(description: "the read came back")
+    var bytes: Data? = pngOf(200)
+    Thread.detachNewThread {
+      bytes = MarkFile.read(at: pipe.path)
+      answered.fulfill()
+    }
+    wait(for: [answered], timeout: 2)
+    XCTAssertNil(bytes)
+  }
+
   // MARK: helpers
 
   /// A file of exactly `count` bytes that opens with the PNG signature.
