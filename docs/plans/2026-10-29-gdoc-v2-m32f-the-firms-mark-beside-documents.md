@@ -437,10 +437,14 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] `PRESENCE_SHOTS="$HOME/gdoc-m32f-board/shots" make app-test` green.
-- [ ] `ls ~/gdoc-m32f-board/shots` lists `e2-dark.png`, `e2-light.png`,
-      `e9-dark.png` and `index.html`.
-- [ ] No commit: the renders are not in git.
+- [x] `PRESENCE_SHOTS="$HOME/gdoc-m32f-board/shots" make app-test` green:
+      389 tests, no failures.
+- [x] `ls ~/gdoc-m32f-board/shots` lists `e2-dark.png`, `e2-light.png`,
+      `e9-dark.png` and `index.html`. e2 draws the stand-in mark at the
+      right end of DOCUMENTS in both appearances, e9 draws none, and the
+      index page says the shape is a stand-in.
+- [x] No commit: the renders are not in git. Only this plan's ticks are
+      committed, so the next task starts on a clean tree.
 
 ### Task 6: Verify acceptance criteria
 
