@@ -60,6 +60,18 @@ final class SourceRulesTests: XCTestCase {
   /// started, and a URL is a path or an address somebody else resolved.
   private static let notTheShells = ["Event", "Records", "Glance", "Call", "Outcome", "URL"]
 
+  /// The five files that may read a byte off this machine, each with the one
+  /// thing it reads. A sixth is a sixth file somebody has to read before
+  /// they know what this app opens, so it is a decision in
+  /// `docs/v2/DECISIONS.md` and a line in CLAUDE.md's invariant.
+  private static let readers = [
+    "Sources/PresenceCore/LogTail.swift": "the record",
+    "Sources/PresenceCore/HubIndex.swift": "the head of a note",
+    "Sources/PresenceApp/BundleWatch.swift": "this app's own plist",
+    "Sources/PresenceApp/Relauncher.swift": "this app's own plist",
+    "Sources/PresenceCore/MarkFile.swift": "the firm's mark",
+  ]
+
   /// The question that signals nothing: a zero asks whether a process is
   /// there and is the whole of Liveness. Any other number is a signal.
   private static let asking = "0"
@@ -429,6 +441,56 @@ final class SourceRulesTests: XCTestCase {
       XCTAssertFalse(text.contains(window), "\(path) opens a window of its own")
     }
     XCTAssertGreaterThan(files, 0, "no source was read, so this test guards nothing")
+  }
+
+  /// A byte off this machine is read in five files, and a picture in one of
+  /// them.
+  ///
+  /// The mark is drawn from a file, so this app now loads an image, and an
+  /// image loader is the easiest read in the world to add somewhere else:
+  /// one `AsyncImage` in a view and the panel fetches whatever a path
+  /// resolves to. The scan names every spelling that turns a path into
+  /// bytes, the image loaders included, and the five files that may use
+  /// one. The floor the other rules keep is kept here too: each of the five
+  /// must still contain a spelling, or the list has outlived the code it
+  /// describes.
+  func testAByteIsReadOnlyInTheFiveReaders() throws {
+    // Spelled in pieces so this file is not its own failure.
+    let contentsOf = "(contentsOf"
+    let spellings = [
+      "Data" + contentsOf,
+      "NSData" + contentsOf,
+      "FileHandle" + "(forReadingFrom",
+      "FileHandle" + "(forReadingAtPath",
+      "." + "contents(atPath",
+      "String" + contentsOf,
+      "O_" + "RDONLY",
+      // `pread(` and not `read(`: Runner.swift reads a pipe, which is the
+      // child it started and not a file on this machine.
+      "pread" + "(",
+      "NSImage" + contentsOf,
+      "NSImage" + "(contentsOfFile",
+      "NSImage" + "(byReferencing",
+      "CGImageSource" + "CreateWithURL",
+      "Async" + "Image",
+    ]
+
+    var reading: Set<String> = []
+    var files = 0
+    try eachSwiftFile { path, text in
+      guard path.hasPrefix("Sources/") else { return }
+      files += 1
+      let found = spellings.filter { text.contains($0) }
+      guard !found.isEmpty else { return }
+      reading.insert(path)
+      if Self.readers[path] == nil {
+        XCTFail("\(path) reads a byte off this machine: \(found.joined(separator: ", "))")
+      }
+    }
+    XCTAssertGreaterThan(files, 0, "no source was read, so this test guards nothing")
+    XCTAssertEqual(
+      reading.sorted(), Self.readers.keys.sorted(),
+      "the list of readers is not the files that read")
   }
 
   /// Whether this line declares a function or an initialiser, which is where

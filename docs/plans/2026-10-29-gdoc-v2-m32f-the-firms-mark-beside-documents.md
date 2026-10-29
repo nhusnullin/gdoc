@@ -255,20 +255,20 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] In `HealthFactsTests.swift`, `testHelpNamesTheLogoPathAndItMayBeAbsent`:
+- [x] In `HealthFactsTests.swift`, `testHelpNamesTheLogoPathAndItMayBeAbsent`:
       a `data` object with `logo_path` decodes to `HelpFacts.logoPath` equal
       to it; one without decodes with `logoPath` nil and nothing else
       changed; one whose `logo_path` is a number fails the whole decode,
       which is the file's strict rule and is stated in the test. Red.
-- [ ] `HelpFacts` gains `public let logoPath: String?`, read the way
+- [x] `HelpFacts` gains `public let logoPath: String?`, read the way
       `markFrom` is, with its one-line comment. Green.
-- [ ] `MarkFileTests.swift`, new, over temp files: a 200-byte file that
+- [x] `MarkFileTests.swift`, new, over temp files: a 200-byte file that
       opens with the eight PNG signature bytes comes back as those bytes; a
       file opening with JPEG's bytes comes back nil; a PNG of exactly
       1,048,576 bytes comes back and one of 1,048,577 comes back nil; a
       directory, a path that does not exist and a symbolic link to a
       passing PNG each come back nil. Red.
-- [ ] `MarkFile.swift`, new in `PresenceCore`: a package comment in the
+- [x] `MarkFile.swift`, new in `PresenceCore`: a package comment in the
       house voice (what it reads, the three checks, why a link is refused:
       the file named is the file read), `public enum MarkFile` with
       `public static let ceiling = 1_048_576`, the signature bytes as a
@@ -279,8 +279,13 @@ Tick each box as it is done. A task ends with its commit.
       must say a regular file of at most `ceiling` bytes; it then reads at
       most `ceiling + 1` bytes through the descriptor, closes it, and
       checks the signature. Any failure is nil, with no log line: a
-      machine with no picture is not an error. Green.
-- [ ] In `SourceRulesTests.swift`, `testAByteIsReadOnlyInTheFiveReaders`:
+      machine with no picture is not an error. Green. Two details the step
+      did not name: the size the descriptor reports must also be at least
+      the eight signature bytes, so a stub is refused before any read, and
+      the bytes come through `Darwin.read` in a loop rather than `pread`,
+      because this read starts at the file's own beginning and keeps no
+      offset. `pread` stays the record's spelling alone.
+- [x] In `SourceRulesTests.swift`, `testAByteIsReadOnlyInTheFiveReaders`:
       walk every Swift file under `Sources` as `testProcessAppearsOnlyInTheRunner`
       does. Five files may read a byte, each named with one line on what
       it reads: `LogTail.swift` (the record), `HubIndex.swift` (a note's
@@ -297,8 +302,8 @@ Tick each box as it is done. A task ends with its commit.
       must contain at least one spelling, or the test guards nothing. A
       sixth file fails it. This is the test the guardian's signature
       names.
-- [ ] `make app-lint` and `make app-test` green.
-- [ ] Commit: `feat: the help's logo path and the one read of it`.
+- [x] `make app-lint` and `make app-test` green.
+- [x] Commit: `feat: the help's logo path and the one read of it`.
 
 ### Task 3: the bytes reach the panel's facts
 
