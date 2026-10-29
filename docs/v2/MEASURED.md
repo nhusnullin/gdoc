@@ -44,6 +44,7 @@ earlier sections are frozen in [MEASURED-archive.md](MEASURED-archive.md).
 | 2026-10-26 | Drive's import of a Russian heading and a link to it | MEASURED.md |
 | 2026-10-28 | The logo's frame and its ink | MEASURED.md |
 | 2026-10-29 | The 29 October cover in pixels | MEASURED.md |
+| 2026-10-30 | The two covers in a PDF export: v2.25.0 against v2.27.0 | MEASURED.md |
 
 A measurement is never edited to match a later reading; a different answer is a
 new section in this file rather than a change in the archive, and the old one
@@ -936,3 +937,46 @@ Docs draws a positioned header picture no higher than the header margin, or the
 picture's ink begins below its frame; the screenshot cannot tell the two apart,
 and M32e does not need to. What it needs is the label 6 pt lower with the mark
 where it is, and the published page after the release is the check.
+
+## The two covers in a PDF export: v2.25.0 against v2.27.0
+
+Measured 2026-10-30 at 00:10 by the team lead, right after v2.27.0 was
+published, as the plan for M32e asked. The lead could not reach the Docs
+screen (the browser pane stops at Google's sign-in, which the lead does not
+do), so the measurement is Drive's PDF export of each document, page 1 drawn
+at 216 dpi with PyMuPDF, which is 3 px per pt on the 596 pt page. The mark's
+ink is every pixel in the right half of the top 83 pt with any channel under
+200; the label's ink the same in the left half. Two documents: the 29
+October review copy of Ch 4, `1S6asK5fgsXX4oz115CNAn2JaxllSF-g-o2aVdF_kQRY`,
+published with v2.25.0, and the same note published again with v2.27.0 into
+the test folder as `1StdYTsI98DSg1jrINjlZ43jU8WOlZrqz8eITXu4lQCw`. The script
+is throwaway and not committed.
+
+| What | v2.25.0, pt | v2.27.0, pt |
+|---|---|---|
+| mark's right edge from the paper's right | 11.67 | 51.33 |
+| text column's right margin (house) | 51.05 | 51.05 |
+| mark's top from the paper's top | 8.67 | 2.67 |
+| mark's height | 41.0 | 41.0 |
+| mark's vertical centre | 29.17 | 23.17 |
+| label's ink, top to bottom | 17.3 to 27.7 | 23.3 to 33.7 |
+| label's vertical centre | 22.67 | 28.67 |
+| label's centre against the mark's | 6.5 above | 5.5 below |
+
+What it says. The horizontal move landed: the mark's right edge is now 0.3 pt
+from the column's right margin, where it was 39.4 pt past it. The vertical
+move did not land as stated: the label came down the six points, but the mark
+went up six as well, from 8.67 to 2.67. In the PDF export the paragraph a
+picture is anchored to begins at the top of its space before, not at its
+text, so a `space_before_pt` of 6 and an `offset_y_pt` of -11.15 move the
+picture six points up against the page, and the sum -5.15 that the decision
+relied on holds only against the text. The label now sits 5.5 pt below the
+mark's centre, where it sat 6.5 pt above.
+
+What it does not say. The 29 October screen measurement put the v2.25.0
+mark's top at 14.3 pt where this export puts it at 8.67, so the Docs screen
+and the PDF export draw the header picture 5 to 6 pt apart, and this table
+cannot tell what Nail's screen shows for v2.27.0. If the screen also shows
+the label below the mark's middle, the two-number pass is `offset_y_pt` back
+to -5.15 with the six points before the paragraph kept: in this export that
+puts the mark's centre at 29.17 against the label's 28.67.
