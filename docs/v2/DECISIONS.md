@@ -112,9 +112,10 @@ replaced it)`, or `measured`. Nothing else.
 | 2026-10-28 | Four small fixes: the panel drops the published number, a cancelled update leaves the terminal wrapping, a backslash escape publishes as the character, and Tab completion follows the installed gdoc | holds | DECISIONS.md |
 | 2026-10-28 | The logo at its old size: the mark is drawn 3.9 cm wide where the firm's template put it, and the three other logo items stay as they are | superseded 2026-10-29 (the place only: the mark ends in line with the text; the width, 3.9 cm, and the three items that stay hold) | DECISIONS.md |
 | 2026-10-28 | The skills say when they are older than gdoc, and the plugin route turns on its updates | holds | DECISIONS.md |
-| 2026-10-28 | The fifth look: a card on a rested pointer, the row opens the document and the Google Docs icon goes, a wider panel, and the firm's mark at the foot as its own later milestone | holds | DECISIONS.md |
+| 2026-10-28 | The fifth look: a card on a rested pointer, the row opens the document and the Google Docs icon goes, a wider panel, and the firm's mark at the foot as its own later milestone | superseded 2026-10-29 (the mark's place only: it goes beside the DOCUMENTS label, not at the foot; the card, the row press, the width and the blank column hold) | DECISIONS.md |
 | 2026-10-29 | The stuck card loses its open icon: a click on the card already opens the document, so the icon was a second control for one action | holds | DECISIONS.md |
 | 2026-10-29 | The logo inside the column: the mark ends in line with the text, and the label sits level with it | holds | DECISIONS.md |
+| 2026-10-29 | The firm's mark beside DOCUMENTS: 14 pt tall on the label's right edge in the label's own ink, read from the one file `help --json` names, and nothing drawn where there is none | holds | DECISIONS.md |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -1705,3 +1706,67 @@ their tests and the drift gate. No read, grant, URL, argv list or presence
 field changes.
 
 The plan is `docs/plans/2026-10-29-gdoc-v2-m32e-the-logo-inside-the-column.md`.
+
+## 2026-10-29. The firm's mark beside DOCUMENTS: 14 pt tall on the label's right edge in the label's own ink, read from the one file `help --json` names, and nothing drawn where there is none.
+
+The fifth look's entry of 2026-10-28 put the firm's mark at the foot of the
+panel, as its own later milestone. On 2026-10-29 the lead showed Nail where
+that was, on the v2.25.0 render with a grey mark under Quit, and he wrote,
+with a screenshot whose red arrow pointed at the empty right side of the
+DOCUMENTS label: "хочу в месте куда указывает стрелка", then "speak with
+desingber about precise position". The visual designer gave the position,
+the lead drew it on the same render in both appearances, and Nail answered:
+"Да, логотип стоит правильно. Запиши это как решение вместо «внизу панели»
+и готовь веху." Serves principle 3, the firm's documents under the firm's
+mark, and principle 4, because the only file read is one gdoc already keeps
+and nothing is built for a machine that has none.
+
+**Where, exactly.** In the DOCUMENTS label's own 28 pt row, as the trailing
+item after the label: 14 pt tall, 38.5 pt wide at the file's 2.75 to 1, its
+right edge on the content edge 20 pt from the panel's right side, the edge
+every icon, value and time ends on, and centred on the row, 7 pt from its
+top, which puts its baseline within a device pixel of the label's. 14 and
+not 16, because at 14 the wordmark's lowercase body is the height of the
+label's capitals and the two words read at one size. Its ink is the label's
+own, `SectionLabel.ink`, tertiary on dark and secondary on light, drawn as a
+template image in that one ink: the palette has no fainter text grey, and a
+grey of its own would be a new literal. It is drawn exactly where the
+DOCUMENTS label is drawn, over the "no documents" line as well, in both
+appearances, and with no rule of its own: a machine that has the file has
+built a document, so a first run has nothing to draw. It is not a press and
+has no tooltip.
+
+**What the app reads for it.** One more file: the path bare `help --json`
+names under `logo_path`, and no other form of the help carries it, which
+is where `internal/asset` caches the house logo
+beside the token, `assets/<id>`, after the first build or publish that
+reached Drive. The binary names the path from the house file it carries and
+never fetches, stats or reads the logo for the help. The app opens that one
+path read-only without following a link, accepts a regular file of at most
+a megabyte whose bytes open as PNG, and draws nothing otherwise: no placeholder, no gap, and nothing
+moves. This is the one route the trust guardian said on 2026-10-28 it would
+sign, and the two it vetoed stay vetoed: the app reading the cache on its
+own, with its own copy of the Drive id, and the binary handing the bytes
+over. The invariant "reads three things" becomes four, with its test.
+
+**What this supersedes.** One clause of the fifth look's entry, the foot.
+The card, the row's press, the 360 pt width and the blank column before each
+title all hold. The 2026-10-28 amendment in the design principles said the
+space beside the label "is not a space for a picture"; the designer's
+objection to this place stands on the record, principle 5 among them, a mark
+over the list says these are the firm's documents, which the fifth look
+called half true. The place is Nail's, and he chose it twice.
+
+**What stays out.** A picture in the public repository: the renders for
+review draw a stand-in shape made by the test, never the firm's file. A
+"no logo yet" line or a file watcher. Any read of Drive by the app.
+
+Trust guardian, 2026-10-29: signed, after one veto on the plan's test that
+the plan took. The app reads one more file, the path bare `help --json`
+names, through `MarkFile` alone, a regular PNG of at most a megabyte whose
+bytes reach one image and nothing else, and
+`SourceRulesTests.testAByteIsReadOnlyInTheFiveReaders` refuses every read
+spelling outside five named files; no argv list, signal, URL, grant or
+presence field is added, and `help` reads nothing for the path.
+
+The plan is `docs/plans/2026-10-29-gdoc-v2-m32f-the-firms-mark-beside-documents.md`.
