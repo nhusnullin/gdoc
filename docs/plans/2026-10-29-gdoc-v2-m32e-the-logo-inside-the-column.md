@@ -261,8 +261,8 @@ that stop them moving again unnoticed.
 
 ### Task 2: Verify acceptance criteria
 
-- [ ] `make test` and `make vet` green, live variables unset
-- [ ] `make build`, then offline: `bin/gdoc build --md
+- [x] `make test` and `make vet` green, live variables unset
+- [x] `make build`, then offline: `bin/gdoc build --md
       release/example/first-note.md --out <tmp>/a.docx --house
       go/internal/house/testdata/house-base64.yaml`; then
       `unzip -p <tmp>/a.docx word/header2.xml` holds `cx="1419225"`,
@@ -271,9 +271,9 @@ that stop them moving again unnoticed.
       `unzip -p <tmp>/a.docx word/header2.xml | grep -c "5353050\|65405"`
       is 0. The logo's PNG bytes travel in the full stream, so a grep over
       the whole package needs `grep -a` or a C locale; the one part is text
-- [ ] the arithmetic in the commit message: 381.43 + 111.75 = 493.18, the
+- [x] the arithmetic in the commit message: 381.43 + 111.75 = 493.18, the
       column; 51.05 + 493.18 = 544.23 under 595.28; 6 + (-11.15) = -5.15
-- [ ] `grep -rn "421.5\|5353050\|65405" go/ docs/guide/` names only the
+- [x] `grep -rn "421.5\|5353050\|65405" go/ docs/guide/` names only the
       files the Context lists as staying: the Known reasons and comments
       that quote the old numbers as history, the synthetic fixtures, and
       the `emu(-5.15)` unit test in `render/xml_test.go`. Any other hit is a
