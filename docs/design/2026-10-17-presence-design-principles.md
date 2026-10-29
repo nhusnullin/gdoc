@@ -767,3 +767,33 @@ the lead's how and cost one line. The decision is in `docs/v2/DECISIONS.md`,
 
 The "five live icons" line under the first reviewer's pass stays as the
 record of its day.
+
+## Amendments, 2026-10-29, the firm's mark beside DOCUMENTS
+
+The visual designer gave the mark's place and its numbers, the lead drew it
+on the v2.25.0 render, and Nail answered: "Да, логотип стоит правильно.
+Запиши это как решение вместо «внизу панели» и готовь веху." The decision is
+in `docs/v2/DECISIONS.md`, 2026-10-29, "The firm's mark beside DOCUMENTS".
+
+- **The firm's mark sits at the right end of the DOCUMENTS label, 14 pt
+  tall.** Its right edge lands on the content edge every value in the panel
+  ends on, the 28 pt label centres it, so its top is at 7 pt, and its width
+  is the picture's own aspect and no number in the package. Only DOCUMENTS
+  is handed it. The fifth look's bullet two sections up, "The firm's mark is
+  decided for the foot of the panel", is superseded in its place by Nail's
+  word of 2026-10-29 and stays as the record of its day: the empty column
+  the fourth look keeps blank is still blank, because the label's line is
+  not a row and no title starts on it. The tests are
+  `RowTests.testTheDocumentsLabelDrawsTheMarkFourteenPointsTallOnTheContentEdge`,
+  `RowTests.testTheMarkTakesTheLabelsOwnInk` and
+  `RowTests.testNoMarkDrawsNothingAndMovesNothing`.
+- **The mark is one read of one file, and nothing where there is no file.**
+  Principle 5 is facts and not promises, and principle 4 of
+  `PRINCIPLES.md` is that nothing is built for a machine that has no
+  picture: no placeholder, no fetch, no watcher. `gdoc help --json` names
+  where `internal/asset` cached the house logo, the app opens that one path
+  with `O_NOFOLLOW` and takes it only as a regular PNG of at most a
+  megabyte, and a missing file, a link, a swap or bytes that are not a
+  picture all draw nothing and write no line. The app holds no Drive id and
+  asks no host. The tests are `MarkFileTests` and
+  `SourceRulesTests.testAByteIsReadOnlyInTheFiveReaders`.

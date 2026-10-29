@@ -168,6 +168,11 @@ no count after it: the fortnight ordered by how much each document was used,
 which the second morning added, is gone, and so is the day as an order of
 its own. There is no Show more, because there is nothing behind it.
 
+The firm's mark sits small and grey at the right end of the Documents
+line, once gdoc has built or published a document on this machine and the
+house logo is cached there. The line is plain until then, because the mark
+is drawn from a file that exists and from nothing else.
+
 A read alone makes no row: reading is not something that happened to the
 document. Each row says what the last action was, when, and where the note
 paired with it is, or "no note". A document leaves the list fourteen days

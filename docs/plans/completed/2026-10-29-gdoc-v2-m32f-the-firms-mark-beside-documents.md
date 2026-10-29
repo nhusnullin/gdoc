@@ -486,7 +486,7 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] `CLAUDE.md` is at its 300-line ceiling (`TestCLAUDEmdIsUnderTheCeiling`
+- [x] `CLAUDE.md` is at its 300-line ceiling (`TestCLAUDEmdIsUnderTheCeiling`
       fails at 301), so the invariant bullet at lines 182 to 192 is
       rewritten in the same number of lines or fewer: "reads three things"
       becomes "reads four things", the list gains "the one logo file bare
@@ -494,14 +494,14 @@ Tick each box as it is done. A task ends with its commit.
       list gains `testAByteIsReadOnlyInTheFiveReaders`. Tighten the
       bullet's other words to pay for it. `cd go && go test ./boundary/
       -run 'TestCLAUDEmd|TestTheTaskMap'` prints `ok`.
-- [ ] In the guide's "### Documents" section, one sentence after the
+- [x] In the guide's "### Documents" section, one sentence after the
       section's first paragraph: the firm's mark sits small and grey at the
       right end of the Documents line once gdoc has built or published a
       document on this machine, and the line is plain until then. Every
       string `TestThePresencePageWalksTheThirdLooksPanel` requires stays;
       `cd go && go test ./boundary/ -run TestThePresencePageWalksTheThirdLooksPanel`
       prints `ok`.
-- [ ] In the principles file, a new heading "## Amendments, 2026-10-29,
+- [x] In the principles file, a new heading "## Amendments, 2026-10-29,
       the firm's mark beside DOCUMENTS" with two bullets: the mark's place
       and numbers, naming
       `RowTests.testTheDocumentsLabelDrawsTheMarkFourteenPointsTallOnTheContentEdge`
@@ -511,10 +511,10 @@ Tick each box as it is done. A task ends with its commit.
       the record of its day; and
       the one read, naming `MarkFileTests` and
       `SourceRulesTests.testAByteIsReadOnlyInTheFiveReaders`.
-- [ ] `git rm docs/backlog/the-panel-does-not-show-the-logo.md`: the item
+- [x] `git rm docs/backlog/the-panel-does-not-show-the-logo.md`: the item
       is built.
-- [ ] Move this plan to `docs/plans/completed/`.
-- [ ] Commit: `docs: the firm's mark beside DOCUMENTS`.
+- [x] Move this plan to `docs/plans/completed/`.
+- [x] Commit: `docs: the firm's mark beside DOCUMENTS`.
 
 ## Acceptance
 
