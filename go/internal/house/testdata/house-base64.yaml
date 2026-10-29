@@ -181,7 +181,8 @@ header:
     paragraphs:
     - align: left
       line_spacing: 2.0
-      space_before_pt: 0
+      # the label sits level with the mark's middle. Nail, 2026-10-29
+      space_before_pt: 6
       space_after_pt: 0
       runs:
       - text: 'For internal use only '
@@ -1152,9 +1153,11 @@ logo:
   anchor:
     in: first_page_header
     relative_h: column
-    offset_x_pt: 421.5
+    # the mark ends in line with the text, 493.18 less 111.75. Nail, 2026-10-29
+    offset_x_pt: 381.43
     relative_v: paragraph
-    offset_y_pt: -5.15
+    # six points up to meet the six the label's paragraph gained. Nail, 2026-10-29
+    offset_y_pt: -11.15
     wrap: square
     wrap_dist_pt: 9
   base64: |-

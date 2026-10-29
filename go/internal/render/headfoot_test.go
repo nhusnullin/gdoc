@@ -37,21 +37,44 @@ func TestTheFirstPageHeaderCarriesTheLogoWhereTheHouseAnchorsIt(t *testing.T) {
 	if got := h.SelectAttrValue("relativeFrom", ""); got != "column" {
 		t.Errorf("positionH relativeFrom = %q, want column", got)
 	}
-	if got := h.SelectElement("wp:posOffset").Text(); got != "5353050" {
-		t.Errorf("logo left offset = %q, want 5353050 EMU (421.5pt)", got)
+	if got := h.SelectElement("wp:posOffset").Text(); got != "4844161" {
+		t.Errorf("logo left offset = %q, want 4844161 EMU (381.43pt)", got)
 	}
 	v := anchor.SelectElement("wp:positionV")
 	if got := v.SelectAttrValue("relativeFrom", ""); got != "paragraph" {
 		t.Errorf("positionV relativeFrom = %q, want paragraph", got)
 	}
-	if got := v.SelectElement("wp:posOffset").Text(); got != "-65405" {
-		t.Errorf("logo top offset = %q, want -65405 EMU (-5.15pt)", got)
+	if got := v.SelectElement("wp:posOffset").Text(); got != "-141605" {
+		t.Errorf("logo top offset = %q, want -141605 EMU (-11.15pt)", got)
 	}
 	if anchor.SelectElement("wp:wrapSquare") == nil {
 		t.Error("the anchor does not wrap square, and the house style says it does")
 	}
 	if got := doc.FindElement("//a:blip").SelectAttrValue("r:embed", ""); got != "rId1" {
 		t.Errorf("the logo names relationship %q, want rId1", got)
+	}
+
+	// Nail's decision of 2026-10-29: the label sits level with the mark's
+	// middle. The mark is anchored from this paragraph, so the paragraph is
+	// the one that gained six points, in twentieths of a point here. The
+	// third paragraph of the header gained none.
+	paras := doc.FindElements("//w:p")
+	if len(paras) != 3 {
+		t.Fatalf("the first page header carries %d paragraphs, want 3", len(paras))
+	}
+	first := paras[0].FindElement("w:pPr/w:spacing")
+	if first == nil {
+		t.Fatal("the label's paragraph carries no w:spacing")
+	}
+	if got := first.SelectAttrValue("w:before", ""); got != "120" {
+		t.Errorf("the label's paragraph has w:before=%q, want 120 (6pt)", got)
+	}
+	third := paras[2].FindElement("w:pPr/w:spacing")
+	if third == nil {
+		t.Fatal("the header's third paragraph carries no w:spacing")
+	}
+	if got := third.SelectAttrValue("w:before", ""); got != "0" {
+		t.Errorf("the header's third paragraph has w:before=%q, want 0", got)
 	}
 }
 

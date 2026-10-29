@@ -208,55 +208,55 @@ that stop them moving again unnoticed.
 `go/internal/drift/compare_test.go`, `go/internal/drift/doc.go`,
 `go/internal/live/publish_test.go`
 
-- [ ] test first: `TestTheLogoStatesItsMimeWidthAndPlacement` wants
+- [x] test first: `TestTheLogoStatesItsMimeWidthAndPlacement` wants
       `width_pt` still 111.75, `offset_x_pt` 381.43 and `offset_y_pt` -11.15,
       the placeholder still 509 by 185
-- [ ] test: `TestTheMarkEndsInLineWithTheText` replaces
+- [x] test: `TestTheMarkEndsInLineWithTheText` replaces
       `TestTheMarkSitsInTheMarginAndOnThePaper`, over `house.Load()`. It reads
       `width_pt` and `offset_x_pt` from the config and states every other
       number as a literal: offset + width is 493.18 within 0.005, the
       column's right edge, and 51.05 + offset + width is 544.23 within 0.005,
       under A4's 595.2755905511811 (the mark is on the paper, with the body's
       margin to its right)
-- [ ] test: `TestTheLabelDropsSixPointsAndTheMarkStays`, over `house.Load()`:
+- [x] test: `TestTheLabelDropsSixPointsAndTheMarkStays`, over `house.Load()`:
       the first paragraph of `header.first` carries `space_before_pt` 6, the
       logo anchor's `offset_y_pt` is -11.15, and 6 + (-11.15) is -5.15 within
       0.005, the mark's offset from the header margin before this run
-- [ ] test: `TestTheFirstPageHeaderCarriesTheLogoWhereTheHouseAnchorsIt`
+- [x] test: `TestTheFirstPageHeaderCarriesTheLogoWhereTheHouseAnchorsIt`
       wants posOffset 4844161 on positionH and -141605 on positionV, with
       381.43pt and -11.15pt in the messages, cx 1419225 and cy 515828 as
       they are, and one new assertion: the header's first `w:p` carries
       `w:spacing` with `w:before="120"`, and its third carries `w:before="0"`
-- [ ] test: the pins in `knownOffline` as literals, `logo leftOffset (pt)`
+- [x] test: the pins in `knownOffline` as literals, `logo leftOffset (pt)`
       {`381.43`, `404.25`} and a new `logo topOffset (pt)` {`-11.15`, `-5.149`};
       the width and the height pairs stay
-- [ ] test: `acceptance()` in `live/publish_test.go` drops
+- [x] test: `acceptance()` in `live/publish_test.go` drops
       `held("logo topOffset (pt)")`, and the literal loop reads
       `logo leftOffset (pt)` 381.43 and gains `logo topOffset (pt)` -11.15,
       with the comment above it naming this decision beside the one of
       2026-10-28
-- [ ] run the house, render and drift tests red
-- [ ] `house.yaml`: `offset_x_pt: 381.43` with a one-line comment above it
+- [x] run the house, render and drift tests red
+- [x] `house.yaml`: `offset_x_pt: 381.43` with a one-line comment above it
       (the mark ends in line with the text, 493.18 less 111.75; Nail,
       2026-10-29), `offset_y_pt: -11.15` with a one-line comment (six points
       up to meet the six the label's paragraph gained; Nail, 2026-10-29), and
       `space_before_pt: 6` on the first paragraph of `header.first` with a
       one-line comment (the label sits level with the mark's middle; Nail,
       2026-10-29)
-- [ ] `testdata/house-base64.yaml`: the same lines, byte for byte
-- [ ] `testdata/header2.xml`: 5353050 to 4844161, -65405 to -141605, the
+- [x] `testdata/house-base64.yaml`: the same lines, byte for byte
+- [x] `testdata/header2.xml`: 5353050 to 4844161, -65405 to -141605, the
       first `w:before="0"` to `w:before="120"` and the second left alone, and
       the commit says the diff is those numbers
-- [ ] `compare.go`: the comment block above the logo names and the reasons
+- [x] `compare.go`: the comment block above the logo names and the reasons
       for `logo leftOffset (pt)` and the new `logo topOffset (pt)` say what
       the Context states; the width and the height reasons stay
-- [ ] `doc.go` lines 81 and 114 and the `compare_test.go` comment at 177 say
+- [x] `doc.go` lines 81 and 114 and the `compare_test.go` comment at 177 say
       thirty-one; the worker counts the "fifteen of" again, there and at
       `compare.go` line 334, and the commit says the count
-- [ ] `house.go`'s package comment names `TestTheMarkEndsInLineWithTheText`
+- [x] `house.go`'s package comment names `TestTheMarkEndsInLineWithTheText`
       and `TestTheLabelDropsSixPointsAndTheMarkStays` where it named
       `TestTheMarkSitsInTheMarginAndOnThePaper`
-- [ ] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test` and `make vet`
+- [x] `env -u GDOC_LIVE_TEST -u GDOC_LIVE_WRITE make test` and `make vet`
       green, one commit
 
 ### Task 2: Verify acceptance criteria
