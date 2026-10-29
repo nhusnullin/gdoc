@@ -319,7 +319,7 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] In `HealthPollerTests.swift`, `FakeGdoc` gains a settable logo path
+- [x] In `HealthPollerTests.swift`, `FakeGdoc` gains a settable logo path
       written into its help answer, and a new
       `testTheLogoIsReadOncePerHelpAnswerFromThePathItNames`: a help answer
       whose `logo_path` names a temp PNG leaves `applied(to:).logo` equal
@@ -327,26 +327,26 @@ Tick each box as it is done. A task ends with its commit.
       answer naming a path with no file leaves it nil; an `auth status`
       answer after a help answer keeps the logo; a later help answer, asked
       with `.changed`, that names no path clears it. Red.
-- [ ] `HealthReading` gains `public let logo: Data?`; `askedHelp` fills it
+- [x] `HealthReading` gains `public let logo: Data?`; `askedHelp` fills it
       with `MarkFile.read(at:)` when the help names a path, once per help
       answer and never between them: the help is asked on the poll
       schedule, and that is how often the file is read. Both `HealthReading`
       constructions in `askedAuth` carry `logo: reading.logo`.
       `applied(to:)` writes `reading.logo` into the facts' `logo` (not
       `facts.logo`: a reading that names nothing draws nothing). Green.
-- [ ] In `UpdateActionTests.swift`, `testTheLogoSurvivesTheUpdateActionsRebuild`:
+- [x] In `UpdateActionTests.swift`, `testTheLogoSurvivesTheUpdateActionsRebuild`:
       `UpdateAction.applied(to:)` over facts with `logo` set returns the
       same bytes. Red, then `UpdateAction.swift:162` passes
       `logo: facts.logo`. Green.
-- [ ] `Facts` gains `public let logo: Data?` with the init's default nil
+- [x] `Facts` gains `public let logo: Data?` with the init's default nil
       and a comment: the one picture the panel draws, from the one file
       the help names, nil where there is none. Place it after `mark`.
-- [ ] In `StateTests.swift`, `testTheModelCarriesTheLogoAndOnlyFromTheFacts`:
+- [x] In `StateTests.swift`, `testTheModelCarriesTheLogoAndOnlyFromTheFacts`:
       a model folded from facts with `logo` set carries the same bytes;
       from facts without, nil. Red, then `PanelModel` gains
       `public let logo: Data?` filled from the facts in the fold. Green.
-- [ ] `make app-lint` and `make app-test` green.
-- [ ] Commit: `feat: the logo's bytes reach the panel's facts`.
+- [x] `make app-lint` and `make app-test` green.
+- [x] Commit: `feat: the logo's bytes reach the panel's facts`.
 
 ### Task 4: the DOCUMENTS label draws the mark
 

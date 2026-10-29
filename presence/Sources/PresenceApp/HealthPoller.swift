@@ -87,19 +87,25 @@ public struct HealthReading: Sendable, Equatable {
   /// The line about the expected domain, where the preference is set and the
   /// account is at another one. It blocks nothing.
   public let domainHint: String?
+  /// The firm's mark as bytes, read once from the path the last help answer
+  /// named. Nothing where that answer named no path, or where the path held
+  /// no mark this app would draw.
+  public let logo: Data?
 
   public init(
     help: HelpFacts? = nil,
     auth: AuthFacts? = nil,
     authUnreadable: Bool = false,
     previousAccount: String? = nil,
-    domainHint: String? = nil
+    domainHint: String? = nil,
+    logo: Data? = nil
   ) {
     self.help = help
     self.auth = auth
     self.authUnreadable = authUnreadable
     self.previousAccount = previousAccount
     self.domainHint = domainHint
+    self.logo = logo
   }
 
   /// The one word the account row says, or nothing before the first answer.
@@ -167,7 +173,8 @@ public actor HealthPoller {
 
   /// The panel's facts with what the polls know written into them. Every
   /// other field is the one it was handed: this room knows the account, the
-  /// versions, the mark and where the binary is, and nothing else.
+  /// versions, the mark, the firm's own mark and where the binary is, and
+  /// nothing else.
   public func applied(to facts: Facts) -> Facts {
     Facts(
       account: reading.auth?.account ?? facts.account,
@@ -178,6 +185,9 @@ public actor HealthPoller {
         gdoc: reading.help?.installed ?? reading.auth?.version ?? facts.versions.gdoc,
         latestStable: reading.help?.latestStable ?? facts.versions.latestStable),
       mark: reading.help?.mark ?? facts.mark,
+      // The reading's own, never the facts it was handed: a help answer that
+      // names nothing draws nothing, and a mark that went is a mark gone.
+      logo: reading.logo,
       gdocPath: location.path,
       gdocPathTried: location.tried,
       home: facts.home,
@@ -199,13 +209,21 @@ public actor HealthPoller {
 
   // MARK: the two questions
 
+  /// The installation, and the firm's mark beside it.
+  ///
+  /// The mark is read here and nowhere else, once for each help answer: the
+  /// help is asked on the poll schedule, so that is how often the file is
+  /// read, and no view, fold or timer reads it again. A help answer that
+  /// names no path, or names one holding nothing this app draws, is a
+  /// reading with no mark in it.
   private func askedHelp() async {
     guard let outcome = try? await answer(.help), outcome.envelope.ok,
       let data = outcome.envelope.data, let help = try? HelpFacts.decode(data)
     else { return }
     reading = HealthReading(
       help: help, auth: reading.auth, authUnreadable: reading.authUnreadable,
-      previousAccount: reading.previousAccount, domainHint: reading.domainHint)
+      previousAccount: reading.previousAccount, domainHint: reading.domainHint,
+      logo: help.logoPath.flatMap(MarkFile.read(at:)))
   }
 
   /// What the token is, or that the file holding it could not be read.
@@ -221,7 +239,8 @@ public actor HealthPoller {
     else {
       reading = HealthReading(
         help: reading.help, auth: nil, authUnreadable: true,
-        previousAccount: reading.previousAccount, domainHint: reading.domainHint)
+        previousAccount: reading.previousAccount, domainHint: reading.domainHint,
+        logo: reading.logo)
       return
     }
     let changed = memory.change(to: auth.account)
@@ -229,7 +248,8 @@ public actor HealthPoller {
     reading = HealthReading(
       help: reading.help, auth: auth, authUnreadable: false,
       previousAccount: changed ?? reading.previousAccount,
-      domainHint: domain.sentence(for: auth.account))
+      domainHint: domain.sentence(for: auth.account),
+      logo: reading.logo)
   }
 
   /// The core's state as the panel's word. Two enums rather than one,

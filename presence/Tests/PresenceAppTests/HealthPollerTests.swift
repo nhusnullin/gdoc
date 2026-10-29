@@ -172,6 +172,73 @@ final class HealthPollerTests: XCTestCase {
     XCTAssertEqual(facts.versions.gdoc, "v2.14.0", "and help still answered")
   }
 
+  /// The firm's mark, read from the one file the help names.
+  ///
+  /// The read happens when the answer arrives and not when the panel is
+  /// folded, so the bytes outlive the file: a cache replaced between two
+  /// polls is drawn as it was read, and the panel reads nothing at all.
+  func testTheLogoIsReadOncePerHelpAnswerFromThePathItNames() async throws {
+    let directory = try temporaryDirectory()
+    let png = directory.appendingPathComponent("logo.png")
+    let bytes = Self.pngOf(200)
+    try bytes.write(to: png)
+
+    let fake = FakeGdoc()
+    await fake.answersLogo(at: png.path)
+    let poller = HealthPoller(location: Self.found, answer: fake.answer)
+    let open = Date(timeIntervalSince1970: 6_000_000)
+    await poller.poll(.panelOpened, live: false, now: open)
+    let read = await poller.applied(to: Facts.launching(appVersion: "2.14.0")).logo
+    XCTAssertEqual(read, bytes, "the bytes of the file the help named")
+
+    // The file goes. The bytes stay, because the fold reads nothing.
+    try FileManager.default.removeItem(at: png)
+    let afterTheFileWent = await poller.applied(to: Facts.launching(appVersion: "2.14.0")).logo
+    XCTAssertEqual(
+      afterTheFileWent, bytes, "the read was the answer's, once, and not the panel's")
+
+    // An `auth status` on its own says nothing about the mark.
+    await poller.poll(.timer, live: true, now: open.addingTimeInterval(700))
+    let afterAuth = await poller.applied(to: Facts.launching(appVersion: "2.14.0")).logo
+    XCTAssertEqual(afterAuth, bytes, "an auth answer is not about the mark")
+
+    // A help answer that names no path at all clears it: a machine that has
+    // no picture draws none.
+    await fake.answersLogo(at: nil)
+    await poller.poll(.changed, live: false, now: open.addingTimeInterval(800))
+    let afterNoPath = await poller.applied(to: Facts.launching(appVersion: "2.14.0")).logo
+    XCTAssertNil(afterNoPath, "the help named nothing, so there is nothing to draw")
+
+    // And a path with no file behind it is the same nothing.
+    await fake.answersLogo(at: directory.appendingPathComponent("gone.png").path)
+    await poller.poll(.changed, live: false, now: open.addingTimeInterval(900))
+    let afterAMissingFile = await poller.applied(to: Facts.launching(appVersion: "2.14.0")).logo
+    XCTAssertNil(afterAMissingFile, "a path with no file behind it draws nothing")
+
+    let calls = await fake.calls
+    XCTAssertEqual(
+      calls, [.help, .authStatus, .authStatus, .help, .authStatus, .help, .authStatus],
+      "four help answers in all, and the logo moved with them")
+  }
+
+  // MARK: a file, for the one read the poller makes
+
+  /// A file of exactly `count` bytes that opens with the eight PNG bytes,
+  /// which is what `MarkFile` holds a mark to.
+  private static func pngOf(_ count: Int) -> Data {
+    var bytes = Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
+    bytes.append(Data(repeating: 0x7A, count: count - bytes.count))
+    return bytes
+  }
+
+  private func temporaryDirectory() throws -> URL {
+    let directory = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+      .appendingPathComponent("pollerlogo-\(UUID().uuidString)", isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+    return directory
+  }
+
   // MARK: the two places, as the runner resolves them
 
   private static let found = Location(
@@ -188,6 +255,7 @@ final class HealthPollerTests: XCTestCase {
 private actor FakeGdoc {
   private(set) var calls: [Call] = []
   private var account: String
+  private var logoPath: String?
   private let broken: Set<Call>
 
   init(broken: Set<Call> = [], account: String = "nail@example.com") {
@@ -196,6 +264,10 @@ private actor FakeGdoc {
   }
 
   func answers(as email: String) { account = email }
+
+  /// Where this gdoc says the house logo is cached, or nothing: a machine
+  /// that has never built a document names no path.
+  func answersLogo(at path: String?) { logoPath = path }
 
   /// The closure the poller is built with. It is `nonisolated` so the poller
   /// holds a plain function, as it will hold the runner's own.
@@ -213,9 +285,11 @@ private actor FakeGdoc {
     }
     switch call {
     case .help:
+      let logo = logoPath.map { #""logo_path":"\#($0)","# } ?? ""
       return outcome(
         call,
-        #"{"settings":{"mark":"⁘"},"update":{"installed":"v2.14.0","latest_stable":"v2.14.1"}}"#)
+        "{" + logo + #""settings":{"mark":"⁘"},"#
+          + #""update":{"installed":"v2.14.0","latest_stable":"v2.14.1"}}"#)
     case .authStatus:
       return outcome(
         call,
