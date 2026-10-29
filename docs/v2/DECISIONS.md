@@ -113,6 +113,7 @@ replaced it)`, or `measured`. Nothing else.
 | 2026-10-28 | The logo at its old size: the mark is drawn 3.9 cm wide where the firm's template put it, and the three other logo items stay as they are | holds | DECISIONS.md |
 | 2026-10-28 | The skills say when they are older than gdoc, and the plugin route turns on its updates | holds | DECISIONS.md |
 | 2026-10-28 | The fifth look: a card on a rested pointer, the row opens the document and the Google Docs icon goes, a wider panel, and the firm's mark at the foot as its own later milestone | holds | DECISIONS.md |
+| 2026-10-29 | The stuck card loses its open icon: a click on the card already opens the document, so the icon was a second control for one action | holds | DECISIONS.md |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -1616,3 +1617,39 @@ notes that the card shows a full home path without a click, which matters
 on a shared screen, and that the half-second rest is the answer to that.
 
 The plan is `docs/plans/completed/2026-10-28-gdoc-v2-m32c-the-fifth-look.md`.
+
+## 2026-10-29. The stuck card loses its open icon: a click on the card already opens the document, so the icon was a second control for one action.
+
+After M32c shipped as v2.25.0, the design reviewer read the renders and
+named one should-fix item: the stuck card in NOW, "Export stopped" in scene
+e3, still carried an icon that opens the document, the first of five, while
+the card itself has been the press that opens the document since the fourth
+look. The lead put it to Nail in what he sees, and he answered: "Yes, drop
+the open icon from the stuck-run card in the next release; the row already
+opens the document." Serves principle 4, one control per action, the same
+rule that took the Google Docs icon off the DOCUMENTS rows the day before.
+
+**What goes.** The open icon on a stuck card about a document. The card
+keeps the note, the chat, the link and the cross, in that order, and a
+click anywhere on the card opens the document, as it did. A stuck card
+about a write that created no document keeps the chat and the cross, as it
+did. The machine's own card, the sign-in that stopped working, keeps Sign
+in and opens nothing, as it did. Nothing else in the panel draws the Google
+Docs glyph after this, so the glyph leaves the icon set rather than staying
+as a shape nothing uses.
+
+**What does not change.** The press itself: a NOW row's and a stuck card's
+click still reach the opener down the one path they took, and that press
+still teaches nothing about the DOCUMENTS card's hint, which only a
+DOCUMENTS row's own click puts away. The dismiss cross stays the last icon.
+
+**One still beside it.** The plan also makes a render that forces the card
+on a row draw that row shaded, because a card is only ever up on a hovered
+row and a still says what the app shows. Nothing in the app sets a forced
+card; it is the lead's how, written here so the plan and the entry agree.
+
+Trust guardian: not called. No read, argv list, signal, URL or presence
+field changes, and no Go file is touched; the change removes a control and
+adds nothing the app reads.
+
+The plan is `docs/plans/2026-10-29-gdoc-v2-m32d-the-stuck-cards-open-icon.md`.
