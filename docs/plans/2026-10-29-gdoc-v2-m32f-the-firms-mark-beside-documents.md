@@ -454,19 +454,25 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] Every test named in the Acceptance table exists under
+- [x] Every test named in the Acceptance table exists under
       `presence/Tests` or `go/cmd/gdoc` with that name.
-- [ ] `git diff --name-only main...HEAD` lists only this plan,
+- [x] `git diff --name-only main...HEAD` lists only this plan,
       `go/cmd/gdoc/help.go`, `go/cmd/gdoc/helpjson_test.go`,
       `go/cmd/gdoc/doc.go`, `presence/Sources` and `presence/Tests`.
-      Nothing under `go/internal/`, and not `CLAUDE.md` yet.
-- [ ] `grep -rn "1J3uh6poVAneP_V_Pc5FuNI4-Gahlab0s" presence/` prints
+      Nothing under `go/internal/`, and not `CLAUDE.md` yet. Plus
+      `go/cmd/gdoc/presenceflag_test.go`, the one pin Task 1 recorded as
+      having to move for `logo_path`.
+- [x] `grep -rn "1J3uh6poVAneP_V_Pc5FuNI4-Gahlab0s" presence/` prints
       nothing: the app holds no copy of the Drive id.
-- [ ] `grep -rln "logo_path" presence/Sources` prints `HealthFacts.swift`
+- [x] `grep -rln "logo_path" presence/Sources` prints `HealthFacts.swift`
       and no other file.
-- [ ] `cd go && go test -race ./cmd/gdoc/ ./boundary/`, `make vet`,
+- [x] `cd go && go test -race ./cmd/gdoc/ ./boundary/`, `make vet`,
       `make app-lint`, `make app-test`, `make app` green.
-- [ ] No commit unless something had to change, and then it says what.
+- [x] Nothing had to change: 17 of 17 named tests found with their
+      names, `MarkFileTests` present with its three cases, both greps as
+      the plan requires, and the Go suite, `make vet`, `make app-lint`,
+      `make app-test` (389 tests, 0 failures) and `make app` all green on
+      a clean tree.
 
 ### Task 7: [Final] Update documentation
 
