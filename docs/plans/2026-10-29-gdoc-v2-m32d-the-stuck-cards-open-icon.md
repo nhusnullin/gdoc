@@ -224,7 +224,7 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] Write `RowTests.testAForcedCardRowDrawsTheHoverFill`, with the
+- [x] Write `RowTests.testAForcedCardRowDrawsTheHoverFill`, with the
       `pixel(_:scheme:side:x:y:)` helper from `Shots.swift`: a document row
       from `SheetPieces.documentRows()[0]` built with `forcedCard: true`
       and `hovering: false`, rendered at `side: Grid.panelWidth` and read
@@ -234,10 +234,10 @@ Tick each box as it is done. A task ends with its commit.
       row with neither reads alpha 0 there. Beside the pixels,
       `RowView(..., forcedCard: true).isFilled` is true through
       `@testable`. Both schemes. It fails first on the forced row.
-- [ ] `isFilled` becomes `hovering || pointerInside || forcedCard`, with
+- [x] `isFilled` becomes `hovering || pointerInside || forcedCard`, with
       the comment saying why: a card is only ever up on a hovered row, so a
       still that forces the card states the hover with it.
-- [ ] The e1 caption in `Scenes.swift`, about line 366: the sentence that
+- [x] The e1 caption in `Scenes.swift`, about line 366: the sentence that
       opens "The plate over the second row is the card, which a pointer
       resting half a second on a document's name brings up and which goes
       when it leaves, is held down or is clicked." becomes "The plate under
@@ -246,8 +246,8 @@ Tick each box as it is done. A task ends with its commit.
       when it leaves, is held down or is clicked. The second row is shaded
       because the card is only ever up on a hovered row." The sentences
       after it stay.
-- [ ] `make app-lint`, `make app-test` green.
-- [ ] Commit: `fix: a still of a forced card draws its row hovered`.
+- [x] `make app-lint`, `make app-test` green.
+- [x] Commit: `fix: a still of a forced card draws its row hovered`.
 
 ### Task 3: the renders, once
 

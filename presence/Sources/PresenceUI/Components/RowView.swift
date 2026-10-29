@@ -305,7 +305,11 @@ public struct RowView<Leading: View, Trailing: View>: View {
 
   /// `.row.hov{background:var(--s2)}`. The caller can state it, so a still
   /// of a hovered row renders, and the pointer states it in the app.
-  var isFilled: Bool { hovering || pointerInside }
+  ///
+  /// A forced card fills the row under it, because a card is only ever up
+  /// on a hovered row: a still that forces the card states the hover with
+  /// it, and a reader can tell which row the plate belongs to.
+  var isFilled: Bool { hovering || pointerInside || forcedCard }
 }
 
 extension RowView where Leading == StatusGlyph, Trailing == EmptyView {

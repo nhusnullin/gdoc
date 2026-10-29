@@ -758,4 +758,70 @@ final class RowTests: XCTestCase {
       }
     }
   }
+
+  /// `.row.hov{background:var(--s2)}` on a row whose card a still forces up.
+  ///
+  /// A card is only ever up on a hovered row, so a still that forces the
+  /// card and leaves the row plain draws a state the app never reaches, and
+  /// a reader cannot tell which of the rows under the plate it belongs to.
+  /// The fill is read off the render rather than off `isFilled`, because a
+  /// flag the background ignores passes any test that reads the flag.
+  func testAForcedCardRowDrawsTheHoverFill() throws {
+    let drawn = try SheetPieces.documentRows()[0]
+    func row(forcedCard: Bool, hovering: Bool) -> some View {
+      RowView(
+        .doc, glyph: drawn.glyph, tone: drawn.tone, title: drawn.title,
+        forcedCard: forcedCard, sub: drawn.sub, hovering: hovering,
+        trailing: { ActionButton(.link, tip: Tips.copyLink) })
+    }
+
+    // 6 pt in from the left edge, past the 6 pt corner and inside the row's
+    // own 12 pt inset, halfway down the square the row is centred in: a
+    // point the fill reaches and nothing else draws on.
+    let side = Grid.panelWidth
+    let x: CGFloat = 6
+    let y = side / 2
+
+    // The hover colour as the stylesheet writes it, not as the palette
+    // reads it back. The pixel is compared with the same swatch drawn
+    // through the same renderer, because a render of a colour is not the
+    // colour's own numbers: the comparison is of two drawings and not of a
+    // drawing and a constant.
+    for (scheme, hex) in [(ColorScheme.dark, 0x2C_2C_2E), (.light, 0xEC_EC_EF)] {
+      let want = Swatch(UInt32(hex))
+      XCTAssertEqual(want, Palette.of(scheme).hover, "the hover colour in \(scheme)")
+
+      let fill = try pixel(
+        Rectangle().fill(want.color), scheme: scheme, side: side, x: x, y: y)
+      let forced = try pixel(
+        row(forcedCard: true, hovering: false), scheme: scheme, side: side, x: x, y: y)
+      let hovered = try pixel(
+        row(forcedCard: false, hovering: true), scheme: scheme, side: side, x: x, y: y)
+      let plain = try pixel(
+        row(forcedCard: false, hovering: false), scheme: scheme, side: side, x: x, y: y)
+
+      for (name, drawnColour) in [("forced", forced), ("hovered", hovered)] {
+        XCTAssertEqual(
+          drawnColour.redComponent, fill.redComponent, accuracy: 0.004,
+          "the \(name) row is not the hover colour in \(scheme)")
+        XCTAssertEqual(drawnColour.greenComponent, fill.greenComponent, accuracy: 0.004)
+        XCTAssertEqual(drawnColour.blueComponent, fill.blueComponent, accuracy: 0.004)
+        XCTAssertEqual(drawnColour.alphaComponent, 1, accuracy: 0.004)
+      }
+
+      XCTAssertEqual(
+        plain.alphaComponent, 0, accuracy: 0.004,
+        "a row with neither draws nothing there in \(scheme)")
+    }
+
+    // And the flag under the fill, which the panel's own rows read.
+    XCTAssertTrue(
+      RowView(
+        .doc, title: drawn.title, forcedCard: true,
+        trailing: { EmptyView() }
+      ).isFilled, "a forced card fills its row")
+    XCTAssertFalse(
+      RowView(.doc, title: drawn.title, trailing: { EmptyView() }).isFilled,
+      "and a row with no card and no pointer is plain")
+  }
 }
