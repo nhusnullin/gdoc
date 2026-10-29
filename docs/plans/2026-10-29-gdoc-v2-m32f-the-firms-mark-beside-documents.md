@@ -201,7 +201,7 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] In `helpjson_test.go`, a new `TestHelpNamesWhereTheLogoIsCached`:
+- [x] In `helpjson_test.go`, a new `TestHelpNamesWhereTheLogoIsCached`:
       `t.Setenv("GDOC_CONFIG_DIR", t.TempDir())`, run
       `help --json`, read `data.logo_path` and require it equal to
       `config.AssetPath("1J3uh6poVAneP_V_Pc5FuNI4-Gahlab0s")`, the house
@@ -212,7 +212,7 @@ Tick each box as it is done. A task ends with its commit.
       pipe, and require `logo_path` absent from each: the field belongs to
       the one argv the app runs, `["help", "--json"]`
       (`Runner.swift:38`), and to nothing a skill reads. Run it: red.
-- [ ] In `help.go`, `helpReport` gains `LogoPath string
+- [x] In `help.go`, `helpReport` gains `LogoPath string
       \`json:"logo_path,omitempty"\`` with a comment in the file's own
       voice: where `internal/asset` keeps the house logo, named so the menu
       bar app can draw it from that one file; carried by bare `help --json`
@@ -225,16 +225,23 @@ Tick each box as it is done. A task ends with its commit.
       help is an answer about the tool and a broken house file is not its
       question. The full form's return at about line 154 sets it when
       `json && len(words) == 0`, and nowhere else.
-- [ ] `TestHelpBriefIsAFewHundredBytes`, `TestHelpNeverReadsTheToken` and
+- [x] `TestHelpBriefIsAFewHundredBytes`, `TestHelpNeverReadsTheToken` and
       `TestHelpOnAPipeIsTodaysTextByteForByte` green, untouched, and no
       file under `testdata/pipe/` changes: the goldens run without
-      `--json`. The help screen prints nothing new.
-- [ ] `go/cmd/gdoc/doc.go`: one rule in the help's section, that the full
+      `--json`. The help screen prints nothing new. One pin the Context
+      did not name had to move: `presenceflag_test.go` holds the full
+      `help --json` object by length and sha256, and `logo_path` is a path
+      on this machine, which no sha can hold. It is masked to a frozen
+      literal before the comparison, the way `pipe_test.go` already masks
+      `checked_at`, a clock reading, and the pins are re-taken under the
+      reason the file's own comment states. Every other byte stays pinned
+      and the path itself is pinned by `TestHelpNamesWhereTheLogoIsCached`.
+- [x] `go/cmd/gdoc/doc.go`: one rule in the help's section, that the full
       help names the logo's cache path and reads nothing for it, naming
       `TestHelpNamesWhereTheLogoIsCached`.
-- [ ] `cd go && go test -race ./cmd/gdoc/ ./boundary/` and `make vet`
+- [x] `cd go && go test -race ./cmd/gdoc/ ./boundary/` and `make vet`
       green.
-- [ ] Commit: `feat: the help names where the logo is cached`.
+- [x] Commit: `feat: the help names where the logo is cached`.
 
 ### Task 2: the one read, held to one file and one shape
 

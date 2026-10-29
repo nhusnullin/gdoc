@@ -306,6 +306,14 @@
 // of nothing else, so gdoc --help --brief is still an unknown command:
 // TestHelpBriefIsAFlagOfHelpAndOfNothingElse.
 //
+// Bare `help --json` names one more field, logo_path: where internal/asset
+// keeps the house logo on this machine. It is there for the menu bar app,
+// whose one help argv that is, so the app draws the firm's mark without
+// holding its own copy of a Drive id. The help names the path and reads
+// nothing for it, and no other form of the question carries it, so no skill's
+// context and no frozen screen holds a home path:
+// TestHelpNamesWhereTheLogoIsCached.
+//
 // The hint is the last line of a screen that dropped its object, dim, and it
 // says to add --json. It is written by run, never where the object was printed,
 // and never on bare gdoc, which failed: that person was reaching for a command

@@ -13,7 +13,9 @@ import (
 	"io"
 	"strings"
 
+	"gdoc/internal/config"
 	"gdoc/internal/emit"
+	"gdoc/internal/house"
 	"gdoc/internal/settings"
 )
 
@@ -34,6 +36,16 @@ type helpReport struct {
 	// absent for a build from a checkout, which names no release and so has
 	// nothing to compare. See notice.go for when it is fetched.
 	Update *updateFacts `json:"update,omitempty"`
+	// LogoPath is where internal/asset keeps the house logo on this machine,
+	// named so the menu bar app can draw the firm's mark from that one file
+	// and hold no copy of a Drive id. Bare `help --json` carries it and
+	// nothing else does: that is the app's own argv, and under --brief, under
+	// any command word and without the flag it is absent, so no skill's
+	// context and no frozen screen carries a home path. The help names the
+	// path and reads nothing: it never fetches, stats or opens the file, and
+	// a machine that has built no document has no file there to draw.
+	// TestHelpNamesWhereTheLogoIsCached.
+	LogoPath string `json:"logo_path,omitempty"`
 }
 
 // helpSettings is the settings in effect as JSON. MarkFrom is one of the three
@@ -149,16 +161,45 @@ func cmdHelp(ctx context.Context, words []string, json, brief bool, errOut io.Wr
 	}
 	facts, line, warns := notice(ctx)
 	writeHelp(errOut, matched, len(words) == 0, line, warns, json)
+	report := helpReport{
+		Commands: helpEntries(matched),
+		Settings: settingsAsked(set),
+		Update:   facts,
+	}
+	// The one argv the menu bar app runs, and the one answer that names the
+	// logo's cache path: Runner.swift asks for ["help", "--json"].
+	if json && len(words) == 0 {
+		report.LogoPath = logoCached()
+	}
 	return emit.Result{
-		OK: true,
-		Data: helpReport{
-			Commands: helpEntries(matched),
-			Settings: settingsAsked(set),
-			Update:   facts,
-		},
+		OK:       true,
+		Data:     report,
 		Warnings: warns,
 		Screen:   !json,
 	}
+}
+
+// logoCached is where the bytes of the house logo sit once something has
+// fetched them: assets/<id> in the config dir, as internal/asset writes it.
+// Nothing here reaches the file or the network. It is the empty string on any
+// error, the house carrying its logo as bytes rather than as a Drive file
+// included, because the help is an answer about the tool and a house file it
+// cannot read is not the question somebody asked it.
+// TestHelpNamesWhereTheLogoIsCached.
+func logoCached() string {
+	cfg, err := house.Load()
+	if err != nil {
+		return ""
+	}
+	id := cfg.LogoDrive()
+	if id == "" {
+		return ""
+	}
+	path, err := config.AssetPath(id)
+	if err != nil {
+		return ""
+	}
+	return path
 }
 
 // settingsAsked is the settings in effect as the object carries them, built in
