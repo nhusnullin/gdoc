@@ -314,3 +314,28 @@ Nail sent two messages for the run: the yes on the icon, and the GO, which
 came with the next milestone's launch in the same line. The lead's own
 context at the end of the day was not read.
 
+
+## 2026-10-29: M32e on Claude
+
+| Run | Task iterations | Tasks, total | Per task iteration | Biggest iteration | Review rounds | Review, total | Per review round | Whole worktree | Sessions |
+|---|---|---|---|---|---|---|---|---|---|
+| M32e, the logo inside the column (Claude) | 3 | 4.6M | 1.5M | 3.1M | 1 | 0.1M | 0.1M | 4.7M | 4 |
+
+- M32e's tasks pass at 1.5M against the bar of 4.9M. Three tasks ran in three
+  iterations in seven minutes, 22:22 to 22:29; the biggest, 3.1M, was Task 1,
+  which moved the two numbers, rewrote the house tests as literals and taught
+  the drift gate the new offsets across ten files. The plan named every
+  literal, including the master's -5.149, after one review pass.
+- Its review passes at 0.1M against the bar of 6.6M: one round, 1m34s, no
+  issue. 4.4M of the run's 4.7M were cache reads.
+
+The plan reviewer ran once before the run and found one blocking thing, a
+pin of the master's top offset written as -5.15 where the file reads -5.149,
+and four should-fix items; the lead folded all five and the run needed no
+relaunch. No design reviewer: the milestone changes two numbers in the house
+file and the cover is checked on the published page. The release had two
+stops the recipe does not yet cover: the pull request went into conflict when
+M32d merged to main with this milestone's decision entry rebased under it, so
+the lead merged main into the branch by hand before the go; and the GO step
+stopped at the fast-forward pull once more, over one unpushed docs commit,
+fixed by the same rebase as M32d's.
