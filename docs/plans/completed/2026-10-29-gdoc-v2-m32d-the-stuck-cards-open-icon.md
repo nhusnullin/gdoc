@@ -290,7 +290,7 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] In the guide, lines 148 to 149, the sentence "It is the same press
+- [x] In the guide, lines 148 to 149, the sentence "It is the same press
       as a Documents row's first icon" becomes "It is the same press as a
       click on a Documents row". No bullet of the NOW section lists the
       stuck card's icons, so nothing is added there. The line "Click opens
@@ -300,15 +300,15 @@ Tick each box as it is done. A task ends with its commit.
       docs/guide/presence.md` prints nothing.
       `cd go && go test ./boundary/ -run TestThePresencePageWalksTheThirdLooksPanel`
       prints `ok`, not "no tests to run".
-- [ ] In the principles file, a new heading "## Amendments, 2026-10-29,
+- [x] In the principles file, a new heading "## Amendments, 2026-10-29,
       the stuck card's open icon" with two bullets: the stuck card's open
       icon went, one control per action, naming
       `CardTests.testTheStuckCardCarriesNoOpenIcon`; and a still of a
       forced card draws its row hovered, naming
       `RowTests.testAForcedCardRowDrawsTheHoverFill`. The "five live icons"
       line above stays as the record of its day.
-- [ ] Move this plan to `docs/plans/completed/`.
-- [ ] Commit: `docs: the stuck card's open icon`.
+- [x] Move this plan to `docs/plans/completed/`.
+- [x] Commit: `docs: the stuck card's open icon`.
 
 ## Acceptance
 
