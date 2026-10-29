@@ -1,6 +1,6 @@
 // The action icons: the screens file's SVG, drawn as Path.
 //
-// Eleven of the thirteen shapes are the `IC` object of
+// Ten of the twelve shapes are the `IC` object of
 // docs/design/2026-10-17-presence-screens-v3.html, kept as the `d` strings
 // that file holds and turned into a Path here. The last two are the pin,
 // which the file has no shape for: it is a pair, the outline and the filled,
@@ -20,13 +20,11 @@
 
 import SwiftUI
 
-/// The thirteen icons the panel draws.
+/// The twelve icons the panel draws.
 ///
 /// The `IC` object holds more than these: the ones Nail did not choose are
 /// not ported, so a name here is an icon some screen uses.
 public enum Icon: String, Sendable, CaseIterable {
-  /// Open in Google Docs.
-  case gdocs
   /// Open the note in Obsidian.
   case md
   /// Continue with Claude.
@@ -77,11 +75,6 @@ public enum Icon: String, Sendable, CaseIterable {
   /// The SVG elements of this icon, in the order the file writes them.
   var parts: [IconPart] {
     switch self {
-    case .gdocs:
-      return [
-        .path("M8.5 2.5H4.5a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V9"),
-        .path("M9.5 2.5h3v3M12.5 2.5 8 7"),
-      ]
     case .md:
       return [
         .path("M4.5 2h7.5a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4.5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"),

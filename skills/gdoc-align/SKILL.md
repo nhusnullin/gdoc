@@ -4,7 +4,7 @@ description: Use when a note in the hub and a Google Doc are paired and the requ
 compatibility: Requires the gdoc binary on PATH, signed in with gdoc auth login, and network access to Google Docs and Drive.
 metadata:
   needs: v2.11.0
-  release: v2.25.0
+  release: v2.26.0
 ---
 
 # Align a note and its document

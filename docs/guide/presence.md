@@ -145,11 +145,11 @@ A section with nothing in it is left out rather than labelled.
   the record, and it says how many watches that sign-in stopped.
 
 Every one of these is about one document, so a click anywhere on the card or
-the row opens that document in your browser. It is the same press as a
-Documents row's first icon, and the id is the one the record named: an id
-Drive could not have written opens nothing, and neither does a publish that
-has made no document yet. Until the fourth look only a stuck card could be
-opened, and a live row could not be opened at all.
+the row opens that document in your browser.
+It is the same press as a click on a Documents row, and the id is the one the
+record named: an id Drive could not have written opens nothing, and neither
+does a publish that has made no document yet. Until the fourth look only a
+stuck card could be opened, and a live row could not be opened at all.
 
 The controls keep their own press. Stop stops the watch and opens nothing,
 and it has no confirm: a hand reaching for Stop never opens a browser tab

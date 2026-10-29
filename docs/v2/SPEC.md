@@ -202,15 +202,27 @@ goes when the pointer leaves, and until the first click on any document row
 carries one more line, "Click opens in Google Docs", which is the ninth key
 in the app's store. The card is the row uncut, never the row plus. The blank
 column before each name stays and carries only the failed-run mark. The
-firm's mark at the foot of the panel is decided and not built: its own
-milestone, by the one route the trust guardian signs. Decided 2026-10-28,
-DECISIONS.md, the fifth look.
+firm's mark was decided for the foot of the panel that day and moved on
+2026-10-29, below. Decided 2026-10-28, DECISIONS.md, the fifth look.
 
 **The stuck card's open icon.** Since 2026-10-29 a stuck card about a
 document carries the note, the chat, the link and the cross, and no icon
 that opens the document: a click on the card opens it, as it has since the
 fourth look, and one action has one control. The Google Docs glyph is drawn
 nowhere in the panel after this. Decided 2026-10-29, DECISIONS.md.
+
+**The firm's mark beside DOCUMENTS.** Since 2026-10-29 the DOCUMENTS label
+carries the firm's mark at its right: 14 pt tall, its right edge on the
+edge every icon and value ends on, centred on the label's row, in the
+label's own ink as a template image, never in colour. It is not a press and
+has no tooltip. It is the one picture the panel draws, and it comes from
+one file, the path bare `help --json` names under `logo_path` and no other
+form of the help carries, where gdoc caches the house logo beside the
+token. The app opens that one path read-only without following a link,
+takes a regular file of at most a megabyte that opens as PNG, and draws
+nothing otherwise, no placeholder and no gap. The binary never fetches or
+reads the logo for the help, and the app never reads Drive. Decided
+2026-10-29, DECISIONS.md.
 
 `auth login` is a real desktop flow: a loopback redirect with PKCE, hand-rolled.
 

@@ -171,23 +171,23 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] Write `CardTests.testTheStuckCardCarriesNoOpenIcon`: e3's stuck
+- [x] Write `CardTests.testTheStuckCardCarriesNoOpenIcon`: e3's stuck
       card's actions are `[.md, .branch, .link, .xmark]` by icon and
       `[.openNote, .openChat, .copyLink, .dismiss]` by kind; its `opens`
       still names the document; no NOW item of any scene carries an
       `ActionModel` of kind `.openDoc`; e9's machine card still carries
       `[.signin]`. It fails first on the first icon.
-- [ ] Change line 348's expectation in the test beside it to the four, and
+- [x] Change line 348's expectation in the test beside it to the four, and
       its comment from "the four of a row and the cross" to "the three the
       row shares and the cross". Change `testACardCutsATitleByTheRowsOwnRule`
       from `actions: 5` to `actions: 4` in its three places, with a comment
       that four is the card's count since 2026-10-29.
-- [ ] Drop `openDoc(doc)` from `stuckActions` and delete the private
+- [x] Drop `openDoc(doc)` from `stuckActions` and delete the private
       `openDoc(_:forced:)` builder. `Tips.openDoc` stays: it is the NOW
       title's words. Delete `Tips.noDoc` and reword the `noLink` comment
       above `Tips.noLink` so it no longer refers to it. The header comment
       of `stuckActions` names the new test and the decision date.
-- [ ] Delete `Icon.gdocs` and its parts in `IconShapes.swift`. In
+- [x] Delete `Icon.gdocs` and its parts in `IconShapes.swift`. In
       `IconTests.testTheIconSheetRenders` the list loses `.gdocs` and the
       words say "the twelve the panel draws". In
       `IconTests.testAnOffIconIsDimmedWithItsOwnTooltip` the pair becomes
@@ -196,7 +196,7 @@ Tick each box as it is done. A task ends with its commit.
       and the two literals at lines 159 to 167 become `Tips.copyLink` and
       `Tips.noLink`. In `RowTests` the two sample trailing buttons become
       `ActionButton(.link, tip: Tips.copyLink)`.
-- [ ] Reword the comments the Context lists so none counts thirteen icons,
+- [x] Reword the comments the Context lists so none counts thirteen icons,
       five on a card, or names the Google Docs icon: `IconShapes.swift:3`
       "Ten of the twelve" and line 23 "The twelve icons the panel draws";
       `IconTests.swift` lines 3, 15 and 230 "twelve" and line 5 "four of
@@ -207,12 +207,12 @@ Tick each box as it is done. A task ends with its commit.
       to 118 say the words are the NOW title's own, which a DOCUMENTS row's
       icon once shared; the assertion messages at `StateTests.swift:910`
       and `CardTests.swift:393` say the same.
-- [ ] `grep -rn "gdocs\|noDoc" presence/Sources presence/Tests` prints
+- [x] `grep -rn "gdocs\|noDoc" presence/Sources presence/Tests` prints
       nothing. `grep -rn "|openDoc" presence/Tests` prints nothing.
       `grep -rn "thirteen\|five of them\|five live" presence/Sources
       presence/Tests` prints nothing.
-- [ ] `make app-lint`, `make app-test` green.
-- [ ] Commit: `feat: the stuck card carries no open icon`.
+- [x] `make app-lint`, `make app-test` green.
+- [x] Commit: `feat: the stuck card carries no open icon`.
 
 ### Task 2: a still of a forced card draws its row hovered
 
@@ -224,7 +224,7 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] Write `RowTests.testAForcedCardRowDrawsTheHoverFill`, with the
+- [x] Write `RowTests.testAForcedCardRowDrawsTheHoverFill`, with the
       `pixel(_:scheme:side:x:y:)` helper from `Shots.swift`: a document row
       from `SheetPieces.documentRows()[0]` built with `forcedCard: true`
       and `hovering: false`, rendered at `side: Grid.panelWidth` and read
@@ -234,10 +234,10 @@ Tick each box as it is done. A task ends with its commit.
       row with neither reads alpha 0 there. Beside the pixels,
       `RowView(..., forcedCard: true).isFilled` is true through
       `@testable`. Both schemes. It fails first on the forced row.
-- [ ] `isFilled` becomes `hovering || pointerInside || forcedCard`, with
+- [x] `isFilled` becomes `hovering || pointerInside || forcedCard`, with
       the comment saying why: a card is only ever up on a hovered row, so a
       still that forces the card states the hover with it.
-- [ ] The e1 caption in `Scenes.swift`, about line 366: the sentence that
+- [x] The e1 caption in `Scenes.swift`, about line 366: the sentence that
       opens "The plate over the second row is the card, which a pointer
       resting half a second on a document's name brings up and which goes
       when it leaves, is held down or is clicked." becomes "The plate under
@@ -246,8 +246,8 @@ Tick each box as it is done. A task ends with its commit.
       when it leaves, is held down or is clicked. The second row is shaded
       because the card is only ever up on a hovered row." The sentences
       after it stay.
-- [ ] `make app-lint`, `make app-test` green.
-- [ ] Commit: `fix: a still of a forced card draws its row hovered`.
+- [x] `make app-lint`, `make app-test` green.
+- [x] Commit: `fix: a still of a forced card draws its row hovered`.
 
 ### Task 3: the renders, once
 
@@ -258,10 +258,10 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] `PRESENCE_SHOTS="$HOME/gdoc-m32d-board/shots" make app-test` green.
-- [ ] `ls ~/gdoc-m32d-board/shots` lists `e1-dark.png`, `e3-dark.png` and
+- [x] `PRESENCE_SHOTS="$HOME/gdoc-m32d-board/shots" make app-test` green.
+- [x] `ls ~/gdoc-m32d-board/shots` lists `e1-dark.png`, `e3-dark.png` and
       `index.html`.
-- [ ] No commit: the renders are not in git.
+- [x] No commit: the renders are not in git.
 
 ### Task 4: Verify acceptance criteria
 
@@ -271,14 +271,14 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] Every test named in the Acceptance table exists under
+- [x] Every test named in the Acceptance table exists under
       `presence/Tests` with that name.
-- [ ] `git diff --name-only main...HEAD` lists only this plan,
+- [x] `git diff --name-only main...HEAD` lists only this plan,
       `presence/Sources` and `presence/Tests`. Nothing under `go/`,
       `CLAUDE.md` or `docs/v2/`.
-- [ ] `grep -rn "gdocs" presence/Sources` prints nothing.
-- [ ] `make app-lint`, `make app-test`, `make app` green.
-- [ ] No commit unless something had to change, and then it says what.
+- [x] `grep -rn "gdocs" presence/Sources` prints nothing.
+- [x] `make app-lint`, `make app-test`, `make app` green.
+- [x] No commit unless something had to change, and then it says what.
 
 ### Task 5: [Final] Update documentation
 
@@ -290,7 +290,7 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] In the guide, lines 148 to 149, the sentence "It is the same press
+- [x] In the guide, lines 148 to 149, the sentence "It is the same press
       as a Documents row's first icon" becomes "It is the same press as a
       click on a Documents row". No bullet of the NOW section lists the
       stuck card's icons, so nothing is added there. The line "Click opens
@@ -300,15 +300,15 @@ Tick each box as it is done. A task ends with its commit.
       docs/guide/presence.md` prints nothing.
       `cd go && go test ./boundary/ -run TestThePresencePageWalksTheThirdLooksPanel`
       prints `ok`, not "no tests to run".
-- [ ] In the principles file, a new heading "## Amendments, 2026-10-29,
+- [x] In the principles file, a new heading "## Amendments, 2026-10-29,
       the stuck card's open icon" with two bullets: the stuck card's open
       icon went, one control per action, naming
       `CardTests.testTheStuckCardCarriesNoOpenIcon`; and a still of a
       forced card draws its row hovered, naming
       `RowTests.testAForcedCardRowDrawsTheHoverFill`. The "five live icons"
       line above stays as the record of its day.
-- [ ] Move this plan to `docs/plans/completed/`.
-- [ ] Commit: `docs: the stuck card's open icon`.
+- [x] Move this plan to `docs/plans/completed/`.
+- [x] Commit: `docs: the stuck card's open icon`.
 
 ## Acceptance
 

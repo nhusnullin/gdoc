@@ -89,12 +89,14 @@ final class CardTests: XCTestCase {
   func testACardCutsATitleByTheRowsOwnRule() throws {
     let title =
       "Export stopped · Proposal: Expansion of Project Falcon to two further regions, draft v1"
-    let lines = StuckCard.titleSplit(title, actions: 5)
+    // Four is the card's own count since 2026-10-29, when the open icon
+    // went: the column beside them is 184 pt and the title still splits.
+    let lines = StuckCard.titleSplit(title, actions: 4)
     XCTAssertEqual(lines.count, 2, "the card takes two lines for it")
     XCTAssertEqual(lines[0], "Export stopped")
 
     let second = try XCTUnwrap(lines.last)
-    let column = StuckCard.column(line: 1, actions: 5)
+    let column = StuckCard.column(line: 1, actions: 4)
     XCTAssertEqual(column, StuckCard.reasonColumn, "the second line has the card's full body")
 
     let split = MiddleTitle.fitted(second, role: Typography.titleEmphasis, column: column)
@@ -108,7 +110,7 @@ final class CardTests: XCTestCase {
       tail.contains("her regions"), "the tail starts inside a word of the title")
 
     // The first line is cut by the same rule, at the width the icons leave.
-    XCTAssertEqual(StuckCard.column(line: 0, actions: 5), StuckCard.titleColumn(actions: 5))
+    XCTAssertEqual(StuckCard.column(line: 0, actions: 4), StuckCard.titleColumn(actions: 4))
   }
 
   /// A confirm draws no line it has no words for.
@@ -319,6 +321,53 @@ final class CardTests: XCTestCase {
       "the card of a publish that stopped in the render is nameless")
   }
 
+  /// The stuck card carries no icon that opens the document.
+  ///
+  /// A click on the card's words has opened it since the fourth look
+  /// (docs/v2/DECISIONS.md, 2026-10-26), so the icon beside them was a
+  /// second control for one action, which is principle 4. Nail dropped it
+  /// on 2026-10-29: the card keeps the three a document row shares, the
+  /// note, the chat and the link, and the cross that closes it.
+  ///
+  /// The press itself stays: the card still names the document it opens,
+  /// and `.openDoc` is still the kind that press leaves as. What went is
+  /// the icon, and with it the last `ActionModel` of that kind anywhere in
+  /// NOW.
+  func testTheStuckCardCarriesNoOpenIcon() throws {
+    let card = try XCTUnwrap(
+      try SheetPieces.scene("e3").model().now.compactMap { item -> (String?, [ActionModel])? in
+        if case .stuck(_, _, let actions, let opens) = item { return (opens, actions) }
+        return nil
+      }.first, "e3 drew no stuck card")
+    XCTAssertEqual(
+      card.1.map(\.icon), [.md, .branch, .link, .xmark],
+      "the note, the chat, the link and the cross, and nothing that opens the document")
+    XCTAssertEqual(card.1.map(\.kind), [.openNote, .openChat, .copyLink, .dismiss])
+    XCTAssertNotNil(card.0, "the card still names the document a click on it opens")
+
+    // No row and no card in NOW, on any screen there is, carries an icon of
+    // that kind: the row is the press now.
+    for scene in Scenes.all {
+      for item in try scene.model().now {
+        var actions: [ActionModel] = []
+        if case .stuck(_, _, let own, _) = item { actions = own }
+        if case .live(_, _, let stop, _, _) = item, let stop { actions = [stop] }
+        XCTAssertNil(
+          actions.first { $0.kind == .openDoc },
+          "scene \(scene.id) carries an open icon in NOW")
+      }
+    }
+
+    // Scene e9's card is the machine's: it asks for the sign-in and opens
+    // nothing, which this change leaves alone.
+    let machine = try XCTUnwrap(
+      try SheetPieces.scene("e9").model().now.compactMap { item -> [ActionModel]? in
+        if case .stuck(_, _, let actions, _) = item { return actions }
+        return nil
+      }.first, "e9 drew no stuck card")
+    XCTAssertEqual(machine.map(\.icon), [.signin], "e9 asks for the sign-in and nothing else")
+  }
+
   /// Principle 4's second sentence: a card never carries an icon that would
   /// do nothing.
   ///
@@ -338,14 +387,14 @@ final class CardTests: XCTestCase {
       }
     }
 
-    // A write that did name a document carries the four of a row and the
-    // cross, each of them live: scene e3's export.
+    // A write that did name a document carries the three the row shares and
+    // the cross, each of them live: scene e3's export.
     let named = try XCTUnwrap(
       try SheetPieces.scene("e3").model().now.compactMap { item -> [ActionModel]? in
         if case .stuck(_, _, let actions, _) = item { return actions }
         return nil
       }.first, "e3 drew no stuck card")
-    XCTAssertEqual(named.map(\.icon), [.gdocs, .md, .branch, .link, .xmark])
+    XCTAssertEqual(named.map(\.icon), [.md, .branch, .link, .xmark])
     for action in named {
       if case .off(let reason) = action.state {
         XCTFail("e3's card carries a dead \(action.icon.rawValue): \(reason)")
@@ -379,7 +428,7 @@ final class CardTests: XCTestCase {
       NowPress.open(item, actions: actions), "the row opens the document it names")
     open()
     XCTAssertEqual(pressed.count, 1, "one press, one thing done")
-    XCTAssertEqual(pressed.first?.kind, .openDoc, "and it is the kind a document icon sends")
+    XCTAssertEqual(pressed.first?.kind, .openDoc, "and it is the kind the row's press sends")
     XCTAssertEqual(pressed.first?.target, doc)
 
     NowPress.stop(stop, actions: actions)()
@@ -390,7 +439,8 @@ final class CardTests: XCTestCase {
     XCTAssertEqual(
       pressed.filter { $0.kind == .openDoc }.count, 1,
       "the control's press is its own and never the row's")
-    XCTAssertEqual(NowPress.words, Tips.openDoc, "the title area carries the icon's own words")
+    XCTAssertEqual(
+      NowPress.words, Tips.openDoc, "the title area carries the press's own words")
 
     // Stop is what it was: the one icon, the ring while the signal is in
     // flight, and no confirm beside either.

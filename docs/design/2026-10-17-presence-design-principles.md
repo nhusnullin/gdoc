@@ -736,3 +736,34 @@ above, and the fourth is a rule about a drawing nobody has drawn yet.
   makes a list readable. Nothing in this branch draws or reads a picture,
   and the day the mark is drawn is a milestone of its own with a decision
   entry in front of it.
+
+## Amendments, 2026-10-29, the stuck card's open icon
+
+The design reviewer read the renders of v2.25.0 and named two should-fix
+items. Nail answered the first: "Yes, drop the open icon from the stuck-run
+card in the next release; the row already opens the document." The second is
+the lead's how and cost one line. The decision is in `docs/v2/DECISIONS.md`,
+2026-10-29, "The stuck card loses its open icon".
+
+- **The stuck card's open icon went, because one action has one control.**
+  The fifth look took the Google Docs icon off a DOCUMENTS row when the row
+  itself became the press; the stuck card in NOW kept the same icon beside
+  the same press, which is two controls for one opening. The card now
+  carries the note, the chat, the link and the cross, and a click on its
+  words opens the document. With four icons the title column beside them is
+  184 pt instead of 156. The glyph is gone from the sheet, which draws
+  twelve icons now, and the words that said "No Google Doc yet" went with
+  it: `CardTests.testTheStuckCardCarriesNoOpenIcon`,
+  `CardTests.testACardCutsATitleByTheRowsOwnRule` and
+  `IconTests.testTheIconSheetRenders`.
+- **A still of a forced card draws its row hovered, because a still states
+  what the app shows.** Principle 5 is facts and not promises. A card is
+  only ever up on a hovered row, so a scene that forces the card and leaves
+  the row unshaded draws a panel the app never draws, and a reader cannot
+  tell which row the plate belongs to. `RowView.isFilled` now reads
+  `hovering || pointerInside || forcedCard`, and the e1 caption says the
+  plate sits under the second row and over the two below it:
+  `RowTests.testAForcedCardRowDrawsTheHoverFill`.
+
+The "five live icons" line under the first reviewer's pass stays as the
+record of its day.
