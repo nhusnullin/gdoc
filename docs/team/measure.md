@@ -284,3 +284,33 @@ card, and the lead changed nothing after the run. Nail sent three messages
 for the run: the go on the recommendation, "did you finish?", and the GO for
 v2.25.0, which the lead ran this time. The lead's own context at the end of
 the day was not read.
+
+## 2026-10-29: M32d on Claude
+
+| Run | Task iterations | Tasks, total | Per task iteration | Biggest iteration | Review rounds | Review, total | Per review round | Whole worktree | Sessions |
+|---|---|---|---|---|---|---|---|---|---|
+| M32d, the stuck card's open icon (Claude) | 5 | 7.8M | 1.6M | 3.1M | 1 | 0.1M | 0.1M | 7.9M | 6 |
+
+- M32d's tasks pass at 1.6M against the bar of 4.9M. Five tasks ran in five
+  iterations in 14 minutes, 18:28 to 18:42; the biggest, 3.1M, was Task 1,
+  which took the icon off the card and the glyph out of the set across
+  twelve files. The plan named every file, line and count comment after one
+  review pass, which is what a 1.6M task looks like.
+- Its review passes at 0.1M against the bar of 6.6M: the adversarial seat
+  found one thing, the verify seat read it against PresenceUI and it held,
+  and the round ended at 18:49 with no issue. 7.5M of the run's 7.9M were
+  cache reads.
+
+The plan reviewer ran once before the run and found that a tooltip string
+the plan meant to delete was still the NOW title's words, that a Go test
+name matched nothing, and that a test the plan named had no measurement
+behind it; the lead folded all three and the run needed no relaunch. The
+design reviewer found nothing blocking and two should-fix items in captions,
+which the lead fixed on the branch in one commit before the release. The
+GO step stopped once at the pull, because two docs commits for other
+milestones sat on local main after the branch point; the lead rebased them
+and ran the step again, and v2.26.0 was published and verified at 19:17Z.
+Nail sent two messages for the run: the yes on the icon, and the GO, which
+came with the next milestone's launch in the same line. The lead's own
+context at the end of the day was not read.
+
