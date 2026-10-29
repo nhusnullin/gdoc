@@ -363,22 +363,22 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] A stand-in mark for the tests, in `Scenes.swift`: `enum SceneMark`
+- [x] A stand-in mark for the tests, in `Scenes.swift`: `enum SceneMark`
       with a nonisolated `static let standIn: Data`, PNG bytes of a filled
       rounded rectangle 275 by 100 px in black on transparent, drawn once
       with `NSBitmapImageRep`, so its aspect is the firm's file's 2.75 to
       1 and its ink fills its frame. Nonisolated because `Scenes.all` is,
       and the `@MainActor` helpers in `Shots.swift` cannot be called from
       it. Nothing from the firm, nothing from disk.
-- [ ] In `ThemeTests.testTheGridIsTheScreens` (about line 173), the list
+- [x] In `ThemeTests.testTheGridIsTheScreens` (about line 173), the list
       gains `Grid.markHeight` at 14 as a literal, in whatever form that
       test holds the other numbers. If the test reads its numbers out of an
       html file rather than a list of literals, stop and say so. Red.
-- [ ] `Grid.swift`: `public static let markHeight: CGFloat = 14` with the
+- [x] `Grid.swift`: `public static let markHeight: CGFloat = 14` with the
       comment: the firm's mark in the DOCUMENTS label, 14 so the wordmark's
       lowercase body is the label's cap height, decided 2026-10-29,
       DECISIONS.md. Green.
-- [ ] In `RowTests.swift`, four tests over `SectionLabel("Documents",
+- [x] In `RowTests.swift`, four tests over `SectionLabel("Documents",
       mark:)` drawn alone at `Grid.panelWidth` in both schemes with the
       helpers in `Shots.swift`:
       `testTheDocumentsLabelDrawsTheMarkFourteenPointsTallOnTheContentEdge`
@@ -395,7 +395,7 @@ Tick each box as it is done. A task ends with its commit.
       the `section-label` probe's frame equals the one with the mark);
       `testBytesThatAreNotAPictureDrawNothing` (two hundred random bytes:
       no `section-label.mark` probe, `inkEnds` under 200). Red.
-- [ ] `SectionLabel` gains `public let mark: Data?`, default nil in the
+- [x] `SectionLabel` gains `public let mark: Data?`, default nil in the
       init, and its body's `HStack` gains, after the `Spacer`, the mark
       when `NSImage(data:)` accepts the bytes: the image with
       `isTemplate = true`, as `Image(nsImage:)`, `.renderingMode(.template)`,
@@ -408,14 +408,14 @@ Tick each box as it is done. A task ends with its commit.
       says nothing a row does not. `NSImage(data:)` runs on each body
       evaluation; the bytes are a few kilobytes and that is accepted.
       Green.
-- [ ] `PanelView.section(_:)` passes `model.logo` to `SectionView` for
+- [x] `PanelView.section(_:)` passes `model.logo` to `SectionView` for
       `.documents` and nil for the other two; `SectionView` takes `mark:`
       and hands it to `SectionLabel`. A fifth test in `RowTests`,
       `testOnlyTheDocumentsLabelCarriesTheMark`: `probeList` over the whole
       panel of e3, which draws NOW, DOCUMENTS and SETTINGS, holds exactly
       one `section-label.mark`, and its frame lies between the DOCUMENTS
       label's top and the first document row's top.
-- [ ] `Scenes.swift`: `Scenes.machine(...)` gains `logo: Data? =
+- [x] `Scenes.swift`: `Scenes.machine(...)` gains `logo: Data? =
       SceneMark.standIn`, so every scene carries the stand-in, the "no
       documents" line's scenes included, because the mark goes wherever
       the label goes. One scene keeps `logo: nil` as the record of a
@@ -425,8 +425,8 @@ Tick each box as it is done. A task ends with its commit.
       is a stand-in shape the test draws, not the firm's logo, which this
       repository does not carry. e2's caption gains one sentence naming
       the mark: 14 pt, on the right edge, the label's grey, not a press.
-- [ ] `make app-lint` and `make app-test` green.
-- [ ] Commit: `feat: the DOCUMENTS label draws the firm's mark`.
+- [x] `make app-lint` and `make app-test` green.
+- [x] Commit: `feat: the DOCUMENTS label draws the firm's mark`.
 
 ### Task 5: the renders, once
 

@@ -39,6 +39,18 @@ public struct Swatch: Sendable, Equatable {
   public var color: Color {
     Color(.sRGB, red: red, green: green, blue: blue, opacity: alpha)
   }
+
+  /// The same colour at full weight, which a view asks for when it tints a
+  /// picture rather than fills a shape.
+  ///
+  /// A translucent tint on a template image draws fainter than the same ink
+  /// on words: measured on 2026-10-29, the firm's mark at `--t3`'s own 0.32
+  /// came out at half the weight of the DOCUMENTS label beside it. A view
+  /// that tints takes the ink opaque and hands the alpha to its own
+  /// `.opacity`, which composites once: RowTests.testTheMarkTakesTheLabelsOwnInk.
+  public var opaque: Color {
+    Color(.sRGB, red: red, green: green, blue: blue, opacity: 1)
+  }
 }
 
 /// One shadow of a CSS stack: the offset, the blur and the colour.

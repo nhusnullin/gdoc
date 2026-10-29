@@ -38,6 +38,16 @@ public enum Grid {
   /// testTheDocRowActionColumnIs108.
   public static let actionColumn: CGFloat = 108
 
+  /// The firm's mark in the DOCUMENTS label, at the right end of it.
+  ///
+  /// 14 so the wordmark's lowercase body is the label's own cap height, 8
+  /// pt, which is the visual designer's number and Nail's answer on the
+  /// v2.25.0 render (docs/v2/DECISIONS.md, 2026-10-29). The width is the
+  /// file's own aspect and never a number here, and the test that reads
+  /// both off the drawing is RowTests's
+  /// testTheDocumentsLabelDrawsTheMarkFourteenPointsTallOnTheContentEdge.
+  public static let markHeight: CGFloat = 14
+
   /// The glyph, an action button and the radius they share.
   public static let glyphSize: CGFloat = 16
   public static let actionSize: CGFloat = 24

@@ -19,6 +19,7 @@
 // Scene e4 is not built at all: releasing a hold without writing is in the
 // specification's "what is not built".
 
+import AppKit
 import Foundation
 import PresenceCore
 import SwiftUI
@@ -73,6 +74,48 @@ enum SceneDocuments {
     concept: "/Users/nail/hub/falcon/b2b2c-concept.md",
     proposal: "/Users/nail/hub/falcon/proposal-mea-v1.md",
   ]
+}
+
+/// The firm's mark as a render may draw it, which is a stand-in and never
+/// the file.
+///
+/// The decision of 2026-10-16 keeps the firm's logo out of this repository,
+/// so a test draws a shape of the file's own proportions: a filled rounded
+/// rectangle 275 by 100 pixels, which is the wordmark's 2.75 to 1, in black
+/// on nothing, so the ink a view puts down is the tint and not the bytes.
+/// Its ink fills its frame, which is what lets a measurement read the
+/// frame off the drawing.
+///
+/// Nonisolated because `Scenes.all` is, and the measuring helpers in
+/// Shots.swift are on the main actor and cannot be called from it.
+enum SceneMark {
+  /// The stand-in, as PNG bytes. Nothing from the firm and nothing from
+  /// disk.
+  static let standIn: Data = drawn(width: 275, height: 100)
+
+  /// Two hundred bytes that are no picture at all, which is what the panel
+  /// is shown to draw nothing for.
+  static let notAPicture: Data = Data((0..<200).map { UInt8(($0 * 7 + 13) % 251) })
+
+  private static func drawn(width: Int, height: Int) -> Data {
+    guard
+      let rep = NSBitmapImageRep(
+        bitmapDataPlanes: nil, pixelsWide: width, pixelsHigh: height,
+        bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+        colorSpaceName: .deviceRGB, bytesPerRow: width * 4, bitsPerPixel: 32),
+      let context = NSGraphicsContext(bitmapImageRep: rep)
+    else { return Data() }
+    NSGraphicsContext.saveGraphicsState()
+    NSGraphicsContext.current = context
+    NSColor.black.setFill()
+    NSBezierPath(
+      roundedRect: NSRect(x: 0, y: 0, width: width, height: height),
+      xRadius: 12, yRadius: 12
+    ).fill()
+    context.flushGraphics()
+    NSGraphicsContext.restoreGraphicsState()
+    return rep.representation(using: .png, properties: [:]) ?? Data()
+  }
 }
 
 enum Scenes {
@@ -226,7 +269,8 @@ enum Scenes {
     updateChecked: Date? = nil,
     updating: Bool = false,
     updateRun: UpdateRun? = nil,
-    extensionRun: ExtensionRun? = nil
+    extensionRun: ExtensionRun? = nil,
+    logo: Data? = SceneMark.standIn
   ) -> Facts {
     Facts(
       account: account,
@@ -235,6 +279,7 @@ enum Scenes {
       versions: Versions(
         app: "2.14.0", gdoc: gdocFound ? "v2.14.0" : nil, latestStable: latestStable),
       mark: "⁘",
+      logo: logo,
       gdocPath: gdocFound ? gdocPath : nil,
       home: home,
       extensionState: extensionState,
@@ -396,7 +441,9 @@ enum Scenes {
         + "nothing a pin invented. The four under it are the fortnight's own, newest "
         + "first, across three days. This is also the one screen whose Launch at login "
         + "is on: the person turned the switch on the evening before, which is the only "
-        + "way it is ever on.",
+        + "way it is ever on. The firm's mark is at the right end of DOCUMENTS: 14 pt "
+        + "tall, on the one edge every value in the panel ends on, in the label's own "
+        + "grey, and nothing presses it.",
       fixture: "e2", moment: "2026-10-18T09:12:00Z", alive: [],
       facts: machine(loginItem: .on),
       ui: UIState(
@@ -468,9 +515,10 @@ enum Scenes {
         + "its last poll came back with gdoc's own auth code, so nothing is polling that "
         + "document and there is no Stop to press. Whether gdoc carries on from the same "
         + "cursor once somebody signs in is unmeasured, so the card asks for the watch to "
-        + "be started again.",
+        + "be started again. This is also the one screen of a machine with no picture of "
+        + "the firm's mark cached, so DOCUMENTS is its words alone.",
       fixture: "e9", moment: "2026-10-17T15:30:00Z", alive: [],
-      facts: machine(auth: .needsSignIn), ui: UIState(), appearance: nil),
+      facts: machine(auth: .needsSignIn, logo: nil), ui: UIState(), appearance: nil),
     Scene(
       id: "e10", title: "Signing out, and changing account",
       caption:
