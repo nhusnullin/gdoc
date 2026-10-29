@@ -110,10 +110,11 @@ replaced it)`, or `measured`. Nothing else.
 | 2026-10-26 | The fourth look: every document on the panel opens on a click, a mark only for a failed run, names that survive, buttons that say what happened, a panel that stays open, a bounded hub | holds | DECISIONS.md |
 | 2026-10-27 | Week one of whole jobs: a watch that wakes a session only for marked work, a short help, live review in its own session, and a stopwatch on every comment | holds | DECISIONS.md |
 | 2026-10-28 | Four small fixes: the panel drops the published number, a cancelled update leaves the terminal wrapping, a backslash escape publishes as the character, and Tab completion follows the installed gdoc | holds | DECISIONS.md |
-| 2026-10-28 | The logo at its old size: the mark is drawn 3.9 cm wide where the firm's template put it, and the three other logo items stay as they are | holds | DECISIONS.md |
+| 2026-10-28 | The logo at its old size: the mark is drawn 3.9 cm wide where the firm's template put it, and the three other logo items stay as they are | superseded 2026-10-29 (the place only: the mark ends in line with the text; the width, 3.9 cm, and the three items that stay hold) | DECISIONS.md |
 | 2026-10-28 | The skills say when they are older than gdoc, and the plugin route turns on its updates | holds | DECISIONS.md |
 | 2026-10-28 | The fifth look: a card on a rested pointer, the row opens the document and the Google Docs icon goes, a wider panel, and the firm's mark at the foot as its own later milestone | holds | DECISIONS.md |
 | 2026-10-29 | The stuck card loses its open icon: a click on the card already opens the document, so the icon was a second control for one action | holds | DECISIONS.md |
+| 2026-10-29 | The logo inside the column: the mark ends in line with the text, and the label sits level with it | holds | DECISIONS.md |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -1653,3 +1654,54 @@ field changes, and no Go file is touched; the change removes a control and
 adds nothing the app reads.
 
 The plan is `docs/plans/2026-10-29-gdoc-v2-m32d-the-stuck-cards-open-icon.md`.
+
+## 2026-10-29. The logo inside the column: the mark ends in line with the text, and the label sits level with it.
+
+Nail sent a screenshot of the cover of "Ch 4. Target Market, Eligibility and
+Cardholder Journey: review draft v0.1", published that day with v2.25.0, and
+wrote: "speak with designer - im doubt that logo is on right position". The
+lead measured the screenshot (MEASURED.md, "The 29 October cover in pixels")
+and put it to the design reviewer, the seat that drew nothing. Its finding:
+the mark hangs 40 pt past the text's right edge while the label starts at the
+text's left edge, so the header shares no right edge with the page, and a
+reader sees a slip rather than a choice; should-fix. Its recommendation: the
+mark's right edge flush with the text column, and the label lowered to sit
+level with the mark's middle. The lead put that to Nail in what he sees, with
+the recommendation, and he answered: "ok". Serves principle 3, because the
+house look is the one a reader trusts, and the first page of every document
+opened with something that read as an error.
+
+**The mark ends in line with the text.** `offset_x_pt` becomes 381.43. With
+the mark 111.75 pt wide its right side lands 493.18 pt from the column's left
+edge, which is the column's right edge, and 51.05 pt from the paper's edge,
+the margin the body keeps. The width holds at 111.75 pt, the mark's own,
+decided 2026-10-28. This supersedes one clause of that entry, the place, and
+its "Nail chose that over a mark that ends in line with the text". The firm's
+template put the mark in the margin, and on 28 October the template was
+matched, not judged. Today it was judged.
+
+**The label sits level with the mark.** On the 29 October cover the label's
+centre is 6 pt above the mark's centre. The label moves down 6 pt and the
+mark stays at the header margin: the first header paragraph gets six points
+before it, and the mark's offset from that paragraph goes from -5.15 to
+-11.15 pt, so the paragraph moves and the mark does not. Docs draws a
+positioned picture in a header by its own rules, and today's screenshot shows
+the mark's top at the header margin where the house states a frame 5 pt
+higher, so the lead checks the published page by eye after the release, the
+way today's screenshot was measured. A label that is still not level is a
+second pass with two numbers, not a blocker. The drift gate's known list
+names the top offset against the master with this entry as its reason, beside
+the width and the left offset it already names, and the left offset's reason
+becomes this entry.
+
+**Where it lands.** Every document built or published after the release. The
+lead publishes today's chapter again from its note after Nail's `gdoc update`
+and tells him where it is. The run is M32e, today, the second run of the day
+and a small one: one Go task, no screen, `Review: go`. The week's stopwatch
+takes its row.
+
+Trust guardian: not called. Two numbers and six points in the house file,
+their tests and the drift gate. No read, grant, URL, argv list or presence
+field changes.
+
+The plan is `docs/plans/2026-10-29-gdoc-v2-m32e-the-logo-inside-the-column.md`.

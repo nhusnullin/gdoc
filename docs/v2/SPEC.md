@@ -706,11 +706,14 @@ firm's name is the wrong answer and a wrong file in Drive is somebody's to
 fix now. `base64` stays for a test house and for a firm that embeds, and
 `--house <file>` is the only override. A logo in the footer is refused by
 name. `width_pt` and `offset_x_pt` state the mark itself, 111.75 pt wide at
-421.5 pt from the column's left edge, the ink box of the firm's template,
-because the picture in Drive carries no padding since 2026-10-26: the mark's
-right side ends 1.4 cm past the text in the margin and 4 mm from the paper's
-edge, as the template drew it. Decided 2026-10-17, DECISIONS.md, the pin on
-exact pixels replaced 2026-10-26, and the width made the mark's own 2026-10-28.
+381.43 pt from the column's left edge, so the mark's right side ends in line
+with the text, 51.05 pt from the paper's edge like the body: the picture in
+Drive carries no padding since 2026-10-26, and a mark out in the margin read
+as a slip. The label before it sits level with the mark's middle, six points
+down from the header margin, and the mark's offset from its paragraph,
+-11.15 pt, keeps the mark at that margin. Decided 2026-10-17, DECISIONS.md,
+the pin on exact pixels replaced 2026-10-26, the width made the mark's own
+2026-10-28, and the place brought inside the column 2026-10-29.
 
 **Every value a block states reaches the page.** A cover line's `align`,
 `italic`, `color` and `line_spacing`, the footer paragraph's alignment and
