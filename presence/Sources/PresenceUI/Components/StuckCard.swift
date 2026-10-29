@@ -96,8 +96,8 @@ public struct StuckCard: View {
   }
 
   /// What the title's first line is drawn in: the reason's own width less
-  /// the gap and the icons beside it, which is as little as 112 pt under
-  /// five of them. A card with no icon has the whole width.
+  /// the gap and the icons beside it, which is 184 pt under the four a
+  /// stuck card carries. A card with no icon has the whole width.
   public static func titleColumn(actions: Int) -> CGFloat {
     guard actions > 0 else { return reasonColumn }
     let icons =
@@ -187,9 +187,9 @@ public struct StuckCard: View {
   public var body: some View {
     let palette = Palette.of(scheme)
     // The title over two lines: the first beside the icons, the second
-    // under them in the card's full width. With five live icons the column
-    // beside them is about 112 pt, and two lines of that cut the middle out
-    // of the title: the second line is where the rest of it goes.
+    // under them in the card's full width. With the four live icons the
+    // column beside them is 184 pt, and two lines of that cut the middle
+    // out of a long title: the second line is where the rest of it goes.
     let title = Self.titleSplit(model.title, actions: actions.count)
     return VStack(alignment: .leading, spacing: 0) {
       HStack(alignment: .top, spacing: Grid.columnGap) {

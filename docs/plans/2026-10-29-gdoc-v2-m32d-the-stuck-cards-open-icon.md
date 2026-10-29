@@ -171,23 +171,23 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] Write `CardTests.testTheStuckCardCarriesNoOpenIcon`: e3's stuck
+- [x] Write `CardTests.testTheStuckCardCarriesNoOpenIcon`: e3's stuck
       card's actions are `[.md, .branch, .link, .xmark]` by icon and
       `[.openNote, .openChat, .copyLink, .dismiss]` by kind; its `opens`
       still names the document; no NOW item of any scene carries an
       `ActionModel` of kind `.openDoc`; e9's machine card still carries
       `[.signin]`. It fails first on the first icon.
-- [ ] Change line 348's expectation in the test beside it to the four, and
+- [x] Change line 348's expectation in the test beside it to the four, and
       its comment from "the four of a row and the cross" to "the three the
       row shares and the cross". Change `testACardCutsATitleByTheRowsOwnRule`
       from `actions: 5` to `actions: 4` in its three places, with a comment
       that four is the card's count since 2026-10-29.
-- [ ] Drop `openDoc(doc)` from `stuckActions` and delete the private
+- [x] Drop `openDoc(doc)` from `stuckActions` and delete the private
       `openDoc(_:forced:)` builder. `Tips.openDoc` stays: it is the NOW
       title's words. Delete `Tips.noDoc` and reword the `noLink` comment
       above `Tips.noLink` so it no longer refers to it. The header comment
       of `stuckActions` names the new test and the decision date.
-- [ ] Delete `Icon.gdocs` and its parts in `IconShapes.swift`. In
+- [x] Delete `Icon.gdocs` and its parts in `IconShapes.swift`. In
       `IconTests.testTheIconSheetRenders` the list loses `.gdocs` and the
       words say "the twelve the panel draws". In
       `IconTests.testAnOffIconIsDimmedWithItsOwnTooltip` the pair becomes
@@ -196,7 +196,7 @@ Tick each box as it is done. A task ends with its commit.
       and the two literals at lines 159 to 167 become `Tips.copyLink` and
       `Tips.noLink`. In `RowTests` the two sample trailing buttons become
       `ActionButton(.link, tip: Tips.copyLink)`.
-- [ ] Reword the comments the Context lists so none counts thirteen icons,
+- [x] Reword the comments the Context lists so none counts thirteen icons,
       five on a card, or names the Google Docs icon: `IconShapes.swift:3`
       "Ten of the twelve" and line 23 "The twelve icons the panel draws";
       `IconTests.swift` lines 3, 15 and 230 "twelve" and line 5 "four of
@@ -207,12 +207,12 @@ Tick each box as it is done. A task ends with its commit.
       to 118 say the words are the NOW title's own, which a DOCUMENTS row's
       icon once shared; the assertion messages at `StateTests.swift:910`
       and `CardTests.swift:393` say the same.
-- [ ] `grep -rn "gdocs\|noDoc" presence/Sources presence/Tests` prints
+- [x] `grep -rn "gdocs\|noDoc" presence/Sources presence/Tests` prints
       nothing. `grep -rn "|openDoc" presence/Tests` prints nothing.
       `grep -rn "thirteen\|five of them\|five live" presence/Sources
       presence/Tests` prints nothing.
-- [ ] `make app-lint`, `make app-test` green.
-- [ ] Commit: `feat: the stuck card carries no open icon`.
+- [x] `make app-lint`, `make app-test` green.
+- [x] Commit: `feat: the stuck card carries no open icon`.
 
 ### Task 2: a still of a forced card draws its row hovered
 

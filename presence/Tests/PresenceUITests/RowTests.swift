@@ -294,7 +294,7 @@ final class RowTests: XCTestCase {
     // all, so the column goes with them.
     let busy = RowView(
       .doc, glyph: .plain, tone: .quiet, title: drawn.title, sub: drawn.sub, busy: true,
-      trailing: { ActionButton(.gdocs, tip: Tips.openDoc) })
+      trailing: { ActionButton(.link, tip: Tips.copyLink) })
     let busyMeasured = try probes(busy, scheme: .dark)
     XCTAssertNil(busyMeasured["row.trailing"], "a busy row draws no action column")
   }
@@ -316,7 +316,7 @@ final class RowTests: XCTestCase {
     let drawn = try SheetPieces.documentRows()[0]
     let row = RowView(
       .doc, glyph: drawn.glyph, tone: drawn.tone, title: drawn.title, sub: drawn.sub,
-      trailing: { ActionButton(.gdocs, tip: Tips.openDoc) })
+      trailing: { ActionButton(.link, tip: Tips.copyLink) })
     let measured = try probes(row, scheme: .dark)
     XCTAssertEqual(
       measured["row.leading"]?.width, Grid.glyphSize,

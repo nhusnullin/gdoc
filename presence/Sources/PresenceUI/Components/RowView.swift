@@ -115,7 +115,7 @@ public struct RowView<Leading: View, Trailing: View>: View {
   public let titleColumn: CGFloat?
   /// The words the title area carries for a pointer that rests on it, where
   /// the row itself is a press. A row whose press opens a document says so
-  /// in the Google Docs icon's own words: NowPress.tip.
+  /// in the press's own words, which an icon carried once: NowPress.tip.
   public let titleTip: String?
   /// What a press held on the title area does, where the row has a menu.
   /// It is the title's and not the row's: the four icons are a column of
