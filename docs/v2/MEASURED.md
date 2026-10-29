@@ -43,6 +43,7 @@ earlier sections are frozen in [MEASURED-archive.md](MEASURED-archive.md).
 | 2026-10-18 | What the header line holds, and what a second version costs it | MEASURED.md |
 | 2026-10-26 | Drive's import of a Russian heading and a link to it | MEASURED.md |
 | 2026-10-28 | The logo's frame and its ink | MEASURED.md |
+| 2026-10-29 | The 29 October cover in pixels | MEASURED.md |
 
 A measurement is never edited to match a later reading; a different answer is a
 new section in this file rather than a change in the archive, and the old one
@@ -906,3 +907,32 @@ What follows for M32b: a `width_pt` of 111.75 at an `offset_x_pt` of 421.5
 draws the new picture's ink exactly where the old picture's ink was. Its
 height at the new ratio is 40.6 pt, against the old ink's 68 pt, because the
 2026-10-26 picture is a wider mark.
+
+## The 29 October cover in pixels
+
+Measured 2026-10-29 by the team lead, before M32e was planned, after Nail sent
+a screenshot of the cover of "Ch 4. Target Market, Eligibility and Cardholder
+Journey: review draft v0.1", published that day with v2.25.0, and asked
+whether the logo was in the right place. A throwaway script, never committed,
+read the PNG with Pillow: the page's edges are the first and last column of a
+row that is pure white, the logo's ink is every pixel in the top band whose
+red, green and blue sum under 200, and the label's ink is every pixel in the
+top left whose sum is under 450 with blue over red.
+
+| What | Pixels | Points |
+|---|---|---|
+| the page | x 21 to 1806, 1785 wide | 595.28, so 3.0 px per pt |
+| the text column | x 174 to 1653 | 51.05 pt margins |
+| the mark's ink | x 1439 to 1772, y 43 to 162 | 111 wide, 40 tall; left side 421.6 pt from the column's left edge; right side 40 pt past the column and 11.6 pt short of the paper; top 14.3 pt from the paper's top |
+| the label's ink | x 177 to 471, y 68 to 98 | centre at 27.7 pt from the paper's top |
+| the mark's centre | y 102 | 34 pt from the paper's top, 6 pt below the label's centre |
+
+Two things follow. The horizontal numbers are the house file's to the point:
+`offset_x_pt` 421.5 and `width_pt` 111.75 drew exactly what M32b stated. The
+vertical one is not: the house states the frame at -5.15 pt from the first
+header paragraph, which starts at the header margin of 14.15 pt, so the frame's
+top should be 9 pt from the paper's top, and the ink starts at 14.3 pt. Either
+Docs draws a positioned header picture no higher than the header margin, or the
+picture's ink begins below its frame; the screenshot cannot tell the two apart,
+and M32e does not need to. What it needs is the label 6 pt lower with the mark
+where it is, and the published page after the release is the check.
