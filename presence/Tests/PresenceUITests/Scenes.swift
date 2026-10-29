@@ -412,8 +412,8 @@ enum Scenes {
         "Holds first, then what is stuck, then running jobs, then watches, oldest first "
         + "inside each class. What is stuck here is an export, so the publish running "
         + "under it clears nothing: a stuck card leaves when the next run of its own "
-        + "command starts. It is a failed publish that created no document, and that is "
-        + "why any later publish clears one of those.",
+        + "command starts. The card carries four icons, the note, the chat, the link and "
+        + "the cross, and a click on its words opens the document.",
       fixture: "e3", moment: "2026-10-17T17:20:00Z", alive: [7200, 7210, 7103],
       facts: machine(), ui: UIState(), appearance: nil),
     Scene(
@@ -439,7 +439,8 @@ enum Scenes {
         + "field says it is gone, so it is not struck through. The Claude Desktop row "
         + "carries the other half of the fourth look: Install extension was pressed at "
         + "10:58, the release gdoc found was a major one it declines without the flag, "
-        + "so nothing was written and the row says which command takes it.",
+        + "so nothing was written and the row says which command takes it. That is also "
+        + "why Continue with Claude is grey on every row here: no extension, no chat.",
       fixture: "e6", moment: "2026-10-17T11:00:00Z", alive: [],
       facts: machine(
         extensionState: .notInstalled,
