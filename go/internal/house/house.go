@@ -6,9 +6,9 @@
 // and the logo: its mime, drawn width, placement, and either the bytes or the
 // id of the one file in Drive that holds them. TestTheTenStylesAreThere,
 // TestFrontMatterIsFourteenBlocksInOrder, TestTheThreeTablesAreThereWithTheirColumns,
-// TestTOCIsALiveFieldOverThreeHeadingLevels, TestTheLogoStatesItsMimeWidthAndPlacement
-// and TestTheMarkSitsInTheMarginAndOnThePaper are the pins over what the file
-// has to carry.
+// TestTOCIsALiveFieldOverThreeHeadingLevels, TestTheLogoStatesItsMimeWidthAndPlacement,
+// TestTheMarkEndsInLineWithTheText and TestTheLabelDropsSixPointsAndTheMarkStays
+// are the pins over what the file has to carry.
 //
 // This comment holds why the package refuses what it refuses. What it reports
 // is in the code beside it.

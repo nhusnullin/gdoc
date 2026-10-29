@@ -28,7 +28,8 @@ type pair struct{ A, B string }
 // computed from the master.
 var knownOffline = map[string]pair{
 	"logo height (pt)":                         {`40.616`, `72.75`},
-	"logo leftOffset (pt)":                     {`421.5`, `404.25`},
+	"logo leftOffset (pt)":                     {`381.43`, `404.25`},
+	"logo topOffset (pt)":                      {`-11.15`, `-5.149`},
 	"logo width (pt)":                          {`111.75`, `146.25`},
 	"HEADING_1 colour":                         {`"#22265F"`, `"#06436E"`},
 	"HEADING_1 indentStart":                    {`0`, `36`},

@@ -266,44 +266,75 @@ func TestTheLogoStatesItsMimeWidthAndPlacement(t *testing.T) {
 	if img.Width != 509 || img.Height != 185 {
 		t.Errorf("logo is %dx%d px, want 509x185", img.Width, img.Height)
 	}
-	if cfg.Logo.Anchor.OffsetXPt != 421.5 || cfg.Logo.Anchor.OffsetYPt != -5.15 {
-		t.Errorf("logo anchor offsets = %v, %v, want 421.5, -5.15",
+	if cfg.Logo.Anchor.OffsetXPt != 381.43 || cfg.Logo.Anchor.OffsetYPt != -11.15 {
+		t.Errorf("logo anchor offsets = %v, %v, want 381.43, -11.15",
 			cfg.Logo.Anchor.OffsetXPt, cfg.Logo.Anchor.OffsetYPt)
 	}
 }
 
-// TestTheMarkSitsInTheMarginAndOnThePaper reads the mark's width and its left
-// offset out of the house that ships, and states every other number as a
-// literal. Nail's decision of 2026-10-28: the mark is drawn at its own width,
-// 111.75 pt at 421.5 pt from the column's left edge, which is where the firm's
-// template put the ink of the old padded picture. Two things stay true of that
-// pair. The mark is wholly on the paper, and it reaches past the text into the
-// right margin, which is the look the template had.
-func TestTheMarkSitsInTheMarginAndOnThePaper(t *testing.T) {
+// TestTheMarkEndsInLineWithTheText reads the mark's width and its left offset
+// out of the house that ships, and states every other number as a literal.
+// Nail's decision of 2026-10-29: the mark ends in line with the text instead
+// of reaching past it into the right margin, which read as a slip on the first
+// page of every document. Two things stay true of that pair. The mark's right
+// side is the column's right edge, and the mark is wholly on the paper with
+// the body's own margin to its right.
+func TestTheMarkEndsInLineWithTheText(t *testing.T) {
 	cfg, err := Load()
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
 	width, offset := cfg.Logo.WidthPt, cfg.Logo.Anchor.OffsetXPt
 
-	// The left margin, then the offset, then the mark: 51.05 + 421.5 + 111.75
-	// is 584.3 points, inside A4's 595.28, so Docs draws the mark whole.
-	onPaper := 51.05 + offset + width
-	if math.Abs(onPaper-584.3) > 0.005 {
-		t.Errorf("the mark's right side is %v points from the paper's left edge, want 584.3", onPaper)
+	// The offset, then the mark: 381.43 + 111.75 is 493.18 points, the
+	// column's own width, so the mark ends where the text ends.
+	right := offset + width
+	if math.Abs(right-493.18) > 0.005 {
+		t.Errorf("the mark's right side is %v points from the column's left edge, want the column's 493.18", right)
+	}
+
+	// The left margin, then the offset, then the mark: 51.05 + 493.18 is
+	// 544.23 points, which leaves the body's own 51.05 pt margin to the
+	// mark's right, inside A4's 595.28.
+	onPaper := 51.05 + right
+	if math.Abs(onPaper-544.23) > 0.005 {
+		t.Errorf("the mark's right side is %v points from the paper's left edge, want 544.23", onPaper)
 	}
 	if onPaper >= 595.2755905511811 {
 		t.Errorf("the mark reaches %v points, past A4's 595.2755905511811, so the paper's edge cuts it", onPaper)
 	}
+}
 
-	// And it is not held inside the text: 421.5 + 111.75 is 533.25 points,
-	// over the column's 493.18, so the mark sits out in the right margin.
-	right := offset + width
-	if math.Abs(right-533.25) > 0.005 {
-		t.Errorf("the mark's right side is %v points from the column's left edge, want 533.25", right)
+// TestTheLabelDropsSixPointsAndTheMarkStays is the other half of Nail's
+// decision of 2026-10-29: "For internal use only" sits level with the mark's
+// middle instead of six points above it. The label is a run in the first
+// paragraph of the first-page header, and the mark is anchored from that same
+// paragraph, so the paragraph gains six points before it and the mark's own
+// offset gives the same six back. The sum is the offset the mark had from the
+// header margin before this run, which is the sentence "the label moves and
+// the mark does not" written as a number.
+func TestTheLabelDropsSixPointsAndTheMarkStays(t *testing.T) {
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
 	}
-	if right <= 493.18 {
-		t.Errorf("the mark reaches %v points, inside the column's 493.18, so it no longer reaches into the margin", right)
+	if len(cfg.Header.First.Paragraphs) == 0 {
+		t.Fatal("the first page header carries no paragraphs")
+	}
+	stated := cfg.Header.First.Paragraphs[0].SpaceBeforePt
+	if stated == nil {
+		t.Fatal("the label's paragraph states no space_before_pt, and it states six points")
+	}
+	before := *stated
+	if before != 6 {
+		t.Errorf("the label's paragraph carries space_before_pt %v, want 6", before)
+	}
+	top := cfg.Logo.Anchor.OffsetYPt
+	if top != -11.15 {
+		t.Errorf("the logo anchor's offset_y_pt is %v, want -11.15", top)
+	}
+	if math.Abs(before+top-(-5.15)) > 0.005 {
+		t.Errorf("the label's six points and the mark's offset sum to %v, want -5.15, the mark's offset from the header margin before this run", before+top)
 	}
 }
 

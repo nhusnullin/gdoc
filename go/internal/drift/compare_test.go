@@ -95,6 +95,8 @@ func TestCompareSaysSoWhenTheTwoReadingsDoNotLineUp(t *testing.T) {
 func TestUnexplainedIsWhatAGateFailsOn(t *testing.T) {
 	rows := []Row{
 		{Item: "page width (pt)", Verdict: Identical},
+		// A Close row is explained with or without Known, and this name has
+		// been in Known since 2026-10-29.
 		{Item: "logo topOffset (pt)", Verdict: Close},
 		{Item: "table count", Verdict: Different},
 		{Item: "HEADING_2 spaceAbove", Verdict: Different},
@@ -174,7 +176,7 @@ func TestATypeMismatchIsABugRatherThanAnAnswer(t *testing.T) {
 
 // TestABugRowIsNeverExplainedAway. Known explains a difference between the two
 // documents. A row saying the fault is in this package is not that, so landing
-// on a name in Known must not drop it: fifteen of the thirty names carry rows
+// on a name in Known must not drop it: fifteen of the thirty-one names carry rows
 // that can go wrong this way, and the gate would pass in silence.
 func TestABugRowIsNeverExplainedAway(t *testing.T) {
 	rows := []Row{
