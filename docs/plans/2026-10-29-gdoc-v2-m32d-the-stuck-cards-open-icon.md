@@ -258,10 +258,10 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] `PRESENCE_SHOTS="$HOME/gdoc-m32d-board/shots" make app-test` green.
-- [ ] `ls ~/gdoc-m32d-board/shots` lists `e1-dark.png`, `e3-dark.png` and
+- [x] `PRESENCE_SHOTS="$HOME/gdoc-m32d-board/shots" make app-test` green.
+- [x] `ls ~/gdoc-m32d-board/shots` lists `e1-dark.png`, `e3-dark.png` and
       `index.html`.
-- [ ] No commit: the renders are not in git.
+- [x] No commit: the renders are not in git.
 
 ### Task 4: Verify acceptance criteria
 
