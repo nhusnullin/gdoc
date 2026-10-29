@@ -907,7 +907,7 @@ final class StateTests: XCTestCase {
       XCTAssertEqual(NowPress.opens(named), chapter4, "and the press is offered")
       XCTAssertEqual(
         NowPress.tip(for: named), Tips.openDoc,
-        "and the title says so in the Google Docs icon's own words")
+        "and the title says so in the press's own words")
 
       let forged = try row(shape, doc: planted)
       XCTAssertNil(

@@ -15,8 +15,10 @@ import PresenceCore
 /// The words on an icon, which are the whole of its label. Each is the
 /// screens file's own `data-tip`.
 public enum Tips {
+  /// The words the title of a NOW row and of a stuck card carries, which
+  /// are the press that opens the document. No icon has carried them since
+  /// 2026-10-29: NowPress.words is the one reader.
   public static let openDoc = "Open in Google Docs"
-  public static let noDoc = "No Google Doc yet"
   public static let openNote = "Open the note in Obsidian"
   public static let noNote = "No note is paired with this document"
   /// Two notes name this document, which the app may not pick between. It
@@ -28,9 +30,8 @@ public enum Tips {
   public static let openChat = "Continue with Claude"
   public static let noExtension = "Install the Desktop extension in Settings"
   public static let copyLink = "Copy link"
-  /// The link icon's own off word, which the screens file writes beside
-  /// "No Google Doc yet": there is no link to copy for the same reason
-  /// there is no document to open.
+  /// The link icon's own off word: an id Drive could not have written has
+  /// no link to copy, which is the one reason the icon is ever grey.
   public static let noLink = "No link yet"
   public static let copied = "Copied"
   /// The last icon of a document row, in its two states. They are the words

@@ -567,12 +567,19 @@ extension PanelModel {
       opens: nil)
   }
 
+  /// The icons of a card about a write that stopped: the three a document
+  /// row shares, and the cross.
+  ///
+  /// It carried a Google Docs icon until 2026-10-29 (docs/v2/DECISIONS.md,
+  /// "The stuck card loses its open icon"). A click on the card's words has
+  /// opened the document since the fourth look, so the icon was a second
+  /// control for one action, which is principle 4:
+  /// testTheStuckCardCarriesNoOpenIcon.
   private static func stuckActions(
     _ write: StuckWrite, facts: Facts, ui: UIState, now: Date
   ) -> [ActionModel] {
     var actions: [ActionModel] = []
     if let doc = write.doc {
-      actions.append(openDoc(doc))
       actions.append(openNote(doc, facts: facts, ui: ui))
       actions.append(openChat(doc, facts: facts))
       actions.append(copyLink(doc, ui: ui, now: now))
@@ -712,21 +719,6 @@ extension PanelModel {
   }
 
   // MARK: the icons a document row and a stuck card carry
-
-  /// Open in Google Docs, greyed where the id is not one Drive could have
-  /// written.
-  ///
-  /// It is the stuck card's icon in NOW since the fifth look: a document row
-  /// opens on a press of the row, and a card is not a row. `Opener` refuses
-  /// to build a URL out of an id of another shape, so the press opens
-  /// nothing either way; what the state adds is the card saying why before
-  /// the click rather than after it.
-  private static func openDoc(_ doc: String, forced: String? = nil) -> ActionModel {
-    ActionModel(
-      .openDoc, icon: .gdocs, tip: Tips.openDoc, state: documentState(doc, missing: Tips.noDoc),
-      target: doc,
-      forcedTooltip: forced == "\(doc)|openDoc")
-  }
 
   /// Whether there is a document behind an id at all, in the word of the
   /// icon that is asking.

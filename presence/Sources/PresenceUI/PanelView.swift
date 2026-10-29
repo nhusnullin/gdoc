@@ -136,16 +136,16 @@ struct PlacedSection: Identifiable {
 ///
 /// Every row in NOW is about a document, so the row itself is the click
 /// target and not an icon on it, which is Nail's own answer at the fourth
-/// look (docs/v2/DECISIONS.md, 2026-10-26). The press leaves as the kind a
-/// DOCUMENTS row's first icon sends, so `Session.perform` reaches
+/// look (docs/v2/DECISIONS.md, 2026-10-26). The press leaves as `.openDoc`,
+/// the kind no icon sends any more, so `Session.perform` reaches
 /// `Opener.openDocument` and nothing new asks the system.
 ///
 /// The controls keep their own press: Stop is a button inside the row and
 /// takes the click that lands on it, so a hand reaching for Stop never
 /// opens a browser tab instead: testTheRowOpensAndOnlyStopStops.
 enum NowPress {
-  /// The words the title area carries, which are the Google Docs icon's:
-  /// the press is that icon's press, moved to the row.
+  /// The words the title area carries, which are the press's own: they were
+  /// an icon's until the row took the press over.
   static let words = Tips.openDoc
 
   /// The document this row's press opens, or nothing where it has no press.

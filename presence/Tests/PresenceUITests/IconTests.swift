@@ -1,8 +1,8 @@
 // The action icons, against the SVG they were ported from.
 //
-// Eleven of the thirteen are the `IC` object of
+// Ten of the twelve are the `IC` object of
 // docs/design/2026-10-17-presence-screens-v3.html, drawn as Path rather than
-// as SF Symbols, because five of them sit side by side in one row and a
+// as SF Symbols, because four of them sit side by side in one row and a
 // system symbol would be whatever the platform ships this year. The numbers
 // below are the `.act` and `.act svg` rules, read by hand and written as
 // literals.
@@ -12,7 +12,7 @@
 // (docs/v2/DECISIONS.md, 2026-10-18), and both shapes are written here in
 // the same grammar.
 //
-// The sheet of all thirteen goes out as a PNG under PRESENCE_SHOTS, so the
+// The sheet of all twelve goes out as a PNG under PRESENCE_SHOTS, so the
 // shapes are looked at once rather than trusted from a pixel count.
 
 import AppKit
@@ -29,10 +29,10 @@ final class IconTests: XCTestCase {
     XCTAssertEqual(
       Icon.allCases,
       [
-        .gdocs, .md, .branch, .link, .done, .stop, .down, .signin, .signout, .x, .xmark,
+        .md, .branch, .link, .done, .stop, .down, .signin, .signout, .x, .xmark,
         .pin, .pinOn,
       ],
-      "the thirteen the panel draws, and no spare from the IC object")
+      "the twelve the panel draws, and no spare from the IC object")
 
     // `.act svg{width:16px;height:16px;stroke-width:1.25;stroke-linecap:round;
     // stroke-linejoin:round}`. Every icon left is one of those: the 12 pt
@@ -156,24 +156,23 @@ final class IconTests: XCTestCase {
     XCTAssertEqual(ActionButton.offOpacity, 0.38)
 
     XCTAssertEqual(ActionButton.opacity(for: .live), 1)
-    XCTAssertEqual(ActionButton.opacity(for: .off("No Google Doc yet")), 0.38)
+    XCTAssertEqual(ActionButton.opacity(for: .off(Tips.noLink)), 0.38)
     XCTAssertEqual(ActionButton.opacity(for: .done), 1)
 
+    XCTAssertEqual(ActionButton.tooltip(Tips.copyLink, state: .live), Tips.copyLink)
     XCTAssertEqual(
-      ActionButton.tooltip("Open in Google Docs", state: .live), "Open in Google Docs")
-    XCTAssertEqual(
-      ActionButton.tooltip("Open in Google Docs", state: .off("No Google Doc yet")),
-      "No Google Doc yet", "an off icon says why, and not what it would have done")
-    XCTAssertFalse(ActionButton.isPressable(.off("No Google Doc yet")))
+      ActionButton.tooltip(Tips.copyLink, state: .off(Tips.noLink)),
+      Tips.noLink, "an off icon says why, and not what it would have done")
+    XCTAssertFalse(ActionButton.isPressable(.off(Tips.noLink)))
     XCTAssertTrue(ActionButton.isPressable(.live))
 
     // The opacity reaches the drawing: the same icon, dimmed, carries less
     // ink than the live one.
     for scheme in [ColorScheme.dark, .light] {
       let live = try inkWeight(
-        ActionButton(.gdocs, tip: "Open in Google Docs"), scheme: scheme, side: ActionButton.size)
+        ActionButton(.link, tip: Tips.copyLink), scheme: scheme, side: ActionButton.size)
       let off = try inkWeight(
-        ActionButton(.gdocs, tip: "Open in Google Docs", state: .off("No Google Doc yet")),
+        ActionButton(.link, tip: Tips.copyLink, state: .off(Tips.noLink)),
         scheme: scheme, side: ActionButton.size)
       XCTAssertGreaterThan(live, 0)
       XCTAssertLessThan(off, live * 0.5, "an off icon is dimmed in \(scheme)")
@@ -227,7 +226,7 @@ final class IconTests: XCTestCase {
 
   // MARK: the renders
 
-  /// The sheet: the thirteen in a row, live, off and done, in both
+  /// The sheet: the twelve in a row, live, off and done, in both
   /// appearances, so the shapes are looked at once.
   private func writeSheet() throws {
     let shots = try shotsDirectory()

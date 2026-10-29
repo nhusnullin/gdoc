@@ -206,6 +206,12 @@ firm's mark at the foot of the panel is decided and not built: its own
 milestone, by the one route the trust guardian signs. Decided 2026-10-28,
 DECISIONS.md, the fifth look.
 
+**The stuck card's open icon.** Since 2026-10-29 a stuck card about a
+document carries the note, the chat, the link and the cross, and no icon
+that opens the document: a click on the card opens it, as it has since the
+fourth look, and one action has one control. The Google Docs glyph is drawn
+nowhere in the panel after this. Decided 2026-10-29, DECISIONS.md.
+
 `auth login` is a real desktop flow: a loopback redirect with PKCE, hand-rolled.
 
 **Two scopes:** Drive, and `https://www.googleapis.com/auth/documents`, the Docs

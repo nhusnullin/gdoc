@@ -115,7 +115,7 @@ public struct RowView<Leading: View, Trailing: View>: View {
   public let titleColumn: CGFloat?
   /// The words the title area carries for a pointer that rests on it, where
   /// the row itself is a press. A row whose press opens a document says so
-  /// in the Google Docs icon's own words: NowPress.tip.
+  /// in the press's own words, which an icon carried once: NowPress.tip.
   public let titleTip: String?
   /// What a press held on the title area does, where the row has a menu.
   /// It is the title's and not the row's: the four icons are a column of
@@ -305,7 +305,11 @@ public struct RowView<Leading: View, Trailing: View>: View {
 
   /// `.row.hov{background:var(--s2)}`. The caller can state it, so a still
   /// of a hovered row renders, and the pointer states it in the app.
-  var isFilled: Bool { hovering || pointerInside }
+  ///
+  /// A forced card fills the row under it, because a card is only ever up
+  /// on a hovered row: a still that forces the card states the hover with
+  /// it, and a reader can tell which row the plate belongs to.
+  var isFilled: Bool { hovering || pointerInside || forcedCard }
 }
 
 extension RowView where Leading == StatusGlyph, Trailing == EmptyView {
