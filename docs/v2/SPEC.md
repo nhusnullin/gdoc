@@ -144,7 +144,11 @@ gains `made`, `step`, `stop` with `line`, `via: code`, `interrupted` and the
 remembers a hash of the refresh token it was held under and is dropped when
 the sign-in changes, so no account ever posts another's held write. `gdoc
 auth logout` removes the token and nothing else. The app relaunches itself
-after an update. Decided 2026-10-17, DECISIONS.md, the panel entry.
+after an update, and since 2026-10-30 the notice row counts the five seconds
+down to it, "Reopens in 5" to 1, says "Reopens when the update finishes"
+while the update still runs, and says "Quit and reopen" only when the reopen
+did not happen. Decided 2026-10-17, DECISIONS.md, the panel entry, and
+2026-10-30, the reopen count.
 
 **The app opens itself.** Under the setting, on macOS, a gdoc command whose
 run is recorded opens `~/Applications/GdocPresence.app` with `/usr/bin/open
@@ -214,15 +218,20 @@ nowhere in the panel after this. Decided 2026-10-29, DECISIONS.md.
 **The firm's mark beside DOCUMENTS.** Since 2026-10-29 the DOCUMENTS label
 carries the firm's mark at its right: 14 pt tall, its right edge on the
 edge every icon and value ends on, centred on the label's row, in the
-label's own ink as a template image, never in colour. It is not a press and
-has no tooltip. It is the one picture the panel draws, and it comes from
+label's own ink as a template image, never in colour. Since 2026-10-30 it
+is drawn from a bitmap made once at its own pixel size, so its edges are
+anti-aliased like the words beside it, and it is a press: a click opens the
+picture's page in Google Drive in the default browser, at the address bare
+`help --json` names beside the path as `logo_url`, with the tooltip "Open in
+Google Drive"; the app holds no Drive id and opens no other address for it.
+It is the one picture the panel draws, and it comes from
 one file, the path bare `help --json` names under `logo_path` and no other
 form of the help carries, where gdoc caches the house logo beside the
 token. The app opens that one path read-only without following a link,
 takes a regular file of at most a megabyte that opens as PNG, and draws
-nothing otherwise, no placeholder and no gap. The binary never fetches or
-reads the logo for the help, and the app never reads Drive. Decided
-2026-10-29, DECISIONS.md.
+nothing otherwise, no placeholder, no gap and no press. The binary never
+fetches or reads the logo for the help, and the app never reads Drive.
+Decided 2026-10-29 and 2026-10-30, DECISIONS.md.
 
 `auth login` is a real desktop flow: a loopback redirect with PKCE, hand-rolled.
 

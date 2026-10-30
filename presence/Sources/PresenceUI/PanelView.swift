@@ -104,7 +104,8 @@ public struct PanelView: View {
   /// RowTests.testOnlyTheDocumentsLabelCarriesTheMark.
   private func section(_ placed: PlacedSection) -> some View {
     SectionView(
-      placed.section.label, isFirst: isFirst(placed.index), mark: mark(of: placed.section)
+      placed.section.label, isFirst: isFirst(placed.index), mark: mark(of: placed.section),
+      press: markPress(of: placed.section)
     ) {
       body(of: placed.section)
     }
@@ -114,6 +115,14 @@ public struct PanelView: View {
   /// for the other two.
   private func mark(of section: PanelSection) -> Data? {
     if case .documents = section { return model.logo }
+    return nil
+  }
+
+  /// The press on that mark, which opens the picture's own page in Drive,
+  /// and nothing for the other two labels or for a panel whose facts carry
+  /// no address (docs/v2/DECISIONS.md, 2026-10-30).
+  private func markPress(of section: PanelSection) -> (() -> Void)? {
+    if case .documents = section { return MarkPress.open(model, actions: actions) }
     return nil
   }
 

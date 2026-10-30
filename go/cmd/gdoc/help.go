@@ -46,6 +46,16 @@ type helpReport struct {
 	// a machine that has built no document has no file there to draw.
 	// TestHelpNamesWhereTheLogoIsCached.
 	LogoPath string `json:"logo_path,omitempty"`
+	// LogoURL is the picture's own page in Google Drive, named so the menu
+	// bar app can open it on a press and still hold no copy of a Drive id.
+	// It rides the one form LogoPath rides, bare `help --json`, and no
+	// other. It is built from the id in the house file and nothing is
+	// fetched: the help names an address, and opening it is the system's
+	// act. The address is the same string on every machine, so unlike the
+	// path it names no home. A house that carries its logo as bytes rather
+	// than as a Drive file has no page, and the field is absent.
+	// TestHelpNamesTheLogosPageInDrive.
+	LogoURL string `json:"logo_url,omitempty"`
 }
 
 // helpSettings is the settings in effect as JSON. MarkFrom is one of the three
@@ -167,9 +177,11 @@ func cmdHelp(ctx context.Context, words []string, json, brief bool, errOut io.Wr
 		Update:   facts,
 	}
 	// The one argv the menu bar app runs, and the one answer that names the
-	// logo's cache path: Runner.swift asks for ["help", "--json"].
+	// logo's cache path and the page it opens: Runner.swift asks for
+	// ["help", "--json"].
 	if json && len(words) == 0 {
 		report.LogoPath = logoCached()
+		report.LogoURL = logoPage()
 	}
 	return emit.Result{
 		OK:       true,
@@ -200,6 +212,23 @@ func logoCached() string {
 		return ""
 	}
 	return path
+}
+
+// logoPage is where a person opens the house logo: the file's own page in
+// Drive, built from the same id logoCached names. Nothing here reaches the
+// file or the network, and it is the empty string on any error or an empty id,
+// for the reason logoCached states.
+// TestHelpNamesTheLogosPageInDrive.
+func logoPage() string {
+	cfg, err := house.Load()
+	if err != nil {
+		return ""
+	}
+	id := cfg.LogoDrive()
+	if id == "" {
+		return ""
+	}
+	return "https://drive.google.com/file/d/" + id + "/view"
 }
 
 // settingsAsked is the settings in effect as the object carries them, built in

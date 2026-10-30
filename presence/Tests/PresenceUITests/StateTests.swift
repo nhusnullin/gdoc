@@ -1025,6 +1025,21 @@ final class StateTests: XCTestCase {
     XCTAssertNil(drawnWithout.logo, "and nothing where the facts carry none")
   }
 
+  /// The page the mark opens reaches the model from the facts, and from
+  /// nothing else: no room under `PresenceUI` builds an address.
+  func testTheModelCarriesTheLogosPageAndOnlyFromTheFacts() throws {
+    let page = "https://drive.google.com/file/d/1MaRkStAnDiN0PaGe0iD00000000/view"
+    let withPage = Facts(
+      versions: Versions(app: "2.15.0"), logoURL: page, gdocPath: Scenes.gdocPath)
+
+    let drawnWith = try drawn([], at: "2026-10-17T10:00:00Z", facts: withPage)
+    XCTAssertEqual(drawnWith.logoURL, page, "the facts' address, unchanged")
+
+    let without = Facts(versions: Versions(app: "2.15.0"), gdocPath: Scenes.gdocPath)
+    let drawnWithout = try drawn([], at: "2026-10-17T10:00:00Z", facts: without)
+    XCTAssertNil(drawnWithout.logoURL, "and nothing where the facts carry none")
+  }
+
   private func drawn(
     _ events: [Event], at text: String, facts: Facts = Scenes.machine(),
     ui: UIState = UIState(), alive: Set<Int32> = []

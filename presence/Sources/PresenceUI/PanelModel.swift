@@ -58,6 +58,12 @@ public enum ActionKind: String, Sendable, Equatable, CaseIterable {
   case pinDoc
   case unpinDoc
   case hideDoc
+  /// The press on the firm's mark, beside the DOCUMENTS label.
+  ///
+  /// Its target is the page's own address, as the facts carry it from the
+  /// binary's help, and never an id: the app builds no Drive address of its
+  /// own, and the one shape it accepts is held in `LinkLine`.
+  case openMark
 }
 
 /// One word of a row's own menu, and what pressing it means.
@@ -341,6 +347,10 @@ public struct PanelModel: Sendable, Equatable {
   /// get here: a machine with no picture folds to nothing, and the label is
   /// then the words alone.
   public let logo: Data?
+  /// The page that mark opens, as the facts handed it over. Nothing builds
+  /// an address here: a panel whose facts carry none draws the mark and no
+  /// press.
+  public let logoURL: String?
 
   /// The mark in effect, which the header and the empty state draw.
   public var mark: String { header.mark }
@@ -447,7 +457,8 @@ extension PanelModel {
       notice: notice(facts),
       sections: sections,
       forcedTooltip: ui.forcedTooltip,
-      logo: facts.logo)
+      logo: facts.logo,
+      logoURL: facts.logoURL)
   }
 
   // MARK: NOW

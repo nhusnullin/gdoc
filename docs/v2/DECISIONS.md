@@ -115,8 +115,10 @@ replaced it)`, or `measured`. Nothing else.
 | 2026-10-28 | The fifth look: a card on a rested pointer, the row opens the document and the Google Docs icon goes, a wider panel, and the firm's mark at the foot as its own later milestone | superseded 2026-10-29 (the mark's place only: it goes beside the DOCUMENTS label, not at the foot; the card, the row press, the width and the blank column hold) | DECISIONS.md |
 | 2026-10-29 | The stuck card loses its open icon: a click on the card already opens the document, so the icon was a second control for one action | holds | DECISIONS.md |
 | 2026-10-29 | The logo inside the column: the mark ends in line with the text, and the label sits level with it | superseded 2026-10-30 (the offset only: it stays the master's -5.15 pt; the place and the label's six points hold) | DECISIONS.md |
-| 2026-10-29 | The firm's mark beside DOCUMENTS: 14 pt tall on the label's right edge in the label's own ink, read from the one file `help --json` names, and nothing drawn where there is none | holds | DECISIONS.md |
+| 2026-10-29 | The firm's mark beside DOCUMENTS: 14 pt tall on the label's right edge in the label's own ink, read from the one file `help --json` names, and nothing drawn where there is none | superseded 2026-10-30 (the press only: the mark opens its page in Drive; the place, the size, the ink, the one file and the empty first run hold) | DECISIONS.md |
 | 2026-10-30 | The mark six points down: Docs measures a picture's offset from the top of its paragraph's space before, so the offset returns to -5.15 pt and the label's six points carry the mark with it | holds | DECISIONS.md |
+| 2026-10-30 | The mark, sharp and a press: drawn from a bitmap made at its own pixel size, and a click opens the picture's page in Drive, at the address bare `help --json` names beside the path | holds | DECISIONS.md |
+| 2026-10-30 | The reopen count: after an update the notice row counts five seconds down and the app reopens itself at zero; "Quit and reopen" is kept for the one case the reopen did not happen | holds | DECISIONS.md |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -1809,3 +1811,114 @@ spelling outside five named files; no argv list, signal, URL, grant or
 presence field is added, and `help` reads nothing for the path.
 
 The plan is `docs/plans/2026-10-29-gdoc-v2-m32f-the-firms-mark-beside-documents.md`.
+
+## 2026-10-30. The mark, sharp and a press: drawn from a bitmap made at its own pixel size, and a click opens the picture's page in Drive, at the address bare `help --json` names beside the path.
+
+v2.29.0 shipped the mark beside DOCUMENTS at 08:23Z. Nail looked at it on
+his own screen within the hour and sent a crop of the header and the label
+with the real wordmark in place: "logo is good in general but im doubt
+about its resolution. also, when i click i expect defualt browser with
+picture from gdrive to be openned".
+
+**The resolution.** The file is not the problem. The cached logo is a
+509 by 185 pixel PNG, and the label draws it 77 by 28 pixels on a 2x
+screen, exactly the 14 pt the entry above asked for. The lead measured
+Nail's crop against the same file downsampled properly to the same size:
+the on-screen mark has 93 half-grey edge pixels where an area-averaged
+downsample has about 300. The view hands the full bitmap to the compositor
+and lets it scale by a factor of six and a half, which drops samples and
+leaves the letters' edges ragged, while the words beside it are
+anti-aliased. So the mark is drawn from a bitmap made once at the drawn
+pixel size, the label's 14 pt at the screen's own scale, at the system's
+highest interpolation quality, which averages the source pixels each output
+pixel covers instead of picking one of them, and the view scales nothing. The
+test for it shrinks a picture of one-pixel stripes and expects a flat grey,
+which a sampler that drops pixels cannot give. The size, the place and the ink
+of the 2026-10-29 entry do not move.
+
+**The press.** A click on the mark opens the picture's own page in Google
+Drive in the default browser, `https://drive.google.com/file/d/<id>/view`.
+The tooltip after half a second is "Open in Google Drive", in the voice of
+"Open in Google Docs"; the hover goes darker like every action's, and the
+pointer stays the arrow every press in the panel has. Where there is no file there is no mark and no press,
+and nothing says so. The app still holds no Drive id: bare `help --json`
+names the page beside the path, as `logo_url`, built by the binary from
+the id it already carries in the house file, on the one form of the help
+that carries `logo_path` and on no other, so the pipe goldens and the brief
+do not change. The app opens the address it was handed and no other, through
+the one Opener, as a fifth verb beside the document, the link, the note and
+Claude, after LinkLine has checked it is that one shape: the Drive host, the
+file path, an id of the document id's alphabet and floor, and the view
+suffix. The host joins the closed list of two in the app's source rule, and
+the rule's test names three. Where the bytes are there and the address is
+not, the mark draws and does not press.
+
+**What this supersedes.** One sentence of the 2026-10-29 entry: "It is not
+a press and has no tooltip." The fifth look's "one action, one control"
+holds: nothing else on the panel opens the picture.
+
+**What stays out.** A copy of the Drive id in the app. A tooltip or a line
+where there is no mark. Any colour on the mark, pressed or not. Any read of
+Drive by the app: opening a page in the browser is the system's act on an
+address the binary named, the same act as opening a document.
+
+Trust guardian, 2026-10-30: signed. The app opens one more address and
+reads no more bytes. The address is `https://drive.google.com/file/d/<id>/view`.
+The binary builds it from the id in the house file it embeds, and names it
+as `logo_url` on bare `help --json` alone, beside a `logo_path` that already
+carries the same id. `LinkLine.markPageURL` builds it again from its parts
+once the prefix, the suffix and the id's alphabet and floor are checked, in
+the poller and again in `Opener.openMark`. The browser opens it with no
+credential of gdoc's. `SourceRulesTests.testTheOnlySchemesAndHostsAreGooglesAndTheVaults`
+names three hosts and no fourth. `testTheSystemIsAskedOnlyThroughTheOpenerAndTheRelauncher`
+still names two files, and `testAByteIsReadOnlyInTheFiveReaders` still
+names five. No argv list, signal, grant, scope, presence field or wire
+request is added. The app holds no Drive id, and `help` reads nothing for
+the address: `TestHelpNamesTheLogosPageInDrive`.
+
+The plan is `docs/plans/2026-10-30-gdoc-v2-m32h-the-mark-sharp-and-a-press.md`.
+
+## 2026-10-30. The reopen count: after an update the notice row counts five seconds down and the app reopens itself at zero; "Quit and reopen" is kept for the one case the reopen did not happen.
+
+Nail pressed Update to v2.29.0 in the panel and wrote: "when i click update
+you show then text, quit and reopen, i expect timer where, which indicate
+that to be reopenned". The record and the app's own stamp say what happened:
+`gdoc update` ended at 08:30:05Z, the relaunch stamp was written at
+08:30:10Z, and the process running since then carries `--relaunched-by`.
+The app did reopen itself, as the panel entry of 2026-10-17 decided and M24
+built, about seven seconds after the update ended: the bundle watcher's
+debounce, the next five-second tick that found the child gone, and the two
+seconds the relauncher waits before it opens the new instance. For those
+seven seconds the panel said "Updated to v2.29.0. Quit and reopen", which
+promises a manual act the app was about to do itself. That is a broken
+promise under principle 5, and the fix is the words and a count the person
+can see, not the mechanism.
+
+**What the row says.** After an update that replaced the bundle, the
+notice row counts down in whole seconds from five: "Updated to v2.29.0.
+Reopens in 5", then 4, 3, 2, 1, one tick a second, and the app opens its
+new instance when the count reaches zero. The count starts when the update
+child has ended, or at once when the bundle changed with no child up, and
+it is the relauncher's settle: the open happens at zero and not two seconds
+later. While a relaunch is held by a guard that can clear, the update still
+running or the child still alive, the row says "Updated to v2.29.0. Reopens
+when the update finishes". Only when the relaunch was refused for good, the
+identifier or the signature on disk is not this app's, or this version was
+already tried within ten minutes, or when the open itself failed, does the
+row say "Updated to v2.29.0. Quit and reopen", as it does today. The
+panel's rule that no time predicts anything is kept in the one way the
+sign-in's countdown kept it: the count is a clock the app itself runs, and
+at zero the app acts.
+
+**What does not change.** The relaunch is `NSWorkspace.openApplication`
+from the relauncher alone, once per on-disk version, never while an update
+runs, the old instance quitting only after the new one is up. No argv list,
+no process, no new program run, no new read, no new file. The tick is one
+second while a count runs, as it already is while a child is up, and five
+seconds after.
+
+Trust guardian: not called. Words, a count the app already waits out, and
+the order of two existing steps. No read, grant, URL, argv list or presence
+field changes.
+
+The plan is `docs/plans/2026-10-30-gdoc-v2-m32i-the-reopen-count.md`.

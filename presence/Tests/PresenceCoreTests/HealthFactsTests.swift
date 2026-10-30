@@ -102,6 +102,40 @@ final class HealthFactsTests: XCTestCase {
     }
   }
 
+  /// The page the help names for the house logo, and a house with no page.
+  ///
+  /// The field rides the same one form of the help the path rides, and it is
+  /// absent where the house carries its mark as bytes rather than as a Drive
+  /// file. A `logo_url` that is not a string is refused by name, as the path
+  /// is: something other than gdoc wrote that object. The id here is a
+  /// stand-in of the right shape; the firm's own is not in this repository.
+  func testHelpNamesTheLogosPageAndItMayBeAbsent() throws {
+    let page = "https://drive.google.com/file/d/1MaRkStAnDiN0PaGe0iD00000000/view"
+    let named = try HelpFacts.decode(
+      Data(
+        #"""
+        {"settings":{"mark":"⁘","mark_from":"default"},
+         "logo_url":"\#(page)"}
+        """#.utf8))
+    XCTAssertEqual(named.logoURL, page, "the string as the help printed it")
+
+    let silent = try HelpFacts.decode(
+      Data(
+        #"""
+        {"settings":{"mark":"⁘","mark_from":"default"},
+         "update":{"installed":"v2.29.0","latest_stable":"v2.29.0"}}
+        """#.utf8))
+    XCTAssertNil(silent.logoURL, "a house with no Drive file names no page")
+
+    do {
+      _ = try HelpFacts.decode(
+        Data(#"{"settings":{"mark":"⁘"},"logo_url":7}"#.utf8))
+      XCTFail("a numeric logo_url was read as an address")
+    } catch {
+      XCTAssertEqual(error as? HealthFault, .undecodable("no logo_url"))
+    }
+  }
+
   // MARK: auth status
 
   func testAuthStatusGivesTheThreeWordsAndTheEmail() throws {

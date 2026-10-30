@@ -221,6 +221,48 @@ final class HealthPollerTests: XCTestCase {
       "four help answers in all, and the logo moved with them")
   }
 
+  /// The picture's page, taken only in the one shape it may have.
+  ///
+  /// The address is a string a gdoc on this machine printed, so the poller
+  /// hands it to `LinkLine` and keeps what comes back. A help answer naming
+  /// anything else leaves the panel with no page, and no press. The id here
+  /// is a stand-in of the right shape; the firm's own is not in this
+  /// repository.
+  func testTheLogosPageIsTakenOnlyInItsOneShape() async throws {
+    let page = "https://drive.google.com/file/d/1MaRkStAnDiN0PaGe0iD00000000/view"
+    let fake = FakeGdoc()
+    await fake.answersLogoPage(page)
+    let poller = HealthPoller(location: Self.found, answer: fake.answer)
+    let open = Date(timeIntervalSince1970: 6_000_000)
+
+    await poller.poll(.panelOpened, live: false, now: open)
+    let named = await poller.applied(to: Facts.launching(appVersion: "2.14.0")).logoURL
+    XCTAssertEqual(named, page, "the address the help printed, as it printed it")
+
+    // An `auth status` on its own says nothing about the page.
+    await poller.poll(.timer, live: true, now: open.addingTimeInterval(700))
+    let afterAuth = await poller.applied(to: Facts.launching(appVersion: "2.14.0")).logoURL
+    XCTAssertEqual(afterAuth, page, "an auth answer is not about the page")
+
+    // A document's own URL is not the picture's page.
+    await fake.answersLogoPage(
+      "https://docs.google.com/document/d/1MaRkStAnDiN0PaGe0iD00000000/edit")
+    await poller.poll(.changed, live: false, now: open.addingTimeInterval(800))
+    let afterADocument = await poller.applied(to: Facts.launching(appVersion: "2.14.0")).logoURL
+    XCTAssertNil(afterADocument, "another page is no page at all")
+
+    // The page is back once the help names it again, and a help answer
+    // naming none clears it.
+    await fake.answersLogoPage(page)
+    await poller.poll(.changed, live: false, now: open.addingTimeInterval(900))
+    let again = await poller.applied(to: Facts.launching(appVersion: "2.14.0")).logoURL
+    XCTAssertEqual(again, page, "the help names it again, so the press is back")
+    await fake.answersLogoPage(nil)
+    await poller.poll(.changed, live: false, now: open.addingTimeInterval(1000))
+    let afterNone = await poller.applied(to: Facts.launching(appVersion: "2.14.0")).logoURL
+    XCTAssertNil(afterNone, "the help named nothing, so there is nothing to open")
+  }
+
   // MARK: a file, for the one read the poller makes
 
   /// A file of exactly `count` bytes that opens with the eight PNG bytes,
@@ -256,6 +298,7 @@ private actor FakeGdoc {
   private(set) var calls: [Call] = []
   private var account: String
   private var logoPath: String?
+  private var logoURL: String?
   private let broken: Set<Call>
 
   init(broken: Set<Call> = [], account: String = "nail@example.com") {
@@ -268,6 +311,10 @@ private actor FakeGdoc {
   /// Where this gdoc says the house logo is cached, or nothing: a machine
   /// that has never built a document names no path.
   func answersLogo(at path: String?) { logoPath = path }
+
+  /// What this gdoc names as the picture's page in Drive, or nothing: a
+  /// house that carries its mark as bytes has no page to name.
+  func answersLogoPage(_ page: String?) { logoURL = page }
 
   /// The closure the poller is built with. It is `nonisolated` so the poller
   /// holds a plain function, as it will hold the runner's own.
@@ -286,9 +333,10 @@ private actor FakeGdoc {
     switch call {
     case .help:
       let logo = logoPath.map { #""logo_path":"\#($0)","# } ?? ""
+      let page = logoURL.map { #""logo_url":"\#($0)","# } ?? ""
       return outcome(
         call,
-        "{" + logo + #""settings":{"mark":"⁘"},"#
+        "{" + logo + page + #""settings":{"mark":"⁘"},"#
           + #""update":{"installed":"v2.14.0","latest_stable":"v2.14.1"}}"#)
     case .authStatus:
       return outcome(

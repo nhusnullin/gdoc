@@ -489,6 +489,36 @@ final class SessionTests: XCTestCase {
     XCTAssertTrue(session.ui.stripSeen, "the first click on an icon is the labels read")
   }
 
+  /// A press on the firm's mark opens the picture's page, and moves nothing
+  /// else.
+  ///
+  /// The mark sits in a section's label, so a click on it is a click on
+  /// neither a row nor one of a row's icons: the four labels stay, the card's
+  /// hint stays, and nothing is written down. The address is the one the
+  /// facts carry, and the session hands it over without reading it.
+  func testTheMarkPressOpensItsPageAndMovesNothingElse() throws {
+    try writeTheRecord([line(kind: "start", command: "reply", call: 1, doc: Self.doc)])
+    let store = Store()
+    let desk = FakeDesk()
+    let session = made(preferences: Preferences(store: store), desk: desk)
+    answered(session)
+
+    let page = "https://drive.google.com/file/d/1MaRkStAnDiN0PaGe0iD00000000/view"
+    session.perform(.openMark, page)
+
+    XCTAssertEqual(
+      desk.opened.map(\.absoluteString), [page],
+      "the mark opens the picture's own page and nothing else")
+    XCTAssertFalse(session.ui.stripSeen, "a click on the mark is not a click on an icon")
+    XCTAssertFalse(session.ui.cardHintSeen, "and it is not a click on a document row")
+    XCTAssertNil(
+      store.object(forKey: Preferences.Key.stripSeen.rawValue),
+      "nothing is written about labels nobody has read")
+    XCTAssertNil(
+      store.object(forKey: Preferences.Key.cardHintSeen.rawValue),
+      "and nothing about a hint nobody has put away")
+  }
+
   /// The card's hint is taught once: the person's own first press of a
   /// document row puts it away, and it never comes back.
   ///

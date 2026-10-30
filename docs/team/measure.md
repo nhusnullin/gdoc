@@ -347,7 +347,7 @@ fixed by the same rebase as M32d's.
 | The mark six points down (lead, no worker) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 
 - No ralphex log, so no row the meter can read: the lead made the change
-  itself in the worktree `../gdoc-m32g`, one number in the house file and
+  itself in the worktree gdoc-m32g beside this checkout, one number in the house file and
   the eight files that state it, red first and then green, in about forty
   minutes from the designer's answer at 00:45 to the green pull request at
   01:10. The cost sits in the lead's own context, which the meter does not
@@ -386,7 +386,9 @@ file, which is cached only after a sign-in, and the rows sheet drew the
 DOCUMENTS label only without it. The lead swapped the no-picture story to
 e5, gave e9 the mark, and drew the label both ways on the sheet, in one
 commit before the release. `make release` ran clean the first time: PR 106,
-checks green, waiting on Nail's word for the number. Main had moved twice
+checks green. The GO step stopped once more at the fast-forward pull, over
+four docs commits on local main, rebased and run again, and v2.29.0 was
+published and verified at 08:23Z. Main had moved twice
 during the run, to v2.27.0 and v2.28.0 from the other session, and the
 branch merges into it without a conflict. Nail sent one message for the
 run, the GO on the previous milestone with this launch in the same line.

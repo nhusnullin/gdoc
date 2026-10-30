@@ -611,6 +611,297 @@ final class RowTests: XCTestCase {
       "the mark reaches into the first document row")
   }
 
+  // MARK: the press on the mark
+
+  // A mark with a page behind it is a press, and the press opens that page.
+  //
+  // The closure is read through a `PanelActions` that writes down what it
+  // was handed, because this package has no offscreen click: what a test can
+  // hold is that the mark was wired to the one kind and the one address.
+  // Nail's hand check holds the rest of it.
+  func testTheMarkWithAPageIsAPressThatOpensIt() throws {
+    var pressed: [(kind: ActionKind, target: String?)] = []
+    let actions = PanelActions { kind, target in pressed.append((kind, target)) }
+
+    let model = try panel(logo: SceneMark.standIn, logoURL: SceneMark.page)
+    let press = try XCTUnwrap(
+      MarkPress.open(model, actions: actions),
+      "the bytes and the address are both there, so the mark presses")
+
+    press()
+    XCTAssertEqual(pressed.count, 1, "one press, one thing done")
+    XCTAssertEqual(pressed.first?.kind, .openMark, "and it is the kind the mark's press sends")
+    XCTAssertEqual(
+      pressed.first?.target, SceneMark.page, "the page, as the facts handed it over")
+  }
+
+  // Either half missing is no press at all. Bytes with no address draw the
+  // mark and nothing to click, which is principle 4 of the design
+  // principles: a dead control is not shown as live.
+  func testTheMarkWithoutAPageOrWithoutBytesIsNoPress() throws {
+    let actions = PanelActions()
+
+    XCTAssertNil(
+      MarkPress.open(try panel(logo: SceneMark.standIn, logoURL: nil), actions: actions),
+      "a mark with no address is drawn and not pressed")
+    XCTAssertNil(
+      MarkPress.open(try panel(logo: nil, logoURL: SceneMark.page), actions: actions),
+      "an address with no picture has nothing to press, which is a first run")
+    XCTAssertNil(
+      MarkPress.open(try panel(logo: nil, logoURL: nil), actions: actions),
+      "neither half, so nothing at all")
+  }
+
+  // The words are the Drive page's, they are shown only where the mark
+  // presses, and the press moved nothing: the picture is the same box on the
+  // same edge with a press as without one.
+  func testTheMarksWordsAreTheDrivePageAndOnlyWhereItPresses() throws {
+    XCTAssertEqual(Tips.openMark, "Open in Google Drive")
+
+    // A forced bubble needs room under the thing it explains, or the layer
+    // flips it over the top: the same band the controls sheet gives each of
+    // its icons.
+    let band = ControlTests.tooltipBand
+    let pressing =
+      SectionLabel("Documents", mark: SceneMark.standIn, press: {}, forcedTooltip: true)
+      .frame(width: Grid.panelWidth, height: band, alignment: .topTrailing)
+      .tooltipLayer()
+    let plain =
+      SectionLabel("Documents", mark: SceneMark.standIn, forcedTooltip: true)
+      .frame(width: Grid.panelWidth, height: band, alignment: .topTrailing)
+      .tooltipLayer()
+
+    let drawn = try probeList(pressing, scheme: .dark)
+    let bubble = try XCTUnwrap(
+      drawn.first { $0.name == "tooltip" }, "the mark that presses said nothing")
+    XCTAssertEqual(
+      bubble.origin.x + bubble.size.width, contentEdge, accuracy: 0.5,
+      "the words end where the mark ends, on the content edge")
+
+    let bare = try probeList(plain, scheme: .dark)
+    XCTAssertNil(
+      bare.first { $0.name == "tooltip" },
+      "a mark with no press carried words about a click that does nothing")
+
+    let withPress = try XCTUnwrap(
+      drawn.first { $0.name == "section-label.mark" }, "the pressing label drew no mark")
+    let without = try XCTUnwrap(
+      bare.first { $0.name == "section-label.mark" }, "the plain label drew no mark")
+
+    XCTAssertEqual(
+      withPress.size.width, Grid.markHeight * 2.75, accuracy: 0.5,
+      "the press changed the picture's width")
+    XCTAssertEqual(
+      withPress.size.height, Grid.markHeight, accuracy: 0.5,
+      "the press changed the picture's height")
+    XCTAssertEqual(
+      withPress.origin.x + withPress.size.width, contentEdge, accuracy: 0.5,
+      "the press took the mark off the content edge")
+    XCTAssertEqual(withPress.size, without.size, "the press resized the picture")
+    XCTAssertEqual(
+      withPress.origin.x, without.origin.x, accuracy: 0.5, "the press moved the picture")
+  }
+
+  /// A panel out of one set of facts, for the two fields the mark's press
+  /// reads. No record and no document: the press is about the facts alone.
+  private func panel(logo: Data?, logoURL: String?) throws -> PanelModel {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .gmt
+    calendar.locale = Locale(identifier: "en_US_POSIX")
+    let facts = Facts(
+      versions: Versions(app: "2.15.0"), logo: logo, logoURL: logoURL,
+      gdocPath: Scenes.gdocPath)
+    return PanelModel.build(
+      events: [], facts: facts, now: Date(timeIntervalSince1970: 1_792_231_200),
+      calendar: calendar, alive: { _ in false })
+  }
+
+  // MARK: the bitmap the mark is drawn from
+
+  // The bitmap is made at the pixels it will be drawn at, and its width is
+  // the source's own aspect. Nothing asserted here is a point: 14 pt at 2x
+  // is 28 px and at 3x is 42, and the stand-in's 275 by 100 makes those 77
+  // and 116 px wide. A picture whose pixel count follows the screen instead
+  // of the drawn size is what left the letters ragged beside the words
+  // (docs/v2/DECISIONS.md, 2026-10-30).
+  func testTheMarkIsABitmapAtItsOwnPixelSize() throws {
+    let twice = try XCTUnwrap(
+      MarkPicture.make(SceneMark.standIn, height: Grid.markHeight, scale: 2),
+      "the stand-in made no bitmap at 2x")
+    XCTAssertEqual(twice.height, 28, "14 pt at 2x is 28 px")
+    XCTAssertEqual(twice.width, 77, "28 px at the stand-in's 2.75 to 1 is 77 px")
+
+    let thrice = try XCTUnwrap(
+      MarkPicture.make(SceneMark.standIn, height: Grid.markHeight, scale: 3),
+      "the stand-in made no bitmap at 3x")
+    XCTAssertEqual(thrice.height, 42, "14 pt at 3x is 42 px")
+    XCTAssertEqual(thrice.width, 116, "42 px at the stand-in's 2.75 to 1 is 116 px")
+
+    // The points either of them draws at are its pixels over its scale, so
+    // the mark is the same 14 pt tall on both screens.
+    XCTAssertEqual(CGFloat(twice.height) / 2, Grid.markHeight)
+    XCTAssertEqual(CGFloat(thrice.height) / 3, Grid.markHeight)
+
+    XCTAssertNil(
+      MarkPicture.make(SceneMark.notAPicture, height: Grid.markHeight, scale: 2),
+      "two hundred bytes that are no picture made a bitmap")
+    XCTAssertNil(
+      MarkPicture.make(SceneMark.standIn, height: 0, scale: 2),
+      "a height of nothing made a bitmap")
+    XCTAssertNil(
+      MarkPicture.make(SceneMark.standIn, height: Grid.markHeight, scale: 0),
+      "a scale of nothing made a bitmap")
+  }
+
+  // Made once per bytes, height and scale. The label's body runs on every
+  // evaluation, so a draw there would be a draw a frame; a repeat call is
+  // handed the same object back. The height is in the key because a second
+  // caller at another height would otherwise be given the label's own
+  // bitmap.
+  func testTheMarkIsMadeOncePerBytesHeightAndScale() throws {
+    let first = try XCTUnwrap(
+      MarkPicture.make(SceneMark.standIn, height: Grid.markHeight, scale: 2))
+    let again = try XCTUnwrap(
+      MarkPicture.make(SceneMark.standIn, height: Grid.markHeight, scale: 2))
+    XCTAssertTrue(first === again, "the same bytes, height and scale were drawn twice")
+
+    let other = try XCTUnwrap(
+      MarkPicture.make(SceneMark.standIn, height: Grid.markHeight, scale: 3))
+    XCTAssertFalse(first === other, "another scale was handed this one's bitmap")
+
+    let taller = try XCTUnwrap(
+      MarkPicture.make(SceneMark.standIn, height: Grid.markHeight * 2, scale: 2))
+    XCTAssertFalse(first === taller, "another height was handed this one's bitmap")
+  }
+
+  // The decision's own test of the averaging: a picture of one-pixel
+  // stripes, at the cached file's own 509 by 185, shrunk to the 77 by 28 the
+  // label draws. Each pixel of the result is then the average of about six
+  // and a half source pixels that alternate black and white, so it is a mid
+  // grey. A shrink that samples instead of averaging leaves the stripes
+  // standing, which is the raggedness Nail saw, so a cheaper interpolation
+  // fails here: at the two settings below the highest, all 2,156 pixels are
+  // a flat black or a flat white.
+  //
+  // The leftmost and rightmost columns are left out, and measured on their
+  // own below. The resampler has no source outside the picture and carries
+  // the edge column outward instead, so an outermost column over a black
+  // stripe comes out at about a quarter rather than a half. That is the
+  // kernel at the edge of a picture and not a dropped sample: it is one
+  // column of each side, it moves with the stripe under it, and the 2,100
+  // pixels between them are flat. The plan said 2,156 of 2,156; the
+  // measurement on this machine is 2,100 of 2,100 inside and two columns at
+  // the edge.
+  func testTheBitmapAveragesWhatItShrinks() throws {
+    let striped = stripes(width: 509, height: 185)
+    XCTAssertFalse(striped.isEmpty, "the stripes drew nothing")
+
+    let bitmap = try XCTUnwrap(
+      MarkPicture.make(striped, height: Grid.markHeight, scale: 2),
+      "the stripes made no bitmap")
+    XCTAssertEqual(bitmap.width, 77, "509 by 185 at 28 px high is 77 px wide")
+    XCTAssertEqual(bitmap.height, 28)
+
+    let read = try channels(of: bitmap)
+    XCTAssertEqual(read.count, 2156, "77 by 28 is 2,156 pixels")
+
+    let isGrey = { (pixel: Channels) in
+      [pixel.red, pixel.green, pixel.blue].allSatisfy { $0 > 0.35 && $0 < 0.65 }
+    }
+    let inside = read.enumerated().filter { at, _ in
+      let column = at % bitmap.width
+      return column > 0 && column < bitmap.width - 1
+    }
+    XCTAssertEqual(inside.count, 2100, "75 columns of 28 is 2,100 pixels")
+    let grey = inside.filter { isGrey($0.element) }
+    XCTAssertEqual(
+      grey.count, inside.count,
+      "\(inside.count - grey.count) of \(inside.count) pixels kept a stripe")
+
+    // And the two columns at the edge are a grey too, darker than the rest
+    // but nothing like the black stripe a sampler would have left there.
+    let edges = read.enumerated().filter { at, _ in
+      let column = at % bitmap.width
+      return column == 0 || column == bitmap.width - 1
+    }
+    for (_, pixel) in edges {
+      XCTAssertGreaterThan(pixel.red, 0.15, "an edge column kept its stripe")
+      XCTAssertLessThan(pixel.red, 0.85, "an edge column kept its stripe")
+    }
+  }
+
+  // The label draws the bitmap that was made for it and makes none of its
+  // own, and it draws nothing where the bytes are not a picture.
+  func testTheLabelDrawsTheBitmapItWasMade() throws {
+    let made = try XCTUnwrap(
+      MarkPicture.make(SceneMark.standIn, height: Grid.markHeight, scale: 2))
+    XCTAssertTrue(
+      SectionLabel.picture(mark: SceneMark.standIn, scale: 2) === made,
+      "the label made a second bitmap of its own")
+    XCTAssertNil(
+      SectionLabel.picture(mark: SceneMark.notAPicture, scale: 2),
+      "bytes that are no picture gave the label a bitmap")
+    XCTAssertNil(
+      SectionLabel.picture(mark: nil, scale: 2), "no bytes gave the label a bitmap")
+  }
+
+  /// A picture of one-pixel black and white vertical stripes, as PNG bytes.
+  ///
+  /// Drawn the way SceneMark.standIn is drawn, so what the test hands over
+  /// is a file's worth of bytes and not a picture already in hand.
+  private func stripes(width: Int, height: Int) -> Data {
+    guard
+      let rep = NSBitmapImageRep(
+        bitmapDataPlanes: nil, pixelsWide: width, pixelsHigh: height,
+        bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+        colorSpaceName: .deviceRGB, bytesPerRow: width * 4, bitsPerPixel: 32),
+      let context = NSGraphicsContext(bitmapImageRep: rep)
+    else { return Data() }
+    NSGraphicsContext.saveGraphicsState()
+    NSGraphicsContext.current = context
+    NSColor.white.setFill()
+    NSRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height)).fill()
+    NSColor.black.setFill()
+    for x in stride(from: 0, to: width, by: 2) {
+      NSRect(x: CGFloat(x), y: 0, width: 1, height: CGFloat(height)).fill()
+    }
+    context.flushGraphics()
+    NSGraphicsContext.restoreGraphicsState()
+    return rep.representation(using: .png, properties: [:]) ?? Data()
+  }
+
+  private struct Channels {
+    let red: CGFloat
+    let green: CGFloat
+    let blue: CGFloat
+  }
+
+  /// Every pixel of a bitmap, as its three channels.
+  ///
+  /// Drawn once at its own size into a context this test owns: a draw at the
+  /// same size resamples nothing, and the layout the numbers come out of is
+  /// then the test's and not whatever format the bitmap happens to carry.
+  private func channels(of bitmap: CGImage) throws -> [Channels] {
+    let width = bitmap.width
+    let height = bitmap.height
+    let space = try XCTUnwrap(CGColorSpace(name: CGColorSpace.sRGB))
+    let context = try XCTUnwrap(
+      CGContext(
+        data: nil, width: width, height: height, bitsPerComponent: 8,
+        bytesPerRow: width * 4, space: space,
+        bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue),
+      "no context of \(width) by \(height)")
+    context.draw(bitmap, in: CGRect(x: 0, y: 0, width: width, height: height))
+    let raw = try XCTUnwrap(context.data, "the context handed back no pixels")
+    let pixels = raw.bindMemory(to: UInt8.self, capacity: width * height * 4)
+    return (0..<(width * height)).map { at in
+      Channels(
+        red: CGFloat(pixels[at * 4]) / 255,
+        green: CGFloat(pixels[at * 4 + 1]) / 255,
+        blue: CGFloat(pixels[at * 4 + 2]) / 255)
+    }
+  }
+
   // `.panel-header{height:36px}`: the mark and the name, the version with
   // its update, and the account with its glyph and its one action.
   //
@@ -820,12 +1111,24 @@ final class RowTests: XCTestCase {
         // the first reads as a header over the second. DOCUMENTS twice, as
         // the two machines draw it: the words alone where no mark file is
         // cached, and with the firm's mark at the right end where one is.
+        //
+        // The second of those has its words held open, which is the one
+        // place the mark's press says anything. It takes the band the
+        // controls sheet gives an icon and a layer of its own, because a
+        // layer with no room below flips the bubble over the thing it
+        // explains, and the thing above this one is the plain DOCUMENTS
+        // label: a bubble on top of that reads as words about the label
+        // with no mark.
         Spacer(minLength: 2 * Grid.unit)
         SectionLabel(labels.now)
         Spacer(minLength: 2 * Grid.unit)
         SectionLabel(labels.documents)
         Spacer(minLength: 2 * Grid.unit)
-        SectionLabel(labels.documents, mark: SceneMark.standIn)
+        SectionLabel(labels.documents, mark: SceneMark.standIn, press: {}, forcedTooltip: true)
+          .frame(
+            width: Grid.panelWidth, height: ControlTests.tooltipBand, alignment: .topTrailing
+          )
+          .tooltipLayer()
       }
       .frame(width: Grid.panelWidth)
       .padding(Grid.unit)

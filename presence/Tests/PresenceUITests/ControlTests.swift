@@ -29,7 +29,8 @@ final class ControlTests: XCTestCase {
     XCTAssertEqual(Tooltip.radius, 4)
     XCTAssertEqual(Tooltip.paddingH, 7)
     XCTAssertEqual(Tooltip.paddingV, 3)
-    XCTAssertEqual(TooltipAlign.allCases, [.centred, .trailing, .leading])
+    XCTAssertEqual(TooltipAlign.allCases, [.centred, .trailing, .leading, .edge])
+    XCTAssertEqual(TooltipAlign.edge.gap, 6)
     XCTAssertEqual(TooltipAlign.centred.gap, 6)
     XCTAssertEqual(TooltipAlign.trailing.gap, 6)
     XCTAssertEqual(
@@ -66,6 +67,13 @@ final class ControlTests: XCTestCase {
     let action = CGRect(x: 320, y: 100, width: 24, height: 24)
     let trailing = Tooltip.place(anchor: action, size: bubble, in: panel, align: .trailing)
     XCTAssertEqual(trailing.origin.x + bubble.width, panel.width - Tooltip.actionMargin)
+
+    // The mark's own case: a press on the content edge with no icon column,
+    // whose bubble ends where the press ends and not 8 pt short of it.
+    let mark = CGRect(x: 310, y: 100, width: 38, height: 14)
+    let onEdge = Tooltip.place(anchor: mark, size: bubble, in: panel, align: .edge)
+    XCTAssertEqual(onEdge.origin.x + bubble.width, mark.maxX)
+    XCTAssertEqual(onEdge.origin.y, mark.maxY + 6)
 
     // And when a centred bubble would hang out of the panel, it slides in:
     // the margin is the panel's own padding, so no tooltip touches its edge.
@@ -345,10 +353,14 @@ final class ControlTests: XCTestCase {
       // makers of a button.
       if makes(maker + "(", in: text) || makes(maker + " {", in: text) { makers.append(name) }
     }
+    // SectionView is the fourth since 2026-10-30, and it is a button with no
+    // words at all: the firm's mark beside DOCUMENTS presses, and what it
+    // says it says on a tooltip like every other icon in the panel
+    // (docs/v2/DECISIONS.md, 2026-10-30).
     XCTAssertEqual(
       makers.sorted(),
-      ["ActionButton.swift", "ButtonStyles.swift", "SwitchView.swift"],
-      "a fourth component makes a button of its own")
+      ["ActionButton.swift", "ButtonStyles.swift", "SectionView.swift", "SwitchView.swift"],
+      "a fifth component makes a button of its own")
   }
 
   /// The sheet asks the question in the shape the header asks it in.

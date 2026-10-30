@@ -236,6 +236,10 @@ public struct Facts: Sendable, Equatable {
   /// nothing where there is none. A machine that has never built a document
   /// has no logo cached, so the DOCUMENTS label is the words alone.
   public let logo: Data?
+  /// The page the mark opens, which is the picture's own in Drive. It is the
+  /// address the binary named, already held to its one shape by the poller,
+  /// and nothing where the help named none. No press is drawn without it.
+  public let logoURL: String?
   /// The resolved absolute path of the binary, or nothing where neither
   /// place held one.
   public let gdocPath: String?
@@ -300,6 +304,7 @@ public struct Facts: Sendable, Equatable {
     versions: Versions,
     mark: String = "⁘",
     logo: Data? = nil,
+    logoURL: String? = nil,
     gdocPath: String? = nil,
     gdocPathTried: String = "~/.local/bin/gdoc",
     home: String = "",
@@ -324,6 +329,7 @@ public struct Facts: Sendable, Equatable {
     self.versions = versions
     self.mark = mark
     self.logo = logo
+    self.logoURL = logoURL
     self.gdocPath = gdocPath
     self.gdocPathTried = gdocPathTried
     self.home = home

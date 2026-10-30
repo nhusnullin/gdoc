@@ -170,6 +170,7 @@ public actor UpdateAction {
         latestStable: facts.versions.latestStable),
       mark: facts.mark,
       logo: facts.logo,
+      logoURL: facts.logoURL,
       gdocPath: facts.gdocPath,
       gdocPathTried: facts.gdocPathTried,
       home: facts.home,

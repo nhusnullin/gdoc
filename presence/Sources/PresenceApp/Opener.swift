@@ -1,7 +1,8 @@
 // The one room that asks the system to open or copy something.
 //
-// Four verbs: open a document in a browser, copy its link, open the note
-// paired with it in Obsidian, and bring Claude Desktop to the front. Every
+// Five verbs: open a document in a browser, copy its link, open the note
+// paired with it in Obsidian, bring Claude Desktop to the front, and open the
+// firm's mark's own page in Drive, which belongs to no row. Every
 // NSWorkspace and NSPasteboard use in this package is here or in
 // Relauncher.swift, which opens this app's own bundle and nothing else, and
 // a source scan in PresenceCoreTests holds the pair, so what this app can
@@ -9,7 +10,8 @@
 //
 // The folder panel was the fifth verb until the third look. The hub was one
 // setting for a thing that differs by document, so the note is found now
-// and there is no folder to ask for.
+// and there is no folder to ask for. The mark's page is the fifth verb since
+// 2026-10-30, by that day's decision.
 //
 // Nothing here decides a URL. A document's URL is built in
 // PresenceCore/LinkLine from an id held to the Drive shape, and a note's is
@@ -34,7 +36,8 @@ import AppKit
 import Foundation
 import PresenceCore
 
-/// What the app may ask of the system, as three verbs.
+/// The three things a desk does: open an address, bring an application to
+/// the front, and replace the pasteboard.
 ///
 /// A protocol so every test states what was asked without a browser opening:
 /// the app hands over `SystemDesk`, and a test hands over an object that
@@ -77,7 +80,9 @@ public struct SystemDesk: Desk {
   }
 }
 
-/// The four things a row's icons do.
+/// The five things the panel opens or copies. Four are a row's icons, and
+/// the fifth is the firm's mark, which sits in a section's label and belongs
+/// to no row.
 public struct Opener: Sendable {
   /// Claude Desktop's own identifier, read off its bundle.
   public static let claudeDesktop = "com.anthropic.claudefordesktop"
@@ -121,5 +126,16 @@ public struct Opener: Sendable {
   /// and the document row's branch icon is this: one activation, no prefill.
   @discardableResult public func continueWithClaude() -> Bool {
     desk.activate(Self.claudeDesktop)
+  }
+
+  /// Open the firm's mark's own page in Drive. The address arrives whole from
+  /// the binary's help, so this verb holds no id and builds nothing: it takes
+  /// the one shape `LinkLine` accepts and refuses everything else, which is a
+  /// mark with no press in the panel and never a click that goes elsewhere.
+  @discardableResult public func openMark(_ page: String?) -> Bool {
+    guard let text = LinkLine.markPageURL(page), let url = URL(string: text) else {
+      return false
+    }
+    return desk.open(url)
   }
 }

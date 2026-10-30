@@ -222,6 +222,10 @@ func TestThePresencePageWalksTheThirdLooksPanel(t *testing.T) {
 		"A click on a row opens its document",
 		"360 points wide",
 		"Click opens in Google Docs",
+		// The firm's mark on the DOCUMENTS label, which is a press of
+		// its own since 2026-10-30, and the words a rested pointer
+		// gets on it.
+		"Open in Google Drive",
 		// The note beside the document, which is found and not
 		// configured, and the override for a machine Spotlight does not
 		// index.
