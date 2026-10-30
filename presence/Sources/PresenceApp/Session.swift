@@ -912,8 +912,11 @@ public final class Session {
         return
       }
       // The policy had just admitted this one, so a row that is still here
-      // is an open the system refused, and the person's own hand is what is
-      // left. The stamp the attempt wrote bounds the asking.
+      // is an open the system refused, or a second ask that held on a disk
+      // read taken a moment later. Either way the person's own hand is what
+      // is left, and the count stops asking: a refused open wrote the stamp
+      // that bounds it, and a hold that late is one this count cannot wait
+      // out.
       self.reopen = .refused
       self.reopenWord = .refused
       self.retick()

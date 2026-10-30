@@ -412,10 +412,11 @@ nothing the app chose on your behalf. The glyph is pressable in all three of
 its states, because `gdoc update` is the command that asks GitHub: a glyph
 that did nothing until the app's own six hours had passed would make you wait
 for a release you already know is out. While the child is up the header draws
-a ring beside the version and still names the version that is installed. While
-the update is still running the row above the panel says "Updated to v2.29.0.
-Reopens when the update finishes". Once it has ended the row counts five
-seconds down, "Reopens in 5" to 1, one a second. At zero the app comes back by
+a ring beside the version and still names the version that is installed. Once
+the run has written the new app, which is near the end of it, the row above the
+panel says `Updated to <version>. Reopens when the update finishes`. Once the
+run has ended the row counts five seconds down, "Reopens in 5" to 1, one a
+second. At zero the app comes back by
 itself with the new version on the line. A run that found nothing leaves the
 check for a second and the words "This is the newest release".
 Install extension is `gdoc update --desktop`, which writes the Claude

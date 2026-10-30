@@ -156,6 +156,68 @@ final class RelauncherTests: XCTestCase {
     XCTAssertNil(preferences.lastRelaunch(), "and writes no stamp")
   }
 
+  /// A hold that clears by itself reads no byte of the bundle.
+  ///
+  /// The session asks on every tick while a reopen is pending, and the
+  /// pending window is the whole hold: a `gdoc update` stays live in the
+  /// record after it swapped the bundle, and a sign-in child is up for
+  /// minutes. The ask runs on the main actor, and a static signature over a
+  /// universal bundle is tens of milliseconds, so a read per tick there is a
+  /// dropped frame per second for as long as the hold lasts. The two guards
+  /// the policy answers before it looks at the disk are answered without
+  /// looking at the disk.
+  func testAHeldDecisionReadsNoByteOfTheBundle() async throws {
+    // Arrange: a relauncher whose two readers over the disk count their
+    // calls.
+    let reads = Reads()
+    let preferences = Preferences(store: Store())
+    let relauncher = made(
+      pad: FakePad(),
+      identifierOnDisk: { _ in
+        reads.readTheIdentifier(); return Self.identifier
+      },
+      signatureValid: { _ in
+        reads.readTheSignature(); return true
+      })
+
+    // Act: ten asks under each of the two holds that clear by themselves,
+    // and the two bundle states that have nothing to open.
+    for _ in 0..<10 {
+      XCTAssertEqual(
+        relauncher.decides(
+          bundle: .reopenNeeded("2.16.0"), updateRunning: true, childAlive: false,
+          remembering: preferences),
+        .hold(.updateRunning))
+      XCTAssertEqual(
+        relauncher.decides(
+          bundle: .reopenNeeded("2.16.0"), updateRunning: false, childAlive: true,
+          remembering: preferences),
+        .hold(.childAlive))
+      XCTAssertEqual(
+        relauncher.decides(
+          bundle: .same, updateRunning: false, childAlive: false, remembering: preferences),
+        .hold(.unchanged))
+      XCTAssertEqual(
+        relauncher.decides(
+          bundle: .gone, updateRunning: false, childAlive: false, remembering: preferences),
+        .hold(.gone))
+    }
+
+    // Assert: forty asks, and the disk was never touched.
+    XCTAssertEqual(reads.identifiers, 0, "a held ask reads no plist")
+    XCTAssertEqual(reads.signatures, 0, "and asks the kernel for no signature")
+
+    // And the ask the count's zero is gated on still reads both, because
+    // the policy cannot admit an open without them.
+    XCTAssertEqual(
+      relauncher.decides(
+        bundle: .reopenNeeded("2.16.0"), updateRunning: false, childAlive: false,
+        remembering: preferences),
+      .relaunch(version: "2.16.0"))
+    XCTAssertEqual(reads.identifiers, 1)
+    XCTAssertEqual(reads.signatures, 1)
+  }
+
   /// An open the system refused leaves the app up with the row asking for a
   /// hand, and the attempt is written down: an open that keeps failing is
   /// tried once in ten minutes and not on every tick.
@@ -180,6 +242,7 @@ final class RelauncherTests: XCTestCase {
 
   private func made(
     pad: FakePad, sleep: @escaping @Sendable (TimeInterval) async -> Void = { _ in },
+    identifierOnDisk: @escaping @Sendable (URL) -> String? = { _ in RelauncherTests.identifier },
     signatureValid: @escaping @Sendable (URL) -> Bool = { _ in true }
   ) -> Relauncher {
     Relauncher(
@@ -187,10 +250,24 @@ final class RelauncherTests: XCTestCase {
       identifier: Self.identifier,
       pid: 4242,
       pad: pad,
-      identifierOnDisk: { _ in Self.identifier },
+      identifierOnDisk: identifierOnDisk,
       signatureValid: signatureValid,
       now: { Date(timeIntervalSince1970: 1_792_000_000) },
       sleep: sleep)
+  }
+
+  /// How often each of the two readers over the bundle on the disk was
+  /// called.
+  private final class Reads: @unchecked Sendable {
+    private let lock = NSLock()
+    private var plists = 0
+    private var seals = 0
+
+    var identifiers: Int { lock.withLock { plists } }
+    var signatures: Int { lock.withLock { seals } }
+
+    func readTheIdentifier() { lock.withLock { plists += 1 } }
+    func readTheSignature() { lock.withLock { seals += 1 } }
   }
 
   /// Every interval the relauncher asked to wait for.

@@ -113,16 +113,28 @@ public struct Relauncher: Sendable {
 
   /// What the policy says about reopening now, and nothing done about it.
   ///
-  /// The session asks this on every tick while its count runs, so it has to
-  /// cost what the policy costs: two reads of the bundle on the disk, no
-  /// stamp and no open. The answer becomes the count's gate, which is why
-  /// the hold itself is handed back and not a boolean:
-  /// testDecidingWritesNoStampAndOpensNothing.
+  /// The session asks this on every tick while a reopen is pending, and it
+  /// asks on the main actor, so it has to cost no more than the policy
+  /// needs: no stamp, no open, and the two reads of the bundle on the disk
+  /// only where the policy gets as far as them. The guards the policy
+  /// answers before it looks at the disk are asked for first, because a hold
+  /// is most of the pending window and a static signature over a universal
+  /// bundle is tens of milliseconds: testDecidingWritesNoStampAndOpensNothing
+  /// and testAHeldDecisionReadsNoByteOfTheBundle.
+  ///
+  /// The order is not decided here. `RelaunchPolicy.holdsBeforeTheDisk` is
+  /// the same function `decide` opens with, so skipping the reads cannot
+  /// change an answer.
   public func decides(
     bundle state: BundleState, updateRunning: Bool, childAlive: Bool,
     remembering preferences: Preferences
   ) -> RelaunchDecision {
-    RelaunchPolicy.decide(
+    if let hold = RelaunchPolicy.holdsBeforeTheDisk(
+      bundle: state, updateRunning: updateRunning, childAlive: childAlive)
+    {
+      return .hold(hold)
+    }
+    return RelaunchPolicy.decide(
       ask(
         bundle: state, updateRunning: updateRunning, childAlive: childAlive,
         remembering: preferences))

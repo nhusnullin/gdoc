@@ -143,31 +143,55 @@ public enum RelaunchPolicy {
   /// waiting for.
   public static let argument = "--relaunched-by"
 
-  /// Whether to reopen, in the order that reads the disk before the clock.
+  /// The holds that are answered before the disk is read at all, or nothing
+  /// where the answer needs the disk.
   ///
   /// `.gone` is first because there is nothing to open, and the two reasons
   /// to wait come before the two about what the bundle is: a person whose
   /// update is still running is told nothing either way, and asking the
   /// kernel for a signature while the bytes are being written is asking
   /// about a file that is half there.
-  public static func decide(_ ask: RelaunchAsk) -> RelaunchDecision {
-    switch ask.bundle {
-    case .same: return .hold(.unchanged)
-    case .gone: return .hold(.gone)
-    case .reopenNeeded(let version):
-      if ask.updateRunning { return .hold(.updateRunning) }
-      if ask.childAlive { return .hold(.childAlive) }
-      guard let onDisk = ask.onDiskIdentifier, onDisk == ask.identifier else {
-        return .hold(.anotherIdentifier)
-      }
-      guard ask.signatureValid else { return .hold(.invalidSignature) }
-      if let last = ask.last, last.version == version,
-        ask.now.timeIntervalSince(last.at) < once
-      {
-        return .hold(.alreadyTried)
-      }
-      return .relaunch(version: version)
+  ///
+  /// It is named rather than left inside `decide` because the session asks
+  /// on every tick for as long as a reopen is pending, and a hold is most of
+  /// that: `gdoc update` stays live in the record after it swapped the
+  /// bundle, and a sign-in child is up for minutes. A caller that has to
+  /// read the disk to build the ask asks this first and reads nothing where
+  /// it answers. The order is here and only here, so the two routes cannot
+  /// drift: testAHeldDecisionReadsNoByteOfTheBundle.
+  public static func holdsBeforeTheDisk(
+    bundle: BundleState, updateRunning: Bool, childAlive: Bool
+  ) -> RelaunchHold? {
+    switch bundle {
+    case .same: return .unchanged
+    case .gone: return .gone
+    case .reopenNeeded:
+      if updateRunning { return .updateRunning }
+      if childAlive { return .childAlive }
+      return nil
     }
+  }
+
+  /// Whether to reopen, in the order that reads the disk before the clock.
+  public static func decide(_ ask: RelaunchAsk) -> RelaunchDecision {
+    if let hold = holdsBeforeTheDisk(
+      bundle: ask.bundle, updateRunning: ask.updateRunning, childAlive: ask.childAlive)
+    {
+      return .hold(hold)
+    }
+    // Only `.reopenNeeded` reaches here: the other two states are answered
+    // above, and this binds the version they do not carry.
+    guard case .reopenNeeded(let version) = ask.bundle else { return .hold(.unchanged) }
+    guard let onDisk = ask.onDiskIdentifier, onDisk == ask.identifier else {
+      return .hold(.anotherIdentifier)
+    }
+    guard ask.signatureValid else { return .hold(.invalidSignature) }
+    if let last = ask.last, last.version == version,
+      ask.now.timeIntervalSince(last.at) < once
+    {
+      return .hold(.alreadyTried)
+    }
+    return .relaunch(version: version)
   }
 
   /// What the instance that asked for the open does with the answer.
