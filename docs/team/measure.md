@@ -357,3 +357,36 @@ fixed by the same rebase as M32d's.
   script, and one call to the design reviewer over three images. The
   release went through on the first GO line, because the branch sat on top
   of local main's unpushed commits and the pull fast-forwarded.
+
+## 2026-10-30: M32f on Claude
+
+| Run | Task iterations | Tasks, total | Per task iteration | Biggest iteration | Review rounds | Review, total | Per review round | Whole worktree | Sessions |
+|---|---|---|---|---|---|---|---|---|---|
+| M32f, the firm's mark beside DOCUMENTS (Claude) | 7 | 21.1M | 3.0M | 6.2M | 2 | 15.3M | 7.6M | 36.3M | 9 |
+
+- M32f's tasks pass at 3.0M against the bar of 4.9M. Seven tasks ran in seven
+  iterations in 40 minutes, 23:19 to 23:59; the biggest, 6.2M, was Task 4,
+  which taught the DOCUMENTS label to draw the mark and pinned its place,
+  size and ink with five probe tests. The plan named every literal after the
+  guardian's one veto and one review pass.
+- Its review fails at 7.6M against the bar of 6.6M. The first round, the
+  external seat, found one real thing in 2 minutes and 1.1M: the open of the
+  mark file was a blocking open before the regular-file check, so a named
+  pipe at that path would have stalled the poller; the run proved it with a
+  FIFO test and added O_NONBLOCK. The second round, the Claude pass, ran two
+  agents in parallel over the 29-file diff, read the sources, the plan, the
+  decision entry and the guide, ran every suite twice, and found six minor
+  items in 12 minutes and 14.1M, 13.7M of it cache reads. That one pass is
+  the whole of the fail: a review that reads a milestone's every file back
+  costs what the milestone cost.
+
+The design reviewer found nothing blocking and two should-fix items in the
+renders: the first-run scene drew the mark on a machine that cannot have the
+file, which is cached only after a sign-in, and the rows sheet drew the
+DOCUMENTS label only without it. The lead swapped the no-picture story to
+e5, gave e9 the mark, and drew the label both ways on the sheet, in one
+commit before the release. `make release` ran clean the first time: PR 106,
+checks green, waiting on Nail's word for the number. Main had moved twice
+during the run, to v2.27.0 and v2.28.0 from the other session, and the
+branch merges into it without a conflict. Nail sent one message for the
+run, the GO on the previous milestone with this launch in the same line.
