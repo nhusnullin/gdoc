@@ -510,11 +510,12 @@ func acceptance(t *testing.T, values []drift.Value, rows []drift.Row) {
 	// master. Nail's decision of 2026-10-28: the house draws the mark at its
 	// own width, where the master states the padded frame, and the height
 	// follows the 2026-10-26 picture's ratio. His decision of 2026-10-29: the
-	// mark ends in line with the text at 381.43 pt, and its top offset is
-	// -11.15 pt so that the label's paragraph can take six points before it
-	// and the mark stay where it was. So the master reads 146.25 pt at
-	// 404.25 pt, 72.75 pt high and -5.149 pt down, and these four rows differ
-	// from it on purpose, which is what drift.Known says. What has to survive
+	// mark ends in line with the text at 381.43 pt. Its top offset is the
+	// master's own -5.15 pt again since 2026-10-30, because Docs measures it
+	// from the top of the paragraph's space before, so the label's six
+	// points carry the mark down with it. So the master reads 146.25 pt at
+	// 404.25 pt and 72.75 pt high, and those three rows differ from it on
+	// purpose, which is what drift.Known says; the top offset reads the same. What has to survive
 	// the import is the value itself, so it is stated here.
 	for _, c := range []struct {
 		name string
@@ -523,7 +524,7 @@ func acceptance(t *testing.T, values []drift.Value, rows []drift.Row) {
 		{"logo width (pt)", 111.75},
 		{"logo height (pt)", 40.616},
 		{"logo leftOffset (pt)", 381.43},
-		{"logo topOffset (pt)", -11.15},
+		{"logo topOffset (pt)", -5.15},
 	} {
 		got, ok := read[c.name].(float64)
 		if !ok {

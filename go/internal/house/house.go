@@ -7,7 +7,7 @@
 // id of the one file in Drive that holds them. TestTheTenStylesAreThere,
 // TestFrontMatterIsFourteenBlocksInOrder, TestTheThreeTablesAreThereWithTheirColumns,
 // TestTOCIsALiveFieldOverThreeHeadingLevels, TestTheLogoStatesItsMimeWidthAndPlacement,
-// TestTheMarkEndsInLineWithTheText and TestTheLabelDropsSixPointsAndTheMarkStays
+// TestTheMarkEndsInLineWithTheText and TestTheLabelAndTheMarkDropSixPointsTogether
 // are the pins over what the file has to carry.
 //
 // This comment holds why the package refuses what it refuses. What it reports

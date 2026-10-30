@@ -266,8 +266,8 @@ func TestTheLogoStatesItsMimeWidthAndPlacement(t *testing.T) {
 	if img.Width != 509 || img.Height != 185 {
 		t.Errorf("logo is %dx%d px, want 509x185", img.Width, img.Height)
 	}
-	if cfg.Logo.Anchor.OffsetXPt != 381.43 || cfg.Logo.Anchor.OffsetYPt != -11.15 {
-		t.Errorf("logo anchor offsets = %v, %v, want 381.43, -11.15",
+	if cfg.Logo.Anchor.OffsetXPt != 381.43 || cfg.Logo.Anchor.OffsetYPt != -5.15 {
+		t.Errorf("logo anchor offsets = %v, %v, want 381.43, -5.15",
 			cfg.Logo.Anchor.OffsetXPt, cfg.Logo.Anchor.OffsetYPt)
 	}
 }
@@ -305,15 +305,17 @@ func TestTheMarkEndsInLineWithTheText(t *testing.T) {
 	}
 }
 
-// TestTheLabelDropsSixPointsAndTheMarkStays is the other half of Nail's
-// decision of 2026-10-29: "For internal use only" sits level with the mark's
-// middle instead of six points above it. The label is a run in the first
-// paragraph of the first-page header, and the mark is anchored from that same
-// paragraph, so the paragraph gains six points before it and the mark's own
-// offset gives the same six back. The sum is the offset the mark had from the
-// header margin before this run, which is the sentence "the label moves and
-// the mark does not" written as a number.
-func TestTheLabelDropsSixPointsAndTheMarkStays(t *testing.T) {
+// TestTheLabelAndTheMarkDropSixPointsTogether is the other half of Nail's
+// decision of 2026-10-29, as the 2026-10-30 entry corrected it: "For internal
+// use only" sits level with the mark's middle instead of six points above it.
+// The label is a run in the first paragraph of the first-page header, and the
+// mark is anchored from that same paragraph, so the paragraph gains six points
+// before it. Docs measures the mark's offset from the top of that space, not
+// from the text, so the six points carry the mark down with the label and the
+// offset stays the -5.15 pt the master states. v2.27.0 gave the offset six
+// points back and the mark rose while the label fell (MEASURED.md, "The two
+// covers in a PDF export").
+func TestTheLabelAndTheMarkDropSixPointsTogether(t *testing.T) {
 	cfg, err := Load()
 	if err != nil {
 		t.Fatalf("Load: %v", err)
@@ -330,11 +332,8 @@ func TestTheLabelDropsSixPointsAndTheMarkStays(t *testing.T) {
 		t.Errorf("the label's paragraph carries space_before_pt %v, want 6", before)
 	}
 	top := cfg.Logo.Anchor.OffsetYPt
-	if top != -11.15 {
-		t.Errorf("the logo anchor's offset_y_pt is %v, want -11.15", top)
-	}
-	if math.Abs(before+top-(-5.15)) > 0.005 {
-		t.Errorf("the label's six points and the mark's offset sum to %v, want -5.15, the mark's offset from the header margin before this run", before+top)
+	if top != -5.15 {
+		t.Errorf("the logo anchor's offset_y_pt is %v, want -5.15, the master's own offset, because Docs measures it from the top of the paragraph's space before", top)
 	}
 }
 

@@ -78,7 +78,7 @@
 //
 // # Known explains a difference between the two documents, never a fault here
 //
-// Known holds thirty-one names, where the 2026-08-29 report counted two real
+// Known holds thirty names, where the 2026-08-29 report counted two real
 // differences. Neither number is wrong, and what separates them is what the
 // offline gate reads. It reads XML, where the master declares a heading colour
 // and a heading indent on the style and then overrides both on every paragraph
@@ -111,7 +111,7 @@
 // line up, by name or by length, and two halves of one row answering in
 // different types are all faults in this package, so they set it, and
 // Unexplained returns a row carrying it whatever Known says about that name.
-// Fifteen of the thirty-one names carry rows that can go wrong that way, so
+// Fifteen of the thirty names carry rows that can go wrong that way, so
 // filtering on the name alone dropped them and the gate passed in silence. The
 // type check is the arm that found it: two halves of one row are one question
 // asked two ways, so they answer in one type, and the %v fallback behind them

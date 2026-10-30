@@ -114,8 +114,9 @@ replaced it)`, or `measured`. Nothing else.
 | 2026-10-28 | The skills say when they are older than gdoc, and the plugin route turns on its updates | holds | DECISIONS.md |
 | 2026-10-28 | The fifth look: a card on a rested pointer, the row opens the document and the Google Docs icon goes, a wider panel, and the firm's mark at the foot as its own later milestone | superseded 2026-10-29 (the mark's place only: it goes beside the DOCUMENTS label, not at the foot; the card, the row press, the width and the blank column hold) | DECISIONS.md |
 | 2026-10-29 | The stuck card loses its open icon: a click on the card already opens the document, so the icon was a second control for one action | holds | DECISIONS.md |
-| 2026-10-29 | The logo inside the column: the mark ends in line with the text, and the label sits level with it | holds | DECISIONS.md |
+| 2026-10-29 | The logo inside the column: the mark ends in line with the text, and the label sits level with it | superseded 2026-10-30 (the offset only: it stays the master's -5.15 pt; the place and the label's six points hold) | DECISIONS.md |
 | 2026-10-29 | The firm's mark beside DOCUMENTS: 14 pt tall on the label's right edge in the label's own ink, read from the one file `help --json` names, and nothing drawn where there is none | holds | DECISIONS.md |
+| 2026-10-30 | The mark six points down: Docs measures a picture's offset from the top of its paragraph's space before, so the offset returns to -5.15 pt and the label's six points carry the mark with it | holds | DECISIONS.md |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -1706,6 +1707,44 @@ their tests and the drift gate. No read, grant, URL, argv list or presence
 field changes.
 
 The plan is `docs/plans/2026-10-29-gdoc-v2-m32e-the-logo-inside-the-column.md`.
+
+## 2026-10-30. The mark six points down: Docs measures a picture's offset from the top of its paragraph's space before, so the offset returns to -5.15 pt and the label's six points carry the mark with it.
+
+v2.27.0 shipped the 2026-10-29 entry at 20:03Z. The lead published the Ch 4
+review note again with it into the test folder and measured the cover twice,
+in Drive's PDF export and on the screenshot Nail sent of his screen
+(MEASURED.md, "The two covers in a PDF export"): the mark's right edge is on
+the text column within a point, and the label came down its six points, but
+the mark rose six points too, so the label's centre sits 5.5 pt below the
+mark's where it sat 6.5 pt above. The entry had the mark's offset from its
+paragraph go from -5.15 to -11.15 pt so that the paragraph's six points of
+space before would move the label and not the mark. Docs does not read it
+that way: it measures the offset from the top of the space before, so the six
+points moved the mark as well, and the -11.15 lifted it six more. Nail asked:
+"from symmetry perspective, the text for internal use only and logo itself,
+are they aligned?" The design reviewer, over the screenshot and both crops:
+no, the mark sits high and the pair reads as two items; the target is the
+centre of the wordmark's lowercase body, which on this mark lands within half
+a point of its geometric centre; move the mark down 6 pt; and the mark's top
+at 6.8 pt from the paper's edge reads cramped, which is a second reason.
+
+**The offset returns to -5.15 pt.** `offset_y_pt` is the master's own value
+again, and the six points before the first header paragraph stay. In the PDF
+export that puts the mark's centre at 29.17 pt against the label's 28.67, and
+on Nail's screen the same half point. The drift gate's known list loses the
+top offset entry it gained on 2026-10-29, because the house and the master
+now read the same value to a thousandth and a row that close is never in the
+list; the width and the left offset stay named. The 2026-10-29 entry holds in
+everything but that number: the place, the width, and the label's six points.
+
+**Where it lands.** Every document built or published after the release. The
+lead runs it as a small fix, one number and the tests that state it, from the
+checkout on a branch to a green pull request, with no plan file and no
+worker, and asks Nail for the release number. The lead measures the next
+published cover the same two ways and writes the row.
+
+Trust guardian: not called. One number in the house file, its tests and the
+drift gate. No read, grant, URL, argv list or presence field changes.
 
 ## 2026-10-29. The firm's mark beside DOCUMENTS: 14 pt tall on the label's right edge in the label's own ink, read from the one file `help --json` names, and nothing drawn where there is none.
 
