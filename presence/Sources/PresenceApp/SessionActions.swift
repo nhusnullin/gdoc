@@ -5,7 +5,8 @@
 // decision table: the row's own press and the two icons that open something,
 // the one that copies, the pin either way round, the one that dismisses a
 // card, the one signal, sign in and sign out, the update and the extension,
-// the switch, quit, and the one word of a document row's own menu.
+// the switch, quit, the one word of a document row's own menu, and the press
+// on the firm's mark.
 //
 // Nothing here judges. A dismissal hides a card and rewrites no row, a stop
 // is refused by the process check and not by this file, and a sign-out stops
@@ -74,6 +75,8 @@ extension Session {
       unpin(target)
     case .hideDoc:
       hide(target)
+    case .openMark:
+      opener.openMark(target)
     }
   }
 

@@ -18,6 +18,10 @@ final class OpenerTests: XCTestCase {
     "https://docs.google.com/document/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd/edit"
   /// A title of somebody's own, which must reach nothing here.
   private static let title = "Supplier register policy, Q4 draft"
+  /// The firm's mark's own page, on a stand-in id: the real one is not in
+  /// this repository, by the decision of 2026-10-16.
+  private static let page =
+    "https://drive.google.com/file/d/1MaRkStAnDiN0PaGe0iD00000000/view"
 
   func testCopyLinkIsThePlainURL() {
     let desk = NoteDesk()
@@ -48,6 +52,7 @@ final class OpenerTests: XCTestCase {
     opener.copyLink(Self.id)
     _ = opener.openNote(at: hub + "/notes/supplier-register.md")
     opener.continueWithClaude()
+    opener.openMark(Self.page)
 
     let everything =
       desk.opened.map(\.absoluteString) + desk.copied + desk.activated
@@ -56,6 +61,29 @@ final class OpenerTests: XCTestCase {
       XCTAssertFalse(said.contains(Self.title), "\(said) carries somebody's document title")
       XCTAssertFalse(said.contains("Supplier"), "\(said) carries a word of the document")
     }
+  }
+
+  /// The fifth verb opens the mark's page, and refuses every other shape.
+  ///
+  /// The app holds no Drive id: the address arrives whole on the help answer
+  /// and is held to its one shape by `LinkLine` before this verb sees it. A
+  /// document's own link, a page with a query on it and no address at all are
+  /// each nothing, so a line that arrived changed opens nothing.
+  func testOpenMarkOpensTheDrivePageAndNoOtherShape() {
+    let desk = NoteDesk()
+    let opener = Opener(desk: desk)
+
+    XCTAssertTrue(opener.openMark(Self.page))
+    XCTAssertEqual(desk.opened.map(\.absoluteString), [Self.page], "the page, built again")
+
+    XCTAssertFalse(opener.openMark(nil), "no address, nothing opened")
+    XCTAssertFalse(opener.openMark(Self.link), "a document is not the picture's page")
+    XCTAssertFalse(
+      opener.openMark(Self.page + "?usp=sharing"), "a query on the end is another address")
+    XCTAssertEqual(desk.opened.count, 1, "and none of the three opened anything")
+
+    XCTAssertTrue(desk.copied.isEmpty, "a press on the mark copies nothing")
+    XCTAssertTrue(desk.activated.isEmpty, "and brings no application to the front")
   }
 
   func testAnUnpairedDocumentGreysTheIconWithItsTooltip() throws {

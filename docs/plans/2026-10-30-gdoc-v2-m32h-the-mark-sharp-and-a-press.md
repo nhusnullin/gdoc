@@ -418,7 +418,7 @@ The `UpdateAction` test is a real red only once `Facts` has the field.
 
 **Steps**
 
-- [ ] In `OpenerTests.swift`, a literal `page` beside `id` and `link`
+- [x] In `OpenerTests.swift`, a literal `page` beside `id` and `link`
       (lines 16 to 18), built on a 28-character stand-in id, and a new
       `testOpenMarkOpensTheDrivePageAndNoOtherShape`: `opener.openMark(page)`
       is true and `desk.opened` holds exactly that URL; `openMark(nil)`,
@@ -426,7 +426,7 @@ The `UpdateAction` test is a real red only once `Facts` has the field.
       false and open nothing more; nothing is copied or activated. Add
       `opener.openMark(page)` to the list in
       `testNoTitleEverReachesAURLOrThePasteboard` (lines 41 to 59). Red.
-- [ ] `Opener.swift`: `@discardableResult public func openMark(_ page:
+- [x] `Opener.swift`: `@discardableResult public func openMark(_ page:
       String?) -> Bool`, after `continueWithClaude`: `LinkLine.markPageURL`
       on the string, `URL(string:)` on what comes back, `desk.open`, false
       otherwise. The header's "Four verbs" at line 3 becomes five with the
@@ -437,25 +437,25 @@ The `UpdateAction` test is a real red only once `Facts` has the field.
       80, "The four things a row's icons do", becomes the five things the
       panel opens or copies, one of them from no row. In
       `SourceRulesTests.swift:232`, "the four verbs" becomes five. Green.
-- [ ] `PanelModel.swift`: `ActionKind` gains `case openMark` after
+- [x] `PanelModel.swift`: `ActionKind` gains `case openMark` after
       `hideDoc`, with a doc comment: the press on the firm's mark, whose
       target is the page's address the facts carry and never an id.
       `SessionActions.perform` fails to compile until the next step, which
       is the exhaustive switch doing its job.
-- [ ] In `SessionTests.swift`, `testTheMarkPressOpensItsPageAndMovesNothingElse`,
+- [x] In `SessionTests.swift`, `testTheMarkPressOpensItsPageAndMovesNothingElse`,
       in the shape of line 469: `session.perform(.openMark, page)` opens
       exactly that URL through the `FakeDesk`; `ui.stripSeen` and
       `ui.cardHintSeen` stay false and nothing is written to the store,
       because a click on the mark is a click on neither a row nor one of a
       row's icons. Red.
-- [ ] `SessionActions.swift`: `case .openMark: opener.openMark(target)` and
+- [x] `SessionActions.swift`: `case .openMark: opener.openMark(target)` and
       nothing else; the header's count at line 3, which says twenty-one
       over twenty cases today, becomes twenty-one for the twenty-one there
       now are, with "the press on the firm's mark" in its list. Green.
-- [ ] `make app-lint` and `make app-test` green, the source rules included:
+- [x] `make app-lint` and `make app-test` green, the source rules included:
       `testTheSystemIsAskedOnlyThroughTheOpenerAndTheRelauncher` still names
       two files.
-- [ ] Commit: `feat: the Opener's fifth verb opens the mark's page`.
+- [x] Commit: `feat: the Opener's fifth verb opens the mark's page`.
 
 ### Task 4: the mark drawn sharp
 

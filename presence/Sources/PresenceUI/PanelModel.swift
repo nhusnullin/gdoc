@@ -58,6 +58,12 @@ public enum ActionKind: String, Sendable, Equatable, CaseIterable {
   case pinDoc
   case unpinDoc
   case hideDoc
+  /// The press on the firm's mark, beside the DOCUMENTS label.
+  ///
+  /// Its target is the page's own address, as the facts carry it from the
+  /// binary's help, and never an id: the app builds no Drive address of its
+  /// own, and the one shape it accepts is held in `LinkLine`.
+  case openMark
 }
 
 /// One word of a row's own menu, and what pressing it means.

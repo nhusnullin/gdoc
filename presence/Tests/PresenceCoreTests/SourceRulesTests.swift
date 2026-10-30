@@ -234,8 +234,9 @@ final class SourceRulesTests: XCTestCase {
   /// The system is asked for something in two files, so what this app can
   /// put in front of a person is a list one person can read.
   ///
-  /// The opener is the four verbs the panel has, which are what a row's
-  /// icons do. The relauncher opens this app's own bundle and nothing else.
+  /// The opener is the five verbs the panel has: the four a row's icons do,
+  /// and the firm's mark's own page, which belongs to no row.
+  /// The relauncher opens this app's own bundle and nothing else.
   /// Both names are here rather than in a review, because the next person
   /// to add a convenience will not have read the specification.
   ///
