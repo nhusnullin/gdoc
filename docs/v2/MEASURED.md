@@ -980,3 +980,14 @@ cannot tell what Nail's screen shows for v2.27.0. If the screen also shows
 the label below the mark's middle, the two-number pass is `offset_y_pt` back
 to -5.15 with the six points before the paragraph kept: in this export that
 puts the mark's centre at 29.17 against the label's 28.67.
+
+Nail's screen, measured 2026-10-30 at 00:40 from the screenshot he sent of
+the v2.27.0 document at 100% zoom, with the 29 October script (page edges
+from a pure white row, 2.35 px per pt on this screenshot, so each value is
+good to half a point): the mark's right edge 50.25 pt from the paper's right
+against the column's 51.05; the mark's top 6.81 pt, height 40.03, centre
+26.83; the label's ink 27.25 to 37.47, centre 32.36; the label's centre 5.54
+pt below the mark's. The screen agrees with the PDF export to within a tenth
+of a point on the one number that matters, so the two-number pass stands:
+`offset_y_pt` back to -5.15 with the six points before the paragraph kept
+puts the mark's centre within half a point of the label's on both.
