@@ -817,11 +817,15 @@ final class RowTests: XCTestCase {
         }
         QuietLine(quiet)
         // The two labels, each on its own and with air around it: stacked,
-        // the first reads as a header over the second.
+        // the first reads as a header over the second. DOCUMENTS twice, as
+        // the two machines draw it: the words alone where no mark file is
+        // cached, and with the firm's mark at the right end where one is.
         Spacer(minLength: 2 * Grid.unit)
         SectionLabel(labels.now)
         Spacer(minLength: 2 * Grid.unit)
         SectionLabel(labels.documents)
+        Spacer(minLength: 2 * Grid.unit)
+        SectionLabel(labels.documents, mark: SceneMark.standIn)
       }
       .frame(width: Grid.panelWidth)
       .padding(Grid.unit)

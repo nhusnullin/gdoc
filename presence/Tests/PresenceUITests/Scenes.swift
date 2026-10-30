@@ -218,7 +218,9 @@ enum Scenes {
         + "the line under it is that screen's press of Update, and the version is in the "
         + "glyph's tooltip; nothing newer known; the second after a press that "
         + "installed nothing; and the ring while the child is up. Then the four row "
-        + "shapes, the quiet line, and the two labels as pieces."
+        + "shapes, the quiet line, and the two labels as pieces, DOCUMENTS twice: its "
+        + "words alone, as a machine that never signed in draws it, and with the firm's "
+        + "mark at its right end, as every other machine does."
     ),
     (
       "cards",
@@ -470,13 +472,15 @@ enum Scenes {
         + "names the icon to press. Nothing else on this machine is set up either: no "
         + "extension has been written, so Claude Desktop carries the one thing to do "
         + "about it. No document has run here yet, so there is no DOCUMENTS row on this "
-        + "screen and no note icon of any tone; the grey one is on e6, e9 and e10. "
-        + "SETTINGS is still pinned above everything, because on this machine it is the "
-        + "whole of what the panel is for.",
+        + "screen and no note icon of any tone; the grey one is on the screens with rows. "
+        + "DOCUMENTS is its words alone: the firm's mark is a file gdoc caches after a "
+        + "sign-in, and this machine has never had one, so this is the one screen with no "
+        + "picture of it. SETTINGS is still pinned above everything, because on this "
+        + "machine it is the whole of what the panel is for.",
       fixture: nil, moment: "2026-10-17T10:00:00Z", alive: [],
       facts: machine(
         auth: .signedOut, account: nil, gdocFound: true, extensionState: .notInstalled,
-        pairing: [:]),
+        pairing: [:], logo: nil),
       ui: UIState(), appearance: nil),
     Scene(
       id: "e6", title: "Icons with nothing to open, and the first hint",
@@ -515,10 +519,9 @@ enum Scenes {
         + "its last poll came back with gdoc's own auth code, so nothing is polling that "
         + "document and there is no Stop to press. Whether gdoc carries on from the same "
         + "cursor once somebody signs in is unmeasured, so the card asks for the watch to "
-        + "be started again. This is also the one screen of a machine with no picture of "
-        + "the firm's mark cached, so DOCUMENTS is its words alone.",
+        + "be started again.",
       fixture: "e9", moment: "2026-10-17T15:30:00Z", alive: [],
-      facts: machine(auth: .needsSignIn, logo: nil), ui: UIState(), appearance: nil),
+      facts: machine(auth: .needsSignIn), ui: UIState(), appearance: nil),
     Scene(
       id: "e10", title: "Signing out, and changing account",
       caption:
