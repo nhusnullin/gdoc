@@ -619,7 +619,7 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] `RenderTests.testTheReopenScenesDrawTheTwoSentences`: scene e12's
+- [x] `RenderTests.testTheReopenScenesDrawTheTwoSentences`: scene e12's
       model has `notice == "Updated to v2.15.0. Reopens when the update
       finishes"`, `header.versionWaiting` true and `header.update` nil,
       because the ring is up, and NOW holds the update's own job row,
@@ -631,7 +631,7 @@ Tick each box as it is done. A task ends with its commit.
       `Scenes.all`, as their moments do. `RenderTests.swift:54` moves to
       20 with the message "the screens file holds eighteen scenes and
       the reopen count added two". Red.
-- [ ] `Scenes.machine(...)` gains `bundle: BundleState = .same` and
+- [x] `Scenes.machine(...)` gains `bundle: BundleState = .same` and
       `reopen: ReopenStanding = .held`, handed to `Facts`. Two scenes
       after e10, in time order. `e12`, "Updated, and the update still
       running", moment 2026-10-17T17:05:58Z, `fixture: "e12"` whose
@@ -655,7 +655,7 @@ Tick each box as it is done. A task ends with its commit.
       person to do, the count is a clock the app runs, which is the one
       way the panel's no-forecast rule lets a number about the next
       second on, the way the sign-in's countdown is. Green.
-- [ ] `Scenes.stillYourCall` at 154 to 156 is reworded, count still
+- [x] `Scenes.stillYourCall` at 154 to 156 is reworded, count still
       seven and "decision 39" still in it: the header counts the
       sign-in's three minutes down, as product decision 39 asks;
       principle 5 allows facts and not promises, and a countdown is
@@ -667,12 +667,12 @@ Tick each box as it is done. A task ends with its commit.
       reopens itself at zero, decided 2026-10-30; "Quit and reopen" is
       kept for the one case the reopen did not happen and no scene draws
       it, because it has shipped since M23 and no scene drew it then.
-- [ ] `make app-lint` and `make app-test` green, then
+- [x] `make app-lint` and `make app-test` green, then
       `PRESENCE_SHOTS="$HOME/gdoc-m32i-board/shots" make app-test`
       green. `ls ~/gdoc-m32i-board/shots` lists `e11-dark.png`,
       `e11-light.png`, `e12-dark.png`, `e12-light.png` and `index.html`,
       and the index carries `reopenRule`. The renders are not in git.
-- [ ] Commit: `test: the reopen count in two scenes, and the renders`.
+- [x] Commit: `test: the reopen count in two scenes, and the renders`.
 
 ### Task 5: [Final] Verify acceptance criteria and update the documents
 
