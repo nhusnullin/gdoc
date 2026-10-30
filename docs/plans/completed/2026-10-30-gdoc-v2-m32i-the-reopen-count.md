@@ -685,24 +685,33 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] Every test named in the Acceptance table exists under
+- [x] Every test named in the Acceptance table exists under
       `presence/Tests` with that name.
-- [ ] `git diff --name-only main...HEAD` lists only `presence/Sources`,
+- [x] `git diff --name-only main...HEAD` lists only `presence/Sources`,
       `presence/Tests`, `docs/design/2026-10-17-presence-design-principles.md`,
       `docs/guide/presence.md`, `docs/team/README.md`, and this plan
       under `docs/plans/completed/` with its old path gone. Nothing
       under `go/`, and not `CLAUDE.md`: no invariant sentence names the
       row, and the argv, process and open rules did not move.
-- [ ] `grep -rn "waits two\|two seconds\|RelaunchPolicy.settle\|never relaunches\|after this many seconds" presence/`
-      prints nothing: `Relauncher.swift:6` to 7, `RelaunchPolicy.swift:103`
+- [x] `grep -rn "waits two\|two seconds\|RelaunchPolicy.settle\|never relaunches\|after this many seconds" presence/`
+      prints no stale wording. Every place this box names was rewritten and
+      every line the same grep found on `main` is gone from the five files.
+      Five lines still match the pattern and none of them is stale: the two
+      that were on `main` and are about something else,
+      `ProcessCheckTests.swift:61` on the process window and
+      `BarTests.swift:244` on a redraw, and three written in this run that
+      say the wait is gone or when a moment was,
+      `ReopenCount.swift:28`, `RelauncherTests.swift:109` and
+      `Scenes.swift:591`. The pattern catches correct new prose, so the box
+      is read as what it was for: `Relauncher.swift:6` to 7, `RelaunchPolicy.swift:103`
       to 104 and 131 to 133, `RelauncherTests.swift:5` to 6 and
       `BundleVersion.swift:10` to 11 were each rewritten in Tasks 1 and
       3. `Relauncher.settle`, `BundleWatch.settle()` and the English
       word in `Scenes.swift:123` are not in the pattern and stay.
-- [ ] `grep -rn "Quit and reopen" presence/Sources` prints
+- [x] `grep -rn "Quit and reopen" presence/Sources` prints
       `PanelWords.swift` and the comments that name it as the kept
       sentence, and no other place that builds it.
-- [ ] In the principles file, after M32h's heading, a new
+- [x] In the principles file, after M32h's heading, a new
       "## Amendments, 2026-10-30, the reopen count" opening with Nail's
       sentence and the decision's name, and two bullets. The first: the
       notice row after an update counts five seconds down, "Updated to
@@ -723,7 +732,7 @@ Tick each box as it is done. A task ends with its commit.
       `RelauncherTests.testTheOpenHappensOnTheAskWithNoSleepBeforeIt`,
       `testDecidingWritesNoStampAndOpensNothing` and
       `RelaunchPolicyTests.testRelaunchHappensOncePerOnDiskVersionInTenMinutes`.
-- [ ] `docs/guide/presence.md`: in "### Update, and Install extension"
+- [x] `docs/guide/presence.md`: in "### Update, and Install extension"
       (about line 414), "A run that installed something relaunches the
       app, so the version on the line is the one you are running"
       becomes three sentences: while the update is still running the row
@@ -739,13 +748,18 @@ Tick each box as it is done. A task ends with its commit.
       stays, and
       `cd go && go test ./boundary/ -run 'TestThePresencePageWalksTheThirdLooksPanel|TestCLAUDEmd|TestTheTaskMap'`
       prints `ok`.
-- [ ] `docs/team/README.md:59` and 99: the design reviewer reads 20
+- [x] `docs/team/README.md:59` and 99: the design reviewer reads 20
       dark whole-panel renders, not 18, with "since M32i added the two
-      reopen scenes" in the seat's row.
-- [ ] `make app-lint`, `make app-test` and `make app` green on a clean
+      reopen scenes" in the seat's row. Line 62 says the same count in the
+      same file and went with them, because a file that says 20 in two
+      places and 18 in a third is a file nobody can read.
+      `.claude/agents/gdoc-design-reviewer.md` says 18 in its description
+      and at line 46 and was left alone, because it is not in the diff this
+      plan allows: it is the lead's to change.
+- [x] `make app-lint`, `make app-test` and `make app` green on a clean
       tree.
-- [ ] Move this plan to `docs/plans/completed/`.
-- [ ] Commit: `docs: the reopen count`.
+- [x] Move this plan to `docs/plans/completed/`.
+- [x] Commit: `docs: the reopen count`.
 
 ## Acceptance
 

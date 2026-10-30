@@ -837,3 +837,39 @@ the first half and wrote the second half up. The decision is in
 
 The 2026-10-29 decision's "It is not a press and has no tooltip" clause is
 superseded in its place and stays as the record of its day.
+
+## Amendments, 2026-10-30, the reopen count
+
+Nail pressed Update to v2.29.0 and wrote: "when i click update you show
+then text, quit and reopen, i expect timer where, which indicate that to
+be reopenned". The app did reopen itself about seven seconds later, so the
+row was asking for a hand the app did not need. The decision is in
+`docs/v2/DECISIONS.md`, 2026-10-30, "The reopen count".
+
+- **The notice row after an update counts five seconds down, and the app
+  opens its new instance at zero.** The row reads "Updated to v2.29.0.
+  Reopens in 5" down to 1, one a second. While the update child or its
+  record still holds the reopen the row says "Updated to v2.29.0. Reopens
+  when the update finishes", because a count that began before the child
+  ended would run while the bytes were still being written; a guard up at
+  zero sends the count back there and it starts again from 5. "Quit and
+  reopen" is kept for the one case the reopen did not happen, which is
+  what the sentence now means. Principle 5, facts and not promises, is
+  kept in the one form the sign-in's countdown kept it: a clock the app
+  runs itself and acts on at zero, which is how the checklist's "nothing
+  predicts a time" reads for both. The tests are
+  `ReopenCountTests.testTheCountReadsFiveDownToOneAndOpensOnceAtFive`,
+  `StateTests.testTheNoticeRowSaysTheThreeReopenSentences` and
+  `SessionTests.testTheReopenCountsFiveToOneOnTheTickAndOpensOnce`.
+- **The count is the settle, so the two seconds the relauncher slept are
+  gone.** The relauncher opens on the ask and sleeps before nothing; the
+  count the person reads is the same wait, drawn. The policy is asked once
+  before the count begins and again before the open, so a guard that comes
+  up in those five seconds still stops it, and every guard of the relaunch
+  policy stays as it was: the one open per on-disk version in ten minutes,
+  no open while an update runs or a child lives, no open into another
+  identifier or an invalid signature, and a bundle that is gone is never
+  opened. The tests are
+  `RelauncherTests.testTheOpenHappensOnTheAskWithNoSleepBeforeIt`,
+  `RelauncherTests.testDecidingWritesNoStampAndOpensNothing` and
+  `RelaunchPolicyTests.testRelaunchHappensOncePerOnDiskVersionInTenMinutes`.

@@ -56,10 +56,10 @@ presence.
 | Seat | Model | When |
 |---|---|---|
 | **Plan reviewer** (`planning:plan-review`) | as defined | once, before the run, over the plan file |
-| **Design reviewer** (`gdoc-design-reviewer`) | Sonnet | once, after the run and before the PR, over 18 dark whole-panel renders and the captions as text. Read only: it never fixes and never draws |
+| **Design reviewer** (`gdoc-design-reviewer`) | Sonnet | once, after the run and before the PR, over 20 dark whole-panel renders and the captions as text, since M32i added the two reopen scenes. Read only: it never fixes and never draws |
 | **Codex second opinion** (`codex-second-opinion`, gpt-5.5) | as defined | only on a contested decision, and as the adversarial lens inside revmux |
 
-Cut 3 is why there is one design reviewer and not five, and why it reads 18
+Cut 3 is why there is one design reviewer and not five, and why it reads 20
 images rather than 120. Its checklist is "Review before showing Nail" in
 `docs/design/2026-10-17-presence-design-principles.md`.
 
@@ -96,7 +96,7 @@ veto is not an argument the lead wins. It goes to Nail as a decision.
    trust surface, then the plan reviewer.
 4. `make milestone PLAN=... REVIEW=go` or `REVIEW=ui`. The lead reads the status
    file.
-5. For a UI milestone, the renders once, then one design reviewer over 18
+5. For a UI milestone, the renders once, then one design reviewer over 20
    images. Findings go to the lead, who decides fix now or tomorrow.
 6. `make release BRANCH=...` to a green PR, and no further. The merge, the tag
    and the zip check need `GO=vX.Y.0`, which is Nail's word.
