@@ -392,3 +392,35 @@ published and verified at 08:23Z. Main had moved twice
 during the run, to v2.27.0 and v2.28.0 from the other session, and the
 branch merges into it without a conflict. Nail sent one message for the
 run, the GO on the previous milestone with this launch in the same line.
+
+## 2026-10-30: M32h on Claude
+
+| Run | Task iterations | Tasks, total | Per task iteration | Biggest iteration | Review rounds | Review, total | Per review round | Whole worktree | Sessions |
+|---|---|---|---|---|---|---|---|---|---|
+| M32h, the mark sharp and a press (Claude) | 6 | 23.4M | 3.9M | 6.5M | 1 | 0.1M | 0.1M | 23.6M | 7 |
+
+- M32h's tasks pass at 3.9M against the bar of 4.9M, with two iterations
+  over it on their own: Task 2 at 6.5M, which carried the logo's page from
+  the help answer through six files of the app in compile order, and Task 5
+  at 5.8M, which made the mark a press, forced its words open on the rows
+  sheet and rendered the twenty scenes. Six tasks ran in six iterations in
+  43 minutes, 13:09 to 13:52.
+- Its review passes at 0.1M against the bar of 6.6M, which is the cheapest
+  review in this file: the external seat found nothing in 3 minutes, its one
+  adversarial finding dropped by its own verifier, so the Claude pass that
+  follows a finding never ran.
+
+The design reviewer found nothing blocking and three should-fix items: the
+bubble under the mark ended on the icon column, 8 pt short of the mark,
+because `.trailing` is the actions' rule and the mark stands on no icon
+column, so the tooltip gained an `.edge` case that ends where its anchor
+ends; the hover plate was absent from the still, which is the house rule for
+every action and is now said in the captions rather than drawn; and the
+captions named neither the half second nor the arrow pointer. The lead fixed
+the three in one commit, re-rendered, and `make release` opened PR 107,
+which went red once on the team check: this file named the cover fix's
+worktree as a path, which exists on one machine only. Reworded, the checks
+went green, and on Nail's GO the step merged, tagged and published v2.30.0,
+verified at 12:33Z, with no stop at the pull this time because the branch
+carried main's two unpushed docs commits. M32i launched from main at that
+merge, in the same minute.
