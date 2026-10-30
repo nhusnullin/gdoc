@@ -112,9 +112,11 @@ public struct SectionLabel: View {
       // plate reaches 4 pt beyond the picture on every side and is taken
       // back off the layout by the matching negative padding, so the box
       // the panel measures is the picture's own either way and the mark
-      // stays on the content edge. The words hang off its right edge, as a
-      // row's actions do, and the pointer stays the arrow: no press in this
-      // panel changes it.
+      // stays on the content edge. The words end where the picture ends,
+      // which is the content edge and not the icon column an action's
+      // words end on, and the pointer stays the arrow: no press in this
+      // panel changes it. The plate is the pointer's alone: a still draws
+      // none, as it draws none on an action.
       if let picture = Self.picture(mark: mark, scale: displayScale) {
         let drawn =
           Image(decorative: picture, scale: displayScale)
@@ -137,7 +139,7 @@ public struct SectionLabel: View {
           }
           .buttonStyle(.plain)
           .onHover { hovering = $0 }
-          .tooltip(Tips.openMark, align: .trailing, forced: forcedTooltip)
+          .tooltip(Tips.openMark, align: .edge, forced: forcedTooltip)
           .accessibilityLabel(Tips.openMark)
           .metricProbe("section-label.mark")
         } else {

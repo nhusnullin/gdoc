@@ -224,10 +224,13 @@ enum Scenes {
         + "the line under it is that screen's press of Update, and the version is in the "
         + "glyph's tooltip; nothing newer known; the second after a press that "
         + "installed nothing; and the ring while the child is up. Then the four row "
-        + "shapes, the quiet line, and the two labels as pieces, DOCUMENTS twice: its "
-        + "words alone, as a machine that never signed in draws it, and with the firm's "
-        + "mark at its right end, as every other machine does, with the mark's own words "
-        + "held open under it."
+        + "shapes, the quiet line, and the two labels as pieces, NOW once and DOCUMENTS "
+        + "twice: its words alone, as a machine that never signed in draws it, and with "
+        + "the firm's mark at its right end, as every other machine does. Under that mark "
+        + "its own words are held open, \"Open in Google Drive\", which the app says half a "
+        + "second after the pointer rests on it, ending on the mark's own right edge. The "
+        + "plate that goes darker behind the mark is the pointer's, and no still draws it, "
+        + "as none draws it on an action; the pointer stays the arrow."
     ),
     (
       "cards",
@@ -454,7 +457,10 @@ enum Scenes {
         + "is on: the person turned the switch on the evening before, which is the only "
         + "way it is ever on. The firm's mark is at the right end of DOCUMENTS: 14 pt "
         + "tall, on the one edge every value in the panel ends on, in the label's own "
-        + "grey, and a click on it opens the picture's own page in Google Drive.",
+        + "grey, and a click on it opens the picture's own page in Google Drive. The "
+        + "pointer resting on it darkens a plate behind it and after half a second says "
+        + "\"Open in Google Drive\", neither of which a still draws: the rows sheet holds "
+        + "the words open.",
       fixture: "e2", moment: "2026-10-18T09:12:00Z", alive: [],
       facts: machine(loginItem: .on),
       ui: UIState(

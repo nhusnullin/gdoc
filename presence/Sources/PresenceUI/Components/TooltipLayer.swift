@@ -41,6 +41,12 @@ public enum TooltipAlign: String, Sendable, CaseIterable {
   /// `.row-title[data-tip]::after{left:0}`: a title's bubble starts where
   /// the title does.
   case leading
+  /// A press that stands on the content edge with no icon column beside it,
+  /// which since 2026-10-30 is the firm's mark: its bubble ends where the
+  /// press itself ends. `.trailing` would end it on the icon column, 8 pt
+  /// short of the mark, and a bubble that stops short of the thing it names
+  /// reads as somebody else's.
+  case edge
 
   /// `top:calc(100% + 6px)`, and 4 under a row title.
   public var gap: CGFloat {
@@ -118,6 +124,7 @@ public enum Tooltip {
     case .centred: x = anchor.midX - size.width / 2
     case .trailing: x = max(margin, panel.width - actionMargin - size.width)
     case .leading: x = anchor.minX
+    case .edge: x = anchor.maxX - size.width
     }
     x = min(max(x, margin), rightmost)
 

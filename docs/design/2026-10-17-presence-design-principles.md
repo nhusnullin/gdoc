@@ -825,8 +825,13 @@ the first half and wrote the second half up. The decision is in
   live. The sentence "The app holds no Drive id and asks no host" in the
   section above stays true: the page's address comes from the binary on
   the same help answer as the path, and the app takes it only in that one
-  shape and opens no other. The tests are
-  `RowTests.testTheMarkWithAPageIsAPressThatOpensIt`,
+  shape and opens no other. The bubble ends where the mark ends, on the
+  content edge, because the mark stands on no icon column: an action's
+  bubble ends on that column, which for the mark is 8 pt short of the
+  thing it names. The plate is the pointer's alone, and a still draws
+  none, as it draws none on an action; the pointer stays the arrow. The
+  tests are `RowTests.testTheMarkWithAPageIsAPressThatOpensIt`,
+  `RowTests.testTheMarksWordsAreTheDrivePageAndOnlyWhereItPresses`,
   `OpenerTests.testOpenMarkOpensTheDrivePageAndNoOtherShape` and
   `SourceRulesTests.testTheOnlySchemesAndHostsAreGooglesAndTheVaults`.
 

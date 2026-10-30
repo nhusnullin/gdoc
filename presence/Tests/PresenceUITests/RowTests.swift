@@ -672,8 +672,11 @@ final class RowTests: XCTestCase {
       .tooltipLayer()
 
     let drawn = try probeList(pressing, scheme: .dark)
-    XCTAssertNotNil(
+    let bubble = try XCTUnwrap(
       drawn.first { $0.name == "tooltip" }, "the mark that presses said nothing")
+    XCTAssertEqual(
+      bubble.origin.x + bubble.size.width, contentEdge, accuracy: 0.5,
+      "the words end where the mark ends, on the content edge")
 
     let bare = try probeList(plain, scheme: .dark)
     XCTAssertNil(
