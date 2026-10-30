@@ -4,7 +4,7 @@ description: Use when the request names a note in the hub and a Drive folder and
 compatibility: Requires the gdoc binary on PATH, signed in with gdoc auth login, and network access to Google Docs and Drive. An SVG picture is rendered to PNG on this machine, by svg2png.js on macOS and by Chrome or librsvg elsewhere.
 metadata:
   needs: v2.11.0
-  release: v2.27.0
+  release: v2.28.0
 ---
 
 # Publish a note as a Google Doc
