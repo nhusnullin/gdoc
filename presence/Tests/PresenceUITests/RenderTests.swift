@@ -772,7 +772,9 @@ final class RenderTests: XCTestCase {
     logo: this repository carries no copy of that file. The app draws the
     file gdoc cached, and a machine with none draws the words alone, which
     is what scene e5 shows: the mark is cached after a sign-in, and the first
-    run has never had one.</p>
+    run has never had one. A click on the mark opens the picture's own page
+    in Google Drive, and the address behind it in these renders is a stand-in
+    of the right shape, as the picture is.</p>
     <p>One record per scene, and each of them its own day: the nine r
     screens are one Saturday told nine times and agree with each other, and
     every e screen is a record of its own, written for the one thing it

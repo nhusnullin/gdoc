@@ -20,7 +20,14 @@
 // the bytes go through MarkPicture, which makes one bitmap of the pixels the
 // mark occupies: the label draws that bitmap one for one and scales nothing.
 //
-// RowTests states the height, the case and the mark.
+// Since 2026-10-30 the mark is also a press, where the caller hands one over:
+// it opens the picture's own page in Drive, which is what Nail expected of it
+// the first time he saw it (docs/v2/DECISIONS.md, 2026-10-30). The press is
+// the caller's and not this room's: a label handed none draws exactly what it
+// drew before, with no plate, no words and nothing read out, because a
+// picture nothing can open is not a control.
+//
+// RowTests states the height, the case, the mark and the press.
 
 import AppKit
 import SwiftUI
@@ -31,14 +38,27 @@ public struct SectionLabel: View {
   /// The firm's mark as the facts handed it over, or nothing. Bytes and
   /// never a path: this room reads no file.
   public let mark: Data?
+  /// What a click on the mark does, or nothing where it does nothing. This
+  /// room decides no address and reaches no page: MarkPress hands over a
+  /// closure or nil, and nil is a picture with no press on it.
+  public let press: (() -> Void)?
+  /// Hold the mark's words open with no pointer, which is the component
+  /// sheet's own ask and no panel's.
+  public let forcedTooltip: Bool
 
   @Environment(\.colorScheme) private var scheme
   /// The pixels this screen puts in a point, which the bitmap is made at.
   @Environment(\.displayScale) private var displayScale
+  @State private var hovering = false
 
-  public init(_ label: String, mark: Data? = nil) {
+  public init(
+    _ label: String, mark: Data? = nil, press: (() -> Void)? = nil,
+    forcedTooltip: Bool = false
+  ) {
     self.label = label
     self.mark = mark
+    self.press = press
+    self.forcedTooltip = forcedTooltip
   }
 
   /// The bitmap to draw, where the bytes are a picture.
@@ -87,16 +107,44 @@ public struct SectionLabel: View {
       // composites twice and drew the mark at half the weight of the words
       // beside it: `Swatch.opaque`.
       //
-      // It is not a control and says nothing a row does not, so nothing
-      // reads it out.
+      // With no press it is not a control and says nothing a row does not,
+      // so nothing reads it out. With one it is a plain button: the hover
+      // plate reaches 4 pt beyond the picture on every side and is taken
+      // back off the layout by the matching negative padding, so the box
+      // the panel measures is the picture's own either way and the mark
+      // stays on the content edge. The words hang off its right edge, as a
+      // row's actions do, and the pointer stays the arrow: no press in this
+      // panel changes it.
       if let picture = Self.picture(mark: mark, scale: displayScale) {
-        Image(decorative: picture, scale: displayScale)
+        let drawn =
+          Image(decorative: picture, scale: displayScale)
           .renderingMode(.template)
           .frame(height: Grid.markHeight)
           .foregroundStyle(Self.ink(in: scheme).opaque)
           .opacity(Self.ink(in: scheme).alpha)
-          .accessibilityHidden(true)
+        if let press {
+          Button(action: press) {
+            drawn
+              .padding(Grid.unit / 2)
+              .background(
+                RoundedRectangle(cornerRadius: Grid.controlRadius, style: .continuous)
+                  .fill(hovering ? Palette.of(scheme).hover.color : Color.clear)
+              )
+              .contentShape(
+                RoundedRectangle(cornerRadius: Grid.controlRadius, style: .continuous)
+              )
+              .padding(-Grid.unit / 2)
+          }
+          .buttonStyle(.plain)
+          .onHover { hovering = $0 }
+          .tooltip(Tips.openMark, align: .trailing, forced: forcedTooltip)
+          .accessibilityLabel(Tips.openMark)
           .metricProbe("section-label.mark")
+        } else {
+          drawn
+            .accessibilityHidden(true)
+            .metricProbe("section-label.mark")
+        }
       }
     }
     .foregroundStyle(Self.ink(in: scheme).color)
@@ -113,24 +161,29 @@ public struct SectionView<Content: View>: View {
   public let isFirst: Bool
   /// The firm's mark, which only DOCUMENTS is handed.
   public let mark: Data?
+  /// What a click on that mark does, which only DOCUMENTS is handed either.
+  /// `forcedTooltip` is not here: no scene holds the mark's words open, so
+  /// it stays the component sheet's own parameter on the label.
+  public let press: (() -> Void)?
   public let content: Content
 
   @Environment(\.colorScheme) private var scheme
 
   public init(
-    _ label: String, isFirst: Bool = false, mark: Data? = nil,
+    _ label: String, isFirst: Bool = false, mark: Data? = nil, press: (() -> Void)? = nil,
     @ViewBuilder content: () -> Content
   ) {
     self.label = label
     self.isFirst = isFirst
     self.mark = mark
+    self.press = press
     self.content = content()
   }
 
   public var body: some View {
     let palette = Palette.of(scheme)
     return VStack(alignment: .leading, spacing: 0) {
-      SectionLabel(label, mark: mark)
+      SectionLabel(label, mark: mark, press: press)
       content
     }
     .padding(.top, isFirst ? 0 : 4)

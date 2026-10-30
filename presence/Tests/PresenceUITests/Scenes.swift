@@ -97,6 +97,12 @@ enum SceneMark {
   /// is shown to draw nothing for.
   static let notAPicture: Data = Data((0..<200).map { UInt8(($0 * 7 + 13) % 251) })
 
+  /// The page the mark opens, on a stand-in id of the right shape. The
+  /// firm's own id is not in this repository and no fragment of it is, by
+  /// the decision of 2026-10-16: what the renders and the tests need is the
+  /// shape, which is twenty-eight characters of the alphabet Drive writes.
+  static let page = "https://drive.google.com/file/d/1MaRkStAnDiN0PaGe0iD00000000/view"
+
   private static func drawn(width: Int, height: Int) -> Data {
     guard
       let rep = NSBitmapImageRep(
@@ -220,7 +226,8 @@ enum Scenes {
         + "installed nothing; and the ring while the child is up. Then the four row "
         + "shapes, the quiet line, and the two labels as pieces, DOCUMENTS twice: its "
         + "words alone, as a machine that never signed in draws it, and with the firm's "
-        + "mark at its right end, as every other machine does."
+        + "mark at its right end, as every other machine does, with the mark's own words "
+        + "held open under it."
     ),
     (
       "cards",
@@ -272,7 +279,8 @@ enum Scenes {
     updating: Bool = false,
     updateRun: UpdateRun? = nil,
     extensionRun: ExtensionRun? = nil,
-    logo: Data? = SceneMark.standIn
+    logo: Data? = SceneMark.standIn,
+    logoURL: String? = SceneMark.page
   ) -> Facts {
     Facts(
       account: account,
@@ -282,6 +290,7 @@ enum Scenes {
         app: "2.14.0", gdoc: gdocFound ? "v2.14.0" : nil, latestStable: latestStable),
       mark: "⁘",
       logo: logo,
+      logoURL: logoURL,
       gdocPath: gdocFound ? gdocPath : nil,
       home: home,
       extensionState: extensionState,
@@ -445,7 +454,7 @@ enum Scenes {
         + "is on: the person turned the switch on the evening before, which is the only "
         + "way it is ever on. The firm's mark is at the right end of DOCUMENTS: 14 pt "
         + "tall, on the one edge every value in the panel ends on, in the label's own "
-        + "grey, and nothing presses it.",
+        + "grey, and a click on it opens the picture's own page in Google Drive.",
       fixture: "e2", moment: "2026-10-18T09:12:00Z", alive: [],
       facts: machine(loginItem: .on),
       ui: UIState(
@@ -475,7 +484,9 @@ enum Scenes {
         + "screen and no note icon of any tone; the grey one is on the screens with rows. "
         + "DOCUMENTS is its words alone: the firm's mark is a file gdoc caches after a "
         + "sign-in, and this machine has never had one, so this is the one screen with no "
-        + "picture of it. SETTINGS is still pinned above everything, because on this "
+        + "picture of it. The address of that picture is here, because the binary names it "
+        + "whether the file is cached or not, so this is also the one screen where there is "
+        + "nothing to press. SETTINGS is still pinned above everything, because on this "
         + "machine it is the whole of what the panel is for.",
       fixture: nil, moment: "2026-10-17T10:00:00Z", alive: [],
       facts: machine(

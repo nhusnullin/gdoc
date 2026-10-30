@@ -473,6 +473,10 @@ enum SheetPieces {
     }
     words += ButtonWord.allCases.map(\.rawValue)
     words += StripLabel.allCases.map(\.rawValue)
+    // The firm's mark's own words, held open on the rows sheet under the
+    // second DOCUMENTS label: the one string on these pages that belongs to
+    // a picture and not to a row.
+    words += [Tips.openMark]
     return words.filter { !$0.isEmpty }
   }
 }
@@ -491,6 +495,9 @@ func panelVocabulary() throws -> Set<String> {
     words.formUnion([model.mark])
     words.formUnion([model.empty, model.notice].compactMap { $0 })
     words.formUnion(headerWords(model.header))
+    // The mark's words, where the panel draws a press on it: bytes and an
+    // address both, which is every machine that has built a document.
+    if model.logo != nil, model.logoURL != nil { words.insert(Tips.openMark) }
     for item in model.now { words.formUnion(nowWords(item)) }
     for section in model.sections {
       words.insert(section.label)

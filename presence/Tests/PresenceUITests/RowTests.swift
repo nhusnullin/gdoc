@@ -611,6 +611,108 @@ final class RowTests: XCTestCase {
       "the mark reaches into the first document row")
   }
 
+  // MARK: the press on the mark
+
+  // A mark with a page behind it is a press, and the press opens that page.
+  //
+  // The closure is read through a `PanelActions` that writes down what it
+  // was handed, because this package has no offscreen click: what a test can
+  // hold is that the mark was wired to the one kind and the one address.
+  // Nail's hand check holds the rest of it.
+  func testTheMarkWithAPageIsAPressThatOpensIt() throws {
+    var pressed: [(kind: ActionKind, target: String?)] = []
+    let actions = PanelActions { kind, target in pressed.append((kind, target)) }
+
+    let model = try panel(logo: SceneMark.standIn, logoURL: SceneMark.page)
+    let press = try XCTUnwrap(
+      MarkPress.open(model, actions: actions),
+      "the bytes and the address are both there, so the mark presses")
+
+    press()
+    XCTAssertEqual(pressed.count, 1, "one press, one thing done")
+    XCTAssertEqual(pressed.first?.kind, .openMark, "and it is the kind the mark's press sends")
+    XCTAssertEqual(
+      pressed.first?.target, SceneMark.page, "the page, as the facts handed it over")
+  }
+
+  // Either half missing is no press at all. Bytes with no address draw the
+  // mark and nothing to click, which is principle 4 of the design
+  // principles: a dead control is not shown as live.
+  func testTheMarkWithoutAPageOrWithoutBytesIsNoPress() throws {
+    let actions = PanelActions()
+
+    XCTAssertNil(
+      MarkPress.open(try panel(logo: SceneMark.standIn, logoURL: nil), actions: actions),
+      "a mark with no address is drawn and not pressed")
+    XCTAssertNil(
+      MarkPress.open(try panel(logo: nil, logoURL: SceneMark.page), actions: actions),
+      "an address with no picture has nothing to press, which is a first run")
+    XCTAssertNil(
+      MarkPress.open(try panel(logo: nil, logoURL: nil), actions: actions),
+      "neither half, so nothing at all")
+  }
+
+  // The words are the Drive page's, they are shown only where the mark
+  // presses, and the press moved nothing: the picture is the same box on the
+  // same edge with a press as without one.
+  func testTheMarksWordsAreTheDrivePageAndOnlyWhereItPresses() throws {
+    XCTAssertEqual(Tips.openMark, "Open in Google Drive")
+
+    // A forced bubble needs room under the thing it explains, or the layer
+    // flips it over the top: the same band the controls sheet gives each of
+    // its icons.
+    let band = ControlTests.tooltipBand
+    let pressing =
+      SectionLabel("Documents", mark: SceneMark.standIn, press: {}, forcedTooltip: true)
+      .frame(width: Grid.panelWidth, height: band, alignment: .topTrailing)
+      .tooltipLayer()
+    let plain =
+      SectionLabel("Documents", mark: SceneMark.standIn, forcedTooltip: true)
+      .frame(width: Grid.panelWidth, height: band, alignment: .topTrailing)
+      .tooltipLayer()
+
+    let drawn = try probeList(pressing, scheme: .dark)
+    XCTAssertNotNil(
+      drawn.first { $0.name == "tooltip" }, "the mark that presses said nothing")
+
+    let bare = try probeList(plain, scheme: .dark)
+    XCTAssertNil(
+      bare.first { $0.name == "tooltip" },
+      "a mark with no press carried words about a click that does nothing")
+
+    let withPress = try XCTUnwrap(
+      drawn.first { $0.name == "section-label.mark" }, "the pressing label drew no mark")
+    let without = try XCTUnwrap(
+      bare.first { $0.name == "section-label.mark" }, "the plain label drew no mark")
+
+    XCTAssertEqual(
+      withPress.size.width, Grid.markHeight * 2.75, accuracy: 0.5,
+      "the press changed the picture's width")
+    XCTAssertEqual(
+      withPress.size.height, Grid.markHeight, accuracy: 0.5,
+      "the press changed the picture's height")
+    XCTAssertEqual(
+      withPress.origin.x + withPress.size.width, contentEdge, accuracy: 0.5,
+      "the press took the mark off the content edge")
+    XCTAssertEqual(withPress.size, without.size, "the press resized the picture")
+    XCTAssertEqual(
+      withPress.origin.x, without.origin.x, accuracy: 0.5, "the press moved the picture")
+  }
+
+  /// A panel out of one set of facts, for the two fields the mark's press
+  /// reads. No record and no document: the press is about the facts alone.
+  private func panel(logo: Data?, logoURL: String?) throws -> PanelModel {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .gmt
+    calendar.locale = Locale(identifier: "en_US_POSIX")
+    let facts = Facts(
+      versions: Versions(app: "2.15.0"), logo: logo, logoURL: logoURL,
+      gdocPath: Scenes.gdocPath)
+    return PanelModel.build(
+      events: [], facts: facts, now: Date(timeIntervalSince1970: 1_792_231_200),
+      calendar: calendar, alive: { _ in false })
+  }
+
   // MARK: the bitmap the mark is drawn from
 
   // The bitmap is made at the pixels it will be drawn at, and its width is
@@ -1006,12 +1108,24 @@ final class RowTests: XCTestCase {
         // the first reads as a header over the second. DOCUMENTS twice, as
         // the two machines draw it: the words alone where no mark file is
         // cached, and with the firm's mark at the right end where one is.
+        //
+        // The second of those has its words held open, which is the one
+        // place the mark's press says anything. It takes the band the
+        // controls sheet gives an icon and a layer of its own, because a
+        // layer with no room below flips the bubble over the thing it
+        // explains, and the thing above this one is the plain DOCUMENTS
+        // label: a bubble on top of that reads as words about the label
+        // with no mark.
         Spacer(minLength: 2 * Grid.unit)
         SectionLabel(labels.now)
         Spacer(minLength: 2 * Grid.unit)
         SectionLabel(labels.documents)
         Spacer(minLength: 2 * Grid.unit)
-        SectionLabel(labels.documents, mark: SceneMark.standIn)
+        SectionLabel(labels.documents, mark: SceneMark.standIn, press: {}, forcedTooltip: true)
+          .frame(
+            width: Grid.panelWidth, height: ControlTests.tooltipBand, alignment: .topTrailing
+          )
+          .tooltipLayer()
       }
       .frame(width: Grid.panelWidth)
       .padding(Grid.unit)

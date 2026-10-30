@@ -19,6 +19,9 @@ public enum Tips {
   /// are the press that opens the document. No icon has carried them since
   /// 2026-10-29: NowPress.words is the one reader.
   public static let openDoc = "Open in Google Docs"
+  /// The words on the firm's mark beside DOCUMENTS, which opens the
+  /// picture's own page in Drive (docs/v2/DECISIONS.md, 2026-10-30).
+  public static let openMark = "Open in Google Drive"
   public static let openNote = "Open the note in Obsidian"
   public static let noNote = "No note is paired with this document"
   /// Two notes name this document, which the app may not pick between. It

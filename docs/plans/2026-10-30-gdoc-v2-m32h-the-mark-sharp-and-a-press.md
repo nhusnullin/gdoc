@@ -555,7 +555,7 @@ assert pixels on the bitmap, not points on a wrapper.
 
 **Steps**
 
-- [ ] In `RowTests.swift`, three tests. `testTheMarkWithAPageIsAPressThatOpensIt`:
+- [x] In `RowTests.swift`, three tests. `testTheMarkWithAPageIsAPressThatOpensIt`:
       through a recording `PanelActions` as `CardTests.swift:419` does,
       `MarkPress.open(model, actions:)` over a model whose `logo` and
       `logoURL` are both set returns a closure, and calling it records one
@@ -571,18 +571,18 @@ assert pixels on the bitmap, not points on a wrapper.
       `forcedTooltip: true` reports no `"tooltip"` probe; the
       `section-label.mark` frame is the same in both, 38.5 by 14 with its
       right edge at 348, so the press moved nothing. Red.
-- [ ] `PanelWords.swift`: `Tips.openMark = "Open in Google Drive"` after
+- [x] `PanelWords.swift`: `Tips.openMark = "Open in Google Drive"` after
       `openDoc` (line 21), in the voice of the line above it: verb and
       object, sentence case, no full stop, with a one-line comment naming
       the decision.
-- [ ] `MarkPress.swift`, new in `PresenceUI`, in the shape of
+- [x] `MarkPress.swift`, new in `PresenceUI`, in the shape of
       `DocumentPress.swift`: `public enum MarkPress` with `public static
       func open(_ model: PanelModel, actions: PanelActions) -> (() ->
       Void)?`, which is nil unless the model carries both the bytes and the
       page, and otherwise `{ actions.perform(.openMark, page) }`. The file
       comment says why both are needed: no file, no mark and no press;
       bytes and no address, the mark and no press, which is principle 4.
-- [ ] `SectionLabel` gains `public let press: (() -> Void)?` and `public
+- [x] `SectionLabel` gains `public let press: (() -> Void)?` and `public
       let forcedTooltip: Bool`, both defaulted in the init, and `SectionView`
       hands them through. With a press the picture is the label of a plain
       `Button` that calls it; behind the picture a
@@ -597,13 +597,13 @@ assert pixels on the bitmap, not points on a wrapper.
       left it: no button, no plate, no hover, no tooltip, hidden from
       accessibility. The file's header gains one paragraph on the press
       and the decision. Green.
-- [ ] `PanelView.swift`: `section(_:)` passes `press: markPress(of:)`,
+- [x] `PanelView.swift`: `section(_:)` passes `press: markPress(of:)`,
       where `markPress(of:)` is `MarkPress.open(model, actions: actions)`
       for `.documents` and nil for the other two, beside `mark(of:)` at
       lines 115 to 118. `forcedTooltip` is not wired through the panel: no
       scene forces the mark's words, and the parameter is the sheet's
       alone.
-- [ ] `Scenes.swift`: `SceneMark` gains `static let page`, the literal
+- [x] `Scenes.swift`: `SceneMark` gains `static let page`, the literal
       `https://drive.google.com/file/d/` plus a 28-character stand-in id of
       the Drive alphabet plus `/view`, with a comment that the real id never
       enters the repository; `Scenes.machine(...)` gains `logoURL: String? =
@@ -619,7 +619,7 @@ assert pixels on the bitmap, not points on a wrapper.
       carries both `logo` and `logoURL`, and `SheetPieces.words()` adds
       `Tips.openMark`, so `testEverySheetWordIsAWordAPanelDraws` holds the
       sheet to the scenes as before.
-- [ ] `RowTests.testTheRowSheetRenders`: the DOCUMENTS label with the mark
+- [x] `RowTests.testTheRowSheetRenders`: the DOCUMENTS label with the mark
       at line 828 gains `press: {}` and `forcedTooltip: true`, and sits in
       the frame pattern the controls sheet uses for a forced tooltip
       (`ControlTests.swift:425` to 445): its own `.frame(width:
@@ -633,15 +633,15 @@ assert pixels on the bitmap, not points on a wrapper.
       In `RenderTests.swift`, the index paragraph at lines 770 to 775 gains
       one sentence: a click on the mark opens the picture's page in Drive,
       and the page address in the renders is a stand-in as the shape is.
-- [ ] `PRESENCE_SHOTS="$HOME/gdoc-m32h-board/shots" make app-test` green.
+- [x] `PRESENCE_SHOTS="$HOME/gdoc-m32h-board/shots" make app-test` green.
       `ls ~/gdoc-m32h-board/shots` lists `e2-dark.png`, `e2-light.png`,
       `e5-dark.png`, `rows-dark.png`, `rows-light.png` and `index.html`;
       e2 draws the stand-in mark at the right end of DOCUMENTS as before,
       e5 draws none, and the rows sheet shows "Open in Google Drive" under
       the second DOCUMENTS label in both appearances. The renders are not
       in git.
-- [ ] `make app-lint` and `make app-test` green.
-- [ ] Commit: `feat: the mark is a press that opens its page in Drive`.
+- [x] `make app-lint` and `make app-test` green.
+- [x] Commit: `feat: the mark is a press that opens its page in Drive`.
 
 ### Task 6: [Final] Verify acceptance and update documentation
 

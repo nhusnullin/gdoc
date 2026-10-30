@@ -345,10 +345,14 @@ final class ControlTests: XCTestCase {
       // makers of a button.
       if makes(maker + "(", in: text) || makes(maker + " {", in: text) { makers.append(name) }
     }
+    // SectionView is the fourth since 2026-10-30, and it is a button with no
+    // words at all: the firm's mark beside DOCUMENTS presses, and what it
+    // says it says on a tooltip like every other icon in the panel
+    // (docs/v2/DECISIONS.md, 2026-10-30).
     XCTAssertEqual(
       makers.sorted(),
-      ["ActionButton.swift", "ButtonStyles.swift", "SwitchView.swift"],
-      "a fourth component makes a button of its own")
+      ["ActionButton.swift", "ButtonStyles.swift", "SectionView.swift", "SwitchView.swift"],
+      "a fifth component makes a button of its own")
   }
 
   /// The sheet asks the question in the shape the header asks it in.
