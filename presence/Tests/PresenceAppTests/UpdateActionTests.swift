@@ -214,6 +214,23 @@ final class UpdateActionTests: XCTestCase {
     XCTAssertEqual(later.updateLook, .quiet, "and offers nothing to install")
   }
 
+  /// Every fact this room was handed comes back, the one picture included.
+  ///
+  /// `applied(to:)` rebuilds the facts field by field, and the session runs
+  /// it after the poller's own, so a field it forgot would be a mark that
+  /// went out every time a person pressed Update.
+  func testTheLogoSurvivesTheUpdateActionsRebuild() async {
+    let action = UpdateAction(answer: FakeUpdater().answer)
+    let bytes = Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x7A, 0x7A])
+
+    let kept = await action.applied(
+      to: Facts(versions: Versions(app: "2.14.0"), logo: bytes))
+    XCTAssertEqual(kept.logo, bytes, "the bytes the poller read are the bytes that stay")
+
+    let none = await action.applied(to: Facts(versions: Versions(app: "2.14.0")))
+    XCTAssertNil(none.logo, "and a machine with no picture invents none")
+  }
+
   // MARK: the panel's own reading
 
   private static func facts(installed: String, latest: String) -> Facts {

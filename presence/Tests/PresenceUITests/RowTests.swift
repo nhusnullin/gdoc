@@ -480,6 +480,137 @@ final class RowTests: XCTestCase {
     XCTAssertEqual(laterHeight - firstHeight, Grid.unit + 4, "8 pt of air and 4 pt of padding")
   }
 
+  // MARK: the firm's mark in the DOCUMENTS label
+
+  /// The content edge the panel's values, times and icons all end on, which
+  /// the mark ends on too: 348 pt, the panel less a row's own inset.
+  private var contentEdge: CGFloat { Grid.panelWidth - Grid.rowInset }
+
+  // The mark is 14 pt tall, its width is the picture's own aspect, its right
+  // edge is the content edge and the 28 pt label centres it.
+  //
+  // Every number is read back off the drawing, because the 12 pt padding the
+  // label already had is what puts the mark on that edge: a layout that
+  // added an offset of its own would pass any test that read the constant.
+  func testTheDocumentsLabelDrawsTheMarkFourteenPointsTallOnTheContentEdge() throws {
+    for scheme in [ColorScheme.dark, .light] {
+      let drawn = try probeList(
+        SectionLabel("Documents", mark: SceneMark.standIn), scheme: scheme)
+      let mark = try XCTUnwrap(
+        drawn.first { $0.name == "section-label.mark" },
+        "the label drew no mark in \(scheme)")
+
+      XCTAssertEqual(mark.size.height, Grid.markHeight, accuracy: 0.5, "14 pt tall in \(scheme)")
+      XCTAssertEqual(
+        mark.size.width, Grid.markHeight * 2.75, accuracy: 0.5,
+        "the width is the picture's 2.75 to 1 in \(scheme)")
+      XCTAssertEqual(
+        mark.origin.x + mark.size.width, contentEdge, accuracy: 0.5,
+        "the mark is off the content edge in \(scheme)")
+      XCTAssertEqual(
+        mark.origin.y, (Grid.sectionLabelHeight - Grid.markHeight) / 2, accuracy: 0.5,
+        "the 28 pt label does not centre the mark in \(scheme)")
+
+      // And the drawing agrees: the last ink in the label is the mark's.
+      XCTAssertEqual(
+        try inkEnds(SectionLabel("Documents", mark: SceneMark.standIn), scheme: scheme),
+        contentEdge, accuracy: 1, "the mark's ink stops short of the edge in \(scheme)")
+    }
+  }
+
+  // The mark is the label's own grey and carries no colour of its own: the
+  // picture is drawn as a template, so the ink is the label's.
+  func testTheMarkTakesTheLabelsOwnInk() throws {
+    let side = Grid.panelWidth
+    // The middle of the mark in the square `pixel` frames: half its width
+    // in from the content edge, and the centre of the 28 pt label, which a
+    // 360 pt square puts at its own middle.
+    let x = contentEdge - Grid.markHeight * 2.75 / 2
+    let y = side / 2
+
+    for scheme in [ColorScheme.dark, .light] {
+      let ink = SectionLabel.ink(in: scheme)
+      let want = try pixel(Rectangle().fill(ink.color), scheme: scheme, side: side, x: x, y: y)
+      let drawn = try pixel(
+        SectionLabel("Documents", mark: SceneMark.standIn), scheme: scheme, side: side, x: x,
+        y: y)
+
+      XCTAssertEqual(
+        drawn.redComponent, want.redComponent, accuracy: 0.02,
+        "the mark is not the label's ink in \(scheme)")
+      XCTAssertEqual(drawn.greenComponent, want.greenComponent, accuracy: 0.02)
+      XCTAssertEqual(drawn.blueComponent, want.blueComponent, accuracy: 0.02)
+      XCTAssertEqual(
+        drawn.alphaComponent, ink.alpha, accuracy: 0.02,
+        "the mark is drawn at another weight than the words in \(scheme)")
+    }
+  }
+
+  // A machine with no picture draws the words alone, and the label is the
+  // same label: the mark is drawn where there is one and changes nothing
+  // where there is none.
+  func testNoMarkDrawsNothingAndMovesNothing() throws {
+    for scheme in [ColorScheme.dark, .light] {
+      let bare = try probeList(SectionLabel("Documents"), scheme: scheme)
+      XCTAssertNil(
+        bare.first { $0.name == "section-label.mark" },
+        "a label with no picture drew a mark in \(scheme)")
+      XCTAssertLessThan(
+        try inkEnds(SectionLabel("Documents"), scheme: scheme), 200,
+        "the words alone reach past the middle of the panel in \(scheme)")
+
+      let withMark = try probeList(
+        SectionLabel("Documents", mark: SceneMark.standIn), scheme: scheme)
+      XCTAssertEqual(
+        bare.first { $0.name == "section-label" }?.size,
+        withMark.first { $0.name == "section-label" }?.size,
+        "the mark changed the label's own box in \(scheme)")
+    }
+  }
+
+  // Bytes that are no picture draw nothing. The app hands over whatever the
+  // cached file holds, so a truncated or half-written file is a thing the
+  // label meets, and the words are then the whole of the label.
+  func testBytesThatAreNotAPictureDrawNothing() throws {
+    for scheme in [ColorScheme.dark, .light] {
+      let drawn = try probeList(
+        SectionLabel("Documents", mark: SceneMark.notAPicture), scheme: scheme)
+      XCTAssertNil(
+        drawn.first { $0.name == "section-label.mark" },
+        "two hundred bytes that are no picture drew a mark in \(scheme)")
+      XCTAssertLessThan(
+        try inkEnds(SectionLabel("Documents", mark: SceneMark.notAPicture), scheme: scheme),
+        200, "something was drawn for bytes that are no picture in \(scheme)")
+    }
+  }
+
+  // One mark on the panel, and it is DOCUMENTS's: scene e3 draws all three
+  // labels, and the mark lies between the DOCUMENTS label's top and the
+  // first document row under it.
+  func testOnlyTheDocumentsLabelCarriesTheMark() throws {
+    let scene = try XCTUnwrap(Scenes.all.first { $0.id == "e3" }, "there is no scene e3")
+    let model = try scene.model()
+    XCTAssertEqual(model.sections.count, 3, "e3 draws NOW, DOCUMENTS and SETTINGS")
+    XCTAssertNotNil(model.logo, "e3's facts carry no picture, so there is nothing to find")
+
+    let drawn = try probeList(PanelView(model: model).rendering(), scheme: .dark)
+    let marks = drawn.filter { $0.name == "section-label.mark" }
+    XCTAssertEqual(marks.count, 1, "the panel drew \(marks.count) marks")
+
+    let labels = drawn.filter { $0.name == "section-label" }
+    XCTAssertEqual(labels.count, 3, "e3 draws three labels")
+    let documents = labels[1]
+    let mark = try XCTUnwrap(marks.first)
+    XCTAssertGreaterThanOrEqual(
+      mark.origin.y, documents.origin.y - 0.5, "the mark is above the DOCUMENTS label")
+
+    let rows = drawn.filter { $0.name == "row.doc" }
+    let firstRow = try XCTUnwrap(rows.first, "e3 drew no document rows")
+    XCTAssertLessThan(
+      mark.origin.y + mark.size.height, firstRow.origin.y,
+      "the mark reaches into the first document row")
+  }
+
   // `.panel-header{height:36px}`: the mark and the name, the version with
   // its update, and the account with its glyph and its one action.
   //
@@ -686,11 +817,15 @@ final class RowTests: XCTestCase {
         }
         QuietLine(quiet)
         // The two labels, each on its own and with air around it: stacked,
-        // the first reads as a header over the second.
+        // the first reads as a header over the second. DOCUMENTS twice, as
+        // the two machines draw it: the words alone where no mark file is
+        // cached, and with the firm's mark at the right end where one is.
         Spacer(minLength: 2 * Grid.unit)
         SectionLabel(labels.now)
         Spacer(minLength: 2 * Grid.unit)
         SectionLabel(labels.documents)
+        Spacer(minLength: 2 * Grid.unit)
+        SectionLabel(labels.documents, mark: SceneMark.standIn)
       }
       .frame(width: Grid.panelWidth)
       .padding(Grid.unit)

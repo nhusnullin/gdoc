@@ -1010,6 +1010,21 @@ final class StateTests: XCTestCase {
     panel.documents?.rows.first?.actions.first { $0.kind == .copyLink }?.state
   }
 
+  /// The one picture the panel draws reaches the model from the facts, and
+  /// from nothing else: no room under `PresenceUI` reads a file.
+  func testTheModelCarriesTheLogoAndOnlyFromTheFacts() throws {
+    let bytes = Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x7A, 0x7A])
+    let withMark = Facts(
+      versions: Versions(app: "2.15.0"), logo: bytes, gdocPath: Scenes.gdocPath)
+
+    let drawnWith = try drawn([], at: "2026-10-17T10:00:00Z", facts: withMark)
+    XCTAssertEqual(drawnWith.logo, bytes, "the facts' bytes, unchanged")
+
+    let without = Facts(versions: Versions(app: "2.15.0"), gdocPath: Scenes.gdocPath)
+    let drawnWithout = try drawn([], at: "2026-10-17T10:00:00Z", facts: without)
+    XCTAssertNil(drawnWithout.logo, "and nothing where the facts carry none")
+  }
+
   private func drawn(
     _ events: [Event], at text: String, facts: Facts = Scenes.machine(),
     ui: UIState = UIState(), alive: Set<Int32> = []

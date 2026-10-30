@@ -337,6 +337,10 @@ public struct PanelModel: Sendable, Equatable {
   public let sections: [PanelSection]
   /// The one action whose words are held open with no pointer.
   public let forcedTooltip: String?
+  /// The firm's mark, as the facts handed it over. Nothing reads a file to
+  /// get here: a machine with no picture folds to nothing, and the label is
+  /// then the words alone.
+  public let logo: Data?
 
   /// The mark in effect, which the header and the empty state draw.
   public var mark: String { header.mark }
@@ -442,7 +446,8 @@ extension PanelModel {
       empty: bare && facts.auth == .signedOut ? EmptyState.firstRun : nil,
       notice: notice(facts),
       sections: sections,
-      forcedTooltip: ui.forcedTooltip)
+      forcedTooltip: ui.forcedTooltip,
+      logo: facts.logo)
   }
 
   // MARK: NOW

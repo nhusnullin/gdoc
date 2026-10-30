@@ -201,7 +201,7 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] In `helpjson_test.go`, a new `TestHelpNamesWhereTheLogoIsCached`:
+- [x] In `helpjson_test.go`, a new `TestHelpNamesWhereTheLogoIsCached`:
       `t.Setenv("GDOC_CONFIG_DIR", t.TempDir())`, run
       `help --json`, read `data.logo_path` and require it equal to
       `config.AssetPath("1J3uh6poVAneP_V_Pc5FuNI4-Gahlab0s")`, the house
@@ -212,7 +212,7 @@ Tick each box as it is done. A task ends with its commit.
       pipe, and require `logo_path` absent from each: the field belongs to
       the one argv the app runs, `["help", "--json"]`
       (`Runner.swift:38`), and to nothing a skill reads. Run it: red.
-- [ ] In `help.go`, `helpReport` gains `LogoPath string
+- [x] In `help.go`, `helpReport` gains `LogoPath string
       \`json:"logo_path,omitempty"\`` with a comment in the file's own
       voice: where `internal/asset` keeps the house logo, named so the menu
       bar app can draw it from that one file; carried by bare `help --json`
@@ -225,16 +225,23 @@ Tick each box as it is done. A task ends with its commit.
       help is an answer about the tool and a broken house file is not its
       question. The full form's return at about line 154 sets it when
       `json && len(words) == 0`, and nowhere else.
-- [ ] `TestHelpBriefIsAFewHundredBytes`, `TestHelpNeverReadsTheToken` and
+- [x] `TestHelpBriefIsAFewHundredBytes`, `TestHelpNeverReadsTheToken` and
       `TestHelpOnAPipeIsTodaysTextByteForByte` green, untouched, and no
       file under `testdata/pipe/` changes: the goldens run without
-      `--json`. The help screen prints nothing new.
-- [ ] `go/cmd/gdoc/doc.go`: one rule in the help's section, that the full
+      `--json`. The help screen prints nothing new. One pin the Context
+      did not name had to move: `presenceflag_test.go` holds the full
+      `help --json` object by length and sha256, and `logo_path` is a path
+      on this machine, which no sha can hold. It is masked to a frozen
+      literal before the comparison, the way `pipe_test.go` already masks
+      `checked_at`, a clock reading, and the pins are re-taken under the
+      reason the file's own comment states. Every other byte stays pinned
+      and the path itself is pinned by `TestHelpNamesWhereTheLogoIsCached`.
+- [x] `go/cmd/gdoc/doc.go`: one rule in the help's section, that the full
       help names the logo's cache path and reads nothing for it, naming
       `TestHelpNamesWhereTheLogoIsCached`.
-- [ ] `cd go && go test -race ./cmd/gdoc/ ./boundary/` and `make vet`
+- [x] `cd go && go test -race ./cmd/gdoc/ ./boundary/` and `make vet`
       green.
-- [ ] Commit: `feat: the help names where the logo is cached`.
+- [x] Commit: `feat: the help names where the logo is cached`.
 
 ### Task 2: the one read, held to one file and one shape
 
@@ -248,20 +255,20 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] In `HealthFactsTests.swift`, `testHelpNamesTheLogoPathAndItMayBeAbsent`:
+- [x] In `HealthFactsTests.swift`, `testHelpNamesTheLogoPathAndItMayBeAbsent`:
       a `data` object with `logo_path` decodes to `HelpFacts.logoPath` equal
       to it; one without decodes with `logoPath` nil and nothing else
       changed; one whose `logo_path` is a number fails the whole decode,
       which is the file's strict rule and is stated in the test. Red.
-- [ ] `HelpFacts` gains `public let logoPath: String?`, read the way
+- [x] `HelpFacts` gains `public let logoPath: String?`, read the way
       `markFrom` is, with its one-line comment. Green.
-- [ ] `MarkFileTests.swift`, new, over temp files: a 200-byte file that
+- [x] `MarkFileTests.swift`, new, over temp files: a 200-byte file that
       opens with the eight PNG signature bytes comes back as those bytes; a
       file opening with JPEG's bytes comes back nil; a PNG of exactly
       1,048,576 bytes comes back and one of 1,048,577 comes back nil; a
       directory, a path that does not exist and a symbolic link to a
       passing PNG each come back nil. Red.
-- [ ] `MarkFile.swift`, new in `PresenceCore`: a package comment in the
+- [x] `MarkFile.swift`, new in `PresenceCore`: a package comment in the
       house voice (what it reads, the three checks, why a link is refused:
       the file named is the file read), `public enum MarkFile` with
       `public static let ceiling = 1_048_576`, the signature bytes as a
@@ -272,8 +279,13 @@ Tick each box as it is done. A task ends with its commit.
       must say a regular file of at most `ceiling` bytes; it then reads at
       most `ceiling + 1` bytes through the descriptor, closes it, and
       checks the signature. Any failure is nil, with no log line: a
-      machine with no picture is not an error. Green.
-- [ ] In `SourceRulesTests.swift`, `testAByteIsReadOnlyInTheFiveReaders`:
+      machine with no picture is not an error. Green. Two details the step
+      did not name: the size the descriptor reports must also be at least
+      the eight signature bytes, so a stub is refused before any read, and
+      the bytes come through `Darwin.read` in a loop rather than `pread`,
+      because this read starts at the file's own beginning and keeps no
+      offset. `pread` stays the record's spelling alone.
+- [x] In `SourceRulesTests.swift`, `testAByteIsReadOnlyInTheFiveReaders`:
       walk every Swift file under `Sources` as `testProcessAppearsOnlyInTheRunner`
       does. Five files may read a byte, each named with one line on what
       it reads: `LogTail.swift` (the record), `HubIndex.swift` (a note's
@@ -290,8 +302,8 @@ Tick each box as it is done. A task ends with its commit.
       must contain at least one spelling, or the test guards nothing. A
       sixth file fails it. This is the test the guardian's signature
       names.
-- [ ] `make app-lint` and `make app-test` green.
-- [ ] Commit: `feat: the help's logo path and the one read of it`.
+- [x] `make app-lint` and `make app-test` green.
+- [x] Commit: `feat: the help's logo path and the one read of it`.
 
 ### Task 3: the bytes reach the panel's facts
 
@@ -307,7 +319,7 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] In `HealthPollerTests.swift`, `FakeGdoc` gains a settable logo path
+- [x] In `HealthPollerTests.swift`, `FakeGdoc` gains a settable logo path
       written into its help answer, and a new
       `testTheLogoIsReadOncePerHelpAnswerFromThePathItNames`: a help answer
       whose `logo_path` names a temp PNG leaves `applied(to:).logo` equal
@@ -315,26 +327,26 @@ Tick each box as it is done. A task ends with its commit.
       answer naming a path with no file leaves it nil; an `auth status`
       answer after a help answer keeps the logo; a later help answer, asked
       with `.changed`, that names no path clears it. Red.
-- [ ] `HealthReading` gains `public let logo: Data?`; `askedHelp` fills it
+- [x] `HealthReading` gains `public let logo: Data?`; `askedHelp` fills it
       with `MarkFile.read(at:)` when the help names a path, once per help
       answer and never between them: the help is asked on the poll
       schedule, and that is how often the file is read. Both `HealthReading`
       constructions in `askedAuth` carry `logo: reading.logo`.
       `applied(to:)` writes `reading.logo` into the facts' `logo` (not
       `facts.logo`: a reading that names nothing draws nothing). Green.
-- [ ] In `UpdateActionTests.swift`, `testTheLogoSurvivesTheUpdateActionsRebuild`:
+- [x] In `UpdateActionTests.swift`, `testTheLogoSurvivesTheUpdateActionsRebuild`:
       `UpdateAction.applied(to:)` over facts with `logo` set returns the
       same bytes. Red, then `UpdateAction.swift:162` passes
       `logo: facts.logo`. Green.
-- [ ] `Facts` gains `public let logo: Data?` with the init's default nil
+- [x] `Facts` gains `public let logo: Data?` with the init's default nil
       and a comment: the one picture the panel draws, from the one file
       the help names, nil where there is none. Place it after `mark`.
-- [ ] In `StateTests.swift`, `testTheModelCarriesTheLogoAndOnlyFromTheFacts`:
+- [x] In `StateTests.swift`, `testTheModelCarriesTheLogoAndOnlyFromTheFacts`:
       a model folded from facts with `logo` set carries the same bytes;
       from facts without, nil. Red, then `PanelModel` gains
       `public let logo: Data?` filled from the facts in the fold. Green.
-- [ ] `make app-lint` and `make app-test` green.
-- [ ] Commit: `feat: the logo's bytes reach the panel's facts`.
+- [x] `make app-lint` and `make app-test` green.
+- [x] Commit: `feat: the logo's bytes reach the panel's facts`.
 
 ### Task 4: the DOCUMENTS label draws the mark
 
@@ -351,22 +363,22 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] A stand-in mark for the tests, in `Scenes.swift`: `enum SceneMark`
+- [x] A stand-in mark for the tests, in `Scenes.swift`: `enum SceneMark`
       with a nonisolated `static let standIn: Data`, PNG bytes of a filled
       rounded rectangle 275 by 100 px in black on transparent, drawn once
       with `NSBitmapImageRep`, so its aspect is the firm's file's 2.75 to
       1 and its ink fills its frame. Nonisolated because `Scenes.all` is,
       and the `@MainActor` helpers in `Shots.swift` cannot be called from
       it. Nothing from the firm, nothing from disk.
-- [ ] In `ThemeTests.testTheGridIsTheScreens` (about line 173), the list
+- [x] In `ThemeTests.testTheGridIsTheScreens` (about line 173), the list
       gains `Grid.markHeight` at 14 as a literal, in whatever form that
       test holds the other numbers. If the test reads its numbers out of an
       html file rather than a list of literals, stop and say so. Red.
-- [ ] `Grid.swift`: `public static let markHeight: CGFloat = 14` with the
+- [x] `Grid.swift`: `public static let markHeight: CGFloat = 14` with the
       comment: the firm's mark in the DOCUMENTS label, 14 so the wordmark's
       lowercase body is the label's cap height, decided 2026-10-29,
       DECISIONS.md. Green.
-- [ ] In `RowTests.swift`, four tests over `SectionLabel("Documents",
+- [x] In `RowTests.swift`, four tests over `SectionLabel("Documents",
       mark:)` drawn alone at `Grid.panelWidth` in both schemes with the
       helpers in `Shots.swift`:
       `testTheDocumentsLabelDrawsTheMarkFourteenPointsTallOnTheContentEdge`
@@ -383,7 +395,7 @@ Tick each box as it is done. A task ends with its commit.
       the `section-label` probe's frame equals the one with the mark);
       `testBytesThatAreNotAPictureDrawNothing` (two hundred random bytes:
       no `section-label.mark` probe, `inkEnds` under 200). Red.
-- [ ] `SectionLabel` gains `public let mark: Data?`, default nil in the
+- [x] `SectionLabel` gains `public let mark: Data?`, default nil in the
       init, and its body's `HStack` gains, after the `Spacer`, the mark
       when `NSImage(data:)` accepts the bytes: the image with
       `isTemplate = true`, as `Image(nsImage:)`, `.renderingMode(.template)`,
@@ -396,14 +408,14 @@ Tick each box as it is done. A task ends with its commit.
       says nothing a row does not. `NSImage(data:)` runs on each body
       evaluation; the bytes are a few kilobytes and that is accepted.
       Green.
-- [ ] `PanelView.section(_:)` passes `model.logo` to `SectionView` for
+- [x] `PanelView.section(_:)` passes `model.logo` to `SectionView` for
       `.documents` and nil for the other two; `SectionView` takes `mark:`
       and hands it to `SectionLabel`. A fifth test in `RowTests`,
       `testOnlyTheDocumentsLabelCarriesTheMark`: `probeList` over the whole
       panel of e3, which draws NOW, DOCUMENTS and SETTINGS, holds exactly
       one `section-label.mark`, and its frame lies between the DOCUMENTS
       label's top and the first document row's top.
-- [ ] `Scenes.swift`: `Scenes.machine(...)` gains `logo: Data? =
+- [x] `Scenes.swift`: `Scenes.machine(...)` gains `logo: Data? =
       SceneMark.standIn`, so every scene carries the stand-in, the "no
       documents" line's scenes included, because the mark goes wherever
       the label goes. One scene keeps `logo: nil` as the record of a
@@ -413,8 +425,8 @@ Tick each box as it is done. A task ends with its commit.
       is a stand-in shape the test draws, not the firm's logo, which this
       repository does not carry. e2's caption gains one sentence naming
       the mark: 14 pt, on the right edge, the label's grey, not a press.
-- [ ] `make app-lint` and `make app-test` green.
-- [ ] Commit: `feat: the DOCUMENTS label draws the firm's mark`.
+- [x] `make app-lint` and `make app-test` green.
+- [x] Commit: `feat: the DOCUMENTS label draws the firm's mark`.
 
 ### Task 5: the renders, once
 
@@ -425,10 +437,14 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] `PRESENCE_SHOTS="$HOME/gdoc-m32f-board/shots" make app-test` green.
-- [ ] `ls ~/gdoc-m32f-board/shots` lists `e2-dark.png`, `e2-light.png`,
-      `e9-dark.png` and `index.html`.
-- [ ] No commit: the renders are not in git.
+- [x] `PRESENCE_SHOTS="$HOME/gdoc-m32f-board/shots" make app-test` green:
+      389 tests, no failures.
+- [x] `ls ~/gdoc-m32f-board/shots` lists `e2-dark.png`, `e2-light.png`,
+      `e9-dark.png` and `index.html`. e2 draws the stand-in mark at the
+      right end of DOCUMENTS in both appearances, e9 draws none, and the
+      index page says the shape is a stand-in.
+- [x] No commit: the renders are not in git. Only this plan's ticks are
+      committed, so the next task starts on a clean tree.
 
 ### Task 6: Verify acceptance criteria
 
@@ -438,19 +454,25 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] Every test named in the Acceptance table exists under
+- [x] Every test named in the Acceptance table exists under
       `presence/Tests` or `go/cmd/gdoc` with that name.
-- [ ] `git diff --name-only main...HEAD` lists only this plan,
+- [x] `git diff --name-only main...HEAD` lists only this plan,
       `go/cmd/gdoc/help.go`, `go/cmd/gdoc/helpjson_test.go`,
       `go/cmd/gdoc/doc.go`, `presence/Sources` and `presence/Tests`.
-      Nothing under `go/internal/`, and not `CLAUDE.md` yet.
-- [ ] `grep -rn "1J3uh6poVAneP_V_Pc5FuNI4-Gahlab0s" presence/` prints
+      Nothing under `go/internal/`, and not `CLAUDE.md` yet. Plus
+      `go/cmd/gdoc/presenceflag_test.go`, the one pin Task 1 recorded as
+      having to move for `logo_path`.
+- [x] `grep -rn "1J3uh6poVAneP_V_Pc5FuNI4-Gahlab0s" presence/` prints
       nothing: the app holds no copy of the Drive id.
-- [ ] `grep -rln "logo_path" presence/Sources` prints `HealthFacts.swift`
+- [x] `grep -rln "logo_path" presence/Sources` prints `HealthFacts.swift`
       and no other file.
-- [ ] `cd go && go test -race ./cmd/gdoc/ ./boundary/`, `make vet`,
+- [x] `cd go && go test -race ./cmd/gdoc/ ./boundary/`, `make vet`,
       `make app-lint`, `make app-test`, `make app` green.
-- [ ] No commit unless something had to change, and then it says what.
+- [x] Nothing had to change: 17 of 17 named tests found with their
+      names, `MarkFileTests` present with its three cases, both greps as
+      the plan requires, and the Go suite, `make vet`, `make app-lint`,
+      `make app-test` (389 tests, 0 failures) and `make app` all green on
+      a clean tree.
 
 ### Task 7: [Final] Update documentation
 
@@ -464,7 +486,7 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] `CLAUDE.md` is at its 300-line ceiling (`TestCLAUDEmdIsUnderTheCeiling`
+- [x] `CLAUDE.md` is at its 300-line ceiling (`TestCLAUDEmdIsUnderTheCeiling`
       fails at 301), so the invariant bullet at lines 182 to 192 is
       rewritten in the same number of lines or fewer: "reads three things"
       becomes "reads four things", the list gains "the one logo file bare
@@ -472,14 +494,14 @@ Tick each box as it is done. A task ends with its commit.
       list gains `testAByteIsReadOnlyInTheFiveReaders`. Tighten the
       bullet's other words to pay for it. `cd go && go test ./boundary/
       -run 'TestCLAUDEmd|TestTheTaskMap'` prints `ok`.
-- [ ] In the guide's "### Documents" section, one sentence after the
+- [x] In the guide's "### Documents" section, one sentence after the
       section's first paragraph: the firm's mark sits small and grey at the
       right end of the Documents line once gdoc has built or published a
       document on this machine, and the line is plain until then. Every
       string `TestThePresencePageWalksTheThirdLooksPanel` requires stays;
       `cd go && go test ./boundary/ -run TestThePresencePageWalksTheThirdLooksPanel`
       prints `ok`.
-- [ ] In the principles file, a new heading "## Amendments, 2026-10-29,
+- [x] In the principles file, a new heading "## Amendments, 2026-10-29,
       the firm's mark beside DOCUMENTS" with two bullets: the mark's place
       and numbers, naming
       `RowTests.testTheDocumentsLabelDrawsTheMarkFourteenPointsTallOnTheContentEdge`
@@ -489,10 +511,10 @@ Tick each box as it is done. A task ends with its commit.
       the record of its day; and
       the one read, naming `MarkFileTests` and
       `SourceRulesTests.testAByteIsReadOnlyInTheFiveReaders`.
-- [ ] `git rm docs/backlog/the-panel-does-not-show-the-logo.md`: the item
+- [x] `git rm docs/backlog/the-panel-does-not-show-the-logo.md`: the item
       is built.
-- [ ] Move this plan to `docs/plans/completed/`.
-- [ ] Commit: `docs: the firm's mark beside DOCUMENTS`.
+- [x] Move this plan to `docs/plans/completed/`.
+- [x] Commit: `docs: the firm's mark beside DOCUMENTS`.
 
 ## Acceptance
 

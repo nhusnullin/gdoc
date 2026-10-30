@@ -232,6 +232,10 @@ public struct Facts: Sendable, Equatable {
   public let versions: Versions
   /// The mark in effect, a setting of the binary's. It may be empty.
   public let mark: String
+  /// The one picture the panel draws, from the one file the help names, and
+  /// nothing where there is none. A machine that has never built a document
+  /// has no logo cached, so the DOCUMENTS label is the words alone.
+  public let logo: Data?
   /// The resolved absolute path of the binary, or nothing where neither
   /// place held one.
   public let gdocPath: String?
@@ -295,6 +299,7 @@ public struct Facts: Sendable, Equatable {
     previousAccount: String? = nil,
     versions: Versions,
     mark: String = "⁘",
+    logo: Data? = nil,
     gdocPath: String? = nil,
     gdocPathTried: String = "~/.local/bin/gdoc",
     home: String = "",
@@ -318,6 +323,7 @@ public struct Facts: Sendable, Equatable {
     self.previousAccount = previousAccount
     self.versions = versions
     self.mark = mark
+    self.logo = logo
     self.gdocPath = gdocPath
     self.gdocPathTried = gdocPathTried
     self.home = home

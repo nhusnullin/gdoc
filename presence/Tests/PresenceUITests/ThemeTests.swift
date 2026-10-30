@@ -184,6 +184,7 @@ final class ThemeTests: XCTestCase {
     XCTAssertEqual(Grid.actionSize, 24)
     XCTAssertEqual(Grid.controlRadius, 6)
     XCTAssertEqual(Grid.actionOverhang, 4, "`.acts{margin-right:-4px}`")
+    XCTAssertEqual(Grid.markHeight, 14, "the firm's mark in the DOCUMENTS label")
   }
 
   // The rest of the stylesheet's layout numbers, each on the grid.

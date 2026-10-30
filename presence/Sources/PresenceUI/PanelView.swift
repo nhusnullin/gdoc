@@ -95,11 +95,26 @@ public struct PanelView: View {
     model.sections.enumerated().map { PlacedSection(index: $0, section: $1) }
   }
 
-  /// One section, with the hairline rule its place in the list decides.
+  /// One section, with the hairline rule its place in the list decides, and
+  /// the firm's mark where the section is DOCUMENTS.
+  ///
+  /// The mark goes beside that one label and nowhere else: it is about the
+  /// firm's documents and says nothing about NOW or SETTINGS
+  /// (docs/v2/DECISIONS.md, 2026-10-29).
+  /// RowTests.testOnlyTheDocumentsLabelCarriesTheMark.
   private func section(_ placed: PlacedSection) -> some View {
-    SectionView(placed.section.label, isFirst: isFirst(placed.index)) {
+    SectionView(
+      placed.section.label, isFirst: isFirst(placed.index), mark: mark(of: placed.section)
+    ) {
       body(of: placed.section)
     }
+  }
+
+  /// The mark DOCUMENTS carries, which the facts handed over, and nothing
+  /// for the other two.
+  private func mark(of section: PanelSection) -> Data? {
+    if case .documents = section { return model.logo }
+    return nil
   }
 
   /// `.section:first-of-type`: the one under the header carries no hairline.

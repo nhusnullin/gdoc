@@ -169,6 +169,7 @@ public actor UpdateAction {
         gdoc: installed(over: facts.versions.gdoc) ?? facts.versions.gdoc,
         latestStable: facts.versions.latestStable),
       mark: facts.mark,
+      logo: facts.logo,
       gdocPath: facts.gdocPath,
       gdocPathTried: facts.gdocPathTried,
       home: facts.home,

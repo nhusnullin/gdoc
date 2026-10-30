@@ -39,14 +39,19 @@ public struct HelpFacts: Sendable, Equatable {
   public let installed: String?
   /// The newest release gdoc's own daily check heard about.
   public let latestStable: String?
+  /// Where gdoc keeps the house logo on this machine. Nothing on a machine
+  /// that has never built a document, which has no picture to draw.
+  public let logoPath: String?
 
   public init(
-    mark: String, markFrom: String? = nil, installed: String? = nil, latestStable: String? = nil
+    mark: String, markFrom: String? = nil, installed: String? = nil,
+    latestStable: String? = nil, logoPath: String? = nil
   ) {
     self.mark = mark
     self.markFrom = markFrom
     self.installed = installed
     self.latestStable = latestStable
+    self.logoPath = logoPath
   }
 
   /// The envelope's `data` object, read.
@@ -63,7 +68,8 @@ public struct HelpFacts: Sendable, Equatable {
       mark: mark,
       markFrom: try settings.string("mark_from", or: "no settings.mark_from"),
       installed: try update?.string("installed", or: "no update.installed"),
-      latestStable: try update?.string("latest_stable", or: "no update.latest_stable"))
+      latestStable: try update?.string("latest_stable", or: "no update.latest_stable"),
+      logoPath: try object.string("logo_path", or: "no logo_path"))
   }
 }
 

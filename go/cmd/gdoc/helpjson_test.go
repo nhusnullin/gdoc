@@ -6,9 +6,15 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
+	"io/fs"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+
+	"gdoc/internal/config"
 )
 
 // helpRoute is which half of dispatch reads the flag for one spelling: the
@@ -201,5 +207,62 @@ func TestHelpBriefPrintsItsObjectOnATerminal(t *testing.T) {
 	}
 	if strings.Contains(errOut.String(), "gdoc <command> [words] [flags]") {
 		t.Errorf("stderr must carry no help under the notice: %q", errOut.String())
+	}
+}
+
+// houseLogoDrive is the Drive id of the house logo as a literal, so a run that
+// names a different file fails here rather than teaching the menu bar app a
+// path to a file nothing writes.
+const houseLogoDrive = "1J3uh6poVAneP_V_Pc5FuNI4-Gahlab0s"
+
+// The menu bar app draws the firm's mark in the panel, and bare `help --json`
+// is the one argv it runs, so that is where the path to the cached logo is
+// named. The help names it and touches nothing: no fetch, no stat, no read,
+// and no assets directory where there was none. The field belongs to that one
+// argv alone, so the brief help, a command's help and the flagless help on a
+// pipe carry none of it: a skill reads those, and a skill draws nothing.
+func TestHelpNamesWhereTheLogoIsCached(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("GDOC_CONFIG_DIR", dir)
+
+	want, err := config.AssetPath(houseLogoDrive)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got, _, code := runHelp(t, "help", "--json")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("the full help is an answer: %v (exit %d)", got, code)
+	}
+	if path, _ := dataOf(t, got)["logo_path"].(string); path != want {
+		t.Errorf("the full help must name %q and named %q", want, path)
+	}
+
+	if _, err := os.Lstat(want); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("the help named the path and must not have written it: %v", err)
+	}
+	if _, err := os.Lstat(filepath.Dir(want)); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("the help must create no assets directory: %v", err)
+	}
+
+	for _, c := range []struct {
+		name string
+		args []string
+	}{
+		{name: "brief", args: []string{"help", "--brief", "--json"}},
+		{name: "one command", args: []string{"help", "publish", "--json"}},
+		{name: "no flag on a pipe", args: []string{"help"}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+
+			got, _, code := runHelp(t, c.args...)
+			if code != 0 || got["ok"] != true {
+				t.Fatalf("%v is an answer: %v (exit %d)", c.args, got, code)
+			}
+			if _, ok := dataOf(t, got)["logo_path"]; ok {
+				t.Errorf("%v must carry no logo path: %v", c.args, got["data"])
+			}
+		})
 	}
 }

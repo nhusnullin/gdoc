@@ -64,6 +64,44 @@ final class HealthFactsTests: XCTestCase {
     }
   }
 
+  /// The path the help names for the house logo, and a machine with no
+  /// picture.
+  ///
+  /// The field is absent on a machine that has never built a document, so a
+  /// help answer without it is an ordinary answer and not a fault. A
+  /// `logo_path` that is not a string is refused by name, which is this
+  /// file's strict rule: something other than gdoc wrote that object.
+  func testHelpNamesTheLogoPathAndItMayBeAbsent() throws {
+    let named = try HelpFacts.decode(
+      Data(
+        #"""
+        {"settings":{"mark":"⁘","mark_from":"default"},
+         "logo_path":"/Users/someone/.config/gdoc-agent/assets/1J3uh6po"}
+        """#.utf8))
+    XCTAssertEqual(named.logoPath, "/Users/someone/.config/gdoc-agent/assets/1J3uh6po")
+    XCTAssertEqual(named.mark, "⁘")
+
+    let silent = try HelpFacts.decode(
+      Data(
+        #"""
+        {"settings":{"mark":"⁘","mark_from":"default"},
+         "update":{"installed":"v2.26.0","latest_stable":"v2.26.0"}}
+        """#.utf8))
+    XCTAssertNil(silent.logoPath)
+    XCTAssertEqual(silent.mark, "⁘")
+    XCTAssertEqual(silent.markFrom, "default")
+    XCTAssertEqual(silent.installed, "v2.26.0")
+    XCTAssertEqual(silent.latestStable, "v2.26.0")
+
+    do {
+      _ = try HelpFacts.decode(
+        Data(#"{"settings":{"mark":"⁘"},"logo_path":7}"#.utf8))
+      XCTFail("a numeric logo_path was read as a path")
+    } catch {
+      XCTAssertEqual(error as? HealthFault, .undecodable("no logo_path"))
+    }
+  }
+
   // MARK: auth status
 
   func testAuthStatusGivesTheThreeWordsAndTheEmail() throws {

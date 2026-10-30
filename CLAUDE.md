@@ -179,16 +179,16 @@ into `docs/v2/DECISIONS.md`, not a refactor.
   `TestPresenceExportsNoReader`, `TestOffTouchesNothing`,
   `TestTheEventCarriesOnlyItsListedFields` and
   `TestTheOpenerAsksThreeThingsAndRunsOpenGOnce`.
-- **The menu bar app runs six argv lists, signals one wait and reads three things.**
-  `help --json`, `auth status`, `auth login`, `auth logout`, `update` and
-  `update --desktop`, from `PresenceApp/Runner.swift` alone, at `~/.local/bin/gdoc`
-  or beside the bundle and never from PATH, with four variables and no stdin; one
-  SIGINT to a `comments --wait` or `--follow` the kernel agreed every claim about, from
-  `Stopper.swift` alone; the record, its plist and the `gdoc:` front matter of
-  the notes Spotlight names and of those under the `hubPath` override where one
-  is set, and no other byte: `testTheArgvEnumIsClosedAtSix`,
-  `testGdocIsResolvedAtLocalBinThenBesideTheBundleNeverFromPATH`,
-  `testASignalIsSentOnlyByTheStopper`, `testAFileThatMerelyMentionsTheIdIsNotTheNote`
+- **The menu bar app runs six argv lists, signals one wait and reads four things.**
+  `help --json`, the three `auth` lists and `update` with and without `--desktop`, from
+  `PresenceApp/Runner.swift` alone, at `~/.local/bin/gdoc` or beside the bundle, never
+  from PATH, with four variables and no stdin; one SIGINT to a `comments` wait the
+  kernel agreed every claim about, from `Stopper.swift` alone; the record, its plist,
+  the `gdoc:` front matter of the notes Spotlight names and of those under a `hubPath`
+  override, and the one logo file bare `help --json` names, a PNG of at most a megabyte,
+  and no other byte: `testGdocIsResolvedAtLocalBinThenBesideTheBundleNeverFromPATH`,
+  `testTheArgvEnumIsClosedAtSix`, `testASignalIsSentOnlyByTheStopper`,
+  `testAFileThatMerelyMentionsTheIdIsNotTheNote`, `testAByteIsReadOnlyInTheFiveReaders`
   and `testStopSendsOneSIGINTOnlyAfterTheProcessCheck`.
 - **A hold dies with the sign-in it was raised under.** `mcpHolds` keeps a hash of
   the refresh token beside the hold and no email, and a release or a sweep that

@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -28,14 +29,28 @@ import (
 // They were first taken before this flag existed, re-taken in M24b for the one
 // line `gdoc auth logout` adds to the table, re-taken twice in M32, for the
 // two lines `help --brief` adds to the help entry and for the flag line and
-// the example `comments --follow` moves, and re-taken in M32a for the one line
-// `completion --loader` adds. That is the only reason to re-take them: a
-// command or a flag a milestone adds names itself in this object, and
-// pipe_test.go holds the same exception over the goldens beside it.
+// the example `comments --follow` moves, re-taken in M32a for the one line
+// `completion --loader` adds, and re-taken in M32f for logo_path. That is the
+// only reason to re-take them: a command or a flag a milestone adds names
+// itself in this object, and pipe_test.go holds the same exception over the
+// goldens beside it.
 const (
-	helpObjectBytes  = 9781
-	helpObjectSHA256 = "922399d11a8e70ccb7c9b79b90ab98131136cc0d89f5f162e8e9475ef008c3bd"
+	helpObjectBytes  = 9820
+	helpObjectSHA256 = "8aba5628707448aead196632579e10dbc540285cd6718a925190b12ef0160c1e"
 )
+
+// frozenLogoPath stands in for where this machine caches the house logo. The
+// real value is a path under this user's config directory, which is a
+// different string on every machine and in every run of the test, so it cannot
+// be pinned by sha; the test replaces it with this one before comparing, and
+// every other byte of the object is compared as it was printed. The value
+// itself is pinned next door, by TestHelpNamesWhereTheLogoIsCached. This is
+// the same exception pipe_test.go makes for checked_at, a clock reading, and
+// for the same reason.
+const frozenLogoPath = "/home/frozen/assets/logo"
+
+// logoPathInObject is the one field whose value is a path on this machine.
+var logoPathInObject = regexp.MustCompile(`"logo_path":"[^"]*"`)
 
 // One flag of the three is experimental, it is --presence, and it carries the
 // sentence that says what it does. A flag in the table with no sentence is a
@@ -123,7 +138,7 @@ func TestAnExperimentalFlagIsInTheTableAndInNoScreen(t *testing.T) {
 	})
 
 	t.Run("the help object with the flag off", func(t *testing.T) {
-		got := helpObject(t)
+		got := logoPathInObject.ReplaceAll(helpObject(t), []byte(`"logo_path":"`+frozenLogoPath+`"`))
 		if len(got) != helpObjectBytes {
 			t.Errorf("the help object is %d bytes, and it was %d before the flag existed", len(got), helpObjectBytes)
 		}
