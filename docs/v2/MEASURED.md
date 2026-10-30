@@ -1001,3 +1001,16 @@ label's centre 0.5 pt above the mark's. The mark's top is back where v2.25.0
 had it in this export, 8.67 pt, and the label kept its six points, which is
 the sentence of the 2026-10-30 decision read off the page. Nail's screen is
 still to be read for this version.
+
+Nail's screen for v2.28.0, measured 2026-10-30 at 12:40 from the screenshot
+he sent after `gdoc update`, same script, 2.31 px per pt on this one: the
+mark's right edge 49.35 pt from the paper's right (the page's left edge sits
+at this screenshot's own edge, so the horizontal values carry a point or two
+of doubt; the vertical ones do not); the mark's top 19.48 pt, height 40.26,
+centre 39.61; the label's ink 33.77 to 44.16, centre 38.96; the label's
+centre 0.65 pt above the mark's. Level, on the screen as in the export. The
+screen draws the whole header about 10 pt lower than the PDF export does and
+drew v2.27.0's 12 pt lower than this, so the two renderers agree on the
+distance between the label and the mark and on nothing else about the top
+margin, which is why that distance is the number the house states its
+intent in.
