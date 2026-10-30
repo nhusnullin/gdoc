@@ -474,7 +474,7 @@ under a renderer at another scale, so the one route that draws 1:1 at 1x,
 2x and 3x is `Image(decorative:scale:)` over the bitmap itself. The tests
 assert pixels on the bitmap, not points on a wrapper.
 
-- [ ] In `RowTests.swift`, three tests over `MarkPicture`.
+- [x] In `RowTests.swift`, three tests over `MarkPicture`.
       `testTheMarkIsABitmapAtItsOwnPixelSize`:
       `MarkPicture.make(SceneMark.standIn, height: Grid.markHeight, scale:
       2)` is a `CGImage` 28 px high and 77 px wide (275 by 100 at 28 high
@@ -493,7 +493,7 @@ assert pixels on the bitmap, not points on a wrapper.
       channel between 0.35 and 0.65; the reviewer measured 2,156 of 2,156
       with `.high` and aliasing with `.none` and `.low`, so a worker who
       reaches for a cheaper interpolation fails here. Red.
-- [ ] `MarkPicture.swift`, new in `PresenceUI`: a file comment in the house
+- [x] `MarkPicture.swift`, new in `PresenceUI`: a file comment in the house
       voice (why the compositor's scaling left ragged edges, measured
       2026-10-30 in DECISIONS.md; what is made instead; why once; why a
       `CGImage` and not a wrapper, with the reviewer's measurement in one
@@ -512,14 +512,14 @@ assert pixels on the bitmap, not points on a wrapper.
       otherwise get the label's bitmap. No spelling from the readers' list
       (`SourceRulesTests.swift:459` to 474) appears in the file, and
       `testAByteIsReadOnlyInTheFiveReaders` still names five. Green.
-- [ ] In `RowTests.swift`, `testTheLabelDrawsTheBitmapItWasMade`:
+- [x] In `RowTests.swift`, `testTheLabelDrawsTheBitmapItWasMade`:
       `SectionLabel.picture(mark: SceneMark.standIn, scale: 2)` is `===`
       `MarkPicture.make(SceneMark.standIn, height: Grid.markHeight, scale:
       2)`, and nil for `SceneMark.notAPicture` and for nil bytes. This is
       the one red the wiring has: the renderer already averages the old
       resizable path, so no render test shows the raggedness Nail saw, and
       the sharpness on a screen is his hand check alone. Red.
-- [ ] `SectionView.swift`: `SectionLabel` gains `public static func
+- [x] `SectionView.swift`: `SectionLabel` gains `public static func
       picture(mark: Data?, scale: CGFloat) -> CGImage?`, which is
       `MarkPicture.make` at `Grid.markHeight` or nil, reads
       `@Environment(\.displayScale)`, and its body draws
@@ -530,15 +530,15 @@ assert pixels on the bitmap, not points on a wrapper.
       property at lines 46 to 52 and its `isTemplate` go; the comment at
       lines 40 to 45 says what is now true: the bitmap is made at the
       drawn size and the view scales nothing. Green.
-- [ ] The five mark tests at `RowTests.swift:495` to 610 pass as they are:
+- [x] The five mark tests at `RowTests.swift:495` to 610 pass as they are:
       14 pt tall within 0.5, 38.5 wide, right edge at 348, top at 7, the
       label's ink in both appearances, no mark with no bytes, no mark for
       bytes that are no picture, one mark on e3. If the probe's frame
       moves because the renderer hands the view another `displayScale`
       than its own `scale`, stop and say so rather than fixing it with a
       constant.
-- [ ] `make app-lint` and `make app-test` green.
-- [ ] Commit: `feat: the mark is drawn from a bitmap at its own pixel size`.
+- [x] `make app-lint` and `make app-test` green.
+- [x] Commit: `feat: the mark is drawn from a bitmap at its own pixel size`.
 
 ### Task 5: the press, its words, the scenes and the renders
 

@@ -16,7 +16,9 @@
 // end, where the count used to be (docs/v2/DECISIONS.md, "The firm's mark
 // beside DOCUMENTS"). The label is handed bytes and never a path: the one
 // read of the cached file is the app's, and a machine with no picture draws
-// the words alone, which is most of what a first run is.
+// the words alone, which is most of what a first run is. Since 2026-10-30
+// the bytes go through MarkPicture, which makes one bitmap of the pixels the
+// mark occupies: the label draws that bitmap one for one and scales nothing.
 //
 // RowTests states the height, the case and the mark.
 
@@ -31,24 +33,25 @@ public struct SectionLabel: View {
   public let mark: Data?
 
   @Environment(\.colorScheme) private var scheme
+  /// The pixels this screen puts in a point, which the bitmap is made at.
+  @Environment(\.displayScale) private var displayScale
 
   public init(_ label: String, mark: Data? = nil) {
     self.label = label
     self.mark = mark
   }
 
-  /// The picture, where the bytes are one.
+  /// The bitmap to draw, where the bytes are a picture.
   ///
-  /// `NSImage(data:)` runs on each evaluation of the body. The bytes are a
-  /// few kilobytes, and that cost is accepted: a stored image would be a
-  /// second place the picture lives. An image with no size is the answer
-  /// AppKit gives for a file that is half written, and it draws nothing.
-  private var picture: NSImage? {
-    guard let mark, let image = NSImage(data: mark), image.size.width > 0,
-      image.size.height > 0
-    else { return nil }
-    image.isTemplate = true
-    return image
+  /// It is made at the height the mark is drawn at and the scale of the
+  /// screen it is drawn on, so this view scales nothing: a shrink in the
+  /// compositor is what left the letters ragged before 2026-10-30.
+  /// MarkPicture keeps it, so an evaluation of the body costs a comparison
+  /// and not a draw.
+  @MainActor
+  public static func picture(mark: Data?, scale: CGFloat) -> CGImage? {
+    guard let mark else { return nil }
+    return MarkPicture.make(mark, height: Grid.markHeight, scale: scale)
   }
 
   /// `text-transform:uppercase`, done here so a test can read the words that
@@ -73,8 +76,10 @@ public struct SectionLabel: View {
       Spacer(minLength: 0)
       // The label's own 12 pt padding lands the right edge on the content
       // edge every value in the panel ends on, and the 28 pt row centres
-      // it, so there is no offset here. The width is the picture's own
-      // aspect and no number in this package.
+      // it, so there is no offset here. The bitmap is already the size it is
+      // drawn at, so its width is the picture's own aspect and no number in
+      // this package, and the frame states the height it was made for rather
+      // than asking for a shrink.
       //
       // The picture is a template, so the ink is the label's and the file
       // carries no colour into the panel. The ink is taken opaque with its
@@ -84,11 +89,9 @@ public struct SectionLabel: View {
       //
       // It is not a control and says nothing a row does not, so nothing
       // reads it out.
-      if let picture {
-        Image(nsImage: picture)
+      if let picture = Self.picture(mark: mark, scale: displayScale) {
+        Image(decorative: picture, scale: displayScale)
           .renderingMode(.template)
-          .resizable()
-          .aspectRatio(contentMode: .fit)
           .frame(height: Grid.markHeight)
           .foregroundStyle(Self.ink(in: scheme).opaque)
           .opacity(Self.ink(in: scheme).alpha)
