@@ -386,7 +386,9 @@ file, which is cached only after a sign-in, and the rows sheet drew the
 DOCUMENTS label only without it. The lead swapped the no-picture story to
 e5, gave e9 the mark, and drew the label both ways on the sheet, in one
 commit before the release. `make release` ran clean the first time: PR 106,
-checks green, waiting on Nail's word for the number. Main had moved twice
+checks green. The GO step stopped once more at the fast-forward pull, over
+four docs commits on local main, rebased and run again, and v2.29.0 was
+published and verified at 08:23Z. Main had moved twice
 during the run, to v2.27.0 and v2.28.0 from the other session, and the
 branch merges into it without a conflict. Nail sent one message for the
 run, the GO on the previous milestone with this launch in the same line.
