@@ -13,6 +13,10 @@
 // may ask the system to open anything. Every guard below is one row of a
 // table in RelaunchPolicyTests.
 //
+// Nothing here waits. The wait before the open is the five seconds of
+// ReopenCount, which the session counts down on the notice row and acts on
+// at zero, and this answers nothing about a clock.
+//
 // The stamp is written when the attempt is made and not when it worked: an
 // open that keeps failing is then tried once in ten minutes rather than
 // every time the watcher fires.
@@ -98,11 +102,11 @@ public enum RelaunchHold: String, Sendable, Equatable, CaseIterable {
   case alreadyTried
 }
 
-/// The answer, and nothing more: the opening is the caller's.
+/// The answer, and nothing more: the opening is the caller's, and so is the
+/// waiting.
 public enum RelaunchDecision: Sendable, Equatable {
-  /// Open the bundle on the disk, after this many seconds, for the version
-  /// the disk names.
-  case relaunch(version: String, after: TimeInterval)
+  /// Open the bundle on the disk, for the version the disk names.
+  case relaunch(version: String)
   case hold(RelaunchHold)
 }
 
@@ -110,8 +114,8 @@ public enum RelaunchDecision: Sendable, Equatable {
 public enum AfterOpen: Sendable, Equatable {
   /// The new instance is up, so this one quits.
   case quit
-  /// Nothing opened, so the app stays up and SETTINGS still says quit and
-  /// reopen.
+  /// Nothing opened, so the app stays up and the notice row goes back to
+  /// asking the person to quit and reopen.
   case keepTheReopenRow
 }
 
@@ -128,10 +132,6 @@ public enum LaunchStep: Sendable, Equatable {
 }
 
 public enum RelaunchPolicy {
-  /// How long the app waits after it decides, so the rename that changed the
-  /// bundle has finished arriving.
-  public static let settle: TimeInterval = 2
-
   /// At most one attempt per version on the disk in ten minutes.
   public static let once: TimeInterval = 600
 
@@ -166,7 +166,7 @@ public enum RelaunchPolicy {
       {
         return .hold(.alreadyTried)
       }
-      return .relaunch(version: version, after: settle)
+      return .relaunch(version: version)
     }
   }
 

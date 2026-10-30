@@ -320,7 +320,7 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] `ReopenCountTests.swift`, new, six tests over a fixed `Date`, `t0`,
+- [x] `ReopenCountTests.swift`, new, six tests over a fixed `Date`, `t0`,
       and offsets from it. Red, because the type does not exist.
       `testTheCountBeginsOnTheFirstClearGateAndNotBefore`:
       `ReopenCount.held.asked(.held, now: t0)` answers standing `.held`,
@@ -354,7 +354,7 @@ Tick each box as it is done. A task ends with its commit.
       negative number.
       `testTheCountIsFiveSeconds`: `ReopenCount.seconds` is the literal
       5.
-- [ ] `ReopenCount.swift`, new, with a file comment in the house voice:
+- [x] `ReopenCount.swift`, new, with a file comment in the house voice:
       what the count is (the five seconds between an update that
       replaced the bundle and the open, which the person reads down on
       the notice row), why it is pure (the session asks the policy and
@@ -377,13 +377,13 @@ Tick each box as it is done. A task ends with its commit.
       ReopenGate, now: Date) -> Step`. The seconds on the row are
       `min(seconds, max(1, seconds - Int(elapsed)))`. New values are
       returned, nothing is mutated. Green.
-- [ ] `RelaunchPolicyTests.testRelaunchHappensOncePerOnDiskVersionInTenMinutes`:
+- [x] `RelaunchPolicyTests.testRelaunchHappensOncePerOnDiskVersionInTenMinutes`:
       the three `.relaunch(version: onDisk, after: 2)` at lines 24, 36
       and 42 become `.relaunch(version: onDisk)`, and line 46's
       `RelaunchPolicy.settle` assertion goes, with a comment that the
       wait is `ReopenCount.seconds` now and `ReopenCountTests` pins it.
       Red.
-- [ ] `RelaunchPolicy.swift`: `case relaunch(version: String)` with its
+- [x] `RelaunchPolicy.swift`: `case relaunch(version: String)` with its
       comment at 103 to 104 no longer saying "after this many seconds";
       `settle` and its comment at 131 to 133 go; `decide` answers
       `.relaunch(version: version)` at 169; the file comment's "waits the
@@ -391,7 +391,7 @@ Tick each box as it is done. A task ends with its commit.
       say the notice row says quit and reopen, and that the wait before
       the open is `ReopenCount` in the session. Green in PresenceCore;
       `Relauncher.swift:128` no longer compiles.
-- [ ] `RelauncherTests.testTheOpenHappensOnTheAskWithNoSleepBeforeIt`:
+- [x] `RelauncherTests.testTheOpenHappensOnTheAskWithNoSleepBeforeIt`:
       `made(pad:)` gains a `sleep` closure that appends every interval
       to a list; a `reopen(bundle: .reopenNeeded("2.16.0"),
       updateRunning: false, childAlive: false, remembering:)` answers
@@ -399,14 +399,14 @@ Tick each box as it is done. A task ends with its commit.
       "4242"]`, and the list is empty: the count in the session is the
       settle, and the open is asked for at zero and not two seconds
       later. Red once the file compiles again.
-- [ ] `Relauncher.swift:128` to 133: bind `version` alone, no sleep
+- [x] `Relauncher.swift:128` to 133: bind `version` alone, no sleep
       before the open; the file comment at 6 to 7 says the session
       counts five seconds down on the notice row and asks for the open
       at zero. `sleep` stays, for `settle()`. `RelauncherTests.swift:5`
       to 6 no longer says "waits two seconds": the fake sleep is there
       for the new instance's wait. Green, and the two existing tests
       stay green.
-- [ ] `BundleVersion.swift:10` to 11: the two sentences about never
+- [x] `BundleVersion.swift:10` to 11: the two sentences about never
       relaunching go, replaced by one that says the session relaunches
       the app on `.reopenNeeded` once `ReopenCount` reaches zero, and
       that the row's words are `PanelModel.notice`'s, by
@@ -414,8 +414,8 @@ Tick each box as it is done. A task ends with its commit.
       message at `BundleVersionTests.swift:19` says "the app reopens
       itself once the count is down; the row says so" instead of "this
       milestone never relaunches itself". No assertion changes.
-- [ ] `make app-lint` and `make app-test` green.
-- [ ] Commit: `feat: the reopen count, pure, in PresenceCore`.
+- [x] `make app-lint` and `make app-test` green.
+- [x] Commit: `feat: the reopen count, pure, in PresenceCore`.
 
 ### Task 2: the facts carry the standing, and the row says it
 

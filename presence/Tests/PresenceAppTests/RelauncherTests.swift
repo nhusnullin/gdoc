@@ -2,8 +2,10 @@
 //
 // The launchpad is a fake that writes down what it was asked, and the two
 // readers over the bundle, the clock and the sleep are closures this file
-// holds. So nothing here opens an app, reads a signature or waits two
-// seconds, and every guard the policy states is a fact handed in.
+// holds. So nothing here opens an app, reads a signature or waits, and every
+// guard the policy states is a fact handed in. The fake sleep is there for
+// the new instance's own wait for the pid that launched it, which is the one
+// wait left in the file.
 //
 // The rule under test here is the one the policy cannot hold on its own:
 // that a reopen the policy held is asked again, and that the holding cost
@@ -80,9 +82,34 @@ final class RelauncherTests: XCTestCase {
     XCTAssertEqual(pad.opened.count, 1)
   }
 
+  func testTheOpenHappensOnTheAskWithNoSleepBeforeIt() async throws {
+    // Arrange: every guard holds, and the sleep writes down what it was
+    // asked to wait for.
+    let pad = FakePad()
+    let waits = Waits()
+    let preferences = Preferences(store: Store())
+    let relauncher = made(pad: pad, sleep: { waits.note($0) })
+
+    // Act: the ask that opens.
+    let answer = await relauncher.reopen(
+      bundle: .reopenNeeded("2.16.0"), updateRunning: false, childAlive: false,
+      remembering: preferences)
+
+    // Assert: the new instance is up and this one quits, and the relauncher
+    // waited for nothing on the way. The five seconds are the session's
+    // count on the notice row, which has already been read down to zero by
+    // the time this is asked.
+    XCTAssertEqual(answer, .quit)
+    XCTAssertEqual(pad.opened.count, 1)
+    XCTAssertEqual(pad.opened.first?.arguments, [RelaunchPolicy.argument, "4242"])
+    XCTAssertEqual(waits.all, [], "the open is asked for at zero and not two seconds later")
+  }
+
   // MARK: the outside this file hands over
 
-  private func made(pad: FakePad) -> Relauncher {
+  private func made(
+    pad: FakePad, sleep: @escaping @Sendable (TimeInterval) async -> Void = { _ in }
+  ) -> Relauncher {
     Relauncher(
       bundle: URL(fileURLWithPath: "/Applications/GdocPresence.app"),
       identifier: Self.identifier,
@@ -91,7 +118,17 @@ final class RelauncherTests: XCTestCase {
       identifierOnDisk: { _ in Self.identifier },
       signatureValid: { _ in true },
       now: { Date(timeIntervalSince1970: 1_792_000_000) },
-      sleep: { _ in })
+      sleep: sleep)
+  }
+
+  /// Every interval the relauncher asked to wait for.
+  private final class Waits: @unchecked Sendable {
+    private let lock = NSLock()
+    private var asked: [TimeInterval] = []
+
+    var all: [TimeInterval] { lock.withLock { asked } }
+
+    func note(_ seconds: TimeInterval) { lock.withLock { asked.append(seconds) } }
   }
 
   /// What was asked of the system, and nothing done to it.

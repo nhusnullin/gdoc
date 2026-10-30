@@ -2,10 +2,12 @@
 // bundle.
 //
 // `gdoc update` swaps the bundle by rename under the running app, so what a
-// person is left with is the old code and a row asking them to quit and
-// reopen. This does it for them: it asks PresenceCore/RelaunchPolicy, waits
-// the two seconds, opens the bundle on the disk as a new instance that is
-// not brought to the front, and quits only once the open succeeded.
+// person is left with is the old code and a panel that would have to ask for
+// a hand. This does it for them: the session counts five seconds down on the
+// notice row and asks for the open at zero, and this asks
+// PresenceCore/RelaunchPolicy one last time, opens the bundle on the disk as
+// a new instance that is not brought to the front, and quits only once the
+// open succeeded. Nothing here sleeps before the open.
 //
 // Nothing is decided here. Every guard is the policy's, as a pure function
 // over facts this file read: the identifier the bundle on the disk names, its
@@ -72,7 +74,8 @@ public struct SystemLaunchpad: Launchpad {
 ///
 /// Every piece of the outside is injected: the launchpad, the two readers
 /// over the bundle on the disk, the clock and the sleep. The app hands over
-/// the real ones.
+/// the real ones. The sleep is the new instance's own wait for the pid that
+/// launched it, and the only wait this file does.
 public struct Relauncher: Sendable {
   /// This app's own bundle on the disk, as the shell resolved it at launch.
   private let bundle: URL
@@ -125,12 +128,11 @@ public struct Relauncher: Sendable {
       childAlive: childAlive,
       last: preferences.lastRelaunch(now: moment),
       now: moment)
-    guard case .relaunch(let version, let after) = RelaunchPolicy.decide(ask) else {
+    guard case .relaunch(let version) = RelaunchPolicy.decide(ask) else {
       return .keepTheReopenRow
     }
 
     preferences.noteRelaunch(version: version, at: moment)
-    await sleep(after)
     let opened = await pad.openNewInstance(
       at: bundle, arguments: [RelaunchPolicy.argument, String(pid)])
     return RelaunchPolicy.after(opened: opened)
@@ -186,7 +188,8 @@ public struct Relauncher: Sendable {
     return SecStaticCodeCheckValidity(code, flags, nil) == errSecSuccess
   }
 
-  /// The wait, as the one sleep this file does.
+  /// The new instance's wait for its launcher, as the one sleep this file
+  /// does.
   public static let slept: @Sendable (TimeInterval) async -> Void = { seconds in
     try? await Task.sleep(nanoseconds: UInt64(max(0, seconds) * 1_000_000_000))
   }

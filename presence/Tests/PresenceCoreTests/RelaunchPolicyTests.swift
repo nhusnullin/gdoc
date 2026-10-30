@@ -21,7 +21,7 @@ final class RelaunchPolicyTests: XCTestCase {
 
     XCTAssertEqual(
       RelaunchPolicy.decide(ask(now: at)),
-      .relaunch(version: onDisk, after: 2),
+      .relaunch(version: onDisk),
       "the disk holds another version and every guard holds, so the app reopens itself")
 
     XCTAssertEqual(
@@ -33,17 +33,19 @@ final class RelaunchPolicyTests: XCTestCase {
     XCTAssertEqual(
       RelaunchPolicy.decide(
         ask(now: at, last: RelaunchStamp(version: onDisk, at: at.addingTimeInterval(-600)))),
-      .relaunch(version: onDisk, after: 2),
+      .relaunch(version: onDisk),
       "ten minutes is the whole of the guard")
 
     XCTAssertEqual(
       RelaunchPolicy.decide(
         ask(now: at, last: RelaunchStamp(version: "2.13.0", at: at.addingTimeInterval(-60)))),
-      .relaunch(version: onDisk, after: 2),
+      .relaunch(version: onDisk),
       "the guard is per version on the disk, and this is another one")
 
+    // The policy says nothing about how long the app waits: that wait is
+    // ReopenCount's five seconds in the session, and ReopenCountTests pins
+    // the number.
     XCTAssertEqual(RelaunchPolicy.once, 600)
-    XCTAssertEqual(RelaunchPolicy.settle, 2)
   }
 
   func testNoRelaunchWhileAnUpdateRunsOrAChildLives() throws {
