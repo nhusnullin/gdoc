@@ -432,7 +432,7 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] In `StateTests.swift`, `testTheNoticeRowSaysTheThreeReopenSentences`,
+- [x] In `StateTests.swift`, `testTheNoticeRowSaysTheThreeReopenSentences`,
       with `drawn([], at:, facts:)` over `Facts(versions:
       Versions(app: "2.15.0"), gdocPath: Scenes.gdocPath, bundle:
       .reopenNeeded("2.16.0"), reopen: ...)`: `.counting(5)` draws
@@ -446,18 +446,18 @@ Tick each box as it is done. A task ends with its commit.
       is read only under `.reopenNeeded`; `.gone` still draws "gdoc
       presence was removed"; and the init with no `reopen` is `.held`.
       Red.
-- [ ] `testTheReopenSentencesCarryNoForecastWord`: the four sentences
+- [x] `testTheReopenSentencesCarryNoForecastWord`: the four sentences
       above, lowercased, carry none of the needles
       `WordsTests.testNothingPredictsATime` bans, spelled in pieces the
       same way, so "Reopens in 5" is a count the app runs and not a
       forecast in words. Red until the sentences exist; it stays as the
       pin on their wording.
-- [ ] `Facts.swift`: `public let reopen: ReopenStanding`, placed after
+- [x] `Facts.swift`: `public let reopen: ReopenStanding`, placed after
       `bundle`, default `.held` in the init, with the comment: what the
       app is doing about a `.reopenNeeded` bundle, held, counting or
       refused; it means nothing under `.same` or `.gone`, and the
       default is held because that is what the first ask answers.
-- [ ] `PanelWords.swift`, in `Sentences`: `reopensIn(_ version: String,
+- [x] `PanelWords.swift`, in `Sentences`: `reopensIn(_ version: String,
       _ seconds: Int)`, `reopensAfterTheUpdate(_ version: String)` and
       `quitAndReopen(_ version: String)`, each one line, the three
       literals above through one private `versionWord` that puts the
@@ -465,19 +465,19 @@ Tick each box as it is done. A task ends with its commit.
       that the first two are the decision of 2026-10-30 and the third is
       the row since M23, kept for the one case the reopen did not
       happen.
-- [ ] `PanelModel.notice` at 713: under `.reopenNeeded(let version)`,
+- [x] `PanelModel.notice` at 713: under `.reopenNeeded(let version)`,
       switch on `facts.reopen` and return the three sentences through
       `Sentences`. The comment above the newer-record line stays. Green.
-- [ ] `HealthPollerTests.testTheReopenStandingSurvivesThePollsRebuild`:
+- [x] `HealthPollerTests.testTheReopenStandingSurvivesThePollsRebuild`:
       `applied(to:)` over facts with `bundle: .reopenNeeded("2.16.0"),
       reopen: .counting(3)` keeps both. Red, then `HealthPoller.swift:201`
       gains `reopen: facts.reopen` beside `bundle`. Green.
       `UpdateActionTests.testTheReopenStandingSurvivesTheUpdateActionsRebuild`:
       the same over `UpdateAction.applied(to:)`. Red, then
       `UpdateAction.swift:184` gains it. Green.
-- [ ] `make app-lint` and `make app-test` green. The scenes still build
+- [x] `make app-lint` and `make app-test` green. The scenes still build
       because `reopen` defaults.
-- [ ] Commit: `feat: the notice row says what the app is doing about the reopen`.
+- [x] Commit: `feat: the notice row says what the app is doing about the reopen`.
 
 ### Task 3: the session counts on the tick and the relauncher opens at zero
 

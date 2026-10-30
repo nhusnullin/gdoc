@@ -146,6 +146,36 @@ public enum Sentences {
     }
   }
 
+  /// The notice row while the app counts down to opening itself again.
+  ///
+  /// The first two are the decision of 2026-10-30: `gdoc update` swaps the
+  /// bundle under the running app and the app opens the new one itself, so
+  /// the row says what is happening rather than asking for a hand.
+  /// StateTests.testTheNoticeRowSaysTheThreeReopenSentences.
+  public static func reopensIn(_ version: String, _ seconds: Int) -> String {
+    "Updated to \(versionWord(version)). Reopens in \(seconds)"
+  }
+
+  /// The same row while something holds the reopen that clears by itself: a
+  /// live `gdoc update`, the app's own child included.
+  public static func reopensAfterTheUpdate(_ version: String) -> String {
+    "Updated to \(versionWord(version)). Reopens when the update finishes"
+  }
+
+  /// The row as it has read since M23, kept for the one case the reopen did
+  /// not happen: the policy refused it, or the open came back having opened
+  /// nothing.
+  public static func quitAndReopen(_ version: String) -> String {
+    "Updated to \(versionWord(version)). Quit and reopen"
+  }
+
+  /// A version as the header writes it. The plist's string is bare, the
+  /// header's `v` is what a person reads everywhere else in the panel, and
+  /// a string that carries one already is left alone.
+  private static func versionWord(_ version: String) -> String {
+    version.hasPrefix("v") ? version : "v" + version
+  }
+
   /// A path as a row writes it: with the home directory as a tilde, or
   /// whole where it is somewhere else.
   ///

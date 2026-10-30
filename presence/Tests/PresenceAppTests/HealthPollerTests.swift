@@ -263,6 +263,22 @@ final class HealthPollerTests: XCTestCase {
     XCTAssertNil(afterNone, "the help named nothing, so there is nothing to open")
   }
 
+  /// The bundle's standing comes back out of the poller's rebuild.
+  ///
+  /// `applied(to:)` rebuilds the facts field by field and the session runs
+  /// it on every poll, so a field it forgot would be a count that went back
+  /// to the update's words once a second, under a person reading it.
+  func testTheReopenStandingSurvivesThePollsRebuild() async {
+    let poller = HealthPoller(location: Self.found, answer: FakeGdoc().answer)
+
+    let kept = await poller.applied(
+      to: Facts(
+        versions: Versions(app: "2.14.0"), bundle: .reopenNeeded("2.16.0"),
+        reopen: .counting(3)))
+    XCTAssertEqual(kept.bundle, .reopenNeeded("2.16.0"), "the disk's fact stays")
+    XCTAssertEqual(kept.reopen, .counting(3), "and the count stays where it had got to")
+  }
+
   // MARK: a file, for the one read the poller makes
 
   /// A file of exactly `count` bytes that opens with the eight PNG bytes,

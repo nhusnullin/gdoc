@@ -248,6 +248,23 @@ final class UpdateActionTests: XCTestCase {
     XCTAssertNil(none.logoURL, "and a house with no page invents none")
   }
 
+  /// The reopen standing comes back too.
+  ///
+  /// It is the one field the press of Update is most likely to drop: the
+  /// press is what starts the child the count waits out, and this rebuild
+  /// runs on the child's end. A count reset to held there would put the
+  /// update's words back on the row a second before the open.
+  func testTheReopenStandingSurvivesTheUpdateActionsRebuild() async {
+    let action = UpdateAction(answer: FakeUpdater().answer)
+
+    let kept = await action.applied(
+      to: Facts(
+        versions: Versions(app: "2.14.0"), bundle: .reopenNeeded("2.16.0"),
+        reopen: .counting(3)))
+    XCTAssertEqual(kept.bundle, .reopenNeeded("2.16.0"), "the disk's fact stays")
+    XCTAssertEqual(kept.reopen, .counting(3), "and the count stays where it had got to")
+  }
+
   // MARK: the panel's own reading
 
   private static func facts(installed: String, latest: String) -> Facts {

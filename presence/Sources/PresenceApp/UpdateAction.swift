@@ -182,6 +182,7 @@ public actor UpdateAction {
       noteFaults: facts.noteFaults,
       signedInAt: facts.signedInAt,
       bundle: facts.bundle,
+      reopen: facts.reopen,
       newerRecord: facts.newerRecord,
       unstoppable: facts.unstoppable,
       // Either run closes both buttons, so this never puts the flag down:
