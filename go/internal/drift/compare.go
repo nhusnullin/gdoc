@@ -97,21 +97,21 @@ type Row struct {
 // house.yaml states. One unit of blue in 255 is not a colour anybody can see,
 // and the live gate reads them as the same value.
 var Known = map[string]string{
-	// The mark's own width and place, the height that follows from them, and
-	// the offset it is drawn down from its paragraph. Nail's decision of
-	// 2026-10-28: the house draws the mark at its own width, 111.75 pt, which
-	// is the ink of the old padded picture on the firm's template. His
-	// decision of 2026-10-29: the mark ends in line with the text at 381.43
-	// pt, where it reached 1.4 cm past the text into the right margin before,
-	// and its offset from its paragraph is -11.15 pt so that the label's
-	// paragraph can take six points before it and the mark stay. The master
-	// states the padded frame, 146.25 pt at 404.25 pt and -5.149 pt down, and
-	// carries the old 195 by 97 mark 72.75 pt high; the 2026-10-26 picture in
-	// Drive is 509 by 185 and has no padding, so at 111.75 pt wide it is
-	// 40.6 pt high.
+	// The mark's own width and place, and the height that follows from them.
+	// Nail's decision of 2026-10-28: the house draws the mark at its own width,
+	// 111.75 pt, which is the ink of the old padded picture on the firm's
+	// template. His decision of 2026-10-29: the mark ends in line with the text
+	// at 381.43 pt, where it reached 1.4 cm past the text into the right margin
+	// before. The offset down from its paragraph is not here: it is the
+	// master's own -5.15 pt again since 2026-10-30, because Docs measures that
+	// offset from the top of the paragraph's space before, so the six points the
+	// label's paragraph gained carry the mark down with it, and v2.27.0's -11.15
+	// lifted the mark instead. The master states the padded frame, 146.25 pt at
+	// 404.25 pt, and carries the old 195 by 97 mark 72.75 pt high; the
+	// 2026-10-26 picture in Drive is 509 by 185 and has no padding, so at
+	// 111.75 pt wide it is 40.6 pt high.
 	"logo width (pt)":      "Nail's decision of 2026-10-28: the mark is drawn at its own width, 111.75 pt, where the master states the padded frame's 146.25 pt",
 	"logo leftOffset (pt)": "Nail's decision of 2026-10-29: the mark ends in line with the text, so it starts at 381.43 pt, where the master's frame starts at 404.25 pt",
-	"logo topOffset (pt)":  "Nail's decision of 2026-10-29: the mark's offset from its paragraph is -11.15 pt so that the label can sit six points lower and the mark stay, where the master's docx reads -5.149 pt",
 	"logo height (pt)":     "the logo in Drive is the 2026-10-26 picture, drawn at its own ratio at 40.6 pt; the master carries the old mark 72.75 pt high",
 
 	// The master declares the heading colour on the style and overrides it to
@@ -341,7 +341,8 @@ func Unexplained(rows []Row) []Row {
 		// carry rows that can go wrong that way, so filtering on the name alone
 		// dropped them and the gate passed in silence. The fifteen are the names
 		// that read words rather than a measurement, counted again on 2026-10-29
-		// when the thirty-first name, a measurement, came in.
+		// when a thirty-first name, a measurement, came in, and on 2026-10-30
+		// when it went.
 		if _, ok := Known[r.Item]; ok && !r.Bug {
 			continue
 		}

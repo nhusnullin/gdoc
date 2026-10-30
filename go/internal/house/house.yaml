@@ -1156,8 +1156,8 @@ logo:
     # the mark ends in line with the text, 493.18 less 111.75. Nail, 2026-10-29
     offset_x_pt: 381.43
     relative_v: paragraph
-    # six points up to meet the six the label's paragraph gained. Nail, 2026-10-29
-    offset_y_pt: -11.15
+    # the master's own offset: Docs measures it from the top of the space before, so the label's six points carry the mark down with it. Nail, 2026-10-30
+    offset_y_pt: -5.15
     wrap: square
     wrap_dist_pt: 9
   drive: 1J3uh6poVAneP_V_Pc5FuNI4-Gahlab0s

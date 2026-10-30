@@ -44,8 +44,8 @@ func TestTheFirstPageHeaderCarriesTheLogoWhereTheHouseAnchorsIt(t *testing.T) {
 	if got := v.SelectAttrValue("relativeFrom", ""); got != "paragraph" {
 		t.Errorf("positionV relativeFrom = %q, want paragraph", got)
 	}
-	if got := v.SelectElement("wp:posOffset").Text(); got != "-141605" {
-		t.Errorf("logo top offset = %q, want -141605 EMU (-11.15pt)", got)
+	if got := v.SelectElement("wp:posOffset").Text(); got != "-65405" {
+		t.Errorf("logo top offset = %q, want -65405 EMU (-5.15pt)", got)
 	}
 	if anchor.SelectElement("wp:wrapSquare") == nil {
 		t.Error("the anchor does not wrap square, and the house style says it does")

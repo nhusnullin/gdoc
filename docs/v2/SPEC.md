@@ -721,11 +721,13 @@ name. `width_pt` and `offset_x_pt` state the mark itself, 111.75 pt wide at
 381.43 pt from the column's left edge, so the mark's right side ends in line
 with the text, 51.05 pt from the paper's edge like the body: the picture in
 Drive carries no padding since 2026-10-26, and a mark out in the margin read
-as a slip. The label before it sits level with the mark's middle, six points
-down from the header margin, and the mark's offset from its paragraph,
--11.15 pt, keeps the mark at that margin. Decided 2026-10-17, DECISIONS.md,
-the pin on exact pixels replaced 2026-10-26, the width made the mark's own
-2026-10-28, and the place brought inside the column 2026-10-29.
+as a slip. The label before it sits level with the mark's middle: its paragraph takes
+six points before it, and the mark's offset from that paragraph stays the
+master's -5.15 pt, because Docs measures the offset from the top of the
+space before, so the six points carry the mark down with the label. Decided
+2026-10-17, DECISIONS.md, the pin on exact pixels replaced 2026-10-26, the
+width made the mark's own 2026-10-28, the place brought inside the column
+2026-10-29, and the offset returned to the master's 2026-10-30.
 
 **Every value a block states reaches the page.** A cover line's `align`,
 `italic`, `color` and `line_spacing`, the footer paragraph's alignment and
