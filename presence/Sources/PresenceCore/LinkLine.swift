@@ -6,8 +6,8 @@
 // a sign-in, one path of Claude Desktop's own scheme for a session, and a
 // document id that is a Drive id or no URL at all. A third host is the Drive
 // page of the firm's mark, which arrives as the one address the binary's own
-// `logo_url` names and is held to its one shape here before a press can open
-// it.
+// help answer names for it and is held to its one shape here before a press
+// can open it.
 //
 // The session link is built and not opened. Measured 2026-10-18, MEASURED.md:
 // `claude://code/continue` activates Claude Desktop from outside the app and

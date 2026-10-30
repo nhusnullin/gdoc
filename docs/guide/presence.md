@@ -171,7 +171,9 @@ its own. There is no Show more, because there is nothing behind it.
 The firm's mark sits small and grey at the right end of the Documents
 line, once gdoc has built or published a document on this machine and the
 house logo is cached there. The line is plain until then, because the mark
-is drawn from a file that exists and from nothing else.
+is drawn from a file that exists and from nothing else. A click on the mark
+opens the picture's own page in Google Drive in your browser. Rest the
+pointer on it for half a second and it says "Open in Google Drive".
 
 A read alone makes no row: reading is not something that happened to the
 document. Each row says what the last action was, when, and where the note

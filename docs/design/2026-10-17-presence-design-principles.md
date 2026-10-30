@@ -797,3 +797,38 @@ in `docs/v2/DECISIONS.md`, 2026-10-29, "The firm's mark beside DOCUMENTS".
   picture all draw nothing and write no line. The app holds no Drive id and
   asks no host. The tests are `MarkFileTests` and
   `SourceRulesTests.testAByteIsReadOnlyInTheFiveReaders`.
+
+## Amendments, 2026-10-30, the mark sharp and a press
+
+Nail looked at v2.29.0 on his own screen within the hour: "logo is good in
+general but im doubt about its resolution. also, when i click i expect
+default browser with picture from gdrive to be opened". The lead measured
+the first half and wrote the second half up. The decision is in
+`docs/v2/DECISIONS.md`, 2026-10-30, "The mark, sharp and a press".
+
+- **The mark is drawn from a bitmap made once at its drawn pixel size, so
+  its edges are anti-aliased like the words beside it, and the view scales
+  nothing.** A 509 by 185 picture handed to the compositor at 14 pt is
+  scaled down by six and a half at draw time, which leaves the letters
+  ragged beside anti-aliased words. The bitmap is made at the drawn size
+  times the screen's scale, once per bytes, height and scale, and the
+  label draws that bitmap and no other picture. The tests are
+  `RowTests.testTheMarkIsABitmapAtItsOwnPixelSize` and
+  `RowTests.testTheBitmapAveragesWhatItShrinks`, which holds that
+  one-pixel stripes shrink to a flat mid grey; whether it looks sharp on
+  a screen is Nail's own check, because the renderer averages already and
+  a test can only say that it did.
+- **The mark is a press that opens the picture's page in Drive.** The
+  tooltip after half a second says "Open in Google Drive", a hover plate
+  goes darker behind it, and there is no press where there is no file or
+  no address, because principle 4 is that dead controls are not shown as
+  live. The sentence "The app holds no Drive id and asks no host" in the
+  section above stays true: the page's address comes from the binary on
+  the same help answer as the path, and the app takes it only in that one
+  shape and opens no other. The tests are
+  `RowTests.testTheMarkWithAPageIsAPressThatOpensIt`,
+  `OpenerTests.testOpenMarkOpensTheDrivePageAndNoOtherShape` and
+  `SourceRulesTests.testTheOnlySchemesAndHostsAreGooglesAndTheVaults`.
+
+The 2026-10-29 decision's "It is not a press and has no tooltip" clause is
+superseded in its place and stays as the record of its day.

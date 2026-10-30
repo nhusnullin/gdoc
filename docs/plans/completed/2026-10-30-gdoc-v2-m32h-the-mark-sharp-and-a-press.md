@@ -654,9 +654,9 @@ assert pixels on the bitmap, not points on a wrapper.
 
 **Steps**
 
-- [ ] Every test named in the Acceptance table exists under
+- [x] Every test named in the Acceptance table exists under
       `presence/Tests` or `go/cmd/gdoc` with that name.
-- [ ] `git diff --name-only main...HEAD` lists only this plan (at its
+- [x] `git diff --name-only main...HEAD` lists only this plan (at its
       path under `docs/plans/completed/` once the last step has moved it),
       `go/cmd/gdoc/help.go`, `go/cmd/gdoc/helpjson_test.go`,
       `go/cmd/gdoc/presenceflag_test.go`, `go/cmd/gdoc/doc.go`,
@@ -664,20 +664,20 @@ assert pixels on the bitmap, not points on a wrapper.
       `docs/design/2026-10-17-presence-design-principles.md`,
       `presence/Sources` and `presence/Tests`. Nothing under `go/internal/`
       and not `CLAUDE.md`.
-- [ ] `grep -rn "1J3uh6poVAneP_V_Pc5FuNI4-Gahlab0s" presence/` prints
+- [x] `grep -rn "1J3uh6poVAneP_V_Pc5FuNI4-Gahlab0s" presence/` prints
       nothing: the app holds no copy of the Drive id, in a source, a test
       or a scene.
-- [ ] `grep -rln "logo_url" presence/Sources` prints `HealthFacts.swift`
+- [x] `grep -rln "logo_url" presence/Sources` prints `HealthFacts.swift`
       and no other file; `grep -rln "drive.google.com" presence/Sources`
       prints `LinkLine.swift` and no other file.
-- [ ] In `guide_test.go`, the list at lines 202 to 238 gains
+- [x] In `guide_test.go`, the list at lines 202 to 238 gains
       `"Open in Google Drive"` with a comment line. Red. Then in the
       guide's "### Documents", the paragraph at lines 171 to 174 gains two
       sentences: a click on the mark opens the picture's own page in Google
       Drive in your browser, and rest the pointer on it for half a second
       and it says "Open in Google Drive". `cd go && go test ./boundary/
       -run TestThePresencePageWalksTheThirdLooksPanel` prints `ok`.
-- [ ] In the principles file, after the 2026-10-29 section at line 771, a
+- [x] In the principles file, after the 2026-10-29 section at line 771, a
       new "## Amendments, 2026-10-30, the mark sharp and a press" with two
       bullets. The first: the mark is drawn from a bitmap made once at its
       drawn pixel size, so its edges are anti-aliased like the words
@@ -697,13 +697,13 @@ assert pixels on the bitmap, not points on a wrapper.
       `SourceRulesTests.testTheOnlySchemesAndHostsAreGooglesAndTheVaults`.
       The 2026-10-29 bullet's "not a press" clause is superseded in its
       place and stays as the record of its day.
-- [ ] `CLAUDE.md` does not change: its menu bar bullet names what the app
+- [x] `CLAUDE.md` does not change: its menu bar bullet names what the app
       runs, signals and reads, and none of those moved. `cd go && go test
       ./boundary/ -run 'TestCLAUDEmd|TestTheTaskMap'` prints `ok`.
-- [ ] `cd go && go test -race ./cmd/gdoc/ ./boundary/`, `make vet`,
+- [x] `cd go && go test -race ./cmd/gdoc/ ./boundary/`, `make vet`,
       `make app-lint`, `make app-test`, `make app` green.
-- [ ] Move this plan to `docs/plans/completed/`.
-- [ ] Commit: `docs: the mark, sharp and a press`.
+- [x] Move this plan to `docs/plans/completed/`.
+- [x] Commit: `docs: the mark, sharp and a press`.
 
 ## Acceptance
 
