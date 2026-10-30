@@ -1860,6 +1860,12 @@ final class SessionTests: XCTestCase {
   /// This file's own, as the desk and the register are: it answers what the
   /// test says and can hold the answer open, which is how an answer that
   /// arrives after the bundle moved again is written as a test.
+  ///
+  /// The open runs off the test's actor, so each of the three handshakes
+  /// reads the state and stores its continuation under one lock, and resumes
+  /// at once where the thing it waits for already happened. Two locks would
+  /// let a waiter install a continuation nothing ever resumes, and a test
+  /// that hangs says nothing.
   private final class FakePad: Launchpad, @unchecked Sendable {
     struct Open: Equatable {
       let bundle: URL
@@ -1871,6 +1877,8 @@ final class SessionTests: XCTestCase {
     private var answer = true
     private var holds = false
     private var held: CheckedContinuation<Void, Never>?
+    /// A release that landed before the open had anything to hold it with.
+    private var letGo = false
     private var asked: CheckedContinuation<Void, Never>?
     private var answered: CheckedContinuation<Void, Never>?
     private var hasAnswered = false
@@ -1898,16 +1906,24 @@ final class SessionTests: XCTestCase {
       }
       if waiting {
         await withCheckedContinuation { (keep: CheckedContinuation<Void, Never>) in
-          lock.withLock { held = keep }
+          let released: Bool = lock.withLock {
+            if letGo {
+              letGo = false
+              return true
+            }
+            held = keep
+            return false
+          }
+          if released { keep.resume() }
         }
       }
       let answer = opens
       let waits: CheckedContinuation<Void, Never>? = lock.withLock {
+        hasAnswered = true
         let waiting = answered
         answered = nil
         return waiting
       }
-      lock.withLock { hasAnswered = true }
       waits?.resume()
       return answer
     }
@@ -1915,26 +1931,37 @@ final class SessionTests: XCTestCase {
     /// Back when the open has answered, so what the session does with that
     /// answer is the next thing on this actor.
     func untilTheOpenAnswered() async {
-      if lock.withLock({ hasAnswered }) { return }
       await withCheckedContinuation { (wait: CheckedContinuation<Void, Never>) in
-        lock.withLock { answered = wait }
+        let already: Bool = lock.withLock {
+          if hasAnswered { return true }
+          answered = wait
+          return false
+        }
+        if already { wait.resume() }
       }
     }
 
     /// Back when the open has been asked for, so a test does not poll.
     func untilTheOpenWasAsked() async {
-      if !opened.isEmpty { return }
       await withCheckedContinuation { (wait: CheckedContinuation<Void, Never>) in
-        lock.withLock { asked = wait }
+        let already: Bool = lock.withLock {
+          if !asks.isEmpty { return true }
+          asked = wait
+          return false
+        }
+        if already { wait.resume() }
       }
     }
 
     /// Let the held open answer.
     func letTheOpenAnswer() {
       let keep: CheckedContinuation<Void, Never>? = lock.withLock {
-        let waiting = held
-        held = nil
-        return waiting
+        if let waiting = held {
+          held = nil
+          return waiting
+        }
+        letGo = true
+        return nil
       }
       keep?.resume()
     }
