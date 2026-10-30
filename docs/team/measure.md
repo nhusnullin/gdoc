@@ -347,7 +347,7 @@ fixed by the same rebase as M32d's.
 | The mark six points down (lead, no worker) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 
 - No ralphex log, so no row the meter can read: the lead made the change
-  itself in the worktree `../gdoc-m32g`, one number in the house file and
+  itself in the worktree gdoc-m32g beside this checkout, one number in the house file and
   the eight files that state it, red first and then green, in about forty
   minutes from the designer's answer at 00:45 to the green pull request at
   01:10. The cost sits in the lead's own context, which the meter does not
