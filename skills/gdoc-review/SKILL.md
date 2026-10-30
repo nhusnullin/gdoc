@@ -4,7 +4,7 @@ description: Use when the request gives a Google Doc link and asks for the marke
 compatibility: Requires the gdoc binary on PATH, signed in with gdoc auth login, and network access to Google Docs and Drive.
 metadata:
   needs: v2.11.0
-  release: v2.28.0
+  release: v2.29.0
 ---
 
 # Google Docs review
