@@ -991,3 +991,13 @@ pt below the mark's. The screen agrees with the PDF export to within a tenth
 of a point on the one number that matters, so the two-number pass stands:
 `offset_y_pt` back to -5.15 with the six points before the paragraph kept
 puts the mark's centre within half a point of the label's on both.
+
+v2.28.0, the six-point fix, measured 2026-10-30 at 12:15 from the PDF export
+of the same note published again into the test folder as
+`1NRcor5q95Psw_ENS2pkZ7K7kvuFLpco9fuwiUBUblMg`, with the same script: the
+mark's right edge 51.33 pt from the paper's right; the mark's top 8.67 pt,
+height 41.0, centre 29.17; the label's ink 23.3 to 33.7, centre 28.67; the
+label's centre 0.5 pt above the mark's. The mark's top is back where v2.25.0
+had it in this export, 8.67 pt, and the label kept its six points, which is
+the sentence of the 2026-10-30 decision read off the page. Nail's screen is
+still to be read for this version.
