@@ -111,6 +111,23 @@ public struct Relauncher: Sendable {
 
   // MARK: reopening
 
+  /// What the policy says about reopening now, and nothing done about it.
+  ///
+  /// The session asks this on every tick while its count runs, so it has to
+  /// cost what the policy costs: two reads of the bundle on the disk, no
+  /// stamp and no open. The answer becomes the count's gate, which is why
+  /// the hold itself is handed back and not a boolean:
+  /// testDecidingWritesNoStampAndOpensNothing.
+  public func decides(
+    bundle state: BundleState, updateRunning: Bool, childAlive: Bool,
+    remembering preferences: Preferences
+  ) -> RelaunchDecision {
+    RelaunchPolicy.decide(
+      ask(
+        bundle: state, updateRunning: updateRunning, childAlive: childAlive,
+        remembering: preferences))
+  }
+
   /// Reopen the app where every guard holds, and say what the caller does
   /// next. The stamp is written before the open, so an open that keeps
   /// failing is tried once in ten minutes.
@@ -118,8 +135,28 @@ public struct Relauncher: Sendable {
     bundle state: BundleState, updateRunning: Bool, childAlive: Bool,
     remembering preferences: Preferences
   ) async -> AfterOpen {
+    let ask = ask(
+      bundle: state, updateRunning: updateRunning, childAlive: childAlive,
+      remembering: preferences)
+    guard case .relaunch(let version) = RelaunchPolicy.decide(ask) else {
+      return .keepTheReopenRow
+    }
+
+    preferences.noteRelaunch(version: version, at: ask.now)
+    let opened = await pad.openNewInstance(
+      at: bundle, arguments: [RelaunchPolicy.argument, String(pid)])
+    return RelaunchPolicy.after(opened: opened)
+  }
+
+  /// Everything the policy is asked over, read now. One moment is read for
+  /// the whole ask, so the stamp an open writes carries the moment its own
+  /// ten minutes were measured against.
+  private func ask(
+    bundle state: BundleState, updateRunning: Bool, childAlive: Bool,
+    remembering preferences: Preferences
+  ) -> RelaunchAsk {
     let moment = now()
-    let ask = RelaunchAsk(
+    return RelaunchAsk(
       bundle: state,
       identifier: identifier,
       onDiskIdentifier: identifierOnDisk(bundle),
@@ -128,14 +165,6 @@ public struct Relauncher: Sendable {
       childAlive: childAlive,
       last: preferences.lastRelaunch(now: moment),
       now: moment)
-    guard case .relaunch(let version) = RelaunchPolicy.decide(ask) else {
-      return .keepTheReopenRow
-    }
-
-    preferences.noteRelaunch(version: version, at: moment)
-    let opened = await pad.openNewInstance(
-      at: bundle, arguments: [RelaunchPolicy.argument, String(pid)])
-    return RelaunchPolicy.after(opened: opened)
   }
 
   // MARK: coming up

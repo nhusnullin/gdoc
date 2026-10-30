@@ -28,6 +28,10 @@ final class SessionTests: XCTestCase {
   /// A second document, for the tests that need two.
   private static let other = "1ZzYyXxWwVvUuTtSsRrQqPpOoNnMmLlKkJjIi"
 
+  /// This app's own identifier, which the bundle this file writes names, so
+  /// the relauncher's own reader finds the app it is running.
+  private static let identifier = "com.altery.gdoc.presence"
+
   override func setUp() async throws {
     root = URL(fileURLWithPath: NSTemporaryDirectory())
       .appendingPathComponent("gdoc-session-\(UUID().uuidString)")
@@ -1360,12 +1364,296 @@ final class SessionTests: XCTestCase {
     XCTAssertTrue(session.ui.pinned.isEmpty, "and the filled tack takes it back")
   }
 
+  // MARK: the reopen after an update swapped the bundle
+
+  /// The five seconds the person reads down on the notice row, and the one
+  /// open at zero.
+  ///
+  /// Nail pressed Update and was told "Quit and reopen" by an app that
+  /// reopened itself seven seconds later. So the row counts, the tick is one
+  /// second while it counts, and the open is asked for once: a second ask at
+  /// zero, which a timer and a watcher can both make, opens nothing more.
+  func testTheReopenCountsFiveToOneOnTheTickAndOpensOnce() throws {
+    // Arrange: an app running at 2.15.0 over a bundle the disk now holds
+    // 2.16.0 of, which is what `gdoc update` leaves behind.
+    try writeTheRecord([])
+    try writeTheBundle(version: "2.15.0")
+    let pad = FakePad()
+    let clock = Movable()
+    let quits = Tally()
+    let session = made(
+      bundle: appBundle, identifier: Self.identifier, pad: pad,
+      quit: { _ = quits.bump() }, clock: { clock.now })
+    try writeTheBundle(version: "2.16.0")
+    answered(session)
+
+    // Act: the watcher's answer, which is the moment the count begins.
+    session.bundleMoved(to: .reopenNeeded("2.16.0"))
+    refreshed(session)
+
+    // Assert: the row says what the app is doing, and the clock it is said
+    // on is the one-second one.
+    XCTAssertEqual(session.facts.reopen, .counting(5))
+    XCTAssertEqual(session.model.notice, "Updated to v2.16.0. Reopens in 5")
+    XCTAssertEqual(session.tickingEvery, 1, "the seconds on the row move in seconds")
+    XCTAssertEqual(pad.opened.count, 0, "and nothing has been opened yet")
+
+    // Act: four ticks, one second apart.
+    for left in [4, 3, 2, 1] {
+      clock.advance(1)
+      session.askTheReopen()
+      refreshed(session)
+      XCTAssertEqual(session.facts.reopen, .counting(left))
+      XCTAssertEqual(pad.opened.count, 0, "the open is at zero and not before it")
+    }
+
+    // Act: zero, asked twice without the clock moving, because a tick and
+    // the watcher can both land there.
+    clock.advance(1)
+    let quit = expectation(description: "the old instance was told to go")
+    quit.assertForOverFulfill = false
+    session.onChange = {}
+    quits.answer = { quit.fulfill() }
+    session.askTheReopen()
+    session.askTheReopen()
+    wait(for: [quit], timeout: 20)
+
+    // Assert: one open, the new instance told whose going to wait for, the
+    // attempt written down, and the row still reading 1 until this instance
+    // goes.
+    XCTAssertEqual(pad.opened.count, 1, "the open is asked for once")
+    XCTAssertEqual(
+      pad.opened.first?.arguments,
+      [RelaunchPolicy.argument, String(ProcessInfo.processInfo.processIdentifier)])
+    XCTAssertEqual(session.preferences.lastRelaunch()?.version, "2.16.0")
+    XCTAssertEqual(quits.count, 1, "and this one quits once")
+    XCTAssertEqual(
+      session.facts.reopen, .counting(1),
+      "the row holds at 1 and never goes back to asking for a hand")
+  }
+
+  /// A `gdoc update` still live in the record holds the count, and the five
+  /// seconds are counted from its end.
+  ///
+  /// The swap happens before the run writes its end, so this is the ordinary
+  /// route and not the odd one. The row says what is holding it, in the
+  /// words of the thing a person started.
+  func testTheReopenIsHeldWhileTheUpdateIsLiveAndCountsFromItsEnd() throws {
+    try writeTheRecord([line(kind: "start", command: "update", call: 1, doc: nil)])
+    try writeTheBundle(version: "2.15.0")
+    let pad = FakePad()
+    let clock = Movable()
+    let running = Switch(true)
+    let quits = Tally()
+    let session = made(
+      bundle: appBundle, identifier: Self.identifier, pad: pad,
+      alive: { _ in running.isOn }, quit: { _ = quits.bump() }, clock: { clock.now })
+    try writeTheBundle(version: "2.16.0")
+    answered(session)
+
+    session.bundleMoved(to: .reopenNeeded("2.16.0"))
+    refreshed(session)
+    XCTAssertEqual(session.facts.reopen, .held)
+    XCTAssertEqual(session.model.notice, "Updated to v2.16.0. Reopens when the update finishes")
+    XCTAssertEqual(session.tickingEvery, 1, "and the app is asking again every second")
+    XCTAssertEqual(pad.opened.count, 0)
+
+    for _ in 0..<3 {
+      clock.advance(1)
+      session.askTheReopen()
+      refreshed(session)
+      XCTAssertEqual(session.facts.reopen, .held, "a held count is not a count under way")
+      XCTAssertEqual(pad.opened.count, 0)
+    }
+
+    // Act: the run's pid has gone, so the record holds no live update.
+    running.isOn = false
+    session.askTheReopen()
+    refreshed(session)
+    XCTAssertEqual(session.facts.reopen, .counting(5), "the five seconds begin here")
+
+    let quit = expectation(description: "the old instance was told to go")
+    quit.assertForOverFulfill = false
+    quits.answer = { quit.fulfill() }
+    clock.advance(5)
+    session.askTheReopen()
+    wait(for: [quit], timeout: 20)
+    XCTAssertEqual(pad.opened.count, 1)
+  }
+
+  /// A guard that comes up while the count runs leaves the row where it is,
+  /// and a guard still up at zero sends the count back to held.
+  ///
+  /// The bytes may still be arriving, and a 1 that sat on the row waiting
+  /// would be the promise this count replaced. So it restarts from 5 when
+  /// the guard clears.
+  func testAGuardUpAtFiveSendsTheCountBackToHeldAndItRestarts() throws {
+    try writeTheRecord([line(kind: "start", command: "update", call: 1, doc: nil)])
+    try writeTheBundle(version: "2.15.0")
+    let pad = FakePad()
+    let clock = Movable()
+    // The update's own pid, which this test says is gone and then back: the
+    // record holds its start either way.
+    let running = Switch(false)
+    let quits = Tally()
+    let session = made(
+      bundle: appBundle, identifier: Self.identifier, pad: pad,
+      alive: { _ in running.isOn }, quit: { _ = quits.bump() }, clock: { clock.now })
+    try writeTheBundle(version: "2.16.0")
+    answered(session)
+
+    session.bundleMoved(to: .reopenNeeded("2.16.0"))
+    refreshed(session)
+    clock.advance(1)
+    session.askTheReopen()
+    refreshed(session)
+    XCTAssertEqual(session.facts.reopen, .counting(4))
+
+    // Act: the update is live again at the moment the count runs out.
+    running.isOn = true
+    clock.advance(4)
+    session.askTheReopen()
+    refreshed(session)
+    XCTAssertEqual(session.facts.reopen, .held, "zero with a guard up is a wait, not an open")
+    XCTAssertEqual(pad.opened.count, 0)
+
+    // Act: the run ended, so the count starts over.
+    running.isOn = false
+    session.askTheReopen()
+    refreshed(session)
+    XCTAssertEqual(session.facts.reopen, .counting(5))
+
+    let quit = expectation(description: "the old instance was told to go")
+    quit.assertForOverFulfill = false
+    quits.answer = { quit.fulfill() }
+    clock.advance(5)
+    session.askTheReopen()
+    wait(for: [quit], timeout: 20)
+    XCTAssertEqual(pad.opened.count, 1, "and the one open is at the end of the second count")
+  }
+
+  /// The row goes back to asking for a hand in the three cases the app is
+  /// not going to reopen itself, and the tick goes back to five seconds.
+  ///
+  /// A hold that is about what the bundle on the disk is never clears by
+  /// itself, an open the system refused is an open, and a build with no
+  /// bundle has nothing to open.
+  func testAReopenRefusedForGoodSaysQuitAndReopenAndTheTickGoesBackToFive() throws {
+    try writeTheRecord([])
+    try writeTheBundle(version: "2.16.0")
+
+    // A bundle whose signature does not check out: the policy is asked
+    // before the count begins and holds for good.
+    let unsigned = FakePad()
+    let store = Store()
+    let refused = made(
+      preferences: Preferences(store: store), bundle: appBundle,
+      identifier: Self.identifier, pad: unsigned, signatureValid: { _ in false })
+    answered(refused)
+    refused.bundleMoved(to: .reopenNeeded("2.16.0"))
+    refreshed(refused)
+    XCTAssertEqual(refused.facts.reopen, .refused)
+    XCTAssertEqual(refused.model.notice, "Updated to v2.16.0. Quit and reopen")
+    XCTAssertEqual(refused.tickingEvery, 5, "nothing is counting, so nothing moves in seconds")
+    XCTAssertEqual(unsigned.opened.count, 0)
+    XCTAssertNil(
+      Preferences(store: store).lastRelaunch(), "a count that never began wrote no stamp")
+    refused.stop()
+
+    // An open the system refused: the count ran, the attempt was made and
+    // written down, and the row is the person's hand again.
+    let shut = FakePad()
+    shut.opens = false
+    let clock = Movable()
+    let own = Preferences(store: Store())
+    let tried = made(
+      preferences: own, bundle: appBundle, identifier: Self.identifier, pad: shut,
+      clock: { clock.now })
+    answered(tried)
+    tried.bundleMoved(to: .reopenNeeded("2.16.0"))
+    refreshed(tried)
+    XCTAssertEqual(tried.facts.reopen, .counting(5))
+
+    let back = expectation(description: "the row asked for a hand")
+    back.assertForOverFulfill = false
+    tried.onChange = { [weak tried] in
+      if tried?.facts.reopen == .refused { back.fulfill() }
+    }
+    clock.advance(5)
+    tried.askTheReopen()
+    wait(for: [back], timeout: 20)
+    XCTAssertEqual(shut.opened.count, 1, "the system was asked once")
+    XCTAssertEqual(own.lastRelaunch()?.version, "2.16.0", "and the attempt is written down")
+    XCTAssertEqual(tried.model.notice, "Updated to v2.16.0. Quit and reopen")
+    XCTAssertEqual(tried.tickingEvery, 5)
+    tried.stop()
+
+    // A `swift run` build, which has no bundle and so no relauncher.
+    let bare = made()
+    answered(bare)
+    bare.bundleMoved(to: .reopenNeeded("2.16.0"))
+    refreshed(bare)
+    XCTAssertEqual(bare.facts.reopen, .refused, "nothing here could open anything")
+    XCTAssertEqual(bare.model.notice, "Updated to v2.16.0. Quit and reopen")
+  }
+
+  /// An open asked for before the bundle moved again cannot mark the count
+  /// that followed it refused.
+  ///
+  /// A rollback is a second change of the bundle, and the first open may
+  /// still be out when it lands. Its answer belongs to an ask nobody is
+  /// waiting on any more.
+  func testAnAnswerFromBeforeTheBundleMovedAgainIsDropped() async throws {
+    try writeTheRecord([])
+    try writeTheBundle(version: "2.15.0")
+    let pad = FakePad()
+    pad.opens = false
+    pad.holdsTheOpen = true
+    let clock = Movable()
+    let session = made(
+      bundle: appBundle, identifier: Self.identifier, pad: pad, clock: { clock.now })
+    try writeTheBundle(version: "2.16.0")
+    await started(session)
+
+    // Act: the count runs out and the open is asked for, and the system has
+    // not answered it.
+    session.bundleMoved(to: .reopenNeeded("2.16.0"))
+    clock.advance(5)
+    session.askTheReopen()
+    await pad.untilTheOpenWasAsked()
+
+    // Act: the bundle moved back and then on again, which is a new ask.
+    session.bundleMoved(to: .same)
+    session.bundleMoved(to: .reopenNeeded("2.17.0"))
+    _ = await session.recompose()
+    XCTAssertEqual(session.facts.reopen, .counting(5), "the new count began")
+
+    // Act: the open from before answers, having opened nothing. The
+    // session's own task resumes on this actor after that answer, so the
+    // hops below are every chance it has to write the refusal this test
+    // says it must not write.
+    pad.letTheOpenAnswer()
+    await pad.untilTheOpenAnswered()
+    for _ in 0..<20 { await Task.yield() }
+    _ = await session.recompose()
+
+    // Assert: the row is the new count's and not the old answer's.
+    XCTAssertEqual(
+      session.facts.reopen, .counting(5),
+      "an answer from before the bundle moved again is dropped")
+    XCTAssertEqual(session.model.notice, "Updated to v2.17.0. Reopens in 5")
+  }
+
   // MARK: a session over this test's own machine
 
   private func made(
     preferences: Preferences = Preferences(store: Store()),
     desk: Desk = FakeDesk(),
     loginService: LoginService = FakeRegister(),
+    bundle: URL? = nil,
+    identifier: String = "",
+    pad: Launchpad = SystemLaunchpad(),
+    signatureValid: @escaping @Sendable (URL) -> Bool = { _ in true },
     noteSearch: NoteSearch = StatedSearch(),
     noteRead: @escaping @Sendable (String) -> String = { _ in "" },
     hubScan: @escaping @Sendable (String) -> HubIndex = { HubIndex.scan(hub: $0) },
@@ -1375,12 +1663,14 @@ final class SessionTests: XCTestCase {
   ) -> Session {
     let made = Session(
       places: Places(
-        records: records, bundle: nil, version: "2.15.0", identifier: "", home: root.path,
-        arguments: []),
+        records: records, bundle: bundle, version: "2.15.0", identifier: identifier,
+        home: root.path, arguments: []),
       calendar: Calendar.current,
       preferences: preferences,
       desk: desk,
       loginService: loginService,
+      pad: pad,
+      signatureValid: signatureValid,
       noteSearch: noteSearch,
       noteRead: noteRead,
       hubScan: hubScan,
@@ -1414,6 +1704,38 @@ final class SessionTests: XCTestCase {
     }
     session.opened()
     wait(for: [settled], timeout: 20)
+  }
+
+  /// The same, awaited, for a test that is async because it holds the
+  /// system's answer to the open open.
+  private func started(_ session: Session) async {
+    let settled = expectation(description: "gdoc answered both questions")
+    settled.assertForOverFulfill = false
+    session.start { [weak session] in
+      guard let session else { return }
+      if session.facts.account != nil, session.facts.versions.gdoc != nil { settled.fulfill() }
+    }
+    session.opened()
+    await fulfillment(of: [settled], timeout: 20)
+  }
+
+  // MARK: the bundle this test wrote
+
+  /// The app bundle these tests run over, under the test's own root.
+  private var appBundle: URL { root.appendingPathComponent("GdocPresence.app") }
+
+  /// A plist naming this app and this version, so the watcher reads a real
+  /// file and the relauncher's own reader finds the app it is running.
+  private func writeTheBundle(version: String) throws {
+    let contents = appBundle.appendingPathComponent("Contents")
+    try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
+    let plist: [String: Any] = [
+      "CFBundleIdentifier": Self.identifier,
+      "CFBundleShortVersionString": version,
+    ]
+    let data = try PropertyListSerialization.data(
+      fromPropertyList: plist, format: .xml, options: 0)
+    try data.write(to: contents.appendingPathComponent("Info.plist"))
   }
 
   // MARK: the record this test wrote
@@ -1533,6 +1855,95 @@ final class SessionTests: XCTestCase {
 
   }
 
+  /// What the system was asked to open, and nothing opened.
+  ///
+  /// This file's own, as the desk and the register are: it answers what the
+  /// test says and can hold the answer open, which is how an answer that
+  /// arrives after the bundle moved again is written as a test.
+  private final class FakePad: Launchpad, @unchecked Sendable {
+    struct Open: Equatable {
+      let bundle: URL
+      let arguments: [String]
+    }
+
+    private let lock = NSLock()
+    private var asks: [Open] = []
+    private var answer = true
+    private var holds = false
+    private var held: CheckedContinuation<Void, Never>?
+    private var asked: CheckedContinuation<Void, Never>?
+    private var answered: CheckedContinuation<Void, Never>?
+    private var hasAnswered = false
+
+    var opened: [Open] { lock.withLock { asks } }
+
+    /// What the system answers the open with.
+    var opens: Bool {
+      get { lock.withLock { answer } }
+      set { lock.withLock { answer = newValue } }
+    }
+
+    /// Whether the open waits to be let go of.
+    var holdsTheOpen: Bool {
+      get { lock.withLock { holds } }
+      set { lock.withLock { holds = newValue } }
+    }
+
+    func openNewInstance(at bundle: URL, arguments: [String]) async -> Bool {
+      let waiting: Bool = lock.withLock {
+        asks.append(Open(bundle: bundle, arguments: arguments))
+        asked?.resume()
+        asked = nil
+        return holds
+      }
+      if waiting {
+        await withCheckedContinuation { (keep: CheckedContinuation<Void, Never>) in
+          lock.withLock { held = keep }
+        }
+      }
+      let answer = opens
+      let waits: CheckedContinuation<Void, Never>? = lock.withLock {
+        let waiting = answered
+        answered = nil
+        return waiting
+      }
+      lock.withLock { hasAnswered = true }
+      waits?.resume()
+      return answer
+    }
+
+    /// Back when the open has answered, so what the session does with that
+    /// answer is the next thing on this actor.
+    func untilTheOpenAnswered() async {
+      if lock.withLock({ hasAnswered }) { return }
+      await withCheckedContinuation { (wait: CheckedContinuation<Void, Never>) in
+        lock.withLock { answered = wait }
+      }
+    }
+
+    /// Back when the open has been asked for, so a test does not poll.
+    func untilTheOpenWasAsked() async {
+      if !opened.isEmpty { return }
+      await withCheckedContinuation { (wait: CheckedContinuation<Void, Never>) in
+        lock.withLock { asked = wait }
+      }
+    }
+
+    /// Let the held open answer.
+    func letTheOpenAnswer() {
+      let keep: CheckedContinuation<Void, Never>? = lock.withLock {
+        let waiting = held
+        held = nil
+        return waiting
+      }
+      keep?.resume()
+    }
+
+    func anotherInstance(of identifier: String) -> Bool { false }
+
+    func isAlive(_ pid: Int32) -> Bool { false }
+  }
+
   /// This machine's login items, untouched.
   private final class FakeRegister: LoginService, @unchecked Sendable {
     private let lock = NSLock()
@@ -1593,11 +2004,32 @@ final class SessionTests: XCTestCase {
 private final class Tally {
   var count = 0
 
+  /// What to do once it has been asked, for a test waiting on the call
+  /// rather than on the count.
+  var answer: (() -> Void)?
+
   /// Counted, and the answer every caller here wants: the pid is alive.
   func bump() -> Bool {
     count += 1
+    answer?()
     return true
   }
+}
+
+/// A clock the test moves by hand, so five seconds pass in no time.
+@MainActor
+private final class Movable {
+  var now = Date(timeIntervalSince1970: 1_792_000_000)
+
+  func advance(_ seconds: TimeInterval) { now = now.addingTimeInterval(seconds) }
+}
+
+/// A yes or no the test flips between two asks.
+@MainActor
+private final class Switch {
+  var isOn: Bool
+
+  init(_ isOn: Bool) { self.isOn = isOn }
 }
 
 /// A walk of the hub this test opens and closes by hand.

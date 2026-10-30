@@ -12,6 +12,10 @@
 // nothing. `gdoc update` swaps the bundle before it writes the run's end,
 // so the first ask lands while the update is still live in the record
 // almost every time.
+//
+// The second rule is that asking is free. The session asks the policy on
+// every tick while its count runs, so `decides` has to write no stamp and
+// open nothing, and only `reopen` may.
 
 import Foundation
 import PresenceCore
@@ -105,10 +109,78 @@ final class RelauncherTests: XCTestCase {
     XCTAssertEqual(waits.all, [], "the open is asked for at zero and not two seconds later")
   }
 
+  /// Asking the policy is free, so the session may ask it on every tick of
+  /// its count: nothing is opened and nothing is written down.
+  func testDecidingWritesNoStampAndOpensNothing() async throws {
+    // Arrange: a relauncher over a bundle that is a newer build of this app.
+    let pad = FakePad()
+    let store = Store()
+    let preferences = Preferences(store: store)
+    let relauncher = made(pad: pad)
+
+    // Act and assert: the clear ask, and the two holds that clear by
+    // themselves, which are the gate the count reads.
+    XCTAssertEqual(
+      relauncher.decides(
+        bundle: .reopenNeeded("2.16.0"), updateRunning: false, childAlive: false,
+        remembering: preferences),
+      .relaunch(version: "2.16.0"))
+    XCTAssertEqual(
+      relauncher.decides(
+        bundle: .reopenNeeded("2.16.0"), updateRunning: true, childAlive: false,
+        remembering: preferences),
+      .hold(.updateRunning))
+    XCTAssertEqual(
+      relauncher.decides(
+        bundle: .reopenNeeded("2.16.0"), updateRunning: false, childAlive: true,
+        remembering: preferences),
+      .hold(.childAlive))
+
+    // And a hold that never clears, which is the gate that refuses for good.
+    let unsigned = made(pad: pad, signatureValid: { _ in false })
+    XCTAssertEqual(
+      unsigned.decides(
+        bundle: .reopenNeeded("2.16.0"), updateRunning: false, childAlive: false,
+        remembering: preferences),
+      .hold(.invalidSignature))
+
+    // Assert: ten asks later the system has been asked nothing and the ten
+    // minutes have not begun, so the one open the count asks for is still
+    // the policy's to admit.
+    for _ in 0..<10 {
+      _ = relauncher.decides(
+        bundle: .reopenNeeded("2.16.0"), updateRunning: false, childAlive: false,
+        remembering: preferences)
+    }
+    XCTAssertEqual(pad.opened.count, 0, "deciding opens nothing")
+    XCTAssertNil(preferences.lastRelaunch(), "and writes no stamp")
+  }
+
+  /// An open the system refused leaves the app up with the row asking for a
+  /// hand, and the attempt is written down: an open that keeps failing is
+  /// tried once in ten minutes and not on every tick.
+  func testAFailedOpenKeepsTheRowAndWritesTheStamp() async throws {
+    let pad = FakePad()
+    pad.opens = false
+    let preferences = Preferences(store: Store())
+    let relauncher = made(pad: pad)
+
+    let after = await relauncher.reopen(
+      bundle: .reopenNeeded("2.16.0"), updateRunning: false, childAlive: false,
+      remembering: preferences)
+
+    XCTAssertEqual(after, .keepTheReopenRow)
+    XCTAssertEqual(pad.opened.count, 1, "the system was asked once")
+    XCTAssertEqual(
+      preferences.lastRelaunch()?.version, "2.16.0",
+      "and the ten minutes count from the attempt")
+  }
+
   // MARK: the outside this file hands over
 
   private func made(
-    pad: FakePad, sleep: @escaping @Sendable (TimeInterval) async -> Void = { _ in }
+    pad: FakePad, sleep: @escaping @Sendable (TimeInterval) async -> Void = { _ in },
+    signatureValid: @escaping @Sendable (URL) -> Bool = { _ in true }
   ) -> Relauncher {
     Relauncher(
       bundle: URL(fileURLWithPath: "/Applications/GdocPresence.app"),
@@ -116,7 +188,7 @@ final class RelauncherTests: XCTestCase {
       pid: 4242,
       pad: pad,
       identifierOnDisk: { _ in Self.identifier },
-      signatureValid: { _ in true },
+      signatureValid: signatureValid,
       now: { Date(timeIntervalSince1970: 1_792_000_000) },
       sleep: sleep)
   }
@@ -140,12 +212,22 @@ final class RelauncherTests: XCTestCase {
 
     private let lock = NSLock()
     private var asks: [Open] = []
+    private var answer = true
 
     var opened: [Open] { lock.withLock { asks } }
 
+    /// What the system answers the open with. True is an instance that came
+    /// up; false is the open the row's last sentence is for.
+    var opens: Bool {
+      get { lock.withLock { answer } }
+      set { lock.withLock { answer = newValue } }
+    }
+
     func openNewInstance(at bundle: URL, arguments: [String]) async -> Bool {
-      lock.withLock { asks.append(Open(bundle: bundle, arguments: arguments)) }
-      return true
+      lock.withLock {
+        asks.append(Open(bundle: bundle, arguments: arguments))
+        return answer
+      }
     }
 
     func anotherInstance(of identifier: String) -> Bool { false }

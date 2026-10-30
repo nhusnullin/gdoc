@@ -490,7 +490,7 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] `RelauncherTests.testDecidingWritesNoStampAndOpensNothing`: a new
+- [x] `RelauncherTests.testDecidingWritesNoStampAndOpensNothing`: a new
       `relauncher.decides(bundle:updateRunning:childAlive:remembering:)`
       answers `.relaunch(version: "2.16.0")` for a clear ask,
       `.hold(.updateRunning)` and `.hold(.childAlive)` for the two
@@ -503,11 +503,11 @@ Tick each box as it is done. A task ends with its commit.
       `preferences.lastRelaunch()?.version` is "2.16.0", so the ten
       minutes count from the attempt. Red on the first; keep the second
       as the pin the session's refused test leans on.
-- [ ] `Relauncher.swift`: `reopen()`'s ask-building at 118 to 127 moves
+- [x] `Relauncher.swift`: `reopen()`'s ask-building at 118 to 127 moves
       into a private `ask(...)` both methods call; `decides(...)` returns
       `RelaunchPolicy.decide(ask)` and touches nothing; `reopen()` keeps
       its stamp and open. Green.
-- [ ] `SessionTests.made(...)` gains `bundle: URL? = nil, identifier:
+- [x] `SessionTests.made(...)` gains `bundle: URL? = nil, identifier:
       String = "", pad: Launchpad = SystemLaunchpad(), signatureValid:
       @escaping @Sendable (URL) -> Bool = { _ in true }`, and a helper
       `writeTheBundle(version:)` that writes `<root>/GdocPresence.app/
@@ -523,7 +523,7 @@ Tick each box as it is done. A task ends with its commit.
       instead of waiting on a timer. `FakePad` is copied into
       `SessionTests` with the `opens` switch, as `FakeDesk` is this
       file's own.
-- [ ] `testTheReopenCountsFiveToOneOnTheTickAndOpensOnce`: a session
+- [x] `testTheReopenCountsFiveToOneOnTheTickAndOpensOnce`: a session
       over a bundle written at "2.15.0" and a plist rewritten to
       "2.16.0" before `answered`, a movable `now`, a `FakePad`, a `quit`
       closure counting its calls. The test calls
@@ -539,7 +539,7 @@ Tick each box as it is done. A task ends with its commit.
       and the session's own pid, `preferences.lastRelaunch()?.version`
       is "2.16.0", quit was called once, and `facts.reopen` is still
       `.counting(1)`, never `.refused`. Red.
-- [ ] `testTheReopenIsHeldWhileTheUpdateIsLiveAndCountsFromItsEnd`: the
+- [x] `testTheReopenIsHeldWhileTheUpdateIsLiveAndCountsFromItsEnd`: the
       record holds a `start` of `update` with no end for a pid the
       session's `alive` closure says is alive, through a `var` the test
       flips. `bundleMoved(to: .reopenNeeded("2.16.0"))` and `refreshed`
@@ -554,7 +554,7 @@ Tick each box as it is done. A task ends with its commit.
       facts and the pad not asked; the start's end is written, and the
       next ask is `.counting(5)` again, five seconds later the one open.
       Red.
-- [ ] `testAReopenRefusedForGoodSaysQuitAndReopenAndTheTickGoesBackToFive`:
+- [x] `testAReopenRefusedForGoodSaysQuitAndReopenAndTheTickGoesBackToFive`:
       the same session with `signatureValid: { _ in false }`.
       `bundleMoved` goes straight to `facts.reopen == .refused`, the
       notice "Updated to v2.16.0. Quit and reopen", `tickingEvery == 5`,
@@ -565,13 +565,13 @@ Tick each box as it is done. A task ends with its commit.
       made with `bundle: nil`, as every other test's is, reads
       `.refused` on `bundleMoved` at once, because there is no
       relauncher. Red.
-- [ ] `testAnAnswerFromBeforeTheBundleMovedAgainIsDropped`: the pad's
+- [x] `testAnAnswerFromBeforeTheBundleMovedAgainIsDropped`: the pad's
       `openNewInstance` waits on a continuation the test holds; the count
       runs to five and the open is asked for; the test calls
       `bundleMoved(to: .same)` and then `.reopenNeeded("2.17.0")`, lets
       the held open answer false, and asserts the new count is
       `.counting(5)` and not `.refused`. Red.
-- [ ] `Session.swift`: `var reopen = ReopenCount.held`, `var reopenWord
+- [x] `Session.swift`: `var reopen = ReopenCount.held`, `var reopenWord
       = ReopenStanding.held` and `var reopenAsk = 0` take the place of
       `reopenHeld` (87 to 97), with a comment that says what the count
       is, that the tick is one second while it runs, including while the
@@ -603,10 +603,10 @@ Tick each box as it is done. A task ends with its commit.
       reopenPending`, where `reopenPending` is `.reopenNeeded` with the
       count not refused; the comment at 36 to 38 names three moving
       things. `tick()` at 524 calls `askTheReopen()`. Green.
-- [ ] `testTheCheckIsOnTheScreenBeforeTheTwoPollsComeBack` and the rest
+- [x] `testTheCheckIsOnTheScreenBeforeTheTwoPollsComeBack` and the rest
       of `SessionTests` green, untouched.
-- [ ] `make app-lint`, `make app-test` and `make app` green.
-- [ ] Commit: `feat: the app counts five seconds down and reopens at zero`.
+- [x] `make app-lint`, `make app-test` and `make app` green.
+- [x] Commit: `feat: the app counts five seconds down and reopens at zero`.
 
 ### Task 4: the two scenes, the captions, and the renders once
 

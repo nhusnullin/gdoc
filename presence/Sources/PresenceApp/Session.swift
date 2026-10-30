@@ -14,9 +14,9 @@
 //
 // Three clocks run over it: the five-second refold, which is how a pid that
 // died without writing its end is noticed; one second instead while a child
-// of the app's own is up, so the ring and the sign-in's countdown move; and
-// the one-shot timers that take a green check, a copied icon and a question
-// back off the screen.
+// of the app's own is up or a reopen is counting, so the ring, the sign-in's
+// countdown and the reopen's own seconds move; and the one-shot timers that
+// take a green check, a copied icon and a question back off the screen.
 
 import Foundation
 import PresenceCore
@@ -32,9 +32,9 @@ private let eventCeiling = 20_000
 /// so, so the only way to notice is to ask the kernel again.
 private let refoldEvery: TimeInterval = 5
 
-/// How often while a child of the app's own is up. The ring and the sign-in
-/// countdown are the two things on the screen that move, and both of them
-/// move in seconds.
+/// How often while a child of the app's own is up, or a reopen is counting.
+/// The ring, the sign-in countdown and the reopen's seconds are the three
+/// things on the screen that move, and all three of them move in seconds.
 private let whileAChildIsUp: TimeInterval = 1
 
 /// How long a document whose query hit the finder's ceiling is left alone by
@@ -85,16 +85,25 @@ public final class Session {
   var facts: Facts
   var drawn: Drawn
   var bundle: BundleState = .same
-  /// Whether a reopen was held by one of the two guards that clear by
-  /// themselves, so the next tick asks again.
+  /// Where the reopen of the bundle on the disk has got to, what the notice
+  /// row says about it, and which bundle the ask it is counting for was
+  /// raised under.
   ///
-  /// `bundleMoved` asks once per change of `BundleState`, and `gdoc update`
-  /// swaps the bundle before it writes its run's end, so the ask the change
-  /// makes lands while the update is still live in the record almost every
-  /// time. Without a second ask the person is left with "Quit and reopen",
-  /// which is the fallback and not what the app decided to do:
-  /// testAHeldReopenCostsNothingAndTheNextAskOpensTheNewInstance.
-  var reopenHeld = false
+  /// The count is five seconds the person reads down on the row, and the
+  /// tick is one second for as long as it is pending, which includes a hold
+  /// whose reason is a terminal's `gdoc update` still live in the record.
+  /// The policy is asked again on every one of those ticks, which costs what
+  /// `Relauncher.decides` costs and writes nothing, and the open is asked
+  /// for once, at zero:
+  /// testTheReopenCountsFiveToOneOnTheTickAndOpensOnce.
+  ///
+  /// The number is the generation. `bundleMoved` bumps it, so an open asked
+  /// for before the bundle moved again cannot come back and mark the count
+  /// it knows nothing about refused:
+  /// testAnAnswerFromBeforeTheBundleMovedAgainIsDropped.
+  var reopen = ReopenCount.held
+  var reopenWord = ReopenStanding.held
+  var reopenAsk = 0
   var index = HubIndex.empty
   /// What the finder answered about each document the panel has drawn, kept
   /// here so a redraw reads a value rather than waiting on a query. The
@@ -196,6 +205,7 @@ public final class Session {
     desk: Desk = SystemDesk(),
     loginService: LoginService = SystemLoginService(),
     pad: Launchpad = SystemLaunchpad(),
+    signatureValid: @escaping @Sendable (URL) -> Bool = Relauncher.signatureChecked,
     noteSearch: NoteSearch = SpotlightSearch(),
     noteRead: @escaping @Sendable (String) -> String = {
       HubIndex.head(of: URL(fileURLWithPath: $0))
@@ -229,7 +239,10 @@ public final class Session {
     self.relauncher =
       places.bundle.flatMap { bundle in
         places.identifier.isEmpty
-          ? nil : Relauncher(bundle: bundle, identifier: places.identifier, pad: pad)
+          ? nil
+          : Relauncher(
+            bundle: bundle, identifier: places.identifier, pad: pad,
+            signatureValid: signatureValid)
       }
     self.tail = LogTail(directory: places.records)
     // The finder is handed a way to say an answer went stale, which hops to
@@ -467,6 +480,7 @@ public final class Session {
       noteFaults: noteFaults(),
       signedInAt: signedInAt,
       bundle: bundle,
+      reopen: reopenWord,
       newerRecord: newerGdoc,
       unstoppable: stopper.unstoppable(in: events),
       // The press and not the actor's standing, so the extension's own run
@@ -508,7 +522,7 @@ public final class Session {
   /// recreated only when that interval changes, so an ordinary minute is
   /// twelve ticks and not sixty.
   func retick() {
-    let wanted = signingIn || installing ? whileAChildIsUp : refoldEvery
+    let wanted = signingIn || installing || reopenPending ? whileAChildIsUp : refoldEvery
     guard ticker == nil || wanted != tickingEvery else { return }
     ticker?.invalidate()
     tickingEvery = wanted
@@ -520,20 +534,15 @@ public final class Session {
   private func tick() {
     if refolded() { changed() }
     readThePhase()
-    reaskTheReopen()
+    askTheReopen()
     Task { [weak self] in await self?.ask(.timer) }
   }
 
-  /// The reopen asked again, once the guard that held it is gone.
-  ///
-  /// The two cheap questions come before the fold, and the flag before both,
-  /// so an ordinary tick asks nothing: a reopen is held for a few seconds in
-  /// the life of an app. The policy's own ten-minute stamp bounds what
-  /// follows, so this asks at most once per hold.
-  private func reaskTheReopen() {
-    guard reopenHeld, !aChildIsUp(), !updateIsRunning() else { return }
-    reopenHeld = false
-    Task { [weak self] in await self?.reopenIfTheBundleMoved() }
+  /// Whether a reopen is still something the app is going to do, which is
+  /// what puts the tick on one second.
+  private var reopenPending: Bool {
+    guard case .reopenNeeded = bundle else { return false }
+    return !reopen.isRefused
   }
 
   /// The sign-in's countdown, read off the child's own start. It is a value
@@ -857,31 +866,78 @@ public final class Session {
 
   // MARK: the bundle under the app
 
-  private func bundleMoved(to state: BundleState) {
+  func bundleMoved(to state: BundleState) {
     guard state != bundle else { return }
     bundle = state
+    // A bundle that moved again is a different ask: the count starts over
+    // and the answer to the open asked for under the old one is dropped.
+    reopenAsk += 1
+    reopen = .held
+    reopenWord = .held
+    askTheReopen()
+    retick()
+    Task { [weak self] in await self?.recompose() }
+  }
+
+  /// The policy asked, the count moved on, and the open asked for at zero.
+  ///
+  /// This runs on the change of the bundle and on every tick while the count
+  /// is pending. Deciding writes nothing, so asking as often as the row
+  /// moves is free; the one open is the step's to say, and the step says it
+  /// once. The app quits only once that open succeeded.
+  func askTheReopen() {
+    guard case .reopenNeeded = bundle, !reopen.isRefused, reopen != .opening else { return }
+    let updateRunning = updateIsRunning()
+    let childAlive = aChildIsUp()
+    let step = reopen.asked(
+      gate(updateRunning: updateRunning, childAlive: childAlive), now: clock())
+    reopen = step.count
+    if step.standing != reopenWord {
+      reopenWord = step.standing
+      retick()
+      Task { [weak self] in await self?.recompose() }
+    }
+    guard step.opensNow, let relauncher else { return }
+
+    let generation = reopenAsk
+    let state = bundle
+    let preferences = preferences
     Task { [weak self] in
-      guard let self else { return }
+      let after = await relauncher.reopen(
+        bundle: state, updateRunning: updateRunning, childAlive: childAlive,
+        remembering: preferences)
+      guard let self, self.reopenAsk == generation else { return }
+      guard after == .keepTheReopenRow else {
+        self.quit()
+        return
+      }
+      // The policy had just admitted this one, so a row that is still here
+      // is an open the system refused, and the person's own hand is what is
+      // left. The stamp the attempt wrote bounds the asking.
+      self.reopen = .refused
+      self.reopenWord = .refused
+      self.retick()
       await self.recompose()
-      await self.reopenIfTheBundleMoved()
     }
   }
 
-  /// The app opens its own bundle again where every guard holds, and quits
-  /// only once that open succeeded. Every guard is the policy's.
-  private func reopenIfTheBundleMoved() async {
-    guard let relauncher else { return }
-    let updateRunning = updateIsRunning()
-    let childAlive = aChildIsUp()
-    let after = await relauncher.reopen(
+  /// What the policy said, as the one thing the count reads.
+  ///
+  /// The two guards that clear by themselves hold the count where it is.
+  /// Every other hold is about what the bundle on the disk is, and a bundle
+  /// that is not this app does not become it while the app waits, so it ends
+  /// the count. A session with no relauncher, which is every `swift run`
+  /// build, has nothing that could open anything.
+  private func gate(updateRunning: Bool, childAlive: Bool) -> ReopenGate {
+    guard let relauncher else { return .refused }
+    switch relauncher.decides(
       bundle: bundle, updateRunning: updateRunning, childAlive: childAlive,
       remembering: preferences)
-    // These two are the only guards that clear on their own: every other
-    // one is about what the bundle on the disk is, and a bundle that is not
-    // this app does not become it while the app waits. A hold on either is
-    // the tick's to ask about again.
-    reopenHeld = after == .keepTheReopenRow && (updateRunning || childAlive)
-    if after == .quit { quit() }
+    {
+    case .relaunch: return .clear
+    case .hold(.updateRunning), .hold(.childAlive): return .held
+    case .hold: return .refused
+    }
   }
 
   /// What this instance does about the one that launched it: wait for it to
