@@ -312,7 +312,9 @@
 // holding its own copy of a Drive id. The help names the path and reads
 // nothing for it, and no other form of the question carries it, so no skill's
 // context and no frozen screen holds a home path:
-// TestHelpNamesWhereTheLogoIsCached.
+// TestHelpNamesWhereTheLogoIsCached. The same form names logo_url, the
+// picture's own page in Drive built from the house id, so the app opens it on
+// a press without holding the id: TestHelpNamesTheLogosPageInDrive.
 //
 // The hint is the last line of a screen that dropped its object, dim, and it
 // says to add --json. It is written by run, never where the object was printed,

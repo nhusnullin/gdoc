@@ -266,3 +266,54 @@ func TestHelpNamesWhereTheLogoIsCached(t *testing.T) {
 		})
 	}
 }
+
+// The mark in the panel is a press, and the page it opens is the picture's own
+// page in Drive. The app holds no Drive id, so the help names the whole
+// address, built from the house file's id and nothing fetched. The address is
+// the same string on every machine, which is why it is a literal here: a run
+// that names another page fails on this line rather than teaching the app a
+// page nobody meant. It rides the one argv the app runs, so the brief help, a
+// command's help and the flagless help on a pipe carry none of it.
+func TestHelpNamesTheLogosPageInDrive(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("GDOC_CONFIG_DIR", dir)
+
+	const want = "https://drive.google.com/file/d/1J3uh6poVAneP_V_Pc5FuNI4-Gahlab0s/view"
+
+	got, _, code := runHelp(t, "help", "--json")
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("the full help is an answer: %v (exit %d)", got, code)
+	}
+	if page, _ := dataOf(t, got)["logo_url"].(string); page != want {
+		t.Errorf("the full help must name %q and named %q", want, page)
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 0 {
+		t.Errorf("the help named an address and must have written nothing: %v", entries)
+	}
+
+	for _, c := range []struct {
+		name string
+		args []string
+	}{
+		{name: "brief", args: []string{"help", "--brief", "--json"}},
+		{name: "one command", args: []string{"help", "publish", "--json"}},
+		{name: "no flag on a pipe", args: []string{"help"}},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+
+			got, _, code := runHelp(t, c.args...)
+			if code != 0 || got["ok"] != true {
+				t.Fatalf("%v is an answer: %v (exit %d)", c.args, got, code)
+			}
+			if _, ok := dataOf(t, got)["logo_url"]; ok {
+				t.Errorf("%v must carry no logo page: %v", c.args, got["data"])
+			}
+		})
+	}
+}

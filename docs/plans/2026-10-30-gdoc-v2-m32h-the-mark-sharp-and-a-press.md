@@ -280,7 +280,7 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] In `helpjson_test.go`, a new `TestHelpNamesTheLogosPageInDrive`
+- [x] In `helpjson_test.go`, a new `TestHelpNamesTheLogosPageInDrive`
       beside `TestHelpNamesWhereTheLogoIsCached`: `t.Setenv("GDOC_CONFIG_DIR",
       t.TempDir())`, run `help --json`, read `data.logo_url` and require
       it equal to the literal
@@ -291,7 +291,7 @@ Tick each box as it is done. A task ends with its commit.
       `help --brief --json`, `help publish --json` and bare `help` on a pipe
       and require `logo_url` absent from each, with the same three
       subtests. Red.
-- [ ] In `help.go`, `helpReport` gains `LogoURL string \`json:"logo_url,omitempty"\``
+- [x] In `help.go`, `helpReport` gains `LogoURL string \`json:"logo_url,omitempty"\``
       after `LogoPath`, with a comment in the file's voice: the picture's
       own page in Google Drive, named so the menu bar app can open it on a
       press without holding a Drive id; on the same one form as `logo_path`
@@ -302,24 +302,24 @@ Tick each box as it is done. A task ends with its commit.
       error or an empty id, for the reason `logoCached` states. Lines 171
       to 173 set `report.LogoURL = logoPage()` under the same `if` and
       nowhere else. Green.
-- [ ] `presenceflag_test.go`: the help object with the flag off is one
+- [x] `presenceflag_test.go`: the help object with the flag off is one
       field longer, so `helpObjectBytes` and `helpObjectSHA256` are
       re-taken from the object the test prints, and the comment's list at
       lines 29 to 36 gains "and re-taken in M32h for logo_url". No mask:
       the address is the same string on every machine, and the path mask
       at line 141 stays as it is. Every other byte stays pinned.
-- [ ] `TestHelpNamesWhereTheLogoIsCached`, `TestHelpBriefIsAFewHundredBytes`,
+- [x] `TestHelpNamesWhereTheLogoIsCached`, `TestHelpBriefIsAFewHundredBytes`,
       `TestHelpNeverReadsTheToken` and `TestHelpOnAPipeIsTodaysTextByteForByte`
       green and untouched; no file under `testdata/pipe/` changes.
-- [ ] `go/cmd/gdoc/doc.go`, in the paragraph at lines 309 to 315: one
+- [x] `go/cmd/gdoc/doc.go`, in the paragraph at lines 309 to 315: one
       sentence that the same form names `logo_url`, the picture's page in
       Drive built from the house id, so the app opens it without holding
       the id, naming `TestHelpNamesTheLogosPageInDrive`.
-- [ ] `cd go && go test -race ./cmd/gdoc/ ./boundary/` and `make vet`
+- [x] `cd go && go test -race ./cmd/gdoc/ ./boundary/` and `make vet`
       green. The boundary package is run because a new host literal under
       `go/` is the kind of thing it reads; if a test there names it, stop
       and say which.
-- [ ] Commit: `feat: the help names the logo's page in Drive`.
+- [x] Commit: `feat: the help names the logo's page in Drive`.
 
 ### Task 2: the address reaches the panel's facts
 
