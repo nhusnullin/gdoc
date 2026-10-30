@@ -1,10 +1,13 @@
-// The URLs the app may build, and the one it may accept.
+// The URLs the app may build, and the two it may accept.
 //
 // Opening a URL is the one outbound act of this app that is not a fixed argv
 // at a path it resolved itself, so what a URL may be is decided here, in a
 // file that opens nothing. One host for a document, one host and one path for
 // a sign-in, one path of Claude Desktop's own scheme for a session, and a
-// document id that is a Drive id or no URL at all.
+// document id that is a Drive id or no URL at all. A third host is the Drive
+// page of the firm's mark, which arrives as the one address the binary's own
+// `logo_url` names and is held to its one shape here before a press can open
+// it.
 //
 // The session link is built and not opened. Measured 2026-10-18, MEASURED.md:
 // `claude://code/continue` activates Claude Desktop from outside the app and
@@ -29,6 +32,13 @@ public enum LinkLine {
   public static let documentPrefix = "https://docs.google.com/document/d/"
   /// What is opened: the document, not a preview and not an export.
   public static let documentSuffix = "/edit"
+  /// Where the firm's mark is opened: the file's own page in Drive. The app
+  /// holds no Drive id, so the address arrives whole from the binary's help
+  /// and this is the only shape of it the app will take.
+  public static let markPagePrefix = "https://drive.google.com/file/d/"
+  /// What is opened: the picture's page, not a download and not a preview.
+  public static let markPageSuffix = "/view"
+
   /// The host `gdoc auth login` prints a link to.
   public static let signInHost = "accounts.google.com"
   /// The path it prints, which is `go/internal/auth/login.go:25`'s own.
@@ -60,6 +70,21 @@ public enum LinkLine {
   public static func documentURL(for id: String?) -> String? {
     guard let id, isDocumentID(id) else { return nil }
     return documentPrefix + id + documentSuffix
+  }
+
+  /// The page of the firm's mark, if what the help printed is one.
+  ///
+  /// The prefix and the suffix are compared whole and with their case, and
+  /// what lies between them is a Drive id or nothing. The answer is built
+  /// again from the parts rather than handed back as it arrived, so nothing
+  /// can ride between them into the system's hands.
+  public static func markPageURL(_ text: String?) -> String? {
+    guard let text else { return nil }
+    let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard trimmed.hasPrefix(markPagePrefix), trimmed.hasSuffix(markPageSuffix) else { return nil }
+    let id = String(trimmed.dropFirst(markPagePrefix.count).dropLast(markPageSuffix.count))
+    guard isDocumentID(id) else { return nil }
+    return markPagePrefix + id + markPageSuffix
   }
 
   /// Whether a string is a Claude Code session id and nothing else.

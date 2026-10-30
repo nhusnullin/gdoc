@@ -42,16 +42,21 @@ public struct HelpFacts: Sendable, Equatable {
   /// Where gdoc keeps the house logo on this machine. Nothing on a machine
   /// that has never built a document, which has no picture to draw.
   public let logoPath: String?
+  /// The picture's own page in Drive, as the help printed it, which is what
+  /// a press on the mark opens. The raw string: `LinkLine` judges it, not
+  /// this file. Nothing where the house carries no Drive file.
+  public let logoURL: String?
 
   public init(
     mark: String, markFrom: String? = nil, installed: String? = nil,
-    latestStable: String? = nil, logoPath: String? = nil
+    latestStable: String? = nil, logoPath: String? = nil, logoURL: String? = nil
   ) {
     self.mark = mark
     self.markFrom = markFrom
     self.installed = installed
     self.latestStable = latestStable
     self.logoPath = logoPath
+    self.logoURL = logoURL
   }
 
   /// The envelope's `data` object, read.
@@ -69,7 +74,8 @@ public struct HelpFacts: Sendable, Equatable {
       markFrom: try settings.string("mark_from", or: "no settings.mark_from"),
       installed: try update?.string("installed", or: "no update.installed"),
       latestStable: try update?.string("latest_stable", or: "no update.latest_stable"),
-      logoPath: try object.string("logo_path", or: "no logo_path"))
+      logoPath: try object.string("logo_path", or: "no logo_path"),
+      logoURL: try object.string("logo_url", or: "no logo_url"))
   }
 }
 

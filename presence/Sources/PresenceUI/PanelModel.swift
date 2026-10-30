@@ -341,6 +341,10 @@ public struct PanelModel: Sendable, Equatable {
   /// get here: a machine with no picture folds to nothing, and the label is
   /// then the words alone.
   public let logo: Data?
+  /// The page that mark opens, as the facts handed it over. Nothing builds
+  /// an address here: a panel whose facts carry none draws the mark and no
+  /// press.
+  public let logoURL: String?
 
   /// The mark in effect, which the header and the empty state draw.
   public var mark: String { header.mark }
@@ -447,7 +451,8 @@ extension PanelModel {
       notice: notice(facts),
       sections: sections,
       forcedTooltip: ui.forcedTooltip,
-      logo: facts.logo)
+      logo: facts.logo,
+      logoURL: facts.logoURL)
   }
 
   // MARK: NOW

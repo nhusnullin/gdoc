@@ -84,8 +84,13 @@ final class SourceRulesTests: XCTestCase {
   /// decision in `docs/v2/DECISIONS.md`, as this third one is.
   private static let schemes = ["https", "obsidian", "claude"]
 
-  /// The hosts it may name, both Google's.
-  private static let hosts = ["docs.google.com", "accounts.google.com"]
+  /// The three hosts it may name, all Google's. `drive.google.com` is the
+  /// picture's own page, opened on a press: the address is built by the
+  /// binary from the id in the house file and held to one shape in LinkLine
+  /// before anything opens it, so this app still carries no Drive id.
+  private static let hosts = [
+    "docs.google.com", "accounts.google.com", "drive.google.com",
+  ]
 
   func testNoSourceFileReachesTheWire() throws {
     // Spelled in pieces so this file is not its own failure.
@@ -360,7 +365,7 @@ final class SourceRulesTests: XCTestCase {
     }
   }
 
-  /// Two schemes and two hosts in the whole of the sources.
+  /// Three schemes and three hosts in the whole of the sources.
   ///
   /// Only the sources: a test that holds a refusal has to write the refused
   /// address down, and this is the file that says so.
@@ -380,8 +385,8 @@ final class SourceRulesTests: XCTestCase {
       }
     }
 
-    XCTAssertEqual(seenSchemes, Set(Self.schemes), "both schemes are named, and no third")
-    XCTAssertEqual(seenHosts, Set(Self.hosts), "both hosts are named, and no third")
+    XCTAssertEqual(seenSchemes, Set(Self.schemes), "three schemes are named, and no fourth")
+    XCTAssertEqual(seenHosts, Set(Self.hosts), "three hosts are named, and no fourth")
   }
 
   /// The shell wires and holds nothing.

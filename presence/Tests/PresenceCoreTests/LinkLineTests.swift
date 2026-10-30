@@ -1,4 +1,4 @@
-// The three URLs the app may build, and the one it may accept.
+// The four URLs the app may build, and the one it may accept.
 //
 // Every value here is a literal. A URL the app opens is the one outbound act
 // of this app that is not a fixed argv, so what it may be is stated in this
@@ -13,6 +13,11 @@ final class LinkLineTests: XCTestCase {
 
   /// A Drive id, the shape `go/internal/frontmatter/schema.go:31` holds.
   private static let id = "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcd"
+
+  /// A stand-in for the id of the firm's mark in Drive. The real id is not
+  /// in this repository, by the decision of 2026-10-16, and no fragment of
+  /// it is either: this is an id of the right shape and nothing more.
+  private static let markID = "1MaRkStAnDiN0PaGe0iD00000000"
 
   func testTheDocsURLIsBuiltFromAValidIdOnly() {
     XCTAssertEqual(
@@ -64,6 +69,42 @@ final class LinkLineTests: XCTestCase {
       "0199c3d4 5e6f 7a8b 9c0d 1e2f3a4b5c6d",
     ] {
       XCTAssertNil(LinkLine.codeSessionURL(for: forged), "\(forged) is not a session id")
+    }
+  }
+
+  /// The picture's own page in Drive, which the binary names in its help and
+  /// a press opens.
+  ///
+  /// The address arrives as a string somebody's gdoc printed, so it is held
+  /// to one shape: one scheme, one host, one path around one Drive id, and
+  /// the string handed back is built again from the parts. A query, a
+  /// fragment, a slash too many or a credential before the host is another
+  /// page, so each is nothing.
+  func testTheMarksPageIsOneShapeAndNothingElse() {
+    let page = "https://drive.google.com/file/d/1MaRkStAnDiN0PaGe0iD00000000/view"
+    XCTAssertEqual(LinkLine.markPageURL(page), page, "the address the help prints")
+    XCTAssertEqual(
+      LinkLine.markPageURL("  " + page + "\n"), page, "a line with its spaces still trimmed")
+    XCTAssertEqual(Self.markID.count, 28, "the stand-in is a Drive id's length")
+
+    XCTAssertNil(LinkLine.markPageURL(nil), "no address, no page")
+    XCTAssertNil(LinkLine.markPageURL(""), "and an empty one is not an address")
+
+    for refused in [
+      "https://docs.google.com/document/d/1MaRkStAnDiN0PaGe0iD00000000/edit",
+      "https://drive.google.com/file/d/1MaRkStAnDiN0PaGe0iD00000000/view?usp=sharing",
+      "https://drive.google.com/file/d/1MaRkStAnDiN0PaGe0iD00000000/view#page",
+      "https://drive.google.com/file/d/1MaRkStAnDiN0PaGe0iD00000000/view/",
+      "https://someone@drive.google.com/file/d/1MaRkStAnDiN0PaGe0iD00000000/view",
+      "https://DRIVE.GOOGLE.COM/file/d/1MaRkStAnDiN0PaGe0iD00000000/view",
+      "http://drive.google.com/file/d/1MaRkStAnDiN0PaGe0iD00000000/view",
+      "https://drive.google.com/file/d/1MaRkStAnDiN0PaGe0i/view",
+      "https://drive.google.com/file/d/1MaRkStAnDiN0PaGe0iD000000.0/view",
+      "https://drive.google.com/file/d/1MaRkStAnDiN0PaGe0iD00000000/../../wherever/view",
+      "https://drive.google.com/file/d/1MaRkStAnDiN0PaGe0iD00000000",
+      "not a URL at all",
+    ] {
+      XCTAssertNil(LinkLine.markPageURL(refused), "\(refused) is not the mark's page")
     }
   }
 

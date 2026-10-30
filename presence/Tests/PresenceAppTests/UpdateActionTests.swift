@@ -231,6 +231,23 @@ final class UpdateActionTests: XCTestCase {
     XCTAssertNil(none.logo, "and a machine with no picture invents none")
   }
 
+  /// The page the mark opens comes back too.
+  ///
+  /// It rides beside the bytes for the same reason: a field this rebuild
+  /// forgot would be a press that died every time a person pressed Update.
+  /// The id is a stand-in of the right shape.
+  func testTheLogosPageSurvivesTheUpdateActionsRebuild() async {
+    let action = UpdateAction(answer: FakeUpdater().answer)
+    let page = "https://drive.google.com/file/d/1MaRkStAnDiN0PaGe0iD00000000/view"
+
+    let kept = await action.applied(
+      to: Facts(versions: Versions(app: "2.14.0"), logoURL: page))
+    XCTAssertEqual(kept.logoURL, page, "the address the poller took is the one that stays")
+
+    let none = await action.applied(to: Facts(versions: Versions(app: "2.14.0")))
+    XCTAssertNil(none.logoURL, "and a house with no page invents none")
+  }
+
   // MARK: the panel's own reading
 
   private static func facts(installed: String, latest: String) -> Facts {

@@ -344,7 +344,7 @@ The order is the one that compiles at every step: the core first, then
 the facts' field with its nil default, then the three rooms that fill it.
 The `UpdateAction` test is a real red only once `Facts` has the field.
 
-- [ ] In `LinkLineTests.swift`, `testTheMarksPageIsOneShapeAndNothingElse`:
+- [x] In `LinkLineTests.swift`, `testTheMarksPageIsOneShapeAndNothingElse`:
       `LinkLine.markPageURL(_:)` over the literal
       `https://drive.google.com/file/d/<a 28-character stand-in id>/view`
       returns that string; nil for nil; nil for a Docs document URL; nil
@@ -352,7 +352,7 @@ The `UpdateAction` test is a real red only once `Facts` has the field.
       host; nil for an uppercase host or an `http` scheme; nil for an id
       of 19 characters or one carrying a dot; and the string trimmed of
       surrounding whitespace comes back without it. Red.
-- [ ] In `SourceRulesTests.swift:88`, `hosts` gains `"drive.google.com"`
+- [x] In `SourceRulesTests.swift:88`, `hosts` gains `"drive.google.com"`
       with one line on why: the picture's page, opened on a press, the
       address built by the binary and checked here. The test's two
       messages at lines 383 and 384 say "three", and the stale words move
@@ -360,7 +360,7 @@ The `UpdateAction` test is a real red only once `Facts` has the field.
       hosts"), the doc at line 87 ("both Google's") and the test's doc at
       line 363 ("Two schemes and two hosts") each say three hosts. Red,
       because no source names the host yet.
-- [ ] `LinkLine.swift`: `markPagePrefix = "https://drive.google.com/file/d/"`,
+- [x] `LinkLine.swift`: `markPagePrefix = "https://drive.google.com/file/d/"`,
       `markPageSuffix = "/view"`, and `public static func markPageURL(_
       text: String?) -> String?`: trim, require the prefix and the suffix
       whole and case-sensitive, require what lies between to pass
@@ -370,7 +370,7 @@ The `UpdateAction` test is a real red only once `Facts` has the field.
       may accept, and the paragraph under it gains one sentence: a third
       host, the Drive page of the firm's mark, from the binary's own
       `logo_url`. Green, both files.
-- [ ] In `HealthFactsTests.swift`, `testHelpNamesTheLogosPageAndItMayBeAbsent`,
+- [x] In `HealthFactsTests.swift`, `testHelpNamesTheLogosPageAndItMayBeAbsent`,
       mirroring lines 74 to 100 with the stand-in id and never a fragment
       of the real one: `logo_url` decodes to `HelpFacts.logoURL`, an
       absent field is nil, and a numeric field fails the whole decode.
@@ -378,11 +378,11 @@ The `UpdateAction` test is a real red only once `Facts` has the field.
       read at line 72 the same way, with its one-line comment: the raw
       string as the help printed it; `LinkLine` judges it, not this file.
       Green.
-- [ ] `Facts` gains `public let logoURL: String?` after `logo` with the
+- [x] `Facts` gains `public let logoURL: String?` after `logo` with the
       init's default nil and a comment: the page the mark opens, already
       held to one shape by the poller, nil where the help named none.
       Everything still compiles, because every caller takes the default.
-- [ ] In `HealthPollerTests.swift`, `FakeGdoc` gains `answersLogoPage(_:)`
+- [x] In `HealthPollerTests.swift`, `FakeGdoc` gains `answersLogoPage(_:)`
       written into the help answer beside `logo_path` (lines 270 and 288),
       and a new `testTheLogosPageIsTakenOnlyInItsOneShape`: a help answer
       naming the stand-in page leaves `applied(to:).logoURL` equal to it; an
@@ -390,21 +390,21 @@ The `UpdateAction` test is a real red only once `Facts` has the field.
       `logo_url` leaves it nil; an `auth status` after a help keeps it; a
       later help answer asked with `.changed` that names none clears it.
       Red.
-- [ ] `HealthReading` gains `public let logoURL: String?` after `logo`,
+- [x] `HealthReading` gains `public let logoURL: String?` after `logo`,
       default nil; `askedHelp` fills it with
       `help.logoURL.flatMap(LinkLine.markPageURL)`; both constructions in
       `askedAuth` carry `logoURL: reading.logoURL`; `applied(to:)` writes
       `logoURL: reading.logoURL`, the reading's own and never the facts'.
       Green.
-- [ ] In `UpdateActionTests.swift`, `testTheLogosPageSurvivesTheUpdateActionsRebuild`,
+- [x] In `UpdateActionTests.swift`, `testTheLogosPageSurvivesTheUpdateActionsRebuild`,
       mirroring line 222: facts with `logoURL` set come back with it. Red,
       because `UpdateAction.applied(to:)` rebuilds the facts without it;
       then `UpdateAction.swift:172` gains `logoURL: facts.logoURL`. Green.
-- [ ] In `StateTests.swift`, `testTheModelCarriesTheLogosPageAndOnlyFromTheFacts`,
+- [x] In `StateTests.swift`, `testTheModelCarriesTheLogosPageAndOnlyFromTheFacts`,
       mirroring line 1015. Red, then `PanelModel` gains `public let
       logoURL: String?` filled from the facts at line 450. Green.
-- [ ] `make app-lint` and `make app-test` green.
-- [ ] Commit: `feat: the logo's page reaches the panel's facts`.
+- [x] `make app-lint` and `make app-test` green.
+- [x] Commit: `feat: the logo's page reaches the panel's facts`.
 
 ### Task 3: the Opener's fifth verb and the kind that reaches it
 

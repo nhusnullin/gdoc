@@ -91,6 +91,10 @@ public struct HealthReading: Sendable, Equatable {
   /// named. Nothing where that answer named no path, or where the path held
   /// no mark this app would draw.
   public let logo: Data?
+  /// The picture's page in Drive, as `LinkLine` took the address the last
+  /// help answer named. Nothing where that answer named none, or named
+  /// something that is not that one page.
+  public let logoURL: String?
 
   public init(
     help: HelpFacts? = nil,
@@ -98,7 +102,8 @@ public struct HealthReading: Sendable, Equatable {
     authUnreadable: Bool = false,
     previousAccount: String? = nil,
     domainHint: String? = nil,
-    logo: Data? = nil
+    logo: Data? = nil,
+    logoURL: String? = nil
   ) {
     self.help = help
     self.auth = auth
@@ -106,6 +111,7 @@ public struct HealthReading: Sendable, Equatable {
     self.previousAccount = previousAccount
     self.domainHint = domainHint
     self.logo = logo
+    self.logoURL = logoURL
   }
 
   /// The one word the account row says, or nothing before the first answer.
@@ -173,8 +179,8 @@ public actor HealthPoller {
 
   /// The panel's facts with what the polls know written into them. Every
   /// other field is the one it was handed: this room knows the account, the
-  /// versions, the mark, the firm's own mark and where the binary is, and
-  /// nothing else.
+  /// versions, the mark, the firm's own mark with the page it opens, and
+  /// where the binary is, and nothing else.
   public func applied(to facts: Facts) -> Facts {
     Facts(
       account: reading.auth?.account ?? facts.account,
@@ -188,6 +194,9 @@ public actor HealthPoller {
       // The reading's own, never the facts it was handed: a help answer that
       // names nothing draws nothing, and a mark that went is a mark gone.
       logo: reading.logo,
+      // The reading's own too, and for the same reason: a help answer that
+      // names no page leaves the mark with nothing to open.
+      logoURL: reading.logoURL,
       gdocPath: location.path,
       gdocPathTried: location.tried,
       home: facts.home,
@@ -223,7 +232,8 @@ public actor HealthPoller {
     reading = HealthReading(
       help: help, auth: reading.auth, authUnreadable: reading.authUnreadable,
       previousAccount: reading.previousAccount, domainHint: reading.domainHint,
-      logo: help.logoPath.flatMap(MarkFile.read(at:)))
+      logo: help.logoPath.flatMap(MarkFile.read(at:)),
+      logoURL: LinkLine.markPageURL(help.logoURL))
   }
 
   /// What the token is, or that the file holding it could not be read.
@@ -240,7 +250,7 @@ public actor HealthPoller {
       reading = HealthReading(
         help: reading.help, auth: nil, authUnreadable: true,
         previousAccount: reading.previousAccount, domainHint: reading.domainHint,
-        logo: reading.logo)
+        logo: reading.logo, logoURL: reading.logoURL)
       return
     }
     let changed = memory.change(to: auth.account)
@@ -249,7 +259,7 @@ public actor HealthPoller {
       help: reading.help, auth: auth, authUnreadable: false,
       previousAccount: changed ?? reading.previousAccount,
       domainHint: domain.sentence(for: auth.account),
-      logo: reading.logo)
+      logo: reading.logo, logoURL: reading.logoURL)
   }
 
   /// The core's state as the panel's word. Two enums rather than one,
