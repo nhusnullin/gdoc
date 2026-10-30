@@ -339,3 +339,21 @@ M32d merged to main with this milestone's decision entry rebased under it, so
 the lead merged main into the branch by hand before the go; and the GO step
 stopped at the fast-forward pull once more, over one unpushed docs commit,
 fixed by the same rebase as M32d's.
+
+## 2026-10-30: the six-point cover fix, by the lead
+
+| Run | Task iterations | Tasks, total | Per task iteration | Biggest iteration | Review rounds | Review, total | Per review round | Whole worktree | Sessions |
+|---|---|---|---|---|---|---|---|---|---|
+| The mark six points down (lead, no worker) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+- No ralphex log, so no row the meter can read: the lead made the change
+  itself in the worktree `../gdoc-m32g`, one number in the house file and
+  the eight files that state it, red first and then green, in about forty
+  minutes from the designer's answer at 00:45 to the green pull request at
+  01:10. The cost sits in the lead's own context, which the meter does not
+  read, and it was one session.
+- What it took to know the fix was needed: two PDF exports measured by a
+  throwaway script, one screenshot from Nail measured by the 29 October
+  script, and one call to the design reviewer over three images. The
+  release went through on the first GO line, because the branch sat on top
+  of local main's unpushed commits and the pull fast-forwarded.
