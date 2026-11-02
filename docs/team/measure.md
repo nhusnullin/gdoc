@@ -424,3 +424,41 @@ went green, and on Nail's GO the step merged, tagged and published v2.30.0,
 verified at 12:33Z, with no stop at the pull this time because the branch
 carried main's two unpushed docs commits. M32i launched from main at that
 merge, in the same minute.
+
+## 2026-11-02: M32i on Claude
+
+| Run | Task iterations | Tasks, total | Per task iteration | Biggest iteration | Review rounds | Review, total | Per review round | Whole worktree | Sessions |
+|---|---|---|---|---|---|---|---|---|---|
+| M32i, the reopen count (Claude) | 5 | 23.1M | 4.6M | 8.3M | 3 | 22.9M | 7.6M | 46.0M | 8 |
+
+- M32i's tasks pass at 4.6M against the bar of 4.9M, which is the closest
+  pass in this file, and two of the five are over it alone: Task 3 at 6.3M,
+  the session wiring with its generation number and one open, and Task 4 at
+  8.3M, the two scenes and the renders. The run's own clock says 39 minutes
+  of work, but Task 3 opened at 16:37 on 2026-10-30 and closed at 22:16: the
+  worker stalled for most of six hours in the middle of it, on asynchronous
+  test expectations that timed out and were then rewritten, and the tasks
+  ended at 22:29.
+- Its review fails at 7.6M against the bar of 6.6M, over three rounds. The
+  external seat found two minor items in test and guide text, 1.9M with the
+  evaluation. Because it found something, the two Claude rounds followed,
+  12.6M and 8.4M, and the second of them found the one thing that mattered:
+  a held reopen verified the whole bundle's signature on disk once a second,
+  on the main thread, exactly while the panel was drawing the count. The
+  policy now answers its cheap guards before it looks at the disk.
+
+The design reviewer found one blocking item: scene e12's new sentence,
+"Updated to v2.15.0. Reopens when the update finishes", was cut mid-word on
+the 360 pt row, so the drawing and the caption disagreed. The lead shortened
+it to "Reopens after the update", amended the decision entry in place, and
+added a test that measures the three sentences against the row's text
+column at the longest version a release can carry. Two should-fix items
+went in the same commit: NOW drew the app's own update as the raw word
+"update", which now has its word, Updating, outside the seven participles;
+and the index page did not count its scenes, which are twenty since this
+milestone, as the reviewer's brief now reads. `make release` opened PR 108
+green the first time. The GO step stopped at the fast-forward pull over the
+one unpushed measure commit on local main, rebased and run again, and
+v2.31.0 was published and verified at 09:24Z on 2026-11-02, three days
+after the run: the lead's session was idle over the weekend. Nail sent one
+message for the run, the GO.
