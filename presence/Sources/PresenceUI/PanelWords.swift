@@ -157,9 +157,12 @@ public enum Sentences {
   }
 
   /// The same row while something holds the reopen that clears by itself: a
-  /// live `gdoc update`, the app's own child included.
+  /// live `gdoc update`, the app's own child included. The sentence is the
+  /// shorter of two: "Reopens when the update finishes" cut mid-word on the
+  /// 360 pt row on 2026-11-02, and a notice that does not fit is not a
+  /// notice. StateTests.testTheReopenSentencesFitTheNoticeRow holds the fit.
   public static func reopensAfterTheUpdate(_ version: String) -> String {
-    "Updated to \(versionWord(version)). Reopens when the update finishes"
+    "Updated to \(versionWord(version)). Reopens after the update"
   }
 
   /// The row as it has read since M23, kept for the one case the reopen did
@@ -313,7 +316,7 @@ struct Phrases {
   /// place in the list, which is a position and not a forecast.
   func jobCard(_ run: NowRun) -> JobCardModel {
     let place = run.index.flatMap { index in run.count.map { "step \(index) of \($0)" } }
-    let title = titled(Words.running(run.command) ?? run.command, run.title)
+    let title = titled(Words.job(run.command) ?? run.command, run.title)
     return JobCardModel(
       prefix: title.prefix,
       name: title.name,

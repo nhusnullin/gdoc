@@ -850,7 +850,7 @@ row was asking for a hand the app did not need. The decision is in
   opens its new instance at zero.** The row reads "Updated to v2.29.0.
   Reopens in 5" down to 1, one a second. While the update child or its
   record still holds the reopen the row says "Updated to v2.29.0. Reopens
-  when the update finishes", because a count that began before the child
+  after the update", because a count that began before the child
   ended would run while the bytes were still being written; a guard up at
   zero sends the count back there and it starts again from 5. "Quit and
   reopen" is kept for the one case the reopen did not happen, which is

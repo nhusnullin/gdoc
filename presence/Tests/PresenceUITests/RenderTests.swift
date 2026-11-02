@@ -420,14 +420,14 @@ final class RenderTests: XCTestCase {
   func testTheReopenScenesDrawTheTwoSentences() throws {
     let held = try XCTUnwrap(Scenes.all.first { $0.id == "e12" }, "e12 is not a scene").model()
     XCTAssertEqual(
-      held.notice, "Updated to v2.15.0. Reopens when the update finishes",
+      held.notice, "Updated to v2.15.0. Reopens after the update",
       "e12's row does not say what is holding the reopen")
     XCTAssertTrue(held.header.versionWaiting, "e12 draws no ring while its update child is up")
     XCTAssertNil(held.header.update, "e12 offers a release to take while one is being written")
     XCTAssertEqual(held.header.version, "v2.14.0", "e12's header is not the version running")
     XCTAssertTrue(
       held.now.contains { item in
-        if case .job(_, let card, _) = item { return card.name == "update" }
+        if case .job(_, let card, _) = item { return card.name == "Updating" }
         return false
       }, "e12's NOW does not carry the update as a job")
     XCTAssertFalse(
@@ -842,7 +842,10 @@ final class RenderTests: XCTestCase {
     plate on nothing, so the rows sheet shows the words alone, held open.
     Whether the real wordmark's edges are smooth is a screen's question and
     not a render's: the stand-in has no letters.</p>
-    <p>One record per scene, and each of them its own day: the nine r
+    <p>Twenty scenes since 2026-10-30: the nine r screens and r3l, and the
+    ten e screens, numbered to twelve with no e4, which the specification
+    rules out, and no e7.
+    One record per scene, and each of them its own day: the nine r
     screens are one Saturday told nine times and agree with each other, and
     every e screen is a record of its own, written for the one thing it
     shows. Two counts from two e scenes are two days and not a sum.</p>

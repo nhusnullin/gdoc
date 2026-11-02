@@ -1454,7 +1454,7 @@ final class SessionTests: XCTestCase {
     session.bundleMoved(to: .reopenNeeded("2.16.0"))
     refreshed(session)
     XCTAssertEqual(session.facts.reopen, .held)
-    XCTAssertEqual(session.model.notice, "Updated to v2.16.0. Reopens when the update finishes")
+    XCTAssertEqual(session.model.notice, "Updated to v2.16.0. Reopens after the update")
     XCTAssertEqual(session.tickingEvery, 1, "and the app is asking again every second")
     XCTAssertEqual(pad.opened.count, 0)
 

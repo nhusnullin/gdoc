@@ -20,7 +20,7 @@ public enum BundleState: Sendable, Equatable {
   case same
   /// The disk holds another version, named here, so the notice row reads
   /// one of three sentences: "Updated to X. Reopens in 5" while the count
-  /// runs, "Updated to X. Reopens when the update finishes" while
+  /// runs, "Updated to X. Reopens after the update" while
   /// something holds it, and "Updated to X. Quit and reopen" where the app
   /// is not going to do it itself.
   case reopenNeeded(String)

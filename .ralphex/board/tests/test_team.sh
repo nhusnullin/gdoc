@@ -115,7 +115,7 @@ holds "the operator never pushes, merges or tags" "$operator" \
 reviewer=$(cat "$AGENTS/gdoc-design-reviewer.md" 2>/dev/null)
 holds "the reviewer reads the principles" "$reviewer" \
     "docs/design/2026-10-17-presence-design-principles.md"
-holds "the reviewer reads eighteen images" "$reviewer" "18"
+holds "the reviewer reads twenty images" "$reviewer" "20"
 holds "the reviewer reads the dark renders at 1x" "$reviewer" "dark"
 holds "the light renders follow a finding" "$reviewer" \
     "light appearance only where dark has a finding"

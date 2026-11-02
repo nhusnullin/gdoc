@@ -578,19 +578,20 @@ enum Scenes {
         "The press of Update at 17:05 took the v2.15.0 that r8 found. The bundle on the "
         + "disk already names it while the update child is up, which is the order gdoc "
         + "does it in. So the header draws the ring beside v2.14.0, the one still "
-        + "running, and NOW carries the update as a job of its own. The row above them "
-        + "says the app reopens when the update finishes, and not a count: a count that "
-        + "began before the child ended would run while the bytes are still being "
-        + "written.",
+        + "running, and NOW carries the update as a job of its own, Updating, from the "
+        + "terminal: the app's child is a terminal run to the record, whichever button "
+        + "started it. The row above them says the app reopens after the update, and "
+        + "not a count: a count that began before the child ended would run while the "
+        + "bytes are still being written.",
       fixture: "e12", moment: "2026-10-17T17:05:58Z", alive: [7500],
       facts: machine(updating: true, bundle: .reopenNeeded("2.15.0")),
       ui: UIState(), appearance: nil),
     Scene(
       id: "e11", title: "Updated, and reopening in three seconds",
       caption:
-        "The update ended two seconds ago, so the row counts five seconds down in whole "
-        + "seconds, 3 here. At zero the app opens its new instance and this one quits. "
-        + "The header still says v2.14.0, because that is the app drawing it. Nothing on "
+        "The update has ended, so the row counts five seconds down in whole seconds, "
+        + "3 here; the header still says v2.14.0, because that is the app drawing it, "
+        + "and the glyph beside it is the release again, with no child up. Nothing on "
         + "this screen is for the person to do: the count is a clock the app runs itself "
         + "and acts on. That is the one way the panel's rule against forecasts lets a "
         + "number about the next second on, the way the sign-in's countdown is.",

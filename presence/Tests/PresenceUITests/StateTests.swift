@@ -532,7 +532,7 @@ final class StateTests: XCTestCase {
       "the count's first second is the row's first second")
     XCTAssertEqual(try notice(moved, .counting(1)), "Updated to v2.16.0. Reopens in 1")
     XCTAssertEqual(
-      try notice(moved, .held), "Updated to v2.16.0. Reopens when the update finishes",
+      try notice(moved, .held), "Updated to v2.16.0. Reopens after the update",
       "a hold is a wait and not a hand")
     XCTAssertEqual(
       try notice(moved, .refused), "Updated to v2.16.0. Quit and reopen",
@@ -552,6 +552,26 @@ final class StateTests: XCTestCase {
     XCTAssertEqual(
       Facts(versions: Versions(app: "2.15.0")).reopen, .held,
       "the facts with no standing in them are holding")
+  }
+
+  /// The three sentences fit the notice row at the longest version a
+  /// release can carry. The row is one line at 360 pt and its text runs from
+  /// the glyph column to the content edge, 44 to 348 pt: on 2026-11-02 the
+  /// held sentence read "Reopens when th… finishes" in scene e12, and the
+  /// design review stopped on it. A notice is the one row with no tooltip
+  /// to read the rest in, so it is measured here and not by eye.
+  func testTheReopenSentencesFitTheNoticeRow() {
+    let column: CGFloat = 304
+    for version in ["v2.15.0", "v2.100.0"] {
+      for sentence in [
+        Sentences.reopensIn(version, 5), Sentences.reopensAfterTheUpdate(version),
+        Sentences.quitAndReopen(version),
+      ] {
+        XCTAssertLessThanOrEqual(
+          MiddleTitle.width(sentence, role: Typography.rowTitle), column,
+          "\"\(sentence)\" does not fit the notice row")
+      }
+    }
   }
 
   /// Principle 5 over the four sentences: "Reopens in 5" is a count the app
