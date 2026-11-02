@@ -509,6 +509,96 @@ final class StateTests: XCTestCase {
     XCTAssertNil(asking.banner, "and the question is the only thing under itself")
   }
 
+  // MARK: - The one line about the app itself
+
+  /// The notice row says what the app is doing about the reopen, and asks
+  /// for a hand only where the app is not going to do it itself.
+  ///
+  /// The row said "Quit and reopen" from M23 until the decision of
+  /// 2026-10-30: Nail pressed Update, read it, and the app opened itself
+  /// seven seconds later. The standing is the count's own word and the row
+  /// is where a person reads it.
+  func testTheNoticeRowSaysTheThreeReopenSentences() throws {
+    func notice(_ bundle: BundleState, _ reopen: ReopenStanding) throws -> String? {
+      let facts = Facts(
+        versions: Versions(app: "2.15.0"), gdocPath: Scenes.gdocPath, bundle: bundle,
+        reopen: reopen)
+      return try drawn([], at: "2026-10-17T10:00:00Z", facts: facts).notice
+    }
+
+    let moved = BundleState.reopenNeeded("2.16.0")
+    XCTAssertEqual(
+      try notice(moved, .counting(5)), "Updated to v2.16.0. Reopens in 5",
+      "the count's first second is the row's first second")
+    XCTAssertEqual(try notice(moved, .counting(1)), "Updated to v2.16.0. Reopens in 1")
+    XCTAssertEqual(
+      try notice(moved, .held), "Updated to v2.16.0. Reopens after the update",
+      "a hold is a wait and not a hand")
+    XCTAssertEqual(
+      try notice(moved, .refused), "Updated to v2.16.0. Quit and reopen",
+      "the one case the app is not going to do it itself")
+
+    // The v is the row writing the version as the header does, and a plist
+    // that already says it is not doubled.
+    XCTAssertEqual(
+      try notice(.reopenNeeded("v2.16.0"), .counting(5)), "Updated to v2.16.0. Reopens in 5")
+
+    // The standing is read only under a bundle that moved.
+    XCTAssertNil(
+      try notice(.same, .counting(3)), "nothing moved, so there is nothing to reopen")
+    XCTAssertEqual(try notice(.gone, .counting(3)), "gdoc presence was removed")
+
+    // The first ask answers held, so that is what the facts start at.
+    XCTAssertEqual(
+      Facts(versions: Versions(app: "2.15.0")).reopen, .held,
+      "the facts with no standing in them are holding")
+  }
+
+  /// The three sentences fit the notice row at the longest version a
+  /// release can carry. The row is one line at 360 pt and its text runs from
+  /// the glyph column to the content edge, 44 to 348 pt: on 2026-11-02 the
+  /// held sentence read "Reopens when th… finishes" in scene e12, and the
+  /// design review stopped on it. A notice is the one row with no tooltip
+  /// to read the rest in, so it is measured here and not by eye.
+  func testTheReopenSentencesFitTheNoticeRow() {
+    let column: CGFloat = 304
+    for version in ["v2.15.0", "v2.100.0"] {
+      for sentence in [
+        Sentences.reopensIn(version, 5), Sentences.reopensAfterTheUpdate(version),
+        Sentences.quitAndReopen(version),
+      ] {
+        XCTAssertLessThanOrEqual(
+          MiddleTitle.width(sentence, role: Typography.rowTitle), column,
+          "\"\(sentence)\" does not fit the notice row")
+      }
+    }
+  }
+
+  /// Principle 5 over the four sentences: "Reopens in 5" is a count the app
+  /// runs and acts on at zero, and no sentence of the row forecasts a time
+  /// in words.
+  func testTheReopenSentencesCarryNoForecastWord() throws {
+    // Spelled in pieces so this test is not its own failure, the same way
+    // WordsTests.testNothingPredictsATime spells them.
+    let banned = [
+      "wi" + "ll", "so" + "on", "esti" + "mate", "remai" + "ning", "e" + "ta",
+      "alm" + "ost", "short" + "ly", "expec" + "ted", "any min" + "ute", "le" + "ft",
+    ]
+    let sentences = [
+      Sentences.reopensIn("2.16.0", 5),
+      Sentences.reopensIn("2.16.0", 1),
+      Sentences.reopensAfterTheUpdate("2.16.0"),
+      Sentences.quitAndReopen("2.16.0"),
+    ]
+
+    for sentence in sentences {
+      for needle in banned {
+        XCTAssertFalse(
+          sentence.lowercased().contains(needle), "\"\(sentence)\" carries \"\(needle)\"")
+      }
+    }
+  }
+
   // MARK: - The pieces a test states
 
   private func question(of panel: PanelModel) throws -> QuestionModel {

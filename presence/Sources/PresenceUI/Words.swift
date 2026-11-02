@@ -159,6 +159,19 @@ public enum Words {
     return found
   }
 
+  /// The one job that is not a write and is still a row of its own in NOW:
+  /// `gdoc update`, which the app itself starts. It is not a participle,
+  /// because that set is the writes a person answers for, and it drew as
+  /// the raw command word in scene e12 until 2026-11-02.
+  public static let updating = "Updating"
+
+  /// What a job in NOW is called: a write's participle, the update's own
+  /// word, or none.
+  public static func job(_ command: String?) -> String? {
+    if command == "update" { return updating }
+    return running(command)
+  }
+
   /// Where a command came from, or none where the record did not say, or
   /// said something this version has no word for.
   public static func via(_ value: String?) -> String? {

@@ -51,7 +51,9 @@ final class RenderTests: XCTestCase {
 
     let index = shots.appendingPathComponent("index.html")
     try html(page).write(to: index, atomically: true, encoding: .utf8)
-    XCTAssertEqual(Scenes.all.count, 18, "the screens file holds eighteen scenes that are built")
+    XCTAssertEqual(
+      Scenes.all.count, 20,
+      "the screens file holds eighteen scenes and the reopen count added two")
   }
 
   /// Scene e4 is the hold released without writing, which the
@@ -400,6 +402,65 @@ final class RenderTests: XCTestCase {
       XCTAssertEqual(
         update.tip, "Update to v2.15.0",
         "\(id)'s header forgets the release r8 found")
+    }
+  }
+
+  /// The two sentences the reopen count puts on the notice row, each on a
+  /// screen of its own.
+  ///
+  /// They are the two the app says while it is doing something about the
+  /// bundle that moved: the hold, which is e12, where the update child is
+  /// still writing the bytes, and a second of the count, which is e11. The
+  /// third sentence, "Quit and reopen", is on no screen: it is what the row
+  /// says where the app is not reopening itself, and no still of this day is
+  /// that machine.
+  ///
+  /// The two moments are five seconds apart and the two scenes are in that
+  /// order, because a reviewer reads the page down.
+  func testTheReopenScenesDrawTheTwoSentences() throws {
+    let held = try XCTUnwrap(Scenes.all.first { $0.id == "e12" }, "e12 is not a scene").model()
+    XCTAssertEqual(
+      held.notice, "Updated to v2.15.0. Reopens after the update",
+      "e12's row does not say what is holding the reopen")
+    XCTAssertTrue(held.header.versionWaiting, "e12 draws no ring while its update child is up")
+    XCTAssertNil(held.header.update, "e12 offers a release to take while one is being written")
+    XCTAssertEqual(held.header.version, "v2.14.0", "e12's header is not the version running")
+    XCTAssertTrue(
+      held.now.contains { item in
+        if case .job(_, let card, _) = item { return card.name == "Updating" }
+        return false
+      }, "e12's NOW does not carry the update as a job")
+    XCTAssertFalse(
+      try XCTUnwrap(held.documents, "e12 drew no DOCUMENTS").rows.isEmpty,
+      "e12 draws no document row under the notice")
+
+    let counting = try XCTUnwrap(Scenes.all.first { $0.id == "e11" }, "e11 is not a scene")
+      .model()
+    XCTAssertEqual(
+      counting.notice, "Updated to v2.15.0. Reopens in 3",
+      "e11's row does not count the seconds down")
+    XCTAssertFalse(counting.header.versionWaiting, "e11's update child is gone, so no ring")
+    XCTAssertNotNil(counting.header.update, "e11 drew no way to take a release")
+    XCTAssertEqual(counting.header.version, "v2.14.0", "e11's header is not the version running")
+    XCTAssertFalse(
+      try XCTUnwrap(counting.documents, "e11 drew no DOCUMENTS").rows.isEmpty,
+      "e11 draws no document row under the notice")
+
+    let order = Scenes.all.map(\.id)
+    let first = try XCTUnwrap(order.firstIndex(of: "e12"))
+    let second = try XCTUnwrap(order.firstIndex(of: "e11"))
+    XCTAssertLessThan(first, second, "the count is on the page before the hold that came first")
+  }
+
+  /// The reopen count is said once on the index page, as a decision and not
+  /// a choice. Said once, because a rule in two places is two rules.
+  func testTheReopenRuleIsSaidOnceOnTheIndex() throws {
+    let page = html([])
+    let said = page.components(separatedBy: escaped(Scenes.reopenRule)).count - 1
+    XCTAssertEqual(said, 1, "the reopen rule is on the page \(said) times")
+
+    for part in ["five seconds down", "2026-10-30", "Quit and reopen"] {
+      XCTAssertTrue(Scenes.reopenRule.contains(part), "the rule does not say \(part)")
     }
   }
 
@@ -760,6 +821,7 @@ final class RenderTests: XCTestCase {
       specification drawn.</p>
       <p>\(escaped(Scenes.settingsRowRule))</p>
       <p>\(escaped(Scenes.markRule))</p>
+      <p>\(escaped(Scenes.reopenRule))</p>
     </section>
     <p>Drawn from the records under Tests/PresenceUITests/Scenes at 2x. One
     image per scene and appearance, which is the whole panel: nothing in it
@@ -780,7 +842,10 @@ final class RenderTests: XCTestCase {
     plate on nothing, so the rows sheet shows the words alone, held open.
     Whether the real wordmark's edges are smooth is a screen's question and
     not a render's: the stand-in has no letters.</p>
-    <p>One record per scene, and each of them its own day: the nine r
+    <p>Twenty scenes since 2026-10-30: the nine r screens and r3l, and the
+    ten e screens, numbered to twelve with no e4, which the specification
+    rules out, and no e7.
+    One record per scene, and each of them its own day: the nine r
     screens are one Saturday told nine times and agree with each other, and
     every e screen is a record of its own, written for the one thing it
     shows. Two counts from two e scenes are two days and not a sum.</p>

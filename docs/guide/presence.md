@@ -412,10 +412,13 @@ nothing the app chose on your behalf. The glyph is pressable in all three of
 its states, because `gdoc update` is the command that asks GitHub: a glyph
 that did nothing until the app's own six hours had passed would make you wait
 for a release you already know is out. While the child is up the header draws
-a ring beside the version and still names the version that is installed. A
-run that installed something relaunches the app, so the version on the line
-is the one you are running. A run that found nothing leaves the check for a
-second and the words "This is the newest release".
+a ring beside the version and still names the version that is installed. Once
+the run has written the new app, which is near the end of it, the row above the
+panel says `Updated to <version>. Reopens after the update`. Once the
+run has ended the row counts five seconds down, "Reopens in 5" to 1, one a
+second. At zero the app comes back by
+itself with the new version on the line. A run that found nothing leaves the
+check for a second and the words "This is the newest release".
 Install extension is `gdoc update --desktop`, which writes the Claude
 Desktop extension and hands it to Desktop. Whether Desktop then loads it is
 not something the app is told; whether the handing over happened is, and that
@@ -605,13 +608,14 @@ after it is refused, with the line to write instead.
 
 Every later `gdoc update` refreshes the app along with the binary, out of the one
 zip it already verified. If the app is open while that happens, it notices the
-new bundle under itself and comes back on its own: it waits two seconds, checks
-the bundle on disk is the same app and still signed, opens that path as a new
-instance without bringing it to the front, and quits once the open succeeded. It
-does this at most once per version in ten minutes, and the second instance of a
-pair always quits, so you are left with exactly one app at the new version. If
-the open does not succeed, the panel keeps a row saying `Updated to <version>.
-Quit and reopen`, and quitting it and opening it again is all that is needed.
+new bundle under itself and comes back on its own: the row above the panel counts
+five seconds down, one a second, and at zero it checks the bundle on disk is the
+same app and still signed, opens that path as a new instance without bringing it
+to the front, and quits once the open succeeded. It does this at most once per
+version in ten minutes, and the second instance of a pair always quits, so you
+are left with exactly one app at the new version. The row reads `Updated to
+<version>. Quit and reopen` only when the open did not happen, and quitting it
+and opening it again is all that is needed then.
 
 If the app cannot be written, the update says so as a warning and names both
 paths. The binary is still updated. The two can sit at different versions until

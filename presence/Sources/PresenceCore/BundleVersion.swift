@@ -7,8 +7,10 @@
 // comparison is a pure function so the reading and the deciding are not the
 // same thing, and so every answer is reachable from a test.
 //
-// This milestone never relaunches itself. Whether that swap is safe while the
-// app runs is M24's question, asked after it is measured.
+// The app reopens itself on `.reopenNeeded`, once the five seconds of
+// ReopenCount have been read down to zero on the notice row. What the row
+// says in those seconds is PanelModel.notice's, out of `Facts.reopen`, and
+// whether the open happens at all is PresenceCore/RelaunchPolicy's.
 
 import Foundation
 
@@ -16,8 +18,11 @@ import Foundation
 public enum BundleState: Sendable, Equatable {
   /// The disk holds the version that is running. Nothing is said.
   case same
-  /// The disk holds another version, named here, so the row reads
-  /// "Updated to X. Quit and reopen".
+  /// The disk holds another version, named here, so the notice row reads
+  /// one of three sentences: "Updated to X. Reopens in 5" while the count
+  /// runs, "Updated to X. Reopens after the update" while
+  /// something holds it, and "Updated to X. Quit and reopen" where the app
+  /// is not going to do it itself.
   case reopenNeeded(String)
   /// There is no bundle, or none that names a version, so the row reads that
   /// gdoc presence was removed.

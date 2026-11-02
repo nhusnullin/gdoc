@@ -158,8 +158,9 @@ enum Scenes {
       + "the record says a document is gone, so nothing is struck through and nothing "
       + "says why.",
     "The header counts the sign-in's three minutes down, as product decision 39 asks. "
-      + "Principle 5 allows facts and not promises, and the countdown is the one number in "
-      + "the panel about something that has not happened.",
+      + "Principle 5 allows facts and not promises, and a countdown is allowed as a clock "
+      + "the app itself runs and acts on, which is the form the reopen count took on "
+      + "2026-10-30. Whether this one belongs on the panel is still yours.",
     "SETTINGS is pinned above DOCUMENTS on the two screens the group is the whole of the "
       + "panel on, no token and a sign-in in flight, which is e5 and e8. It is the one "
       + "place Quit is not the last row in the panel, and the plan of the second morning "
@@ -185,6 +186,20 @@ enum Scenes {
     + "overruled that day. What follows from it is in the bar of every screen: a live "
     + "watch and an idle machine are the same image, so the menu bar tells four states "
     + "apart and not five."
+
+  /// What the notice row does after an update, said once on the index page
+  /// as a decision rather than a choice.
+  ///
+  /// The row asked the person to quit and reopen until 2026-10-30, and the
+  /// app was reopening itself seven seconds later all along. A reviewer who
+  /// knows the old sentence needs to read which of the three is current.
+  static let reopenRule =
+    "The notice row after an update counts five seconds down, and the app reopens itself "
+    + "at zero, which was decided on 2026-10-30. Scenes e12 and e11 are the two sentences "
+    + "it says on the way: the hold while the update child is still writing, and a second "
+    + "of the count. \"Quit and reopen\" is the third, kept for the one case the reopen "
+    + "did not happen, and no scene draws it: it has shipped since M23 and no scene drew "
+    + "it then."
 
   /// How SETTINGS's rows are chosen, said once on the index page because it
   /// is the one section whose length changes from screen to screen, and a
@@ -280,6 +295,8 @@ enum Scenes {
     pairing: [String: String] = SceneDocuments.pairing,
     updateChecked: Date? = nil,
     updating: Bool = false,
+    bundle: BundleState = .same,
+    reopen: ReopenStanding = .held,
     updateRun: UpdateRun? = nil,
     extensionRun: ExtensionRun? = nil,
     logo: Data? = SceneMark.standIn,
@@ -302,6 +319,8 @@ enum Scenes {
       signIn: signIn,
       pairing: pairing,
       signedInAt: signedInAt,
+      bundle: bundle,
+      reopen: reopen,
       updating: updating,
       updateChecked: updateChecked,
       updateRun: updateRun,
@@ -553,6 +572,32 @@ enum Scenes {
       ui: UIState(
         question: .signOut, questionAt: Date(timeIntervalSince1970: 1_792_259_999)),
       appearance: nil),
+    Scene(
+      id: "e12", title: "Updated, and the update still running",
+      caption:
+        "The press of Update at 17:05 took the v2.15.0 that r8 found. The bundle on the "
+        + "disk already names it while the update child is up, which is the order gdoc "
+        + "does it in. So the header draws the ring beside v2.14.0, the one still "
+        + "running, and NOW carries the update as a job of its own, Updating, from the "
+        + "terminal: the app's child is a terminal run to the record, whichever button "
+        + "started it. The row above them says the app reopens after the update, and "
+        + "not a count: a count that began before the child ended would run while the "
+        + "bytes are still being written.",
+      fixture: "e12", moment: "2026-10-17T17:05:58Z", alive: [7500],
+      facts: machine(updating: true, bundle: .reopenNeeded("2.15.0")),
+      ui: UIState(), appearance: nil),
+    Scene(
+      id: "e11", title: "Updated, and reopening in three seconds",
+      caption:
+        "The update has ended, so the row counts five seconds down in whole seconds, "
+        + "3 here; the header still says v2.14.0, because that is the app drawing it, "
+        + "and the glyph beside it is the release again, with no child up. Nothing on "
+        + "this screen is for the person to do: the count is a clock the app runs itself "
+        + "and acts on. That is the one way the panel's rule against forecasts lets a "
+        + "number about the next second on, the way the sign-in's countdown is.",
+      fixture: "e11", moment: "2026-10-17T17:06:03Z", alive: [],
+      facts: machine(bundle: .reopenNeeded("2.15.0"), reopen: .counting(3)),
+      ui: UIState(), appearance: nil),
   ]
 }
 

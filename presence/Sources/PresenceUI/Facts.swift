@@ -270,6 +270,11 @@ public struct Facts: Sendable, Equatable {
   /// Whether the bundle under the running app is still the one it launched
   /// from.
   public let bundle: BundleState
+  /// What the app is doing about a bundle that moved: holding, counting the
+  /// seconds down, or not reopening itself at all. It means nothing under
+  /// `.same` or `.gone`, and the default is held because that is what the
+  /// first ask of the policy answers.
+  public let reopen: ReopenStanding
   /// Whether the record has held a line from a gdoc at a schema this app
   /// does not read. The line was skipped, so the one thing left to say is
   /// that it was there.
@@ -316,6 +321,7 @@ public struct Facts: Sendable, Equatable {
     noteFaults: [String: NoteFault] = [:],
     signedInAt: Date? = nil,
     bundle: BundleState = .same,
+    reopen: ReopenStanding = .held,
     newerRecord: Bool = false,
     unstoppable: Set<String> = [],
     updating: Bool = false,
@@ -341,6 +347,7 @@ public struct Facts: Sendable, Equatable {
     self.noteFaults = noteFaults
     self.signedInAt = signedInAt
     self.bundle = bundle
+    self.reopen = reopen
     self.newerRecord = newerRecord
     self.unstoppable = unstoppable
     self.updating = updating

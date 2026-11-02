@@ -1902,7 +1902,10 @@ child has ended, or at once when the bundle changed with no child up, and
 it is the relauncher's settle: the open happens at zero and not two seconds
 later. While a relaunch is held by a guard that can clear, the update still
 running or the child still alive, the row says "Updated to v2.29.0. Reopens
-when the update finishes". Only when the relaunch was refused for good, the
+after the update" (amended 2026-11-02 from "Reopens when the update
+finishes", which the design review found cut mid-word on the 360 pt row in
+scene e12: the words changed, the rule did not). Only when the relaunch was
+refused for good, the
 identifier or the signature on disk is not this app's, or this version was
 already tried within ten minutes, or when the open itself failed, does the
 row say "Updated to v2.29.0. Quit and reopen", as it does today. The

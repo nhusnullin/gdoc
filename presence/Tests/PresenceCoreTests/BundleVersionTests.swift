@@ -16,7 +16,7 @@ final class BundleVersionTests: XCTestCase {
     XCTAssertEqual(BundleVersion.check(running: "0.0.0", onDisk: "0.0.0"), .same)
     XCTAssertEqual(
       BundleVersion.check(running: "2.13.0", onDisk: "2.14.0"), .reopenNeeded("2.14.0"),
-      "the person quits and reopens; this milestone never relaunches itself")
+      "the app reopens itself once the count is down; the row says so")
     XCTAssertEqual(
       BundleVersion.check(running: "2.14.0", onDisk: "2.13.0"), .reopenNeeded("2.13.0"),
       "a rollback is a difference like any other, and the app says which version is there")

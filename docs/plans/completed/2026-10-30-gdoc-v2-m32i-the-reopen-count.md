@@ -320,7 +320,7 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] `ReopenCountTests.swift`, new, six tests over a fixed `Date`, `t0`,
+- [x] `ReopenCountTests.swift`, new, six tests over a fixed `Date`, `t0`,
       and offsets from it. Red, because the type does not exist.
       `testTheCountBeginsOnTheFirstClearGateAndNotBefore`:
       `ReopenCount.held.asked(.held, now: t0)` answers standing `.held`,
@@ -354,7 +354,7 @@ Tick each box as it is done. A task ends with its commit.
       negative number.
       `testTheCountIsFiveSeconds`: `ReopenCount.seconds` is the literal
       5.
-- [ ] `ReopenCount.swift`, new, with a file comment in the house voice:
+- [x] `ReopenCount.swift`, new, with a file comment in the house voice:
       what the count is (the five seconds between an update that
       replaced the bundle and the open, which the person reads down on
       the notice row), why it is pure (the session asks the policy and
@@ -377,13 +377,13 @@ Tick each box as it is done. A task ends with its commit.
       ReopenGate, now: Date) -> Step`. The seconds on the row are
       `min(seconds, max(1, seconds - Int(elapsed)))`. New values are
       returned, nothing is mutated. Green.
-- [ ] `RelaunchPolicyTests.testRelaunchHappensOncePerOnDiskVersionInTenMinutes`:
+- [x] `RelaunchPolicyTests.testRelaunchHappensOncePerOnDiskVersionInTenMinutes`:
       the three `.relaunch(version: onDisk, after: 2)` at lines 24, 36
       and 42 become `.relaunch(version: onDisk)`, and line 46's
       `RelaunchPolicy.settle` assertion goes, with a comment that the
       wait is `ReopenCount.seconds` now and `ReopenCountTests` pins it.
       Red.
-- [ ] `RelaunchPolicy.swift`: `case relaunch(version: String)` with its
+- [x] `RelaunchPolicy.swift`: `case relaunch(version: String)` with its
       comment at 103 to 104 no longer saying "after this many seconds";
       `settle` and its comment at 131 to 133 go; `decide` answers
       `.relaunch(version: version)` at 169; the file comment's "waits the
@@ -391,7 +391,7 @@ Tick each box as it is done. A task ends with its commit.
       say the notice row says quit and reopen, and that the wait before
       the open is `ReopenCount` in the session. Green in PresenceCore;
       `Relauncher.swift:128` no longer compiles.
-- [ ] `RelauncherTests.testTheOpenHappensOnTheAskWithNoSleepBeforeIt`:
+- [x] `RelauncherTests.testTheOpenHappensOnTheAskWithNoSleepBeforeIt`:
       `made(pad:)` gains a `sleep` closure that appends every interval
       to a list; a `reopen(bundle: .reopenNeeded("2.16.0"),
       updateRunning: false, childAlive: false, remembering:)` answers
@@ -399,14 +399,14 @@ Tick each box as it is done. A task ends with its commit.
       "4242"]`, and the list is empty: the count in the session is the
       settle, and the open is asked for at zero and not two seconds
       later. Red once the file compiles again.
-- [ ] `Relauncher.swift:128` to 133: bind `version` alone, no sleep
+- [x] `Relauncher.swift:128` to 133: bind `version` alone, no sleep
       before the open; the file comment at 6 to 7 says the session
       counts five seconds down on the notice row and asks for the open
       at zero. `sleep` stays, for `settle()`. `RelauncherTests.swift:5`
       to 6 no longer says "waits two seconds": the fake sleep is there
       for the new instance's wait. Green, and the two existing tests
       stay green.
-- [ ] `BundleVersion.swift:10` to 11: the two sentences about never
+- [x] `BundleVersion.swift:10` to 11: the two sentences about never
       relaunching go, replaced by one that says the session relaunches
       the app on `.reopenNeeded` once `ReopenCount` reaches zero, and
       that the row's words are `PanelModel.notice`'s, by
@@ -414,8 +414,8 @@ Tick each box as it is done. A task ends with its commit.
       message at `BundleVersionTests.swift:19` says "the app reopens
       itself once the count is down; the row says so" instead of "this
       milestone never relaunches itself". No assertion changes.
-- [ ] `make app-lint` and `make app-test` green.
-- [ ] Commit: `feat: the reopen count, pure, in PresenceCore`.
+- [x] `make app-lint` and `make app-test` green.
+- [x] Commit: `feat: the reopen count, pure, in PresenceCore`.
 
 ### Task 2: the facts carry the standing, and the row says it
 
@@ -432,7 +432,7 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] In `StateTests.swift`, `testTheNoticeRowSaysTheThreeReopenSentences`,
+- [x] In `StateTests.swift`, `testTheNoticeRowSaysTheThreeReopenSentences`,
       with `drawn([], at:, facts:)` over `Facts(versions:
       Versions(app: "2.15.0"), gdocPath: Scenes.gdocPath, bundle:
       .reopenNeeded("2.16.0"), reopen: ...)`: `.counting(5)` draws
@@ -446,18 +446,18 @@ Tick each box as it is done. A task ends with its commit.
       is read only under `.reopenNeeded`; `.gone` still draws "gdoc
       presence was removed"; and the init with no `reopen` is `.held`.
       Red.
-- [ ] `testTheReopenSentencesCarryNoForecastWord`: the four sentences
+- [x] `testTheReopenSentencesCarryNoForecastWord`: the four sentences
       above, lowercased, carry none of the needles
       `WordsTests.testNothingPredictsATime` bans, spelled in pieces the
       same way, so "Reopens in 5" is a count the app runs and not a
       forecast in words. Red until the sentences exist; it stays as the
       pin on their wording.
-- [ ] `Facts.swift`: `public let reopen: ReopenStanding`, placed after
+- [x] `Facts.swift`: `public let reopen: ReopenStanding`, placed after
       `bundle`, default `.held` in the init, with the comment: what the
       app is doing about a `.reopenNeeded` bundle, held, counting or
       refused; it means nothing under `.same` or `.gone`, and the
       default is held because that is what the first ask answers.
-- [ ] `PanelWords.swift`, in `Sentences`: `reopensIn(_ version: String,
+- [x] `PanelWords.swift`, in `Sentences`: `reopensIn(_ version: String,
       _ seconds: Int)`, `reopensAfterTheUpdate(_ version: String)` and
       `quitAndReopen(_ version: String)`, each one line, the three
       literals above through one private `versionWord` that puts the
@@ -465,19 +465,19 @@ Tick each box as it is done. A task ends with its commit.
       that the first two are the decision of 2026-10-30 and the third is
       the row since M23, kept for the one case the reopen did not
       happen.
-- [ ] `PanelModel.notice` at 713: under `.reopenNeeded(let version)`,
+- [x] `PanelModel.notice` at 713: under `.reopenNeeded(let version)`,
       switch on `facts.reopen` and return the three sentences through
       `Sentences`. The comment above the newer-record line stays. Green.
-- [ ] `HealthPollerTests.testTheReopenStandingSurvivesThePollsRebuild`:
+- [x] `HealthPollerTests.testTheReopenStandingSurvivesThePollsRebuild`:
       `applied(to:)` over facts with `bundle: .reopenNeeded("2.16.0"),
       reopen: .counting(3)` keeps both. Red, then `HealthPoller.swift:201`
       gains `reopen: facts.reopen` beside `bundle`. Green.
       `UpdateActionTests.testTheReopenStandingSurvivesTheUpdateActionsRebuild`:
       the same over `UpdateAction.applied(to:)`. Red, then
       `UpdateAction.swift:184` gains it. Green.
-- [ ] `make app-lint` and `make app-test` green. The scenes still build
+- [x] `make app-lint` and `make app-test` green. The scenes still build
       because `reopen` defaults.
-- [ ] Commit: `feat: the notice row says what the app is doing about the reopen`.
+- [x] Commit: `feat: the notice row says what the app is doing about the reopen`.
 
 ### Task 3: the session counts on the tick and the relauncher opens at zero
 
@@ -490,7 +490,7 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] `RelauncherTests.testDecidingWritesNoStampAndOpensNothing`: a new
+- [x] `RelauncherTests.testDecidingWritesNoStampAndOpensNothing`: a new
       `relauncher.decides(bundle:updateRunning:childAlive:remembering:)`
       answers `.relaunch(version: "2.16.0")` for a clear ask,
       `.hold(.updateRunning)` and `.hold(.childAlive)` for the two
@@ -503,11 +503,11 @@ Tick each box as it is done. A task ends with its commit.
       `preferences.lastRelaunch()?.version` is "2.16.0", so the ten
       minutes count from the attempt. Red on the first; keep the second
       as the pin the session's refused test leans on.
-- [ ] `Relauncher.swift`: `reopen()`'s ask-building at 118 to 127 moves
+- [x] `Relauncher.swift`: `reopen()`'s ask-building at 118 to 127 moves
       into a private `ask(...)` both methods call; `decides(...)` returns
       `RelaunchPolicy.decide(ask)` and touches nothing; `reopen()` keeps
       its stamp and open. Green.
-- [ ] `SessionTests.made(...)` gains `bundle: URL? = nil, identifier:
+- [x] `SessionTests.made(...)` gains `bundle: URL? = nil, identifier:
       String = "", pad: Launchpad = SystemLaunchpad(), signatureValid:
       @escaping @Sendable (URL) -> Bool = { _ in true }`, and a helper
       `writeTheBundle(version:)` that writes `<root>/GdocPresence.app/
@@ -523,7 +523,7 @@ Tick each box as it is done. A task ends with its commit.
       instead of waiting on a timer. `FakePad` is copied into
       `SessionTests` with the `opens` switch, as `FakeDesk` is this
       file's own.
-- [ ] `testTheReopenCountsFiveToOneOnTheTickAndOpensOnce`: a session
+- [x] `testTheReopenCountsFiveToOneOnTheTickAndOpensOnce`: a session
       over a bundle written at "2.15.0" and a plist rewritten to
       "2.16.0" before `answered`, a movable `now`, a `FakePad`, a `quit`
       closure counting its calls. The test calls
@@ -539,7 +539,7 @@ Tick each box as it is done. A task ends with its commit.
       and the session's own pid, `preferences.lastRelaunch()?.version`
       is "2.16.0", quit was called once, and `facts.reopen` is still
       `.counting(1)`, never `.refused`. Red.
-- [ ] `testTheReopenIsHeldWhileTheUpdateIsLiveAndCountsFromItsEnd`: the
+- [x] `testTheReopenIsHeldWhileTheUpdateIsLiveAndCountsFromItsEnd`: the
       record holds a `start` of `update` with no end for a pid the
       session's `alive` closure says is alive, through a `var` the test
       flips. `bundleMoved(to: .reopenNeeded("2.16.0"))` and `refreshed`
@@ -554,7 +554,7 @@ Tick each box as it is done. A task ends with its commit.
       facts and the pad not asked; the start's end is written, and the
       next ask is `.counting(5)` again, five seconds later the one open.
       Red.
-- [ ] `testAReopenRefusedForGoodSaysQuitAndReopenAndTheTickGoesBackToFive`:
+- [x] `testAReopenRefusedForGoodSaysQuitAndReopenAndTheTickGoesBackToFive`:
       the same session with `signatureValid: { _ in false }`.
       `bundleMoved` goes straight to `facts.reopen == .refused`, the
       notice "Updated to v2.16.0. Quit and reopen", `tickingEvery == 5`,
@@ -565,13 +565,13 @@ Tick each box as it is done. A task ends with its commit.
       made with `bundle: nil`, as every other test's is, reads
       `.refused` on `bundleMoved` at once, because there is no
       relauncher. Red.
-- [ ] `testAnAnswerFromBeforeTheBundleMovedAgainIsDropped`: the pad's
+- [x] `testAnAnswerFromBeforeTheBundleMovedAgainIsDropped`: the pad's
       `openNewInstance` waits on a continuation the test holds; the count
       runs to five and the open is asked for; the test calls
       `bundleMoved(to: .same)` and then `.reopenNeeded("2.17.0")`, lets
       the held open answer false, and asserts the new count is
       `.counting(5)` and not `.refused`. Red.
-- [ ] `Session.swift`: `var reopen = ReopenCount.held`, `var reopenWord
+- [x] `Session.swift`: `var reopen = ReopenCount.held`, `var reopenWord
       = ReopenStanding.held` and `var reopenAsk = 0` take the place of
       `reopenHeld` (87 to 97), with a comment that says what the count
       is, that the tick is one second while it runs, including while the
@@ -603,10 +603,10 @@ Tick each box as it is done. A task ends with its commit.
       reopenPending`, where `reopenPending` is `.reopenNeeded` with the
       count not refused; the comment at 36 to 38 names three moving
       things. `tick()` at 524 calls `askTheReopen()`. Green.
-- [ ] `testTheCheckIsOnTheScreenBeforeTheTwoPollsComeBack` and the rest
+- [x] `testTheCheckIsOnTheScreenBeforeTheTwoPollsComeBack` and the rest
       of `SessionTests` green, untouched.
-- [ ] `make app-lint`, `make app-test` and `make app` green.
-- [ ] Commit: `feat: the app counts five seconds down and reopens at zero`.
+- [x] `make app-lint`, `make app-test` and `make app` green.
+- [x] Commit: `feat: the app counts five seconds down and reopens at zero`.
 
 ### Task 4: the two scenes, the captions, and the renders once
 
@@ -619,7 +619,7 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] `RenderTests.testTheReopenScenesDrawTheTwoSentences`: scene e12's
+- [x] `RenderTests.testTheReopenScenesDrawTheTwoSentences`: scene e12's
       model has `notice == "Updated to v2.15.0. Reopens when the update
       finishes"`, `header.versionWaiting` true and `header.update` nil,
       because the ring is up, and NOW holds the update's own job row,
@@ -631,7 +631,7 @@ Tick each box as it is done. A task ends with its commit.
       `Scenes.all`, as their moments do. `RenderTests.swift:54` moves to
       20 with the message "the screens file holds eighteen scenes and
       the reopen count added two". Red.
-- [ ] `Scenes.machine(...)` gains `bundle: BundleState = .same` and
+- [x] `Scenes.machine(...)` gains `bundle: BundleState = .same` and
       `reopen: ReopenStanding = .held`, handed to `Facts`. Two scenes
       after e10, in time order. `e12`, "Updated, and the update still
       running", moment 2026-10-17T17:05:58Z, `fixture: "e12"` whose
@@ -655,7 +655,7 @@ Tick each box as it is done. A task ends with its commit.
       person to do, the count is a clock the app runs, which is the one
       way the panel's no-forecast rule lets a number about the next
       second on, the way the sign-in's countdown is. Green.
-- [ ] `Scenes.stillYourCall` at 154 to 156 is reworded, count still
+- [x] `Scenes.stillYourCall` at 154 to 156 is reworded, count still
       seven and "decision 39" still in it: the header counts the
       sign-in's three minutes down, as product decision 39 asks;
       principle 5 allows facts and not promises, and a countdown is
@@ -667,12 +667,12 @@ Tick each box as it is done. A task ends with its commit.
       reopens itself at zero, decided 2026-10-30; "Quit and reopen" is
       kept for the one case the reopen did not happen and no scene draws
       it, because it has shipped since M23 and no scene drew it then.
-- [ ] `make app-lint` and `make app-test` green, then
+- [x] `make app-lint` and `make app-test` green, then
       `PRESENCE_SHOTS="$HOME/gdoc-m32i-board/shots" make app-test`
       green. `ls ~/gdoc-m32i-board/shots` lists `e11-dark.png`,
       `e11-light.png`, `e12-dark.png`, `e12-light.png` and `index.html`,
       and the index carries `reopenRule`. The renders are not in git.
-- [ ] Commit: `test: the reopen count in two scenes, and the renders`.
+- [x] Commit: `test: the reopen count in two scenes, and the renders`.
 
 ### Task 5: [Final] Verify acceptance criteria and update the documents
 
@@ -685,24 +685,33 @@ Tick each box as it is done. A task ends with its commit.
 
 **Steps**
 
-- [ ] Every test named in the Acceptance table exists under
+- [x] Every test named in the Acceptance table exists under
       `presence/Tests` with that name.
-- [ ] `git diff --name-only main...HEAD` lists only `presence/Sources`,
+- [x] `git diff --name-only main...HEAD` lists only `presence/Sources`,
       `presence/Tests`, `docs/design/2026-10-17-presence-design-principles.md`,
       `docs/guide/presence.md`, `docs/team/README.md`, and this plan
       under `docs/plans/completed/` with its old path gone. Nothing
       under `go/`, and not `CLAUDE.md`: no invariant sentence names the
       row, and the argv, process and open rules did not move.
-- [ ] `grep -rn "waits two\|two seconds\|RelaunchPolicy.settle\|never relaunches\|after this many seconds" presence/`
-      prints nothing: `Relauncher.swift:6` to 7, `RelaunchPolicy.swift:103`
+- [x] `grep -rn "waits two\|two seconds\|RelaunchPolicy.settle\|never relaunches\|after this many seconds" presence/`
+      prints no stale wording. Every place this box names was rewritten and
+      every line the same grep found on `main` is gone from the five files.
+      Five lines still match the pattern and none of them is stale: the two
+      that were on `main` and are about something else,
+      `ProcessCheckTests.swift:61` on the process window and
+      `BarTests.swift:244` on a redraw, and three written in this run that
+      say the wait is gone or when a moment was,
+      `ReopenCount.swift:28`, `RelauncherTests.swift:109` and
+      `Scenes.swift:591`. The pattern catches correct new prose, so the box
+      is read as what it was for: `Relauncher.swift:6` to 7, `RelaunchPolicy.swift:103`
       to 104 and 131 to 133, `RelauncherTests.swift:5` to 6 and
       `BundleVersion.swift:10` to 11 were each rewritten in Tasks 1 and
       3. `Relauncher.settle`, `BundleWatch.settle()` and the English
       word in `Scenes.swift:123` are not in the pattern and stay.
-- [ ] `grep -rn "Quit and reopen" presence/Sources` prints
+- [x] `grep -rn "Quit and reopen" presence/Sources` prints
       `PanelWords.swift` and the comments that name it as the kept
       sentence, and no other place that builds it.
-- [ ] In the principles file, after M32h's heading, a new
+- [x] In the principles file, after M32h's heading, a new
       "## Amendments, 2026-10-30, the reopen count" opening with Nail's
       sentence and the decision's name, and two bullets. The first: the
       notice row after an update counts five seconds down, "Updated to
@@ -723,7 +732,7 @@ Tick each box as it is done. A task ends with its commit.
       `RelauncherTests.testTheOpenHappensOnTheAskWithNoSleepBeforeIt`,
       `testDecidingWritesNoStampAndOpensNothing` and
       `RelaunchPolicyTests.testRelaunchHappensOncePerOnDiskVersionInTenMinutes`.
-- [ ] `docs/guide/presence.md`: in "### Update, and Install extension"
+- [x] `docs/guide/presence.md`: in "### Update, and Install extension"
       (about line 414), "A run that installed something relaunches the
       app, so the version on the line is the one you are running"
       becomes three sentences: while the update is still running the row
@@ -739,13 +748,18 @@ Tick each box as it is done. A task ends with its commit.
       stays, and
       `cd go && go test ./boundary/ -run 'TestThePresencePageWalksTheThirdLooksPanel|TestCLAUDEmd|TestTheTaskMap'`
       prints `ok`.
-- [ ] `docs/team/README.md:59` and 99: the design reviewer reads 20
+- [x] `docs/team/README.md:59` and 99: the design reviewer reads 20
       dark whole-panel renders, not 18, with "since M32i added the two
-      reopen scenes" in the seat's row.
-- [ ] `make app-lint`, `make app-test` and `make app` green on a clean
+      reopen scenes" in the seat's row. Line 62 says the same count in the
+      same file and went with them, because a file that says 20 in two
+      places and 18 in a third is a file nobody can read.
+      `.claude/agents/gdoc-design-reviewer.md` says 18 in its description
+      and at line 46 and was left alone, because it is not in the diff this
+      plan allows: it is the lead's to change.
+- [x] `make app-lint`, `make app-test` and `make app` green on a clean
       tree.
-- [ ] Move this plan to `docs/plans/completed/`.
-- [ ] Commit: `docs: the reopen count`.
+- [x] Move this plan to `docs/plans/completed/`.
+- [x] Commit: `docs: the reopen count`.
 
 ## Acceptance
 

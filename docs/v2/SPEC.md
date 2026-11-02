@@ -145,7 +145,7 @@ remembers a hash of the refresh token it was held under and is dropped when
 the sign-in changes, so no account ever posts another's held write. `gdoc
 auth logout` removes the token and nothing else. The app relaunches itself
 after an update, and since 2026-10-30 the notice row counts the five seconds
-down to it, "Reopens in 5" to 1, says "Reopens when the update finishes"
+down to it, "Reopens in 5" to 1, says "Reopens after the update"
 while the update still runs, and says "Quit and reopen" only when the reopen
 did not happen. Decided 2026-10-17, DECISIONS.md, the panel entry, and
 2026-10-30, the reopen count.

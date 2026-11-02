@@ -1,6 +1,6 @@
 ---
 name: gdoc-design-reviewer
-description: "The reviewer who drew nothing. Call it after a presence milestone's renders are made, over the 18 dark whole-panel images and the index page's captions, before anything is shown to Nail. It reads the principles checklist and rates each finding blocking, should-fix or note. Read only: it never fixes and never draws."
+description: "The reviewer who drew nothing. Call it after a presence milestone's renders are made, over the 20 dark whole-panel images and the index page's captions, before anything is shown to Nail. It reads the principles checklist and rates each finding blocking, should-fix or note. Read only: it never fixes and never draws."
 tools:
   - Read
 model: sonnet
@@ -32,8 +32,8 @@ yesterday's screens.
    on that page. Read the captions as text and never as pixels: an image costs
    far more than its own caption and tells you less about it.
 3. The dark whole-panel renders at 1x, `$PRESENCE_SHOTS/<scene>-dark.png`. There
-   are 18 scenes, one image each, and the image is the whole panel as the person
-   opens it. Read all 18 and no more.
+   are 20 scenes, one image each, and the image is the whole panel as the person
+   opens it. Read all 20 and no more.
 4. The light appearance only where dark has a finding: `<scene>-light.png` for
    that one scene, to see whether the finding is the palette's or the layout's.
    Principle 8 says the two palettes are not one inverted, so a layout finding

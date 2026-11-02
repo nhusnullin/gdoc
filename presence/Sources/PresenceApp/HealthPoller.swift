@@ -208,6 +208,7 @@ public actor HealthPoller {
       noteFaults: facts.noteFaults,
       signedInAt: facts.signedInAt,
       bundle: facts.bundle,
+      reopen: facts.reopen,
       newerRecord: facts.newerRecord,
       unstoppable: facts.unstoppable,
       updating: facts.updating,

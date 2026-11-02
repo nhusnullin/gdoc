@@ -54,6 +54,13 @@ final class WordsTests: XCTestCase {
     XCTAssertEqual(Words.running("annotate"), "Commenting")
 
     XCTAssertNil(Words.running("read"))
+
+    // The update is a job of its own in NOW and not a write: it has a word
+    // there and none among the participles.
+    XCTAssertNil(Words.running("update"))
+    XCTAssertEqual(Words.job("update"), "Updating")
+    XCTAssertEqual(Words.job("publish"), "Publishing")
+    XCTAssertNil(Words.job("read"))
     XCTAssertNil(Words.running(nil))
   }
 

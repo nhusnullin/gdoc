@@ -724,7 +724,15 @@ extension PanelModel {
   private static func notice(_ facts: Facts) -> String? {
     switch facts.bundle {
     case .same: break
-    case .reopenNeeded(let version): return "Updated to \(version). Quit and reopen"
+    case .reopenNeeded(let version):
+      // What the app is doing about it, which is a count it runs itself on
+      // every tick and acts on at zero. "Quit and reopen" is the one answer
+      // left where it is not going to.
+      switch facts.reopen {
+      case .counting(let seconds): return Sentences.reopensIn(version, seconds)
+      case .held: return Sentences.reopensAfterTheUpdate(version)
+      case .refused: return Sentences.quitAndReopen(version)
+      }
     case .gone: return "gdoc presence was removed"
     }
     // The app on the disk comes first, because that is the one a person can
