@@ -1196,18 +1196,20 @@ func TestThePollReadsTheListingBeforeTheDocument(t *testing.T) {
 	}
 }
 
-func TestTheWaitIntervalIsTwoSeconds(t *testing.T) {
+func TestTheWaitIntervalIsOneSecond(t *testing.T) {
 	// The literal, never the constant: a test that read waitInterval would
-	// follow it wherever somebody moved it. Nail's decision of 2026-09-18.
-	if waitInterval != 2*time.Second {
-		t.Fatalf("waitInterval is %v, want 2s", waitInterval)
+	// follow it wherever somebody moved it. Nail's decision of 2026-11-03,
+	// halving the 2026-09-18 interval again.
+	if waitInterval != time.Second {
+		t.Fatalf("waitInterval is %v, want 1s", waitInterval)
 	}
 }
 
 // A quiet poll is one request, not two. The document read exists to place the
 // comments the listing carried, so a tick whose narrowed listing is empty has
 // nothing to place and the read would answer the same bytes as the tick before.
-// At two seconds a tick, a quiet nine-minute wait was 270 whole-document reads.
+// At two seconds a tick, a quiet nine-minute wait was 270 whole-document reads,
+// and at one it would be 540.
 // The first poll still reads it, so the envelope carries the document's fields
 // and a deadline-cut first poll stays distinguishable by tabs: 0.
 func TestAQuietPollReadsTheListingAlone(t *testing.T) {

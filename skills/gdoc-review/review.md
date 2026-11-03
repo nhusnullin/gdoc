@@ -57,7 +57,9 @@ after gdoc's last reply is new work, and it gets its own pair. Live mode
 makes that ordinary rather than rare, because the session sees the second
 question arrive.
 
-- Write the acknowledgment only when the work will take noticeably long. One
+- In a one-shot run, write the acknowledgment only when the work will take
+  noticeably long. In a live session, write it first, into every marked thread
+  a window hands over, before the window is read. `live.md` says when. One
   line, reader language: `Looking into this now.`
 - Write the receipt when the work verifiably landed.
 - A failure replaces the receipt with a plain sentence naming the reason.

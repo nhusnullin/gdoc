@@ -203,12 +203,15 @@
 // missing poll, a non-positive interval and a negative deadline
 // (TestWaitRefusesOptionsItCannotRun).
 //
-// The interval is two seconds, a constant, and never a flag. It was ten until
-// 2026-09-18, when Nail halved the latency again on the measured quota: a poll
-// is one Docs read against a limit of 300 a minute per user, so thirty a minute
-// spends a tenth of it. cmd/gdoc's waitInterval is a package variable only so
-// a test can shorten it, and TestTheWaitIntervalIsTwoSeconds pins the literal. The first poll happens at once rather than after an
-// interval, because latency is the point of a live session: a wait that slept
+// The interval is one second, a constant, and never a flag. It was ten until
+// 2026-09-18, when Nail halved the latency on the measured quota, and two until
+// 2026-11-03, when he asked for every second: a quiet tick has read the Drive
+// listing alone since the quiet-poll rule above, the Docs read against the 300
+// a minute per user goes out only on a tick that carried something, and Drive
+// meters a listing in units it barely touches. cmd/gdoc's waitInterval is a
+// package variable only so a test can shorten it, and
+// TestTheWaitIntervalIsOneSecond pins the literal. The first poll happens at
+// once rather than after an interval, because latency is the point of a live session: a wait that slept
 // first would cost the interval on every call the skill makes, quiet document
 // or not. The last gap is slept out rather than polled on, because a poll
 // started on the instant the deadline lands on runs on a context that is
@@ -287,7 +290,7 @@
 // listing carried anything, so the session spends a turn on it, and that
 // includes gdoc's own reply landing a second after gdoc wrote it. Follow hands a
 // window over only when something in it is addressed to gdoc, and keeps looking
-// otherwise, so a quiet half hour is one listing every two seconds and no model
+// otherwise, so a quiet half hour is one listing every second and no model
 // turn at all. Nail's decision, 2026-10-27.
 //
 // The wake rule is hasNewMarked, and it is three questions about one item. Is it
