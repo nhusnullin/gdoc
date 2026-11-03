@@ -39,11 +39,23 @@ A window line names ids, markers and times, and no words at all:
 {"line":"window","since":"<cursor>","cursor":"<cursor>","noticed":"2026-10-27T09:14:02Z","items":[{"id":"AAABc","thread":"AAABc","marker":"ai?","created":"2026-10-27T09:13:58Z"}],"more":0}
 ```
 
-To read the window, run `$GDOC comments <url> --since <the line's since>`.
+Before reading the window, write the acknowledgment into every thread the
+line names whose marker is not `none`. One Step 5 call per thread, the line's
+`thread` id as the comment id, and the body is the one line review.md gives:
+`Looking into this now.` It goes out on the ids alone, so the person sees a
+sign in the thread about ten seconds after writing, and nothing in that line
+asks for a judgement.
+
+Then read the window: run `$GDOC comments <url> --since <the line's since>`.
 Act on the items the line names, and leave anything newer in that read to the
 next line: the follow is still polling, and whatever landed after the line was
 written rides in the line after it. Run Steps 2 to 8 over those items, print
 the Step 8 report, and keep the line's `cursor` as `CURSOR`.
+
+The acknowledgment is the first of the thread's two messages, so the receipt
+or the plain failure sentence is still the second and the last. A thread the
+session stopped on keeps its acknowledgment until the person decides. Then it
+gets its receipt, or the sentence that says the work was not done.
 
 Items whose `marker` is `none` are listed in that window's report and never
 acted on, which is Step 2's rule and not a new one.
@@ -97,16 +109,18 @@ the four paths below, and killed with a signal it comes back
 `waited.interrupted: true`, which reads as you having stopped the session. Set
 the timeout on every call in this loop.
 
-That one call blocks. The binary polls Drive every two seconds inside it and
+That one call blocks. The binary polls Drive every second inside it and
 comes back on the first activity after the cursor, or at the deadline with an
 empty window. So a quiet document costs one call and no thinking. Read the
 object and take one of four paths:
 
 - **`ok: true`, `threads: []`, `waited.interrupted: false`.** Nothing happened
   in those nine minutes. Print nothing at all. Call again with the same cursor.
-- **`ok: true` with threads.** This is a window. Run Steps 2 to 8 over exactly
-  those threads. Print the Step 8 report. Set `CURSOR` to the answer's `cursor`
-  and call again.
+- **`ok: true` with threads.** This is a window. First the acknowledgment,
+  into every thread in it that carries a marked comment or reply that is not
+  gdoc's own, as under the Monitor tool above. Then run Steps 2 to 8 over
+  exactly those threads. Print the Step 8 report. Set `CURSOR` to the answer's
+  `cursor` and call again.
 - **`ok: false`.** A poll failed. Print the error, wait thirty seconds, call
   again with the cursor you already had. Never move the cursor past a failed
   poll: that window is unread, not empty. Three failures in a row and the

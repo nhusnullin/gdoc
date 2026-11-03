@@ -69,7 +69,7 @@ replaced it)`, or `measured`. Nothing else.
 | 2026-09-16 | What the update door actually reaches: two asset hosts, one bigger page, and a version that is only ever a tag | holds | DECISIONS-archive.md |
 | 2026-09-17 | There is no rc. The nightly is the pre-release channel | holds | DECISIONS-archive.md |
 | 2026-09-17 | The plugin is named `altery`, and the marketplace stays `gdoc` | holds | DECISIONS-archive.md |
-| 2026-09-18 | The wait polls every two seconds | holds | DECISIONS-archive.md |
+| 2026-09-18 | The wait polls every two seconds | superseded 2026-11-03 (every second; the constant, the first poll at once and the loop being the skill's hold) | DECISIONS-archive.md |
 | 2026-09-18 | The binary notices a release by itself, once a day from `help`, and the plugin carries the stable number | superseded 2026-10-03 (the one-command clause only: `gdoc mcp` asks unasked too, under the same grant, stamp and ceiling; everything else in the entry holds) | DECISIONS-archive.md |
 | 2026-09-18 | annotate: a comment on quoted words, and nothing else | holds | DECISIONS-archive.md |
 | 2026-09-18 | Five backlog items closed, and what each decided | superseded 2026-09-27 (the bookmark on every heading only: a heading carries one when a link names it; everything else in the entry holds) | DECISIONS-archive.md |
@@ -119,6 +119,7 @@ replaced it)`, or `measured`. Nothing else.
 | 2026-10-30 | The mark six points down: Docs measures a picture's offset from the top of its paragraph's space before, so the offset returns to -5.15 pt and the label's six points carry the mark with it | holds | DECISIONS.md |
 | 2026-10-30 | The mark, sharp and a press: drawn from a bitmap made at its own pixel size, and a click opens the picture's page in Drive, at the address bare `help --json` names beside the path | holds | DECISIONS.md |
 | 2026-10-30 | The reopen count: after an update the notice row counts five seconds down and the app reopens itself at zero; "Quit and reopen" is kept for the one case the reopen did not happen | holds | DECISIONS.md |
+| 2026-11-03 | A sign within seconds: a live session acknowledges every marked thread a window hands over before it reads the window, and the poll is every second | holds | DECISIONS.md |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -1925,3 +1926,59 @@ the order of two existing steps. No read, grant, URL, argv list or presence
 field changes.
 
 The plan is `docs/plans/2026-10-30-gdoc-v2-m32i-the-reopen-count.md`.
+
+## 2026-11-03. A sign within seconds: a live session acknowledges every marked thread a window hands over before it reads the window, and the poll is every second.
+
+Nail, on the live review of his concept paper that morning: "do we use follow
+comments?", then "feedback pulling comments too long, i want be quick", and on
+the proposal: "Add a "Looking into this now", also can we pull every second?".
+
+**What was measured.** The session watched the document under `--follow`.
+His comment was written at 04:35:33Z; the follow handed it over three
+seconds later. The suggestion landed in the document 80 seconds after the
+comment and the receipt in its thread after 93, of which gdoc on the wire
+was about twelve: a listing, a proposal with its three read-backs, a listing
+again and the reply. The other eighty seconds were the session reading the
+chapter sources and the hub and thinking, and for all of them the thread
+showed nothing. The research of 2026-10-27,
+`docs/v2/research/how-ai-skills-talk-to-gdoc.md`, had the automatic
+acknowledgment as its last idea, "S, needs Nail's decision", and this is
+that decision.
+
+**The acknowledgment, first.** On every window a live session is handed, the
+one line `Looking into this now.` goes into every thread the window names
+whose marker is not `none`, before the window is read. It is posted on the
+ids the follow's line carries, so the session reads nothing and judges
+nothing before it goes out, and the person sees a sign about ten seconds
+after writing: one model turn and one reply. The one-shot rule is unchanged:
+there the acknowledgment is written only when the work will take noticeably
+long. The two-messages rule is unchanged too: the acknowledgment is the
+first of the two and the receipt or the plain failure sentence is the second,
+and a thread the session stopped on keeps its acknowledgment until the person
+decides. The session posts it, not the binary: the binary still writes
+nothing into a thread on its own decision, which is what the research's
+rule R2 protects, and a session that dies after acknowledging leaves the
+dangling "on it" that the next run's Step 2 check already reads as work not
+proven done. The rule is in `review.md` and the moment in `live.md`:
+`TestEveryReviewRuleLandedOnce` and
+`TestALiveSessionAcknowledgesBeforeItReadsTheWindow`.
+
+**The poll, every second.** `waitInterval` is one second, under `--wait` and
+`--follow` alike. The 2026-09-18 table counted Docs reads, and a quiet tick
+has not made one since the quiet-poll rule: the listing goes out every tick,
+the document is read only on a tick that carried something, and Drive meters
+a listing in units it barely touches. So sixty listings a minute for one
+person is what a quiet live hour costs, and the Docs pool is untouched by it.
+What this buys is at most one second off the three the follow took to notice,
+and Nail asked for it knowing the eighty are elsewhere. What does not change:
+the interval is a constant and never a flag, the first poll happens at once,
+the deadline bounds the call, and the loop is the skill's.
+`TestTheWaitIntervalIsOneSecond` pins the literal, and the next change to it
+is an entry here first.
+
+Trust guardian: not called. One constant, and a line the session already
+knows how to post, through the same `reply` and the same guard.
+
+A domain choice with no principle above it, by the 2026-08-29 live-review
+argument: the comment and the reply arrive within seconds, and a sign at
+ten seconds is closer to that than silence for ninety.

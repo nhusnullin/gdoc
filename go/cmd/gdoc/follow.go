@@ -20,12 +20,12 @@ import (
 )
 
 // waitInterval is how long a poll sleeps between looks, under --wait and under
-// --follow alike. It is two seconds, a constant the spec names, and a package
+// --follow alike. It is one second, a constant the spec names, and a package
 // variable only so a test can drive two polls in no wall time. It is
 // deliberately not a flag: a caller that could set it could poll Drive as fast
 // as it liked, and nothing on the wire would say the interval had changed.
-// TestTheWaitIntervalIsTwoSeconds pins the literal.
-var waitInterval = 2 * time.Second
+// TestTheWaitIntervalIsOneSecond pins the literal.
+var waitInterval = time.Second
 
 // maxWait is the longest one call will look, whichever flag asked. The skill
 // asks for nine minutes under --wait, because the tool that runs the command

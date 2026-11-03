@@ -95,6 +95,7 @@ var reviewRules = []string{
 	"A run can be cut off between an action and its receipt. So a marked comment with no receipt does not prove the work is undone.",
 	// Two messages at most
 	"A thread carries an acknowledgment and a receipt per piece of work, and nothing else.",
+	"In a live session, write it first, into every marked thread a window hands over, before the window is read.",
 	"Never a progress feed. The margin is the readers' room, and the terminal is where the operator's record goes.",
 	// When to stop and ask
 	"Judge the draft before it is posted. Stop, show it, and wait when any of these is true:",
@@ -267,6 +268,32 @@ func TestTheCoreHasTheAnnotateFlow(t *testing.T) {
 		want := squashSpace(step)
 		if !strings.Contains(core, want) {
 			t.Errorf("%s does not hold %q. The flow is read the same way through either front door, so it lives here", reviewCore, want)
+		}
+	}
+}
+
+// reviewLiveAckRules are what a live session does the moment a window
+// arrives, before it reads a word of it: the acknowledgment goes out first,
+// and a thread the session then stops on keeps that acknowledgment until the
+// person decides.
+var reviewLiveAckRules = []string{
+	"Before reading the window, write the acknowledgment into every thread the line names whose marker is not `none`.",
+	"A thread the session stopped on keeps its acknowledgment until the person decides.",
+}
+
+// Nail's decision of 2026-11-03: a comment he wrote at 04:35:33Z was noticed
+// in three seconds and answered after ninety-three, and for all of those the
+// thread showed nothing. The sign he asked for is the acknowledgment, first,
+// on every window, and live.md is the file that says when a window arrives.
+func TestALiveSessionAcknowledgesBeforeItReadsTheWindow(t *testing.T) {
+	// Arrange
+	_, live := readReviewFile(t, "live.md")
+
+	// Act and assert
+	for _, rule := range reviewLiveAckRules {
+		want := squashSpace(rule)
+		if !strings.Contains(live, want) {
+			t.Errorf("live.md does not hold %q. Without it a comment shows nothing for a minute and a half", want)
 		}
 	}
 }
