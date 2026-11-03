@@ -951,6 +951,32 @@ func TestTheLiveLoopFollowsUnderTheMonitorTool(t *testing.T) {
 	}
 }
 
+// The Stop button in the presence app sends the same signal Ctrl-C does, and
+// the wait answers it the same way, `waited.interrupted: true`. On 2026-11-03
+// Nail pressed Stop twice and the session started the watch again both times,
+// nine seconds after the first and fourteen after the second, because the page
+// said "You stopped it" and nobody had said stop in the chat, so the session
+// read the signal as a kill from outside and re-armed. The page has to name the
+// button, say that a stop is a stop whoever pressed it, and say that an
+// interrupted envelope never starts another watch.
+func TestTheLivePageKnowsTheStopButton(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join(skillsDir, "gdoc-review", "live.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := string(b)
+	for want, why := range map[string]string{
+		"Stop button":               "the presence app's Stop is one of the ways a watch ends, and a page that never names it leaves the session to guess who sent the signal",
+		"whoever pressed it":        "a stop from the menu bar is as final as one typed here",
+		"never start another watch": "an interrupted envelope is the end of the session, not a reason to re-arm",
+		"not a kill from outside":   "the one reading that restarted the watch is named and ruled out",
+	} {
+		if !strings.Contains(src, want) {
+			t.Errorf("skills/gdoc-review/live.md does not say %q. %s", want, why)
+		}
+	}
+}
+
 // A live review holds the watch for half an hour at a time, and the session
 // running it cannot be doing anything else while it reads the lines. A person
 // who asked for it in the middle of other work gets a second session rather than

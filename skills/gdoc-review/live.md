@@ -74,8 +74,11 @@ The last line is the ordinary `comments` envelope, with `threads` empty and
 
 - **`ok: true`, `waited.interrupted: false`.** The half hour ran out and
   nothing is wrong. Start the next follow from the last cursor you kept.
-- **`ok: true`, `waited.interrupted: true`.** You stopped it. Print the totals
-  below and do not restart.
+- **`ok: true`, `waited.interrupted: true`.** Somebody stopped it: Ctrl-C
+  here, or the Stop button on the document's row in the gdoc presence menu
+  bar app, which sends the wait the same signal. Whoever pressed it, it is
+  not a kill from outside and not a failure. Print the totals below, do not
+  restart, and never start another watch on this envelope.
 - **`ok: false`.** A poll failed. Today's retry rule holds: print the error,
   wait thirty seconds, start again from the cursor you already had, and stop
   after three failures in a row.
@@ -125,8 +128,8 @@ object and take one of four paths:
   again with the cursor you already had. Never move the cursor past a failed
   poll: that window is unread, not empty. Three failures in a row and the
   session stops and says so.
-- **`waited.interrupted: true`.** You stopped it. Print the totals below and
-  stop.
+- **`waited.interrupted: true`.** Somebody stopped it, here or with the Stop
+  button in the presence app. Print the totals below and stop.
 
 Nine minutes, and never more. The binary would look for an hour, but the tool
 that runs the command gives up at ten even when it is asked for its longest, and
@@ -188,9 +191,12 @@ the work is already there, write the missing receipt rather than doing it twice.
 
 ## Stop, and the totals
 
-You stop it with Ctrl-C or by saying stop. An answer carrying
-`waited.interrupted: true` is you stopping, not a failure: the object says
-`ok: true` and the cursor is the one handed in.
+You stop it with Ctrl-C or by saying stop, and the person can stop it from
+the gdoc presence menu bar app: the document's row there has a Stop button,
+and it sends the wait the one signal Ctrl-C sends. An answer carrying
+`waited.interrupted: true` is a stop, not a failure, whoever pressed it: the
+object says `ok: true` and the cursor is the one handed in. The session ends
+there. Nobody in the chat has to have said stop for the stop to count.
 
 Then print the session's totals, in the shape of the Step 8 report:
 
