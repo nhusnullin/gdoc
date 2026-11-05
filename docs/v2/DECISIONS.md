@@ -121,6 +121,7 @@ replaced it)`, or `measured`. Nothing else.
 | 2026-10-30 | The reopen count: after an update the notice row counts five seconds down and the app reopens itself at zero; "Quit and reopen" is kept for the one case the reopen did not happen | holds | DECISIONS.md |
 | 2026-11-03 | A sign within seconds: a live session acknowledges every marked thread a window hands over before it reads the window, and the poll is every second | superseded 2026-11-05 (the sentence "the session posts it, not the binary" only: under `--follow` the watch posts the sign itself from the words the call carries; the sign first, the two-message rule, the one-shot rule and the poll hold) | DECISIONS.md |
 | 2026-11-05 | The watch posts the sign itself within seconds, and a reply sent from a draft is news when it is sent | holds | DECISIONS.md |
+| 2026-11-05 | A task in a note is a checklist item in the document, with a name chip and a date chip | holds | DECISIONS.md |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -2069,3 +2070,77 @@ not a comment asked again, and a reply's edit is read as the follow-up it is.
 
 **Order and release.** Both ship together, before the list of programs gdoc
 may run, which stays an open decision of 2026-11-03.
+
+## 2026-11-05. A task in a note is a checklist item in the document, with a name chip and a date chip.
+
+Nail, 2026-11-05: "how can we create checklist tasks from md file. i suppose i
+will write smth [] task 1. it means i expect in google doc task list. think how
+can we instruct whom assignee and how we notate date in md files and cli
+binary". The case he named: the questions from a PDF go into a note as tasks,
+and when he says publish they arrive as a checklist. Then, mid-research: "be
+sure you do changes in mcp as well".
+
+**What was measured.** `docs/v2/research/checklist-tasks.md` holds it. The
+Docs schema, revision 20261028, has `BULLET_CHECKBOX`, `insertPerson` and
+`insertDate`, and no field for a ticked box or for a Docs task. The Tasks API
+marks `assignmentInfo` output only. `TestLiveChecklistProbe` put a checklist,
+a person chip and a date chip into four throwaway documents, directly and in
+SUGGEST mode, and every one landed; in SUGGEST mode each landed as a
+suggestion. A checklist level reads with no number and no glyph symbol, which
+is how a reader tells it from a bullet. Whether a tick or a Docs task shows in
+a read is not measured yet: that needs a person's click on the document
+`TestLiveChecklistForHands` kept in the test folder.
+
+**The questions, and his answers.** 1. "Today `- [ ]` shows in the document
+as a "☐" character. After this, it is a real box you can tick. The person
+shows as a name chip and the date as a date chip. In chat, Claude can also
+read these boxes and suggest new ones in a document." 2. "`- [ ] Which bank
+holds the account? @anna 2026-11-20`. Here `@anna` means Anna at your own
+company address, and a full email also works. The date is year-month-day.
+Both go at the end of the line." 3. "A name chip does not notify Anna. The
+closest thing to a real assignment is a comment assigned to her, which sends
+her an email. When you publish: (A) Anna gets that email, or (B) she only sees
+her name in the document, and you press "Assign as a task" yourself where you
+want it." 4. "Google cannot tick the box. (A) It shows as an empty box with
+the words crossed out, or (B) it stays as today's ☒ character." 5. "Open this
+document. Tick the first box, and press "Assign as a task" on the second.
+That tells me if gdoc can see ticks when it reads a document back into a
+note." The recommendation line: "1 yes, 2 as written, 3 B, 4 A, 5 you do the
+clicks when you have a minute. Chat will not get publishing: you still
+publish a note from Claude Code." His answer: "ok".
+
+**The notation.** A task is a GFM task list item. At the end of its line, after
+the words, it may carry one owner, `@name` or `@name@domain`, and one due date,
+`YYYY-MM-DD`, in either order. Tokens anywhere else are words. Two owners, two
+dates, a date that is not a day on the calendar, or an owner that is not an
+address are refused by name before anything is sent, because a file gdoc half
+understands never reaches a document. A bare `@name` takes its domain from the
+`domain` setting, and a bare name with no setting is refused with a
+sentence naming the setting. The domain is not read from the signed-in
+account: that read is a grant `login` and `auth status` alone hold, and a
+third caller would be a widening for its own decision. It is not in the house
+style either, because no file in this repository carries the firm's domain.
+
+**What lands.** `publish` keeps the docx as it is. After the upload, on the
+document the guard's own create made, one more batch turns each task paragraph
+into a checklist item, takes the ballot character out, and inserts the person
+chip and the date chip where the tokens stood. A done item, `[x]`, lands as an
+unticked box with its words struck through, because nothing can tick it. The
+read-back counts the checklist items and the chips against the note and says
+`verified: false` on any difference. No comment is assigned and nobody is
+emailed by a publish. `propose` takes a task list inside a block, and it lands
+as one SUGGEST batch with the chips in it, so `withdraw` still takes it back
+whole. `read` and `export` print a checklist item as `- [ ] words`, with a
+person chip as `@email` and a date chip as `YYYY-MM-DD` at the end, so the
+note and the read use one notation. A tick prints as `[x]` only once the hand
+test shows the read carries one; until then every item prints unticked and
+the reader says so in the envelope.
+
+**Chat.** `read` and `propose` carry the same notation, and nothing else in
+chat changes: chat still has no `publish`. A proposed task that names an owner
+shows that owner's address on the card, because a chip names a person.
+
+Serves principle 3, uncertainty never resolves toward the destructive answer:
+a notation gdoc half understands is refused rather than guessed, a tick the
+binary cannot see is said rather than assumed, and nobody is emailed by a
+publish they did not ask for.

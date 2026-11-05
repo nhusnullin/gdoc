@@ -120,6 +120,8 @@ The settings file, `settings.yaml`, lives in the config folder; `--config
 <file>` names another, and an argument such as `--mark` beats the file. The
 token is never a setting (2026-10-04, DECISIONS.md; the token moves to the
 macOS Keychain in M17).
+The `domain` setting is the address domain a bare `@name` owner on a task
+takes; without it a bare name is refused (2026-11-05, DECISIONS.md).
 
 **The presence is a file gdoc appends to and never reads.** Under the
 `presence` setting, every command that names a document, `update` and `auth
@@ -363,6 +365,20 @@ before it runs. Publishing into the document that is already there is refused,
 because gdoc never replaces a body: that request is a merge, and a merge travels
 as suggestions through `gdoc-align`. Changed 2026-09-19, DECISIONS.md.
 
+**A task is a checklist item.** A GFM task list item in the note lands as a
+Docs checklist item. At the end of its line, after the words, it may carry one
+owner, `@name` or `@name@domain`, and one due date, `YYYY-MM-DD`, in either
+order; anywhere else they are words. A bare `@name` takes its domain from the
+`domain` setting and is refused without one. Two owners, two dates, a date
+that is not a calendar day, or an owner that is not an address are refused by
+name before the build. The docx is built as before. After the upload, one more
+batch on the document the guard's own create made turns each task paragraph
+into a checklist item, takes the ballot character out, and puts a person chip
+and a date chip where the tokens stood. A done item, `[x]`, lands unticked
+with its words struck through, because no request ticks a box. The read-back
+counts checklist items and chips against the note. No comment is assigned and
+nobody is emailed. Added 2026-11-05, DECISIONS.md.
+
 ### `restyle`
 
 Puts a document gdoc did not create into the house style. One command and three
@@ -512,7 +528,10 @@ replaces whole paragraphs. It names exactly one placement, either `after` with a
 quote in the paragraph the block follows, or the pair `replace_from` and
 `replace_to` which covers whole paragraphs from the start of the first to the
 end of the last. It carries `content` as markdown: paragraphs, `#` to `######`
-headings, `-` and `1.` lists one level deep, bold, italic and links. Every quote
+headings, `-` and `1.` lists one level deep, task lists one level deep in
+the notation `publish` reads, bold, italic and links. A task list lands as a
+suggested checklist with its chips suggested beside it, in the same one batch
+(2026-11-05, DECISIONS.md). Every quote
 is found exactly once, by the same span walk the words kind uses. A block is one
 SUGGEST batch and comes back with one suggestion id, so `withdraw` takes it back
 whole. Changed 2026-09-28, DECISIONS.md.
@@ -647,7 +666,12 @@ piece held, so an edit inside a cover table reaches the envelope rather than the
 note. A prelude it cannot recognise stays in the file under a warning naming
 what stood there. A footnote comes across as `[^n]` in the prose with its
 definition after a `---` line, and that file publishes again: `build` sets
-footnotes rather than refusing them (2026-10-14, DECISIONS.md). A label
+footnotes rather than refusing them (2026-10-14, DECISIONS.md). A checklist
+item comes across as `- [ ] words`, `read` prints it the same way, a person
+chip on it as `@email` and a date chip as `YYYY-MM-DD` at the end of the line,
+so the note publishes again into the same checklist. Every item prints
+unticked, and the envelope says the tick is not read, until a measurement
+shows the read carries one (2026-11-05, DECISIONS.md). A label
 referenced twice in the hub comes back as two notes, because a document holds
 one note per mark. A mark the author wrote comes back as the syntax it left
 as. A page break that stands on its own comes back as `---` on a line of its
@@ -1106,7 +1130,9 @@ flag to a property or a named exclusion. `update`, `restyle`, `publish`,
 `export`, `build`, `probe`, `withdraw`, `help` and `completion` are not tools: a
 spoken sentence never creates a file, never changes a document's look and never
 touches the installation. Nothing in chat reaches a hub, so no tool takes `--md`
-and a write tool names one item per call.
+and a write tool names one item per call. `read` and `propose` carry the task
+notation as the terminal does, and a proposed task that names an owner shows
+that address on the card (2026-11-05, DECISIONS.md).
 
 **One call at a time, and 200 seconds each.** A reader parses the lines and
 answers `initialize`, `ping` and `tools/list` where they arrive; one worker runs
