@@ -66,7 +66,33 @@ The guard needs no change. A document gdoc created is at the full level. On a
 handed-in document, SUGGEST mode carries kinds the guard does not know, and
 these three are not in any refused family.
 
+Measured the same day, `TestLiveChecklistProbeOverBullets`, same conditions:
+
+| Case | Result |
+|---|---|
+| SUGGEST, one batch: two new paragraphs, a checklist over them, a person chip on the first | One suggestion id on everything, the text, the chip, the list. `withdraw` can take it back whole |
+| Direct, a disc list of three, a checklist over the first two | The whole list turns into checkboxes, the third item too. A list's look belongs to the list, not the paragraph |
+| Direct, the same with two requests, one per paragraph | The same: one list, all three checkboxes |
+| Direct, bullets taken off the first two, then a checklist over them | Two lists: the two tasks are a checklist, the third item stays a disc bullet |
+| Direct, bullets taken off the middle one, then a checklist over it | Three runs: disc, checklist, disc, the two disc items in one list |
+
+So a published list that mixes tasks and plain items must take the bullets
+off the task paragraphs before it makes them a checklist. Taking bullets off
+moved no index.
+
 ## Still to measure, by hand
+
+**Whether a person chip mails or shares.** The trust guardian vetoed the plan
+until this is measured: every chip so far named the signed-in account, and
+nobody is notified about themselves. Google's own coverage of body mentions
+(2020 and 2021) says a mention notifies nobody and shares nothing, and that
+the person typing in the browser gets a prompt to share. No current help
+page says so. The test: a chip naming an address Nail reads, that is not the
+signed-in account and has no access to the document, once direct and once
+in SUGGEST mode. He then says whether a mail arrived and whether the
+document's sharing list changed.
+
+**Ticks and Docs tasks.**
 
 `TestLiveChecklistForHands` left one document in the test folder:
 https://docs.google.com/document/d/1IoTXlEWi2VUtkqEnVQstn_Rj9kXqraeMWSdDXZumPPg/edit

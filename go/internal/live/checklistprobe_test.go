@@ -106,6 +106,88 @@ func TestLiveChecklistProbe(t *testing.T) {
 	}
 }
 
+// TestLiveChecklistProbeOverBullets asks the two questions the M33 plan review
+// left: does one SUGGEST batch that inserts paragraphs, makes them a checklist
+// and puts a chip on one come back as one suggestion id, and what does a
+// checklist request do to paragraphs that are already a disc list, the way a
+// published docx arrives?
+func TestLiveChecklistProbeOverBullets(t *testing.T) {
+	if os.Getenv(liveVar) != "1" || os.Getenv(writeVar) != "1" {
+		t.Skipf("skipped: set %s=1 and %s=1", liveVar, writeVar)
+	}
+	folder := strings.TrimSpace(os.Getenv(folderVar))
+	if folder == "" {
+		folder = testFolder
+	}
+	p := guard.NewPolicy()
+	p.AllowCreateIn(folder)
+	s, err := gapi.Open(p, nil)
+	if err != nil {
+		t.Fatalf("the session could not be opened: %v", err)
+	}
+	ctx := context.Background()
+	who := strings.TrimSpace(os.Getenv("GDOC_PROBE_PERSON"))
+	if who == "" {
+		t.Fatal("GDOC_PROBE_PERSON names the email the person chip carries")
+	}
+	disc := func(start, end int) map[string]any {
+		return req("createParagraphBullets", map[string]any{"range": rng(start, end), "bulletPreset": "BULLET_DISC_CIRCLE_SQUARE"})
+	}
+	box := func(start, end int) map[string]any {
+		return req("createParagraphBullets", map[string]any{"range": rng(start, end), "bulletPreset": "BULLET_CHECKBOX"})
+	}
+	// Questions [1,11), First [11,22), Second [22,34), Third [34,45).
+	cases := []struct {
+		name    string
+		setup   []map[string]any
+		suggest bool
+		reqs    []map[string]any
+	}{
+		{"suggest, one batch: two new paragraphs, a checklist over them, a chip on the first", nil, true, []map[string]any{
+			req("insertText", map[string]any{"location": map[string]any{"index": 11}, "text": "Task A\nTask B\n"}),
+			box(11, 24),
+			req("insertPerson", map[string]any{"location": map[string]any{"index": 17}, "personProperties": map[string]any{"email": who}}),
+			req("insertText", map[string]any{"location": map[string]any{"index": 17}, "text": " "}),
+		}},
+		{"direct: a disc list of three, a checklist over the first two in one request", []map[string]any{disc(11, 44)}, false, []map[string]any{box(11, 33)}},
+		{"direct: a disc list of three, a checklist over the first and over the second, two requests", []map[string]any{disc(11, 44)}, false, []map[string]any{box(11, 21), box(22, 33)}},
+		{"direct: a disc list of three, bullets off the first two, then a checklist over them", []map[string]any{disc(11, 44)}, false, []map[string]any{
+			req("deleteParagraphBullets", map[string]any{"range": rng(11, 33)}), box(11, 33)}},
+		{"direct: a disc list of three, bullets off the middle one, then a checklist over it", []map[string]any{disc(11, 44)}, false, []map[string]any{
+			req("deleteParagraphBullets", map[string]any{"range": rng(22, 33)}), box(22, 33)}},
+	}
+	for _, c := range cases {
+		probeDoc(ctx, t, s, folder, c.name, func(id string) {
+			url := "https://docs.googleapis.com/v1/documents/" + id + ":batchUpdate"
+			setup := append([]map[string]any{
+				req("insertText", map[string]any{"location": map[string]any{"index": 1}, "text": strings.TrimSuffix(checklistSetup, "\n")}),
+			}, c.setup...)
+			if err := s.PostJSON(ctx, url, map[string]any{"requests": setup}, nil); err != nil {
+				t.Fatalf("the setup write failed: %v", err)
+			}
+			var err error
+			if c.suggest {
+				err = suggestBatch(ctx, s, id, c.reqs...)
+			} else {
+				err = s.PostJSON(ctx, url, map[string]any{"requests": c.reqs}, nil)
+			}
+			if err != nil {
+				t.Logf("  REFUSED: %s", docsReason(err))
+				return
+			}
+			after, err := readInline(ctx, s, id)
+			if err != nil {
+				t.Errorf("the read back failed: %v", err)
+				return
+			}
+			logChecklist(t, after)
+			ids := map[string][]string{}
+			collectIDs(after, ids)
+			t.Logf("    suggestion ids: %s", fmtIDs(ids))
+		})
+	}
+}
+
 // TestLiveChecklistForHands makes one checklist document and keeps it, for the
 // two things no request can do: a person ticks the first box and presses
 // "Assign as a task" on the second. GDOC_PROBE_READ_ID then reads it back, so
