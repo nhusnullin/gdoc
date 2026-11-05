@@ -269,7 +269,9 @@ func NextCursor(prev *Cursor, threads []Thread) *Cursor {
 }
 
 // peak is one thread's own newest instant, across its modifiedTime and its
-// replies' createdTime, and false when it carries none gdoc can read.
+// replies' two instants, and false when it carries none gdoc can read. A
+// reply's modifiedTime is in it so the cursor moves past the send of a reply
+// Docs kept as a draft, which is the instant the follow handed it over on.
 func peak(t Thread) (time.Time, bool) {
 	out := time.Time{}
 	ok := false
@@ -285,6 +287,7 @@ func peak(t Thread) (time.Time, bool) {
 	consider(t.Modified)
 	for _, r := range t.Replies {
 		consider(r.Created)
+		consider(r.Modified)
 	}
 	return out, ok
 }

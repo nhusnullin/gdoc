@@ -17,6 +17,7 @@ import (
 	"gdoc/internal/comments"
 	"gdoc/internal/docs"
 	"gdoc/internal/emit"
+	"gdoc/internal/reply"
 )
 
 // waitInterval is how long a poll sleeps between looks, under --wait and under
@@ -147,19 +148,92 @@ type followLine struct {
 	Noticed string       `json:"noticed"`
 	Items   []followItem `json:"items"`
 	More    int          `json:"more"`
+	// Acknowledged and AcknowledgeFailed are the sign --acknowledge wrote
+	// before this line, one entry per thread that woke the window, and absent
+	// without the flag. Facts about a write gdoc made, the way verified is.
+	Acknowledged      []acknowledged      `json:"acknowledged,omitempty"`
+	AcknowledgeFailed []acknowledgeFailed `json:"acknowledge_failed,omitempty"`
+}
+
+// acknowledged is one thread the sign reached: the reply Drive named, and
+// whether the read-back found it.
+type acknowledged struct {
+	Thread   string `json:"thread"`
+	ReplyID  string `json:"reply_id,omitempty"`
+	Verified bool   `json:"verified"`
+}
+
+// acknowledgeFailed is one thread the sign could not be posted into, and why.
+// The session writes it there itself.
+type acknowledgeFailed struct {
+	Thread string `json:"thread"`
+	Error  string `json:"error"`
 }
 
 // followLineOf is one window as its line. Noticed is in UTC, as every instant
 // gdoc prints is, so two lines from two machines sort against each other.
 func followLineOf(w comments.Window) followLine {
 	items, more := followItemsOf(w.Items)
-	return followLine{
+	line := followLine{
 		Line:    "window",
 		Since:   w.Since.String(),
 		Cursor:  w.Cursor.String(),
 		Noticed: w.Noticed.UTC().Format(time.RFC3339),
 		Items:   items,
 		More:    more,
+	}
+	for _, a := range w.Acknowledged {
+		line.Acknowledged = append(line.Acknowledged, acknowledged{Thread: a.Thread, ReplyID: a.ReplyID, Verified: a.Verified})
+	}
+	for _, u := range w.Unacknowledged {
+		line.AcknowledgeFailed = append(line.AcknowledgeFailed, acknowledgeFailed{Thread: u.Thread, Error: u.Error})
+	}
+	return line
+}
+
+// acknowledgeWords is what --acknowledge asks the watch to write, checked
+// before any read is made, and "" without the flag.
+//
+// Three refusals, each before the session opens. The flag needs --follow,
+// because only a watch has a window to sign. The words go through the check
+// every reply goes through, so a sign Docs would render literally never
+// reaches a thread. And words whose first token is a marker are refused on
+// their own: with an empty mark in effect nothing says a reply is gdoc's own,
+// so a sign opening with `ai?` would wake the next window and be signed
+// again, one write a second into somebody's document for up to an hour.
+// TestAcknowledgeNeedsFollow, TestAcknowledgeRefusesMarkdownBeforeAnyRead and
+// TestAcknowledgeWordsOpeningWithAMarkerAreRefusedBeforeAnyRead.
+func acknowledgeWords(a *args) (string, error) {
+	if !a.has("--acknowledge") {
+		return "", nil
+	}
+	if !a.has("--follow") {
+		return "", fmt.Errorf(
+			"--acknowledge needs --follow: the words are written into each thread that wakes a window, and only a follow has windows")
+	}
+	words := trimBody(a.flags["--acknowledge"])
+	if err := reply.Check(words, a.set.Mark); err != nil {
+		return "", fmt.Errorf("--acknowledge: %w", err)
+	}
+	if m := comments.MarkerOf(words); m != comments.MarkerNone {
+		return "", fmt.Errorf(
+			"--acknowledge must not open with %s: a sign that carries a marker would wake the watch that wrote it", m)
+	}
+	return words, nil
+}
+
+// acknowledger is the write the follow makes into one thread, from the words
+// the call carried: the reply command's own write, the mark in effect in
+// front, the same read-back. The caller's time is read nowhere here, for the
+// reason cmdReply gives: a sign that went out is read back whatever stopped
+// the watch, so a thread never holds a reply nobody can find again.
+func acknowledger(r *reach, words, mark string) func(context.Context, string) (comments.Acknowledgment, error) {
+	return func(ctx context.Context, thread string) (comments.Acknowledgment, error) {
+		res, err := reply.Post(context.WithoutCancel(ctx), r.session, r.id, thread, words, mark)
+		if err != nil {
+			return comments.Acknowledgment{}, err
+		}
+		return comments.Acknowledgment{ReplyID: res.ReplyID, Verified: res.Verified}, nil
 	}
 }
 
@@ -193,9 +267,10 @@ func followItemsOf(from []comments.NewItem) ([]followItem, int) {
 // wakesTheWindow is the wake rule as a line reads it: an item carrying one of
 // the three markers that gdoc did not write itself. internal/comments asks the
 // same question of the same two fields to decide whether to hand the window
-// over at all, and this is the one place in the binary that has to name what
-// that answer rested on. It judges nothing: both fields are facts off the wire,
-// and what the items mean is still the skill's to read.
+// over at all, and, under --acknowledge, which threads the caller's words go
+// into before it does. It is a fixed rule over two facts off the wire and
+// judges nothing: what the items mean is still the skill's to read, and the
+// words it writes are the caller's, given once when the watch started.
 func wakesTheWindow(it comments.NewItem) bool {
 	return it.Marker != comments.MarkerNone && !it.ByGdoc
 }

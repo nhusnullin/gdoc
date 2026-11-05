@@ -444,9 +444,17 @@ open with gdoc's mark. The rest of a window is held and rides in the next line,
 so gdoc's own replies and a reply with no marker never wake a session alone.
 A line carries the window's `since` and `cursor`, when gdoc noticed it, and each
 new item's id, thread, marker and created time, at most twenty, and the session
-reads the window whole with a one-shot `--since`. It reads the document once, on
+reads the window whole with a one-shot `--since`. A reply is new when either of
+its instants, created or modified, is past the cursor, because Docs posts a
+reply kept as a draft with the draft's created time, and a reply in a listing
+carries `modified` (2026-11-05, DECISIONS.md). It reads the document once, on
 its first poll. Its start is recorded as a wait. Added
-2026-10-27, DECISIONS.md. Each comment is reported with its
+2026-10-27, DECISIONS.md. With `--acknowledge <words>` the watch writes those
+words, through `reply`, into every thread of a window that carries a marked
+item gdoc did not write, once per thread and before the line, and the line
+names the threads it acknowledged and the ones it could not; words that open
+with a marker are refused, chat is never offered the flag, and without the
+flag it writes nothing (2026-11-05, DECISIONS.md). Each comment is reported with its
 marker: `ai:`, `ai?`, `ai!`, or none. An unmarked comment, including an unmarked
 follow-up in a thread gdoc has answered, is reported and never acted on. The
 marker is the trigger, always: stickiness carries context, never authority.
@@ -473,7 +481,9 @@ checked. gdoc never resolves and never reopens a thread, even though the API can
 resolving means the answer was accepted, and only Nail accepts. **A long
 action writes at most two messages into its thread**, as two replies rather than
 edits of one: an acknowledgment when the work will take noticeably long, and in
-a live session always, first, before the window is read (2026-11-03,
+a live session always, first: the watch itself writes it under `--acknowledge`
+before it hands the window over, and the session writes it only where the line
+says the watch could not (2026-11-03 and 2026-11-05,
 DECISIONS.md), and the receipt when the action verifiably landed. Never a progress feed,
 because the margin is the readers' room and the terminal is the operator's. A
 failed action replaces the receipt with a plain failure naming the reason, so a

@@ -337,7 +337,7 @@ func TestTheCLIEnvelopeGainsOnlyAuthorDomain(t *testing.T) {
 		t.Fatal("the listing carried no threads, so this test holds nothing")
 	}
 	threadKeys := []string{"author", "author_domain", "content", "created", "id", "marker", "modified", "quoted", "range", "replies", "resolved"}
-	replyKeys := []string{"author", "author_domain", "by_gdoc", "content", "created", "id", "marker"}
+	replyKeys := []string{"author", "author_domain", "by_gdoc", "content", "created", "id", "marker", "modified"}
 	for _, thread := range envelope.Data.Threads {
 		if got := sortedRawKeys(thread); !reflect.DeepEqual(got, threadKeys) {
 			t.Errorf("a thread carries %v, want %v", got, threadKeys)

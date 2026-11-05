@@ -119,7 +119,8 @@ replaced it)`, or `measured`. Nothing else.
 | 2026-10-30 | The mark six points down: Docs measures a picture's offset from the top of its paragraph's space before, so the offset returns to -5.15 pt and the label's six points carry the mark with it | holds | DECISIONS.md |
 | 2026-10-30 | The mark, sharp and a press: drawn from a bitmap made at its own pixel size, and a click opens the picture's page in Drive, at the address bare `help --json` names beside the path | holds | DECISIONS.md |
 | 2026-10-30 | The reopen count: after an update the notice row counts five seconds down and the app reopens itself at zero; "Quit and reopen" is kept for the one case the reopen did not happen | holds | DECISIONS.md |
-| 2026-11-03 | A sign within seconds: a live session acknowledges every marked thread a window hands over before it reads the window, and the poll is every second | holds | DECISIONS.md |
+| 2026-11-03 | A sign within seconds: a live session acknowledges every marked thread a window hands over before it reads the window, and the poll is every second | superseded 2026-11-05 (the sentence "the session posts it, not the binary" only: under `--follow` the watch posts the sign itself from the words the call carries; the sign first, the two-message rule, the one-shot rule and the poll hold) | DECISIONS.md |
+| 2026-11-05 | The watch posts the sign itself within seconds, and a reply sent from a draft is news when it is sent | holds | DECISIONS.md |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -1982,3 +1983,89 @@ knows how to post, through the same `reply` and the same guard.
 A domain choice with no principle above it, by the 2026-08-29 live-review
 argument: the comment and the reply arrive within seconds, and a sign at
 ten seconds is closer to that than silence for ninety.
+
+## 2026-11-05. The watch posts the sign itself within seconds, and a reply sent from a draft is news when it is sent.
+
+Nail, on the evening of 2026-11-03 at 23:14 local, with a screenshot of the
+live review of his concept paper beside the thread: "it appears only after
+14s - can we do it earlier and faster?". Five questions were put to him on
+2026-11-03 and he answered "ok" on 2026-11-05, which takes the
+recommendation on every one.
+
+**What was measured.** From the review session's transcript and the presence
+record, with the instants Drive printed. He pressed Reply at 19:14:03.879Z.
+The follow saw it at 19:14:04 and the Monitor tool woke the session at
+19:14:04.5. The session thought until 19:14:09.9, streamed the `reply` call
+for the acknowledgment by 19:14:13.6 and the `comments --since` call by
+19:14:18.5, and Claude Code runs a message's tools only once the whole message
+has streamed, so `gdoc reply` ran from 19:14:20 to 19:14:21.3. The
+acknowledgment landed seventeen seconds after the post: the wire was two and
+a half seconds, the session fourteen. The morning's entry had estimated "one
+model turn and one reply, about ten seconds"; a turn is not ten seconds when
+it thinks and types two commands.
+
+**The questions, and his answers.** 1. "Now you see the sign about 14 s after
+Reply. After this, about 4 s: the watch posts it before the session wakes. Or
+keep it with the session, at about 8 s?" 2. "Is this right: you typed "ai! a"
+at 22:38 and pressed Reply at 23:14? Drive dates the reply 22:38, the watch saw
+it at 23:14, and nothing in between." 3. "Where: the thread only. The sign
+reads the same, the answer and the suggestion come later as today." 4. "If 2
+is yes: a reply you started typing before gdoc's last answer and sent after it
+is missed today until the thread moves again. After this, it is seen when you
+press Reply. In the same release?" 5. "Order: before the list of programs gdoc
+may run, or after?" The recommendation line: "1 the watch posts it, 2 yes, 3
+ok, 4 yes, same release, 5 before." His answer: "ok".
+
+**The watch posts the sign.** `comments --follow` takes `--acknowledge
+<words>`. On every window it hands over, before it writes the line, the watch
+writes those words into every thread of the window that carries a marked item
+gdoc did not write itself, once per thread, through the same `reply` write
+with the same check, the same mark in front and the same read-back. The line
+then says which threads were acknowledged, and the session writes the sign
+itself only into a thread the line says the watch could not. A watch with no
+`--acknowledge` writes nothing, as before. This reverses one sentence of the
+2026-11-03 entry, "The session posts it, not the binary", and nothing else of
+it: the sign is still the first of a thread's two messages, the receipt or the
+plain failure sentence is still the second, the one-shot rule is unchanged,
+and a session that dies after the sign still leaves the "on it" that the next
+run's Step 2 reads as work not proven done. Why this is not the binary judging:
+the words and the standing instruction are the session's, given once when the
+watch starts, and the rule the watch applies is the wake rule it already has,
+a marker that is not `none` on an item gdoc did not write, which the morning's
+entry already said "asks for no judgement". What moved is who carries out the
+instruction, from a model turn of fourteen seconds to a write of one. A watch
+that could not post the sign into a thread says so on the line and hands the
+window over anyway: the sign is a courtesy and the window is the work. Two
+refusals the trust guardian asked for before it signed, both before any read:
+words that open with `ai:`, `ai?` or `ai!`, because under an empty mark
+gdoc's own sign would wake the watch that wrote it and be written again every
+second; and chat is never offered the flag, so no comment can reach it. The
+guardian's sentence: "The watch writes only the caller's words, behind the
+mark, into threads the wake rule names, on the level `open` already grants;
+it refuses words that would wake itself, and chat is never offered the flag."
+`TestTheWatchAcknowledgesEveryMarkedThreadBeforeItHandsTheWindowOver`,
+`TestAWatchWithoutTheWordsWritesNothing`,
+`TestAnAcknowledgmentThatFailedIsOnTheLineAndTheWindowStillGoesOut`,
+`TestTheAcknowledgmentGoesOncePerThread`,
+`TestAcknowledgeWordsOpeningWithAMarkerAreRefusedBeforeAnyRead` and
+`TestTheLivePageLeavesTheSignToTheWatch`.
+
+**A reply sent from a draft.** Docs keeps a reply somebody typed and did not
+send, and posts it later with the draft's createdTime. Measured 2026-11-05 on
+the thread above: the reply "ai! a" carries created 18:38:38.928Z and
+modified 19:14:03.879Z, and the first follow, polling every second from a
+cursor at 18:37:02.504Z, never handed it over in 1,208 polls, because the
+follow's news rule asked a reply's createdTime alone. It was handed over when
+the thread's modifiedTime moved at 19:14:03.879Z, which was the Reply press.
+Had the draft been started before the cursor, the thread would have moved and
+the reply still not been news. So a reply carries `modified` beside
+`created`, and the follow's news rule asks both instants of a reply: news when
+either is past the cursor. The line keeps `created` alone, on the skeptic's
+point that a line exists to say whether to look. A comment's own rule
+is unchanged, for the reason the 2026-10-27 entry gives: a comment edited is
+not a comment asked again, and a reply's edit is read as the follow-up it is.
+`TestAReplyCarriesWhenItWasLastModified` and
+`TestAReplyDraftedBeforeTheCursorAndSentAfterItIsNews`.
+
+**Order and release.** Both ship together, before the list of programs gdoc
+may run, which stays an open decision of 2026-11-03.

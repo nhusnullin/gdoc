@@ -296,14 +296,48 @@
 // The wake rule is hasNewMarked, and it is three questions about one item. Is it
 // news by the cursor's own rule, the same newer, sameInstant and reported the
 // listing narrows with. Is its own marker one of the three. Does it open with a
-// mark gdoc recognises. The instant the news question asks about is createdTime,
-// for a thread as well as for a reply, because a cursor advances on
-// modifiedTime: an old comment somebody edited, and a thread Drive touched
-// because a reply arrived, come back on every poll until something else moves
-// the instant, and reading that as news would hand the same thread over for
-// ever. TestEveryMarkerCounts, TestAWindowOfOnlyGdocsRepliesIsHeld,
-// TestGdocsReplyInAnOldMarkedThreadIsHeld, TestAnEditedOldCommentIsHeld and
-// TestAMarkedReplyAtTheCursorsInstantIsNews are the pins.
+// mark gdoc recognises. The instant the news question asks about is createdTime
+// for a thread, because a cursor advances on modifiedTime: an old comment
+// somebody edited, and a thread Drive touched because a reply arrived, come
+// back on every poll until something else moves the instant, and reading that
+// as news would hand the same thread over for ever. TestEveryMarkerCounts,
+// TestAWindowOfOnlyGdocsRepliesIsHeld, TestGdocsReplyInAnOldMarkedThreadIsHeld,
+// TestAnEditedOldCommentIsHeld and TestAMarkedReplyAtTheCursorsInstantIsNews
+// are the pins.
+//
+// A reply is asked both of its instants, and is news when either is past the
+// cursor. Docs keeps a reply somebody typed and did not send, and posts it
+// later with the draft's createdTime: measured 2026-11-05, a reply typed at
+// 18:38:38Z and sent at 19:14:03Z came back created 18:38:38.928Z and modified
+// 19:14:03.879Z, and a follow polling from a cursor between the two never
+// handed it over in 1,208 polls. The send is the reply's modifiedTime, so the
+// listing asks Drive for it, Reply carries it as modified, and NextCursor reads
+// it so the cursor moves past the send. An absent modified instant makes
+// nothing news on its own. TestAReplyCarriesWhenItWasLastModified,
+// TestAReplyDraftedBeforeTheCursorAndSentAfterItIsNews and
+// TestAReplyWithBothInstantsBeforeTheCursorIsNotNews are the pins.
+//
+// # Under --acknowledge the follow makes the one write a listing makes
+//
+// Nail's decision, 2026-11-05. FollowOptions.Acknowledge, when set, is a write
+// the caller supplies, and before a window is handed over the follow calls it
+// once for each thread that woke the window, in the order the items came. The
+// outcome of each is on the Window as a fact, Acknowledged with the reply id
+// and whether the read-back found it, or Unacknowledged with the reason, and
+// the window is handed over either way: the sign is a courtesy, the window is
+// the work. The threads are exactly the ones the wake rule names, so the rule
+// now also says where the caller's words go; what it still does not do is
+// judge them. The words are the caller's, given once when the follow started,
+// and cmd/gdoc checks them before the first poll: the reply check, and a
+// refusal of words that open with a marker, because with an empty mark gdoc's
+// own sign would read as a marked item not gdoc's own and wake the next window.
+// A nil Acknowledge is every follow without the flag, and it writes nothing.
+// TestTheWatchAcknowledgesEveryMarkedThreadBeforeItHandsTheWindowOver,
+// TestTheAcknowledgmentGoesOncePerThread,
+// TestAnAcknowledgmentThatFailedIsOnTheLineAndTheWindowStillGoesOut and
+// TestAWatchWithoutTheWordsWritesNothing are the pins here, and in cmd/gdoc
+// TestAcknowledgeNeedsFollow, TestAcknowledgeRefusesMarkdownBeforeAnyRead and
+// TestAcknowledgeWordsOpeningWithAMarkerAreRefusedBeforeAnyRead.
 //
 // A window nobody was handed holds its items and leaves the cursor where it was,
 // so the next poll asks the same question and those items ride in the next window

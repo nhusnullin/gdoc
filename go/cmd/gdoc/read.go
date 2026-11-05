@@ -519,6 +519,10 @@ func cmdComments(ctx context.Context, a *args) emit.Result {
 	if err != nil {
 		return failed(err)
 	}
+	sign, err := acknowledgeWords(a)
+	if err != nil {
+		return failed(err)
+	}
 	deadline, err := waitDeadline(a, since)
 	if err != nil {
 		return failed(err)
@@ -564,7 +568,7 @@ func cmdComments(ctx context.Context, a *args) emit.Result {
 		// The windows were the answer and they are already written. What comes
 		// back here is how the watch ended, and follow.go turns it into the
 		// last line.
-		f, err := commentsFollow(ctx, a, r, since, follow, read)
+		f, err := commentsFollow(ctx, a, r, since, follow, read, sign)
 		return followResult(r, d, f, err)
 	}
 
@@ -646,7 +650,7 @@ func cmdComments(ctx context.Context, a *args) emit.Result {
 // Nothing runs after this, so the deferred stop is the whole of it: there is no
 // --witness export on this route, which is why --follow refuses one.
 func commentsFollow(ctx context.Context, a *args, r *reach, since *comments.Cursor,
-	deadline time.Duration, read comments.Read) (comments.Followed, error) {
+	deadline time.Duration, read comments.Read, sign string) (comments.Followed, error) {
 	sigCtx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -657,14 +661,20 @@ func commentsFollow(ctx context.Context, a *args, r *reach, since *comments.Curs
 	// minutes into a half-hour watch is news now, and a caller that had to wait
 	// for the envelope could not act on it until the watch ended.
 	hand := func(w comments.Window) error { return a.lines.WriteLine(followLineOf(w)) }
-	return comments.Follow(sigCtx, since, comments.FollowOptions{
+	o := comments.FollowOptions{
 		Interval: waitInterval,
 		Deadline: deadline,
 		List:     list,
 		Read:     read,
 		Mark:     a.set.Mark,
 		Hand:     hand,
-	})
+	}
+	// The sign, under --acknowledge alone: a watch given no words writes
+	// nothing. TestAWatchWithoutTheWordsWritesNothing holds it on the wire.
+	if sign != "" {
+		o.Acknowledge = acknowledger(r, sign, a.set.Mark)
+	}
+	return comments.Follow(sigCtx, since, o)
 }
 
 // commentsBase is the envelope's document fields. The document is nil whenever

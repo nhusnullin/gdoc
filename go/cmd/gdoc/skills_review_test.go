@@ -95,7 +95,7 @@ var reviewRules = []string{
 	"A run can be cut off between an action and its receipt. So a marked comment with no receipt does not prove the work is undone.",
 	// Two messages at most
 	"A thread carries an acknowledgment and a receipt per piece of work, and nothing else.",
-	"In a live session, write it first, into every marked thread a window hands over, before the window is read.",
+	"In a live session it goes first, into every marked thread that wakes a window: the watch writes it the moment it sees the window, and the session writes it only where the line says the watch could not.",
 	"Never a progress feed. The margin is the readers' room, and the terminal is where the operator's record goes.",
 	// When to stop and ask
 	"Judge the draft before it is posted. Stop, show it, and wait when any of these is true:",
@@ -277,8 +277,31 @@ func TestTheCoreHasTheAnnotateFlow(t *testing.T) {
 // and a thread the session then stops on keeps that acknowledgment until the
 // person decides.
 var reviewLiveAckRules = []string{
-	"Before reading the window, write the acknowledgment into every thread the line names whose marker is not `none`.",
+	"the watch writes them itself into every thread that wakes a window, before it writes the line",
 	"A thread the session stopped on keeps its acknowledgment until the person decides.",
+}
+
+// reviewLiveSignRules are Nail's decision of 2026-11-05: the sign is the
+// watch's to write, from the words the follow call carries, and the session
+// writes it only where the line says the watch could not. Without the first
+// line the sign waits on a model turn; without the second a thread gets it
+// twice.
+var reviewLiveSignRules = []string{
+	`--follow 29m --acknowledge "Looking into this now."`,
+	"The session writes the sign itself only into a thread the line lists under `acknowledge_failed`",
+}
+
+func TestTheLivePageLeavesTheSignToTheWatch(t *testing.T) {
+	// Arrange
+	_, live := readReviewFile(t, "live.md")
+
+	// Act and assert
+	for _, rule := range reviewLiveSignRules {
+		want := squashSpace(rule)
+		if !strings.Contains(live, want) {
+			t.Errorf("live.md does not hold %q. Without it the sign waits on a model turn, or a thread gets it twice", want)
+		}
+	}
 }
 
 // Nail's decision of 2026-11-03: a comment he wrote at 04:35:33Z was noticed

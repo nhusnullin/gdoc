@@ -42,6 +42,25 @@ type FollowOptions struct {
 	// while the follow is still running: a follow that collected its windows and
 	// answered at the end would be a wait with a longer deadline.
 	Hand func(Window) error
+	// Acknowledge, when set, is the write the caller makes into one thread
+	// before a window is handed over: the words are the caller's, given once
+	// when the follow starts, and the thread is one the wake rule named. Nil
+	// means the follow writes nothing, which is every follow without the flag.
+	Acknowledge func(ctx context.Context, thread string) (Acknowledgment, error)
+}
+
+// Acknowledgment is the fact of one such write: the reply Drive named and
+// whether the read-back found it.
+type Acknowledgment struct {
+	Thread   string
+	ReplyID  string
+	Verified bool
+}
+
+// Unacknowledged is one thread the write could not be made into, and why.
+type Unacknowledged struct {
+	Thread string
+	Error  string
 }
 
 // NewItem is one comment or reply in a window that the cursor it was asked from
@@ -50,11 +69,15 @@ type FollowOptions struct {
 // whether it opens with a mark gdoc recognises. Nothing here says whether it is
 // work, or whether it was answered.
 type NewItem struct {
-	ID      string
-	Thread  string
-	Marker  string
-	Created string
-	ByGdoc  bool
+	ID     string
+	Thread string
+	Marker string
+	// Created and Modified are the item's two instants as Drive sent them. For
+	// a reply Docs kept as a draft, Created is the draft's and Modified is the
+	// send; a comment's Modified is Drive's own and is not in the news rule.
+	Created  string
+	Modified string
+	ByGdoc   bool
 }
 
 // Window is one poll's worth of news: the cursor the poll asked from, the cursor
@@ -65,6 +88,11 @@ type Window struct {
 	Cursor  *Cursor
 	Noticed time.Time
 	Items   []NewItem
+	// Acknowledged and Unacknowledged are what Acknowledge did before this
+	// window was handed over, one entry per thread the wake rule named, and
+	// both empty when the follow was given no Acknowledge.
+	Acknowledged   []Acknowledgment
+	Unacknowledged []Unacknowledged
 }
 
 // Followed is what one follow did. Every field is a count, a duration, a cursor
@@ -174,6 +202,13 @@ func Follow(ctx context.Context, since *Cursor, o FollowOptions) (Followed, erro
 				Noticed: now(),
 				Items:   newItems(threads, cursor, o.Mark),
 			}
+			// The sign goes out before the line, so the person sees it
+			// without a model turn in between, and the line can say where it
+			// landed. A write that failed is on the window and the window is
+			// still handed over: the sign is a courtesy, the window is the
+			// work. The poll context bounds it, as it bounds every request
+			// in a poll.
+			w.Acknowledged, w.Unacknowledged = acknowledge(poll, o.Acknowledge, w.Items)
 			if err := o.Hand(w); err != nil {
 				// A line that could not be written is not a window the caller
 				// was told about, so the cursor does not move and the error
@@ -259,13 +294,17 @@ func newItems(threads []Thread, since *Cursor, mark string) []NewItem {
 			})
 		}
 		for _, r := range t.Replies {
-			if isNewAt(since, r.Created, t.ID) {
+			// Either instant past the cursor: Docs posts a reply it kept as a
+			// draft with the draft's createdTime, and the send is its
+			// modifiedTime. TestAReplyDraftedBeforeTheCursorAndSentAfterItIsNews.
+			if isNewAt(since, r.Created, t.ID) || isSentAt(since, r.Modified, t.ID) {
 				out = append(out, NewItem{
-					ID:      r.ID,
-					Thread:  t.ID,
-					Marker:  r.Marker,
-					ByGdoc:  r.ByGdoc,
-					Created: r.Created,
+					ID:       r.ID,
+					Thread:   t.ID,
+					Marker:   r.Marker,
+					Modified: r.Modified,
+					ByGdoc:   r.ByGdoc,
+					Created:  r.Created,
 				})
 			}
 		}
@@ -281,6 +320,16 @@ func newItems(threads []Thread, since *Cursor, mark string) []NewItem {
 //
 // A nil cursor has reported nothing, so everything is news: that is a follow
 // with no --since, which cmd/gdoc refuses, and the honest answer here.
+// isSentAt is isNewAt asked of a reply's modified instant, which Drive may
+// leave out: an absent instant is no evidence either way, so it alone makes
+// nothing news, where an instant that is there and unreadable still does.
+func isSentAt(since *Cursor, modified, thread string) bool {
+	if modified == "" {
+		return false
+	}
+	return isNewAt(since, modified, thread)
+}
+
 func isNewAt(since *Cursor, created, thread string) bool {
 	if since == nil {
 		return true
@@ -292,4 +341,42 @@ func isNewAt(since *Cursor, created, thread string) bool {
 		return false
 	}
 	return since.sameInstant(created)
+}
+
+// wakes is the wake rule asked of one item: a marker that is not none on an
+// item gdoc did not write. It is the rule hasNewMarked loops over, named once
+// so the threads the sign goes into are exactly the ones that woke the window.
+func wakes(it NewItem) bool {
+	return it.Marker != MarkerNone && !it.ByGdoc
+}
+
+// acknowledge makes the caller's write into each thread the wake rule names,
+// once per thread in the order the items came, and reports each outcome as a
+// fact. A nil write is no write at all.
+// TestTheWatchAcknowledgesEveryMarkedThreadBeforeItHandsTheWindowOver,
+// TestTheAcknowledgmentGoesOncePerThread,
+// TestAnAcknowledgmentThatFailedIsOnTheLineAndTheWindowStillGoesOut and
+// TestAWatchWithoutTheWordsWritesNothing.
+func acknowledge(ctx context.Context, write func(context.Context, string) (Acknowledgment, error),
+	items []NewItem) ([]Acknowledgment, []Unacknowledged) {
+	if write == nil {
+		return nil, nil
+	}
+	var done []Acknowledgment
+	var failed []Unacknowledged
+	seen := map[string]bool{}
+	for _, it := range items {
+		if !wakes(it) || seen[it.Thread] {
+			continue
+		}
+		seen[it.Thread] = true
+		ack, err := write(ctx, it.Thread)
+		if err != nil {
+			failed = append(failed, Unacknowledged{Thread: it.Thread, Error: err.Error()})
+			continue
+		}
+		ack.Thread = it.Thread
+		done = append(done, ack)
+	}
+	return done, failed
 }
