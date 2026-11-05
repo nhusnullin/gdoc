@@ -70,10 +70,12 @@
 //     sentence says.
 //   - read <url> [--structure]: the text projection, or the tree with the flag.
 //     internal/docs reads, internal/view projects.
-//   - comments <url> [--since] [--wait] [--follow] [--witness]: the threads
-//     with their ranges, markers, replies and the next cursor, in one answer
-//     or one line per window. internal/comments, with internal/docx for the
-//     witness.
+//   - comments <url> [--since] [--wait] [--follow] [--acknowledge] [--witness]:
+//     the threads with their ranges, markers, replies and the next cursor, in
+//     one answer or one line per window, and under --acknowledge the one
+//     write a listing makes, the caller's words into each thread that woke a
+//     window. internal/comments, with internal/reply for the sign and
+//     internal/docx for the witness.
 //   - suggestions <url> [--md]: what is pending, and with a paired note what
 //     stopped being pending. internal/suggestions, internal/frontmatter.
 //   - export <url> --out: the document in the hub as Markdown, one file per

@@ -11,7 +11,7 @@ you paste from the browser, or a bare document id.
 
 ```bash
 gdoc read <url> [--structure]
-gdoc comments <url> [--since CURSOR] [--wait DURATION] [--follow DURATION] [--witness]
+gdoc comments <url> [--since CURSOR] [--wait DURATION] [--follow DURATION] [--acknowledge TEXT] [--witness]
 gdoc suggestions <url> [--md PATH]
 gdoc restyle <url> --dry-run
 ```
@@ -152,6 +152,18 @@ reading acts on a line and then asks for the words with a plain `comments
 items, the ones that woke it first, and counts the rest in `more`: the cursor
 moves past the whole window either way, so a line carrying `more` above 0 is one
 to read in full.
+
+`--acknowledge` takes words, and only beside `--follow`. The watch writes them,
+under your mark, into every thread that wakes a window, once per thread and
+before it prints the line, through the same write and read-back as `reply`. The
+line then carries `acknowledged`, one entry per thread with the reply id and
+whether the read-back found it, and `acknowledge_failed` for any thread the
+write could not be made into, with the reason. That is how the live review
+shows "Looking into this now." a few seconds after you write, with no model turn
+in between. The words go through the checks every reply goes through, and words
+that open with `ai?`, `ai!` or `ai:` are refused outright: a sign carrying a
+marker would wake the watch that wrote it. Without the flag the watch writes
+nothing.
 
 A window with nothing marked for gdoc in it prints nothing at all and leaves the
 cursor where it was. That is the point of the mode: gdoc's own replies, and the

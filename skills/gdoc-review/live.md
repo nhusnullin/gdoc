@@ -20,31 +20,38 @@ Where this session has the Monitor tool, start the watch under it, with a limit
 of 30 minutes:
 
 ```bash
-$GDOC comments <url> --since "$CURSOR" --follow 29m
+$GDOC comments <url> --since "$CURSOR" --follow 29m --acknowledge "Looking into this now."
 ```
 
 That call does not come back with a window. It holds the poll open for half an
 hour and writes one JSON line the moment it sees a comment or a reply marked
 for gdoc, so each window arrives as its own event and a quiet half hour costs
-no thinking at all. Where the Monitor tool here allows a shorter limit than
+no thinking at all. The words after `--acknowledge` are the acknowledgment
+review.md names, and the watch writes them itself into every thread that
+wakes a window, before it writes the line: the person sees the sign a few
+seconds after writing, with no turn of yours in between. Where the Monitor tool here allows a shorter limit than
 thirty minutes, ask for the longest it allows and set `--follow` a minute under
 it.
 
 Read the `line` field to tell the two kinds of line apart. A window carries
 `"line": "window"`. The envelope the follow ends on carries no such field.
 
-A window line names ids, markers and times, and no words at all:
+A window line names ids, markers and times, and no words at all, and it says
+where the watch wrote the acknowledgment:
 
 ```json
-{"line":"window","since":"<cursor>","cursor":"<cursor>","noticed":"2026-10-27T09:14:02Z","items":[{"id":"AAABc","thread":"AAABc","marker":"ai?","created":"2026-10-27T09:13:58Z"}],"more":0}
+{"line":"window","since":"<cursor>","cursor":"<cursor>","noticed":"2026-10-27T09:14:02Z","items":[{"id":"AAABc","thread":"AAABc","marker":"ai?","created":"2026-10-27T09:13:58Z"}],"more":0,"acknowledged":[{"thread":"AAABc","reply_id":"AAABd","verified":true}]}
 ```
 
-Before reading the window, write the acknowledgment into every thread the
-line names whose marker is not `none`. One Step 5 call per thread, the line's
-`thread` id as the comment id, and the body is the one line review.md gives:
-`Looking into this now.` It goes out on the ids alone, so the person sees a
-sign in the thread about ten seconds after writing, and nothing in that line
-asks for a judgement.
+`acknowledged` is every thread the sign went into, and `acknowledge_failed`,
+when it is there, is every thread it could not be posted into, with Drive's
+reason. The session writes the sign itself only into a thread the line lists
+under `acknowledge_failed`: one Step 5 call per such thread, the line's
+`thread` id as the comment id, the same one line. A thread under
+`acknowledged` already carries it, and a second one would be a third message.
+A watch run by an older gdoc that refuses `--acknowledge` is the one case
+where no thread is listed either way: then write the sign into every thread
+the line names whose marker is not `none`, before reading the window.
 
 Then read the window: run `$GDOC comments <url> --since <the line's since>`.
 Act on the items the line names, and leave anything newer in that read to the

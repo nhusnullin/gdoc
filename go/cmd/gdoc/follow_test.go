@@ -9,6 +9,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -359,5 +360,147 @@ func TestTheWaitKeepsItsOwnWords(t *testing.T) {
 		if msg, _ := got["error"].(string); msg != c.want {
 			t.Errorf("--wait %q reads\n%q\nand has always read\n%q", c.value, msg, c.want)
 		}
+	}
+}
+
+// Nail's decision of 2026-11-05. The sign took fourteen seconds because a
+// model turn sat between the window and the write; now the watch writes the
+// caller's words itself, before the line, through the reply command's own
+// write. Two marked threads in the fixture, so two writes, each under the mark
+// in effect, and the line names both.
+func TestTheWatchAcknowledgesEveryMarkedThreadBeforeItHandsTheWindowOver(t *testing.T) {
+	shortPolls(t)
+	f := waitWire(t, newsListing(t))
+	f.answers = append(f.answers,
+		&answer{method: "POST", match: "/comments/AAAA1111/replies", json: `{"id":"S1","createdTime":"2026-09-06T10:46:00Z","content":"⁘ Looking into this now."}`},
+		&answer{method: "POST", match: "/comments/BBBB2222/replies", json: `{"id":"S2","createdTime":"2026-09-06T10:46:01Z","content":"⁘ Looking into this now."}`},
+		quietListing())
+	stubWire(t, f)
+
+	lines, code := runLines(t, context.Background(),
+		"comments", fixtureDocID, "--since", waitSince, "--follow", followOnce, "--acknowledge", "Looking into this now.")
+	if code != 0 {
+		t.Fatalf("comments --follow --acknowledge: exit %d, %v", code, lines)
+	}
+	posts := f.writes()
+	if len(posts) != 2 {
+		t.Fatalf("writes = %v, want one sign per marked thread", posts)
+	}
+	for _, p := range posts {
+		var body map[string]any
+		if err := json.Unmarshal(p.Body, &body); err != nil {
+			t.Fatal(err)
+		}
+		if body["content"] != "⁘ Looking into this now." {
+			t.Errorf("content = %q, want the words under the mark in effect", body["content"])
+		}
+	}
+	w := windowLine(t, lines)
+	acks, _ := w["acknowledged"].([]any)
+	if len(acks) != 2 {
+		t.Fatalf("acknowledged = %v, want the two threads the sign went into", w["acknowledged"])
+	}
+	first, _ := acks[0].(map[string]any)
+	if first["thread"] != "AAAA1111" || first["reply_id"] != "S1" {
+		t.Errorf("acknowledged[0] = %v, want the thread and the reply Drive named", first)
+	}
+	if _, has := w["acknowledge_failed"]; has {
+		t.Errorf("acknowledge_failed = %v, want absent: every sign went out", w["acknowledge_failed"])
+	}
+}
+
+func TestAWatchWithoutTheWordsWritesNothing(t *testing.T) {
+	shortPolls(t)
+	f := waitWire(t, newsListing(t), quietListing())
+	stubWire(t, f)
+
+	lines, code := runLines(t, context.Background(),
+		"comments", fixtureDocID, "--since", waitSince, "--follow", followOnce)
+	if code != 0 {
+		t.Fatalf("comments --follow: exit %d, %v", code, lines)
+	}
+	if posts := f.writes(); len(posts) != 0 {
+		t.Errorf("a follow with no --acknowledge wrote %v", posts)
+	}
+	w := windowLine(t, lines)
+	for _, field := range []string{"acknowledged", "acknowledge_failed"} {
+		if _, has := w[field]; has {
+			t.Errorf("the line carries %s without the flag: %v", field, w)
+		}
+	}
+}
+
+// A sign that could not be posted is a fact on the line, and the window still
+// goes out: the sign is a courtesy and the window is the work. The session
+// reads the line and writes the sign itself into that thread.
+func TestAnAcknowledgmentThatFailedIsOnTheLineAndTheWindowStillGoesOut(t *testing.T) {
+	shortPolls(t)
+	f := waitWire(t, newsListing(t))
+	f.answers = append(f.answers,
+		&answer{method: "POST", match: "/comments/AAAA1111/replies", err: errors.New("Drive answered 500")},
+		&answer{method: "POST", match: "/comments/BBBB2222/replies", json: `{"id":"S2","createdTime":"2026-09-06T10:46:01Z","content":"⁘ Looking into this now."}`},
+		quietListing())
+	stubWire(t, f)
+
+	lines, code := runLines(t, context.Background(),
+		"comments", fixtureDocID, "--since", waitSince, "--follow", followOnce, "--acknowledge", "Looking into this now.")
+	if code != 0 {
+		t.Fatalf("a sign that failed is not a failed watch: exit %d, %v", code, lines)
+	}
+	w := windowLine(t, lines)
+	failed, _ := w["acknowledge_failed"].([]any)
+	if len(failed) != 1 {
+		t.Fatalf("acknowledge_failed = %v, want the one thread", w["acknowledge_failed"])
+	}
+	one, _ := failed[0].(map[string]any)
+	msg, _ := one["error"].(string)
+	if one["thread"] != "AAAA1111" || !strings.Contains(msg, "Drive answered 500") {
+		t.Errorf("acknowledge_failed[0] = %v, want the thread and Drive's reason", one)
+	}
+	if acks, _ := w["acknowledged"].([]any); len(acks) != 1 {
+		t.Errorf("acknowledged = %v, want the one thread the sign reached", w["acknowledged"])
+	}
+}
+
+// The three refusals, each before anything reaches the wire.
+func TestAcknowledgeNeedsFollow(t *testing.T) {
+	f := stubWire(t, waitWire(t))
+
+	got, code := runJSON(t, "comments", fixtureDocID, "--since", waitSince, "--acknowledge", "Looking into this now.")
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("--acknowledge without --follow must be refused: %v (exit %d)", got, code)
+	}
+	namesTheRefusal(t, got, "--acknowledge", "--follow")
+	if len(f.calls) != 0 {
+		t.Errorf("%v reached the wire on a refused call", f.calls)
+	}
+}
+
+func TestAcknowledgeRefusesMarkdownBeforeAnyRead(t *testing.T) {
+	f := stubWire(t, waitWire(t))
+
+	got, code := runJSON(t, "comments", fixtureDocID, "--since", waitSince, "--follow", "29m", "--acknowledge", "**Looking** into this now.")
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("a sign Docs would render literally must be refused: %v (exit %d)", got, code)
+	}
+	namesTheRefusal(t, got, "--acknowledge")
+	if len(f.calls) != 0 {
+		t.Errorf("%v reached the wire on a refused call", f.calls)
+	}
+}
+
+// The trust guardian's refusal, 2026-11-05: with an empty mark nothing says a
+// reply is gdoc's own, so a sign opening with a marker would wake the watch
+// that wrote it and be written again every second.
+func TestAcknowledgeWordsOpeningWithAMarkerAreRefusedBeforeAnyRead(t *testing.T) {
+	f := stubWire(t, waitWire(t))
+
+	got, code := runJSON(t, "comments", fixtureDocID, "--since", waitSince, "--follow", "29m", "--acknowledge", "ai? looking into this now")
+	if code == 0 || got["ok"] != false {
+		t.Fatalf("a sign that carries a marker must be refused: %v (exit %d)", got, code)
+	}
+	namesTheRefusal(t, got, "--acknowledge", "ai?")
+	if len(f.calls) != 0 {
+		t.Errorf("%v reached the wire on a refused call", f.calls)
 	}
 }

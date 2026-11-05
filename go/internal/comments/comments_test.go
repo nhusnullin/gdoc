@@ -685,3 +685,37 @@ func TestTheFieldMaskNamesTheAddressOnlyInsideTheAuthorGroup(t *testing.T) {
 		t.Errorf("the field mask carries the author mask %d times, want twice", got)
 	}
 }
+
+// TestAReplyCarriesWhenItWasLastModified: Docs keeps a reply somebody typed
+// and did not send as a draft, and posts it later with the createdTime of the
+// draft. Measured 2026-11-03: a reply typed at 18:38:38Z and sent at
+// 19:14:03Z came back created 18:38:38.928Z. The instant it was sent is its
+// modifiedTime, so a reply carries that fact beside created, and the mask
+// asks Drive for it inside the replies group.
+func TestAReplyCarriesWhenItWasLastModified(t *testing.T) {
+	// Arrange
+	raw := []RawReply{{
+		ID:           "r1",
+		CreatedTime:  "2026-11-03T18:38:38.928Z",
+		ModifiedTime: "2026-11-03T19:14:03.879Z",
+		Content:      "ai! a",
+	}}
+
+	// Act
+	got := replies(raw, "⁘")
+
+	// Assert
+	if got[0].Modified != "2026-11-03T19:14:03.879Z" {
+		t.Errorf("modified = %q, want the instant Drive sent", got[0].Modified)
+	}
+	encoded, err := json.Marshal(got[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(encoded), `"modified":"2026-11-03T19:14:03.879Z"`) {
+		t.Errorf("the reply's JSON carries no modified instant: %s", encoded)
+	}
+	if !strings.Contains(fieldMask, "replies(id,"+authorMask+",createdTime,modifiedTime,content)") {
+		t.Errorf("the field mask does not ask for a reply's modifiedTime: %s", fieldMask)
+	}
+}

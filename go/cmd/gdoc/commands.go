@@ -324,6 +324,7 @@ func commands() []command {
 				{"--witness", kindNone, needOptional, "export the document and say which threads the export still shows"},
 				{"--wait", kindDuration, needOptional, "wait this long for something new before answering, written as 9m or 90s"},
 				{"--follow", kindDuration, needOptional, "keep looking for this long, printing one line per window that carries something marked for gdoc"},
+				{"--acknowledge", kindText, needOptional, "under --follow, write these words into every thread that wakes a window, before its line; the sign the live review shows within seconds"},
 			},
 			summary: "List the comment threads with their ranges, their replies and the next cursor.",
 			example: "gdoc comments https://docs.google.com/document/d/1AbC.../edit --since <cursor> --follow 29m",

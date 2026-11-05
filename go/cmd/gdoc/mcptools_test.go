@@ -25,7 +25,7 @@ import (
 // go on the line, and chat writes no file for one sentence.
 var flagsNeverOffered = map[string][]string{
 	"read":        nil,
-	"comments":    {"--wait", "--follow"},
+	"comments":    {"--wait", "--follow", "--acknowledge"},
 	"suggestions": {"--md"},
 	"reply":       {"--body-file"},
 	"annotate":    {"--quote", "--body-file"},

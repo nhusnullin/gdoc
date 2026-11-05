@@ -122,21 +122,31 @@ func edited(id, content, created, modified string) RawComment {
 func answered(c RawComment, rs ...RawReply) RawComment {
 	c.Replies = rs
 	for _, r := range rs {
-		if r.CreatedTime > c.ModifiedTime {
-			c.ModifiedTime = r.CreatedTime
+		if r.ModifiedTime > c.ModifiedTime {
+			c.ModifiedTime = r.ModifiedTime
 		}
 	}
 	return c
 }
 
-// aReply is one reply of a thread.
+// aReply is one reply of a thread, created and modified at one instant, which
+// is what Drive answers for a reply typed and sent in one go.
 func aReply(id, content, created string) RawReply {
 	return RawReply{
-		ID:          id,
-		Author:      Author{DisplayName: "Nail Khusnullin"},
-		CreatedTime: created,
-		Content:     content,
+		ID:           id,
+		Author:       Author{DisplayName: "Nail Khusnullin"},
+		CreatedTime:  created,
+		ModifiedTime: created,
+		Content:      content,
 	}
+}
+
+// aDraftReply is one reply Docs kept as a draft from created and sent at
+// modified, which is what Drive answers for it once it is posted.
+func aDraftReply(id, content, created, modified string) RawReply {
+	r := aReply(id, content, created)
+	r.ModifiedTime = modified
+	return r
 }
 
 // itemIDs is the ids of what a window carried, in the window's own order.
@@ -620,5 +630,189 @@ func TestAWindowThatCouldNotBeWrittenEndsTheFollow(t *testing.T) {
 	}
 	if got.Cursor != since {
 		t.Errorf("Cursor = %v, want the one handed in, %v", got.Cursor, since)
+	}
+}
+
+// Docs keeps a reply somebody typed and did not send, and posts it later with
+// the draft's createdTime. Measured 2026-11-05: "ai! a" typed at 18:38:38Z,
+// sent at 19:14:03Z, and the follow polling from a cursor between the two
+// never handed it over in 1,208 polls. The instant it was sent is its
+// modifiedTime, so a reply is news when either of its instants is past the
+// cursor.
+func TestAReplyDraftedBeforeTheCursorAndSentAfterItIsNews(t *testing.T) {
+	// Arrange: the cursor is gdoc's own receipt, written after the draft was
+	// started and before it was sent.
+	since := &Cursor{At: at("2026-11-03T18:37:51.604Z"), Ids: []string{"c1"}}
+	p := newTape(t, found(answered(
+		topComment("c1", "ai? any ideas how to rename?", "2026-11-03T18:36:54.566Z"),
+		aReply("r1", "⁘ Three names, all within the rules", "2026-11-03T18:37:51.604Z"),
+		aDraftReply("r2", "ai! a", "2026-11-03T18:38:38.928Z", "2026-11-03T19:14:03.879Z"),
+	)))
+
+	// Act
+	got, err := Follow(context.Background(), since, p.options(2*time.Second, 2*time.Second))
+
+	// Assert
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(p.handed) != 1 {
+		t.Fatalf("%d windows were handed over, want 1: the reply was sent after the cursor", len(p.handed))
+	}
+	w := p.handed[0]
+	if want := []string{"r2"}; !reflect.DeepEqual(itemIDs(w), want) {
+		t.Errorf("items = %+v, want %v", w.Items, want)
+	}
+	if w.Items[0].Modified != "2026-11-03T19:14:03.879Z" || w.Items[0].Created != "2026-11-03T18:38:38.928Z" {
+		t.Errorf("item = %+v, want both of the reply's instants", w.Items[0])
+	}
+	if got.Cursor == nil || !got.Cursor.At.Equal(at("2026-11-03T19:14:03.879Z")) {
+		t.Errorf("Cursor = %v, want the instant the reply was sent, so the next poll does not hand it over again", got.Cursor)
+	}
+}
+
+// The other direction of that rule: a reply sent before the cursor and never
+// touched since is not news, whatever its thread's own modifiedTime says.
+func TestAReplyWithBothInstantsBeforeTheCursorIsNotNews(t *testing.T) {
+	since := &Cursor{At: at("2026-11-03T18:37:51.604Z"), Ids: []string{"c1"}}
+	p := newTape(t, found(answered(
+		edited("c1", "ai? any ideas how to rename?", "2026-11-03T18:36:54.566Z", "2026-11-03T19:14:03.879Z"),
+		aReply("r1", "ai! a", "2026-11-03T18:37:00Z"),
+	)))
+
+	_, err := Follow(context.Background(), since, p.options(2*time.Second, 2*time.Second))
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(p.handed) != 0 {
+		t.Fatalf("%d windows were handed over, want 0: nothing about the reply is past the cursor", len(p.handed))
+	}
+}
+
+// acks records the sign the follow asked to be written, in order against the
+// windows handed over, so a test can say which came first.
+type acks struct {
+	threads []string
+	handed  []int // how many windows had been handed over when each ack was asked
+	fail    map[string]error
+}
+
+func (a *acks) write(p *tape) func(context.Context, string) (Acknowledgment, error) {
+	return func(_ context.Context, thread string) (Acknowledgment, error) {
+		a.threads = append(a.threads, thread)
+		a.handed = append(a.handed, len(p.handed))
+		if err := a.fail[thread]; err != nil {
+			return Acknowledgment{}, err
+		}
+		return Acknowledgment{ReplyID: "R-" + thread, Verified: true}, nil
+	}
+}
+
+// Nail's decision of 2026-11-05: the sign went out fourteen seconds after his
+// comment because a model turn sat between the window and the write. So the
+// follow itself writes the caller's words into every thread that woke the
+// window, before the window is handed over, and says so on the window.
+func TestTheWatchAcknowledgesEveryMarkedThreadBeforeItHandsTheWindowOver(t *testing.T) {
+	// Arrange
+	since := &Cursor{At: at("2026-10-27T12:00:00Z")}
+	p := newTape(t, found(
+		topComment("c1", "ai? which register", "2026-10-27T12:00:05Z"),
+		answered(topComment("c2", "Please check this", "2026-10-27T11:00:00Z"),
+			aReply("r1", "ai! add it", "2026-10-27T12:00:06Z")),
+		topComment("c3", "no marker here", "2026-10-27T12:00:07Z"),
+	))
+	a := &acks{}
+	o := p.options(2*time.Second, 2*time.Second)
+	o.Acknowledge = a.write(p)
+
+	// Act
+	_, err := Follow(context.Background(), since, o)
+
+	// Assert
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"c1", "c2"}; !reflect.DeepEqual(a.threads, want) {
+		t.Fatalf("the sign went into %v, want %v: the threads that woke the window and no other", a.threads, want)
+	}
+	if want := []int{0, 0}; !reflect.DeepEqual(a.handed, want) {
+		t.Errorf("windows handed over when each sign was asked = %v, want none: the sign goes out first", a.handed)
+	}
+	if len(p.handed) != 1 {
+		t.Fatalf("%d windows handed over, want 1", len(p.handed))
+	}
+	want := []Acknowledgment{{Thread: "c1", ReplyID: "R-c1", Verified: true}, {Thread: "c2", ReplyID: "R-c2", Verified: true}}
+	if !reflect.DeepEqual(p.handed[0].Acknowledged, want) {
+		t.Errorf("Acknowledged = %+v, want %+v", p.handed[0].Acknowledged, want)
+	}
+	if len(p.handed[0].Unacknowledged) != 0 {
+		t.Errorf("Unacknowledged = %+v, want none", p.handed[0].Unacknowledged)
+	}
+}
+
+func TestTheAcknowledgmentGoesOncePerThread(t *testing.T) {
+	since := &Cursor{At: at("2026-10-27T12:00:00Z")}
+	p := newTape(t, found(answered(
+		topComment("c1", "ai? which register", "2026-10-27T12:00:05Z"),
+		aReply("r1", "ai! and add it", "2026-10-27T12:00:06Z"),
+		aReply("r2", "ai? and which year", "2026-10-27T12:00:07Z"),
+	)))
+	a := &acks{}
+	o := p.options(2*time.Second, 2*time.Second)
+	o.Acknowledge = a.write(p)
+
+	if _, err := Follow(context.Background(), since, o); err != nil {
+		t.Fatal(err)
+	}
+
+	if want := []string{"c1"}; !reflect.DeepEqual(a.threads, want) {
+		t.Errorf("the sign went into %v, want %v: three marked items in one thread are one sign", a.threads, want)
+	}
+}
+
+func TestAnAcknowledgmentThatFailedIsOnTheLineAndTheWindowStillGoesOut(t *testing.T) {
+	since := &Cursor{At: at("2026-10-27T12:00:00Z")}
+	p := newTape(t, found(
+		topComment("c1", "ai? which register", "2026-10-27T12:00:05Z"),
+		topComment("c2", "ai! add it", "2026-10-27T12:00:06Z"),
+	))
+	a := &acks{fail: map[string]error{"c1": errors.New("Drive said no")}}
+	o := p.options(2*time.Second, 2*time.Second)
+	o.Acknowledge = a.write(p)
+
+	got, err := Follow(context.Background(), since, o)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(p.handed) != 1 {
+		t.Fatalf("%d windows handed over, want 1: a sign that failed does not hold the window back", len(p.handed))
+	}
+	w := p.handed[0]
+	if want := []Unacknowledged{{Thread: "c1", Error: "Drive said no"}}; !reflect.DeepEqual(w.Unacknowledged, want) {
+		t.Errorf("Unacknowledged = %+v, want %+v", w.Unacknowledged, want)
+	}
+	if len(w.Acknowledged) != 1 || w.Acknowledged[0].Thread != "c2" {
+		t.Errorf("Acknowledged = %+v, want the one thread the sign reached", w.Acknowledged)
+	}
+	if got.Cursor != w.Cursor {
+		t.Errorf("the cursor did not move past the window that was handed over")
+	}
+}
+
+func TestAWatchWithoutTheWordsWritesNothing(t *testing.T) {
+	since := &Cursor{At: at("2026-10-27T12:00:00Z")}
+	p := newTape(t, found(topComment("c1", "ai? which register", "2026-10-27T12:00:05Z")))
+
+	if _, err := Follow(context.Background(), since, p.options(2*time.Second, 2*time.Second)); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(p.handed) != 1 {
+		t.Fatalf("%d windows handed over, want 1", len(p.handed))
+	}
+	if w := p.handed[0]; w.Acknowledged != nil || w.Unacknowledged != nil {
+		t.Errorf("a follow with no Acknowledge reported %+v / %+v, want nothing", w.Acknowledged, w.Unacknowledged)
 	}
 }

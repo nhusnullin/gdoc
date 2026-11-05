@@ -40,7 +40,7 @@ const authorMask = "author(displayName,emailAddress,me)"
 // every field would carry the permission surface the guard refuses to reach by
 // its own path, so the mask is written out rather than left off.
 const fieldMask = "nextPageToken,comments(id," + authorMask + ",createdTime,modifiedTime," +
-	"content,resolved,quotedFileContent(value),replies(id," + authorMask + ",createdTime,content))"
+	"content,resolved,quotedFileContent(value),replies(id," + authorMask + ",createdTime,modifiedTime,content))"
 
 // The markers a comment can carry. The match is exact: `AI:` is not one of
 // them, and neither is `ai:x`. A marker is the trigger for gdoc to act, so a
@@ -65,10 +65,11 @@ type RawComment struct {
 
 // RawReply is one reply of a thread, as Drive answers it.
 type RawReply struct {
-	ID          string `json:"id"`
-	Author      Author `json:"author"`
-	CreatedTime string `json:"createdTime"`
-	Content     string `json:"content"`
+	ID           string `json:"id"`
+	Author       Author `json:"author"`
+	CreatedTime  string `json:"createdTime"`
+	ModifiedTime string `json:"modifiedTime"`
+	Content      string `json:"content"`
 }
 
 // Author is who wrote a comment. `me` is kept because Drive sends it, and not
@@ -122,9 +123,13 @@ type Reply struct {
 	Author       string `json:"author"`
 	AuthorDomain string `json:"author_domain,omitempty"`
 	Created      string `json:"created"`
-	Content      string `json:"content"`
-	Marker       string `json:"marker"`
-	ByGdoc       bool   `json:"by_gdoc"`
+	// Modified is when the reply was last changed, and for a reply Docs kept as
+	// a draft it is the instant it was sent: Created is the draft's. See the
+	// follow's news rule.
+	Modified string `json:"modified"`
+	Content  string `json:"content"`
+	Marker   string `json:"marker"`
+	ByGdoc   bool   `json:"by_gdoc"`
 }
 
 // Reader is the one thing this package needs of a session: a JSON GET. A
@@ -270,6 +275,7 @@ func replies(raw []RawReply, mark string) []Reply {
 			Author:       r.Author.DisplayName,
 			AuthorDomain: domainOf(r.Author.EmailAddress),
 			Created:      r.CreatedTime,
+			Modified:     r.ModifiedTime,
 			Content:      r.Content,
 			Marker:       markerOf(r.Content),
 			ByGdoc:       byGdoc(r.Content, mark),
@@ -282,6 +288,11 @@ func replies(raw []RawReply, mark string) []Reply {
 // token is exactly one of the three markers. Everything else is MarkerNone,
 // including `AI:` and `ai:no-space`: the marker is what makes gdoc act, and a
 // loose match is gdoc acting on a sentence nobody addressed to it.
+// MarkerOf is markerOf for a caller outside this package that has to ask the
+// same question of words it is about to write: cmd/gdoc refuses a sign that
+// would wake the watch that writes it.
+func MarkerOf(content string) string { return markerOf(content) }
+
 func markerOf(content string) string {
 	// Fields, so the sentence is cut the way the doc comment says it is. Cutting
 	// on one separator at a time left `ai:<tab>answer this` as a single token,
