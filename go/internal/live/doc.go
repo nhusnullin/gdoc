@@ -48,9 +48,10 @@
 //     internal/body/testdata/docs, one Google Drawing, one floating picture,
 //     and a second tab titled Appendix with one picture in it. The
 //     measurement creates nothing and writes nothing to Drive.
-//   - GDOC_LIVE_OWNER: the whole address the name chip in M33's task
-//     acceptance carries. It has no default for the guard's reason above and
-//     one of its own: a chip names a person, and gdoc may never guess who.
+//   - GDOC_LIVE_OWNER: the whole address the name chip in M33's two task
+//     acceptances carries, the published one and the proposed one. It has no
+//     default for the guard's reason above and one of its own: a chip names a
+//     person, and gdoc may never guess who.
 //   - GDOC_LIVE_PUBLISHED_DOC_ID: a document publish made, in the test folder.
 //   - GDOC_LIVE_RESTYLED_DOC_ID: a document restyle styled with --fields, in
 //     the test folder. Those two are read only under GDOC_LIVE_RECORD, for the
@@ -222,6 +223,16 @@
 //     above names a variable of its own: GDOC_LIVE_TEST, GDOC_LIVE_WRITE and
 //     GDOC_LIVE_FOLDER_ID with its default are the whole of what they read, and
 //     every document they touch is one they made.
+//   - TestLiveProposeSuggestsATaskList, M33's. It creates the same five
+//     paragraphs and proposes one block whose list is a checklist, one task
+//     naming GDOC_LIVE_OWNER and one naming a day, in front of the list item
+//     so the new paragraphs inherit that list. It asserts one suggestion id
+//     across every key Docs records one under, two boxes, one name chip
+//     carrying the address and one date chip, each under the block's own id,
+//     and then withdraws it and compares the projection character for
+//     character. It is the run that found the second id a checkbox preset over
+//     an inherited list leaves behind, which is why the batch takes the
+//     bullets off first: MEASURED.md, 2026-11-07.
 //   - TestLiveFootnoteImportProbe, M18's, and the gate Part A of that
 //     milestone rests on. It uploads testdata/footnote-probe.docx, the built
 //     04-minimal.md with one Word footnote added by hand, and prints three

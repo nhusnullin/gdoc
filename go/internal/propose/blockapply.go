@@ -54,7 +54,7 @@ func (p Proposal) checkBlock(mark string) error {
 	}
 	// The size is asked first, because a refusal naming the ceiling says more
 	// about a note pasted in whole than the first construct in it would.
-	if _, err := ParseContent(p.Content); err != nil {
+	if _, err := ParseContent(p.Content, p.Domain); err != nil {
 		return err
 	}
 	return p.checkWhy(mark)
@@ -106,7 +106,7 @@ func applyBlock(ctx context.Context, s Session, docID string, p Proposal, held *
 	}
 	// The content is read before the document, because it needs no document: a
 	// block gdoc cannot read is refused without a request being made at all.
-	content, err := ParseContent(p.Content)
+	content, err := ParseContent(p.Content, p.Domain)
 	if err != nil {
 		return out, err
 	}

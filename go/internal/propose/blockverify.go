@@ -97,7 +97,9 @@ func blockInlineHolds(d *docs.Document, place Placement, content []Para) (bool, 
 	met := &idSet{}
 
 	for i, c := range content {
-		at := l.Paras[i].Start
+		// A chip is a unit of the document that the inserted text does not
+		// hold, so each paragraph sits as far on as the chips in front of it.
+		at := l.Paras[i].Start + chipsBefore(content, i)
 		p := paraAt(paras, at)
 		if p == nil {
 			return false, met.ids, fmt.Sprintf(
@@ -115,6 +117,9 @@ func blockInlineHolds(d *docs.Document, place Placement, content []Para) (bool, 
 			return false, met.ids, fmt.Sprintf(
 				"the read-back carries %q as the suggested insertion at index %d, where %q was written", got, at, want)
 		}
+		if why := met.chipsHold(p, c); why != "" {
+			return false, met.ids, why
+		}
 	}
 	if !place.Replaces() {
 		return true, met.ids, ""
@@ -123,7 +128,7 @@ func blockInlineHolds(d *docs.Document, place Placement, content []Para) (bool, 
 	// The old paragraphs are where the insert left them: it went in at the start
 	// of the first of them, so both ends moved along by its length. It is the
 	// same shift blockbatch.go computed the deleteContentRange at.
-	shift := utf16Len(l.Text)
+	shift := utf16Len(l.Text) + chipsBefore(content, len(content))
 	start, end := place.Delete.Start+shift, place.Delete.End+shift
 	var found int
 	for _, p := range paras {
@@ -307,6 +312,80 @@ func (s *idSet) insertionIn(p *docs.Paragraph) string {
 		s.add(r.InsertionIDs)
 	}
 	return b.String()
+}
+
+// chipsHold is the chips one paragraph came back with: the right number of
+// each kind, and every one of them inside the block's own suggestion.
+//
+// The id is the trust guardian's condition on this milestone. A chip carrying
+// an id the block never got is a second suggestion, and withdraw takes back
+// the one the note records, so that chip would stay in somebody's document
+// after the proposal was taken back. A chip carrying no id at all is worse: it
+// is a change written directly into a document this package may only suggest
+// into. Both answer the same way, which is the route not holding, and the run
+// stops at this proposal rather than going on to the next.
+//
+// The words were already compared without the chips, because insertionIn reads
+// the text runs alone. What is counted here is the chips themselves.
+func (s *idSet) chipsHold(p *docs.Paragraph, c Para) string {
+	var people, dates int
+	for _, r := range p.Runs {
+		switch r.Kind {
+		case docs.KindPerson:
+			people++
+		case docs.KindDate:
+			dates++
+		default:
+			continue
+		}
+		if !s.carries(r.InsertionIDs) {
+			return fmt.Sprintf(
+				"the read-back carries a %s chip at index %d whose suggestion ids are %v, and the block is the suggestion %v: a chip outside the block's own suggestion is one withdraw would leave in the document",
+				r.Kind, r.StartIndex, r.InsertionIDs, s.ids)
+		}
+	}
+	want := 0
+	if c.Owner != "" {
+		want = 1
+	}
+	if people != want {
+		return fmt.Sprintf(
+			"the read-back carries %d name chips in the paragraph at index %d, where the block wrote %d", people, p.StartIndex, want)
+	}
+	want = 0
+	if c.Due != "" {
+		want = 1
+	}
+	if dates != want {
+		return fmt.Sprintf(
+			"the read-back carries %d date chips in the paragraph at index %d, where the block wrote %d", dates, p.StartIndex, want)
+	}
+	return ""
+}
+
+// carries says whether every one of these ids is one the block's own text came
+// back with. An element carrying no id at all is not pending at all, so it
+// answers no.
+func (s *idSet) carries(ids []string) bool {
+	if len(ids) == 0 {
+		return false
+	}
+	for _, id := range ids {
+		if !s.seen[id] {
+			return false
+		}
+	}
+	return true
+}
+
+// chipsBefore is how many chips the block's first n paragraphs hold, which is
+// how far the paragraph behind them moved once the chips went in.
+func chipsBefore(content []Para, n int) int {
+	total := 0
+	for _, p := range content[:n] {
+		total += p.chips()
+	}
+	return total
 }
 
 // deletionIn says whether every one of the paragraph's words is marked for

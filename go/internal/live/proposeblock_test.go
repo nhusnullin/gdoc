@@ -29,6 +29,7 @@ package live
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"sort"
 	"strings"
@@ -119,40 +120,7 @@ const (
 // because the guard carried the create that made it, and no document of Nail's
 // is in the reachable set at all.
 func TestLiveProposeBlock(t *testing.T) {
-	if os.Getenv(liveVar) != "1" || os.Getenv(writeVar) != "1" {
-		t.Skipf("skipped: set %s=1 and %s=1 to create a document in the Drive test folder and propose blocks into it; %s names another folder", liveVar, writeVar, folderVar)
-	}
-	folder := strings.TrimSpace(os.Getenv(folderVar))
-	if folder == "" {
-		folder = testFolder
-	}
-	t.Logf("creating in folder %s", folder)
-
-	p := guard.NewPolicy()
-	p.AllowCreateIn(folder)
-	s, err := gapi.Open(p, nil)
-	if err != nil {
-		t.Fatalf("the session could not be opened: %v", err)
-	}
-	ctx := context.Background()
-
-	// The probe first, and this test is the one running it: an unenrolled
-	// project makes every assertion below meaningless, and the probe is the
-	// one that says so. No command does this any more, so a failure below is
-	// about the block rather than about the day.
-	report, err := probe.Run(ctx, s, folder)
-	for _, w := range report.Warnings {
-		t.Logf("probe warning: %s", w)
-	}
-	if err != nil {
-		t.Fatalf("the probe failed, and its document is %q: %v", report.ProbeDocumentID, err)
-	}
-	if !report.Enrolled {
-		t.Fatalf("the probe says SUGGEST is not honoured today, so nothing below can be a suggestion; probe document %q", report.ProbeDocumentID)
-	}
-	if !report.Trashed {
-		t.Errorf("the probe document %q was left in the folder", report.ProbeDocumentID)
-	}
+	ctx, p, s, folder := liveBlockSession(t)
 
 	docID := blockSubject(t, ctx, s, folder)
 	before := blockBodyText(t, ctx, s, docID, "before the proposals")
@@ -392,5 +360,156 @@ func withdrawBlocks(t *testing.T, ctx context.Context, p *guard.Policy, s *gapi.
 		}
 		block = withdraw.Forget(block, docID, id)
 		t.Logf("withdrawn: %v", gone.RejectedSuggestionIDs)
+	}
+}
+
+// liveBlockSession is the session every block proposal in this file is written
+// through: the skip, the folder, the policy with its one door open, and the
+// probe's word that SUGGEST is honoured today.
+//
+// The probe runs here because an unenrolled project makes every assertion
+// below it meaningless, and the probe is the one thing that says so. No
+// command runs it any more, so a failure after this point is about the block
+// rather than about the day.
+func liveBlockSession(t *testing.T) (context.Context, *guard.Policy, *gapi.Session, string) {
+	t.Helper()
+	if os.Getenv(liveVar) != "1" || os.Getenv(writeVar) != "1" {
+		t.Skipf("skipped: set %s=1 and %s=1 to create a document in the Drive test folder and propose blocks into it; %s names another folder", liveVar, writeVar, folderVar)
+	}
+	folder := strings.TrimSpace(os.Getenv(folderVar))
+	if folder == "" {
+		folder = testFolder
+	}
+	t.Logf("creating in folder %s", folder)
+
+	p := guard.NewPolicy()
+	p.AllowCreateIn(folder)
+	s, err := gapi.Open(p, nil)
+	if err != nil {
+		t.Fatalf("the session could not be opened: %v", err)
+	}
+	ctx := context.Background()
+
+	report, err := probe.Run(ctx, s, folder)
+	for _, w := range report.Warnings {
+		t.Logf("probe warning: %s", w)
+	}
+	if err != nil {
+		t.Fatalf("the probe failed, and its document is %q: %v", report.ProbeDocumentID, err)
+	}
+	if !report.Enrolled {
+		t.Fatalf("the probe says SUGGEST is not honoured today, so nothing below can be a suggestion; probe document %q", report.ProbeDocumentID)
+	}
+	if !report.Trashed {
+		t.Errorf("the probe document %q was left in the folder", report.ProbeDocumentID)
+	}
+	return ctx, p, s, folder
+}
+
+// The task block: M33's own live case. One block, a line of words and two
+// boxes, the first naming an owner and the second a day. %s takes the
+// address GDOC_LIVE_OWNER names.
+//
+// Its first line is in the document nowhere else, which is what the preview
+// read-back needs to answer at all, and the anchor is the second paragraph, so
+// the block's own last paragraph is not the one owning the document's final
+// mark: a block ending in a list item is refused there.
+const (
+	blockTasksQuoted  = "Every exception to the review is recorded"
+	blockTasksContent = "The bank's own questions are tracked here.\n" +
+		"\n" +
+		"- [ ] Confirm which bank holds the safeguarding account @%s\n" +
+		"- [ ] Confirm the licence number 2026-11-20\n"
+	blockTasksWhy = "The exceptions have no owner and no date anywhere in the document, and these are the two the review asked for."
+
+	// The words of each task, as literals, because what is asserted is what a
+	// person would have written.
+	blockTaskWithOwner = "Confirm which bank holds the safeguarding account"
+	blockTaskWithDay   = "Confirm the licence number"
+	blockTaskDay       = "2026-11-20"
+)
+
+// TestLiveProposeSuggestsATaskList is the one question no fixture can answer:
+// a block whose list is a checklist, with a name chip and a date chip in it,
+// comes back from Google as one suggestion id.
+//
+// One id is what the whole kind rests on. The note records one, withdraw takes
+// back the one it recorded, and the decision of 2026-11-05 promised a proposed
+// task list that withdraw takes back whole. The chips are the new part: three
+// request kinds that never went out in one SUGGEST batch through the
+// production writer before this test. If more than one id comes back, this
+// test says so and nothing else in the milestone is true.
+//
+// The guardian's condition is asserted here as well as in the package: every
+// chip in the block carries the block's own id, so no chip is a change
+// withdraw would leave behind.
+func TestLiveProposeSuggestsATaskList(t *testing.T) {
+	ctx, p, s, folder := liveBlockSession(t)
+	owner := strings.TrimSpace(os.Getenv(ownerVar))
+	if owner == "" {
+		t.Skipf("skipped: set %s=<address> to put a name chip on a proposed task; a chip names a person and there is no default", ownerVar)
+	}
+
+	docID := blockSubject(t, ctx, s, folder)
+	before := blockBodyText(t, ctx, s, docID, "before the task block")
+
+	idsBefore := blockSuggestionIDs(t, ctx, s, docID, "before the task block")
+	tasked := proposeBlock(t, ctx, s, docID, "the task block", propose.Proposal{
+		Kind:    propose.KindBlock,
+		After:   blockTasksQuoted,
+		Content: fmt.Sprintf(blockTasksContent, owner),
+		Why:     blockTasksWhy,
+	})
+	blockAddedOneID(t, "the task block", idsBefore,
+		blockSuggestionIDs(t, ctx, s, docID, "after the task block"), tasked)
+	blockTasksLanded(t, ctx, s, docID, tasked.SuggestionIDs[0], owner)
+
+	withdrawBlocks(t, ctx, p, s, docID, []propose.Result{tasked})
+	if got := blockBodyText(t, ctx, s, docID, "after the withdrawal"); got != before {
+		t.Errorf("the document does not read as it did before the task block was proposed:\nbefore %q\nafter  %q", before, got)
+	}
+}
+
+// blockTasksLanded asks the document itself what the block became: two
+// checklist items, one name chip carrying the address, one date chip, and the
+// block's own suggestion id on every one of them.
+func blockTasksLanded(t *testing.T, ctx context.Context, s *gapi.Session, docID, id, owner string) {
+	t.Helper()
+	d, err := docs.Fetch(ctx, s, docID)
+	if err != nil {
+		t.Fatalf("the document %q could not be read back with its suggestions inline: %v", docID, err)
+	}
+	if len(d.Tabs) != 1 {
+		t.Fatalf("the document came back with %d tabs", len(d.Tabs))
+	}
+	var boxes, people, dates int
+	for _, b := range d.Tabs[0].Body {
+		p := b.Paragraph
+		if p == nil || p.Bullet == nil || !p.Bullet.Checklist {
+			continue
+		}
+		boxes++
+		for _, r := range p.Runs {
+			switch r.Kind {
+			case docs.KindPerson:
+				people++
+				if r.Detail == nil || !strings.EqualFold(r.Detail.Email, owner) {
+					t.Errorf("the name chip names %+v, want %s", r.Detail, owner)
+				}
+			case docs.KindDate:
+				dates++
+			default:
+				continue
+			}
+			if len(r.InsertionIDs) != 1 || r.InsertionIDs[0] != id {
+				t.Errorf("the %s chip carries the suggestion ids %v, and the block is %q: a chip outside the block's own suggestion is one withdraw leaves behind", r.Kind, r.InsertionIDs, id)
+			}
+		}
+	}
+	if boxes != 2 {
+		t.Errorf("the document holds %d checklist items, and the block proposed two", boxes)
+	}
+	if people != 1 || dates != 1 {
+		t.Errorf("the document holds %d name chips and %d date chips, and the block proposed one of each", people, dates)
 	}
 }

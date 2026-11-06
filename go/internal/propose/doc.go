@@ -141,24 +141,98 @@
 // markdown, and ParseContent reads it into the paragraphs the write is built
 // from: a named style, a list membership, and runs carrying marks.
 //
-// The subset is paragraphs, headings one to six, bulleted and numbered lists one
-// level deep, and three marks, which are bold, italic and a link. A wrapped line
-// is one paragraph and the wrap is a space, because a paragraph is a paragraph
-// because of the empty line between two of them. A list item is NORMAL_TEXT with
-// a bullet, because in Docs a bullet is a list membership and never a style.
+// The subset is paragraphs, headings one to six, bulleted, numbered and task
+// lists one level deep, and three marks, which are bold, italic and a link. A
+// wrapped line is one paragraph and the wrap is a space, because a paragraph
+// is a paragraph because of the empty line between two of them. A list item is
+// NORMAL_TEXT with a bullet, because in Docs a bullet is a list membership and
+// never a style.
 // TestContentBecomesTheParagraphsTheBlockWrites,
 // TestContentReadsAHeadingAtItsOwnLevel, TestContentReadsTheMarksASentenceCarries,
 // TestContentReadsBothListKinds, TestContentJoinsAWrappedLineWithASpace and
 // TestParaTextIsTheWordsWithoutTheMarks are the pins.
+//
+// # A task list is a checklist, and its tokens are chips
+//
+// A task list item is a box in the document, with the owner and the day the
+// item names as a name chip and a date chip behind its words: the notation
+// publish reads, read here by the same internal/tasks (DECISIONS.md,
+// 2026-11-05). The item's words become its runs, and Para carries the owner as
+// a whole address and the day as the calendar day.
+// TestContentReadsATaskList and TestABareOwnerTakesTheDomainInEffect are the
+// pins.
+//
+// The notation is read twice, from the item's own markdown and from the runs
+// the document will show, and a token that is not the same in both is refused.
+// That is how markup around a token is caught: "**@anna**" is a word in the
+// source and a token in the rendered text, and a chip made of it would lose
+// the emphasis the author wrote. internal/body reads the same two the same way
+// for the docx. The emphasis case of
+// TestContentRefusesWhatTheSubsetDoesNotHold is the pin.
+//
+// A bare "@anna" takes the domain in effect, which the run carries on the
+// proposal rather than in the file, like the mark. With no domain it is
+// refused naming the setting, before a request is built: chat sends none,
+// because the card a person sees is the words they wrote and a domain resolved
+// behind their back would not be on it. The bare-owner case of
+// TestContentRefusesWhatTheSubsetDoesNotHold is the pin.
+//
+// Four shapes are refused, each because it is a notation gdoc would half
+// understand. A ticked task, because a block's marks are bold, italic and a
+// link and a block has no strike to write a done item with. A task in a
+// numbered list, because a Docs checklist carries no numbers. A nested task
+// list, by the nested-list rule every list has. And a list that holds a task
+// item beside a plain one, because a checklist request covers the whole list
+// it lands in, so one preset would reach the other items. Each is a case of
+// TestContentRefusesWhatTheSubsetDoesNotHold.
+//
+// Each chip is one space in the inserted text and nothing more. A chip is a
+// unit of the document that no run of the content holds, so Para.Text leaves
+// room for it where it will go, which also keeps the words and the chips from
+// reading as one word. The name chip is written before the date chip whichever
+// order the item wrote the two tokens in, because both land at the end of the
+// words rather than where the token stood: internal/publish keeps the written
+// order, because there the tokens are in the document and each chip replaces
+// one. TestATaskParagraphCarriesOneSpacePerChip and
+// TestEachTokenBecomesItsChipWhereItStood in internal/publish are the pins.
+//
+// The chips are the last requests of the batch, from the last paragraph to the
+// first and inside a paragraph from the end back. Each one moves every index
+// behind it, so sent earlier a chip would move the old paragraphs under a
+// replace's deletion and the words under the comment's anchor, and a later
+// chip's own index as well. TestTheChipsGoLastFromTheLastToTheFirst and
+// TestTheReplaceShiftIsUnchangedByChips are the pins.
+//
+// A task stretch takes its bullets off before its boxes go on, which no other
+// stretch does. New text takes the list membership of the paragraph it lands
+// in front of, and a checkbox preset over that inherited list is a change to
+// the list's own properties, which Docs records as a second suggestion: it was
+// measured as two ids on 2026-11-07 and as one with the removal in front of it
+// (MEASURED.md). A block withdraw cannot take back whole is not one this
+// package will make. TestABlockTaskListIsACheckboxStretch and
+// TestLiveProposeSuggestsATaskList are the pins.
+//
+// The read-back learns the chips. Each paragraph sits as far on as the chips in
+// front of it, the words are compared with the chips taken out, and every chip
+// has to carry the block's own suggestion id: a chip under another id is a
+// second suggestion withdraw would leave in the document, and a chip under no
+// id at all is a direct edit in a document this package may only suggest into.
+// Both answer the same way, which is the route not holding, so the run stops at
+// this proposal rather than going on to the next. It is the trust guardian's
+// condition on this milestone. TestTheBlockReadBackHoldsWithChips,
+// TestABlockWithTasksIsStillOneSuggestion and
+// TestAChipWithoutTheBlocksIdStopsTheRun are the pins.
 //
 // Everything else is a refusal naming the line, never a construct quietly
 // dropped. A block that lost its table is a suggestion nobody can read and
 // nobody can explain, and the words around the hole read as if they were the
 // whole answer. The refusals are a table, a nested list, a picture, a code block,
 // a block quote, HTML in either shape, a page break, code in a sentence,
-// struck-out words, a task list, a line break inside a paragraph, a heading
-// inside a list item, a list item with more than one paragraph, a numbered list
-// that does not begin at 1, a paragraph or a heading with no words in it, and
+// struck-out words, a ticked task, a task in a numbered list, a list holding a
+// task item beside a plain one, a task whose notation gdoc half understands,
+// a line break inside a paragraph, a heading inside a list item, a list item
+// with more than one paragraph, a numbered list that does not begin at 1, a
+// paragraph or a heading with no words in it, and
 // content that is empty or nothing but space. Three of them are decisions rather
 // than gaps: a nested list, because nesting a suggested list goes in through
 // leading tabs and that is unmeasured in SUGGEST mode, a table, because
