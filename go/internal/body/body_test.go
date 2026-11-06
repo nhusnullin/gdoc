@@ -1258,3 +1258,77 @@ func TestALinkWithASchemeOrAnAnchorIsStillALink(t *testing.T) {
 		}
 	}
 }
+
+// TestTheResultListsEveryTaskInOrder: the walk reports the note's tasks as
+// facts, in the order the note holds them, and judges none of them. A plain
+// item is no task and is not in the list.
+func TestTheResultListsEveryTaskInOrder(t *testing.T) {
+	out := walk(t, "- [ ] Ask the bank @anna@example.com 2026-01-02\n- An ordinary item.\n- [x] Sign it @bob\n")
+
+	want := []Task{
+		{Words: "Ask the bank", Owner: "@anna@example.com", Due: "2026-01-02",
+			Tokens: " @anna@example.com 2026-01-02"},
+		{Words: "Sign it", Owner: "@bob", Done: true, Tokens: " @bob"},
+	}
+	if len(out.Tasks) != len(want) {
+		t.Fatalf("the walk listed %d tasks, want %d: %#v", len(out.Tasks), len(want), out.Tasks)
+	}
+	for i := range want {
+		if out.Tasks[i] != want[i] {
+			t.Errorf("task %d is %#v, want %#v", i, out.Tasks[i], want[i])
+		}
+	}
+}
+
+// TestATaskTheNotationRefusesStopsTheBuild: internal/tasks names what is
+// wrong with the line, and the build says it and writes nothing. A second
+// owner published as words is a task assigned to nobody.
+func TestATaskTheNotationRefusesStopsTheBuild(t *testing.T) {
+	got := refused(t, "- [ ] Ask the bank @anna@example.com @bob@example.com\n")
+
+	if !strings.Contains(got, "at most one owner") {
+		t.Errorf("the refusal is %q, want it to name the second owner", got)
+	}
+	if !strings.Contains(got, "line 1") {
+		t.Errorf("the refusal is %q, want it to name the line", got)
+	}
+}
+
+// TestANestedTaskIsRefused: a checklist in a document stands at one level, so
+// a task inside another list is refused rather than published as a level the
+// document cannot tick.
+func TestANestedTaskIsRefused(t *testing.T) {
+	got := refused(t, "- [ ] Ask the bank.\n    - [ ] And the auditor.\n")
+
+	if !strings.Contains(got, "inside another list") {
+		t.Errorf("the refusal is %q, want it to name the nesting", got)
+	}
+	if !strings.Contains(got, "line 2") {
+		t.Errorf("the refusal is %q, want it to name the line", got)
+	}
+}
+
+// TestATaskInANumberedListIsRefused: a checklist is not numbered, so a task in
+// a numbered list is refused rather than losing either the number or the box.
+func TestATaskInANumberedListIsRefused(t *testing.T) {
+	got := refused(t, "1. [ ] Ask the bank.\n")
+
+	if !strings.Contains(got, "numbered list") {
+		t.Errorf("the refusal is %q, want it to name the numbered list", got)
+	}
+}
+
+// TestATokenInsideEmphasisIsRefused: the item's source says what the author
+// wrote and the runs say what the document will show. A token the one holds
+// and the other does not has markup around it, and a chip there would land on
+// nobody.
+func TestATokenInsideEmphasisIsRefused(t *testing.T) {
+	got := refused(t, "- [ ] Ask the bank *@anna@example.com*\n")
+
+	if !strings.Contains(got, "@anna@example.com") {
+		t.Errorf("the refusal is %q, want it to name the token", got)
+	}
+	if !strings.Contains(got, "plain words") {
+		t.Errorf("the refusal is %q, want it to say a token is the item's own plain words", got)
+	}
+}

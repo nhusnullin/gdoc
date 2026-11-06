@@ -44,8 +44,8 @@ here[^twice] takes a number of its own.
 
 ### A task list
 
-- [ ] An unchecked item.
-- [x] A checked item.
+- [ ] An unchecked item, with somebody to do it. @anna@example.com
+- [x] A checked item, with the day it was due. 2026-01-02
 - [ ] A third item, long enough to wrap so the hanging indent is exercised the
       same way an ordinary bullet is.
 
