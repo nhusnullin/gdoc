@@ -45,6 +45,8 @@ earlier sections are frozen in [MEASURED-archive.md](MEASURED-archive.md).
 | 2026-10-28 | The logo's frame and its ink | MEASURED.md |
 | 2026-10-29 | The 29 October cover in pixels | MEASURED.md |
 | 2026-10-30 | The two covers in a PDF export: v2.25.0 against v2.27.0 | MEASURED.md |
+| 2026-11-05 | Checklists, person chips and date chips, direct and suggested | MEASURED.md |
+| 2026-11-06 | A person chip naming another address mails and shares with nobody | MEASURED.md |
 
 A measurement is never edited to match a later reading; a different answer is a
 new section in this file rather than a change in the archive, and the old one
@@ -1014,3 +1016,47 @@ drew v2.27.0's 12 pt lower than this, so the two renderers agree on the
 distance between the label and the mark and on nothing else about the top
 margin, which is why that distance is the number the house states its
 intent in.
+
+## Checklists, person chips and date chips, direct and suggested
+
+Measured 2026-11-05 by the team lead for M33, with `TestLiveChecklistProbe`
+and `TestLiveChecklistProbeOverBullets` in
+`go/internal/live/checklistprobe_test.go`: the real token through the real
+guard, throwaway documents the guard's own create made in the Drive test
+folder, each trashed after. The full tables are in
+`docs/v2/research/checklist-tasks.md`.
+
+- `createParagraphBullets` with `BULLET_CHECKBOX`, `insertPerson` and
+  `insertDate` all land directly, and in SUGGEST mode each lands as a
+  suggestion.
+- A checklist level reads `glyphType: GLYPH_TYPE_UNSPECIFIED`,
+  `glyphFormat: "%0"` and no `glyphSymbol`. A disc level carries
+  `glyphSymbol: "●"`.
+- One SUGGEST batch that inserts paragraphs, makes them a checklist and puts a
+  person chip on one comes back with one suggestion id on everything.
+- A checklist request over part of an existing list turns the whole list,
+  whether sent as one request or one per paragraph. With
+  `deleteParagraphBullets` over the task paragraphs first, they become a list
+  of their own and the other items keep their disc. Taking bullets off moves
+  no index.
+- The schema, revision 20261028, has no field for a ticked box or a Docs task,
+  to read or to write.
+
+Ask again when the Docs discovery document's `Paragraph`, `Bullet` or
+`NestingLevel` gains a field, or when a published checklist reads differently.
+
+## A person chip naming another address mails and shares with nobody
+
+Measured 2026-11-06 for the trust guardian's condition on M33, with
+`TestLivePersonChipToAnotherAddress`. How taken: the real token, two documents
+kept in the Drive test folder, each holding one chip naming Nail's personal
+address, which is not the signed-in account and has no access to the folder.
+One chip was written directly at 05:18:07Z, the other suggested at 05:18:11Z.
+The sharing list of each, read through Drive's permissions, holds the shared
+drive's members and not that address. Nail read that inbox, spam included,
+and answered "No email".
+
+So a chip in the body is text that names a person, not a share and not a
+notification. A browser shows the person typing a prompt to share, which an
+API write never sees. Ask again if Google's help starts to describe body
+mentions as notifying, or if a colleague reports a mail after a publish.

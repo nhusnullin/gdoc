@@ -2136,6 +2136,15 @@ note and the read use one notation. A tick prints as `[x]` only once the hand
 test shows the read carries one; until then every item prints unticked and
 the reader says so in the envelope.
 
+**The trust guardian's signature.** The guardian vetoed the run on 2026-11-05
+until a chip naming an address that is not the signed-in account was measured,
+because chat refuses `assignee` for the mail it sends. Measured 2026-11-06 in
+MEASURED.md, Nail's answer "No email". The guardian's sentence: "A person chip
+writes an address into the body, and was measured on 2026-11-06 to mail and
+share with nobody. It is therefore text the card shows, and chat takes it only
+as a full address." Its other condition is in the plan: every chip in a
+proposed block must carry the block's suggestion id, or the run stops.
+
 **Chat.** `read` and `propose` carry the same notation, and nothing else in
 chat changes: chat still has no `publish`. A proposed task that names an owner
 shows that owner's address on the card, because a chip names a person.

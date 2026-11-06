@@ -97,7 +97,7 @@ kept in the test folder, a chip naming Nail's personal address (not the
 signed-in account, no access to the folder), one written directly at
 05:18:07Z and one suggested at 05:18:11Z. Sharing, read through the Drive
 permissions list of each: the address was not added, and both lists are the
-shared drive's members alone. The inbox: waiting on Nail.
+shared drive's members alone. The inbox: Nail read it, spam included, and answered "No email".
 
 **Ticks and Docs tasks.**
 
