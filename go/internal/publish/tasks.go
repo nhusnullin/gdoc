@@ -322,7 +322,13 @@ func runsOf(found []taskPara) [][]taskPara {
 // It counts and compares; it judges nothing. A task that did not land is a
 // fact about a document that exists, so it is a warning and a check that did
 // not hold, never a failed publish.
-// TestAMissingChipIsTasksFalseAndAWarning.
+//
+// What is taken off the end of the line read back is the space or the tab the
+// token stood after, which the delete left where it was. Both, because both
+// are what internal/tasks splits a token off on: trimming the space alone
+// called a tabbed task a task that did not land.
+// TestAMissingChipIsTasksFalseAndAWarning and
+// TestATabBeforeATokenIsNotATaskThatDidNotLand.
 func tasksLanded(tab docs.Tab, want []Task) []string {
 	got := checklistParagraphs(tab)
 	if len(got) != len(want) {
@@ -332,7 +338,7 @@ func tasksLanded(tab docs.Tab, want []Task) []string {
 	var warns []string
 	for i, p := range got {
 		text, _ := joinRuns(p)
-		if words := strings.TrimRight(text, " "); words != want[i].Words {
+		if words := strings.TrimRight(text, " \t"); words != want[i].Words {
 			warns = append(warns, taskWarning(fmt.Sprintf(
 				"task %d reads %q in the note and %q in the document", i+1, want[i].Words, words)))
 		}

@@ -154,14 +154,22 @@
 // it. TestChipsThatEndAChecklistItemPrintAsTheNotation and internal/export's
 // TestAnExportedChecklistParsesBackToTheSameTasks are the pins.
 //
-// Only a chip at the end of the line is a token, with nothing but spaces
-// between it and the words or the other chip, and at most one of each kind.
-// That is where the notation puts a token, so a chip in the middle of a
-// sentence keeps its placeholder and its warning, and so does a person chip
-// with no address: the notation is an address and the label is a name, and
-// "@A Placeholder" is a line the next build refuses.
+// Only a chip at the end of the line is a token, with at least one space or
+// tab between it and the words or the other chip and nothing else, and at most
+// one of each kind. That is where the notation puts a token, so a chip in the
+// middle of a sentence keeps its placeholder and its warning, and so does a
+// person chip with no address: the notation is an address and the label is a
+// name, and "@A Placeholder" is a line the next build refuses.
 // TestAChipInsideTheWordsPrintsAsToday and
 // TestAPersonChipWithNoEmailPrintsAsToday are the pins.
+//
+// A chip standing against the words, or against another chip, is one of those
+// too. The next build splits a token off on a space or a tab, so
+// "Call@anna@example.com" reads as one word with nobody named and two joined
+// tokens read as one address nobody has. Printing the placeholder says the
+// chip is there; printing the token would lose it on the next publish.
+// TestAChipAgainstTheWordsIsNoToken and TestTwoChipsAgainstEachOtherAreNoTokens
+// are the pins.
 //
 // A date chip's day is worked out in the chip's own zone, not the reader's: a
 // chip at local midnight in Asia/Dubai is 20:00 UTC the day before, and the

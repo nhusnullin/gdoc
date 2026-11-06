@@ -885,12 +885,13 @@ func (e *emitter) sayTicks() {
 // are what publish put there, and writing them back this way is what lets the
 // note publish again into the same checklist.
 //
-// Only a chip at the end of the line counts, with nothing but spaces between it
-// and the words or the other chip, because that is where the note's own
-// notation puts a token: a chip in the middle of a sentence is a chip, and
-// writing it as a token would move somebody's name into the prose. At most one
-// of each kind, for the same reason: two owners are a line the next build
-// refuses by name.
+// Only a chip at the end of the line counts, with at least one space or tab
+// between it and the words or the other chip and nothing else, because that is
+// where the note's own notation puts a token: a chip in the middle of a
+// sentence is a chip, and writing it as a token would move somebody's name into
+// the prose. spacedBefore holds the space, and it is a rule rather than a tidy
+// detail. At most one of each kind, for the same reason: two owners are a line
+// the next build refuses by name.
 //
 // A paragraph that is not a checklist item has no tokens at all. A chip in a
 // bullet list or in prose is not a task's, and a box is the only thing that
@@ -915,13 +916,37 @@ func (e *emitter) tokensOf(p *docs.Paragraph) map[int]string {
 			return out
 		}
 		token := chipToken(r)
-		if token == "" || taken[r.Kind] {
+		if token == "" || taken[r.Kind] || !spacedBefore(p.Runs[:i]) {
 			return out
 		}
 		taken[r.Kind] = true
 		out[r.StartIndex] = token
 	}
 	return out
+}
+
+// spacedBefore answers whether a space or a tab stands in front of the chip
+// that follows these runs.
+//
+// A token is a word of the line, and the next build splits the words on a space
+// or a tab and on nothing else. A chip written against the words prints
+// "Call@anna@example.com", which that build reads as one long word with nobody
+// named, and a chip written against another chip prints the two tokens joined,
+// which it reads as one address nobody has. Neither is a token, so the chip
+// keeps its placeholder and the warning beside it, which is what says the name
+// is in the document and not in the line.
+// TestAChipAgainstTheWordsIsNoToken and TestTwoChipsAgainstEachOtherAreNoTokens
+// are the pins.
+func spacedBefore(before []docs.Run) bool {
+	if len(before) == 0 {
+		// The chip opens the item, so there are no words for it to run into.
+		return true
+	}
+	last := before[len(before)-1]
+	if last.Kind != docs.KindText {
+		return false
+	}
+	return strings.HasSuffix(last.Text, " ") || strings.HasSuffix(last.Text, "\t")
 }
 
 // chipToken is one chip as the notation writes it, or the empty string for a

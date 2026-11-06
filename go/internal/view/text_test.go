@@ -1022,6 +1022,40 @@ func TestADateChipPrintsTheDayInItsOwnZone(t *testing.T) {
 	}
 }
 
+// TestAChipAgainstTheWordsIsNoToken is the space the notation needs. The next
+// build splits a token off on a space or a tab, so "Chase@glued@example.com"
+// is one word with nobody named in it and the chip would be gone on the next
+// publish. The placeholder and its warning say the name is in the document.
+func TestAChipAgainstTheWordsIsNoToken(t *testing.T) {
+	got, warnings := Text(fixture(t, "checklist.json"))
+
+	want := "- [ ] Chase[person: No Space]\n"
+	if !strings.Contains(got, want) {
+		t.Errorf("%q is not in the text:\n%s", want, got)
+	}
+	if strings.Contains(got, "glued@example.com") {
+		t.Errorf("a chip against the words printed as a token:\n%s", got)
+	}
+	if !warned(warnings, "a person chip at index 68") {
+		t.Errorf("the chip against the words raised no warning: %v", warnings)
+	}
+}
+
+// TestTwoChipsAgainstEachOtherAreNoTokens is the same rule between the tokens.
+// Printed as the notation the two would join into "@two@example.com2026-11-22",
+// which reads as one address nobody has, so neither is a token.
+func TestTwoChipsAgainstEachOtherAreNoTokens(t *testing.T) {
+	got, warnings := Text(fixture(t, "checklist.json"))
+
+	want := "- [ ] Both [person: Two Chips][date: Nov 22, 2026]\n"
+	if !strings.Contains(got, want) {
+		t.Errorf("%q is not in the text:\n%s", want, got)
+	}
+	if !warned(warnings, "a person chip at index 75") || !warned(warnings, "a date chip at index 76") {
+		t.Errorf("the two joined chips raised no warning: %v", warnings)
+	}
+}
+
 // TestAReadWithAChecklistSaysTheTicksAreNotRead is the fact the envelope
 // carries instead of a guess. It is said once however many items the document
 // holds, and not at all for a document with no checklist in it.

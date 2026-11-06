@@ -298,6 +298,34 @@ func TestAMissingChipIsTasksFalseAndAWarning(t *testing.T) {
 	}
 }
 
+// TestATabBeforeATokenIsNotATaskThatDidNotLand is the separator the batch
+// leaves behind. A note may write the tab internal/tasks splits a token off
+// on, and the chip goes in where the token stood, so the tab stays at the end
+// of the line the read brings back. Taking only the space off called that
+// landed task a task whose words had changed, and the warning beside it said
+// the boxes never arrived, which was false twice over.
+func TestATabBeforeATokenIsNotATaskThatDidNotLand(t *testing.T) {
+	want := []Task{{
+		Words:  "Ask the bank",
+		Owner:  "anna@example.com",
+		Tokens: "\t@anna@example.com",
+	}}
+	// The paragraph as the read brings it back: the words with the tab still
+	// on them, and the chip where the token stood.
+	landed := docs.Tab{Body: []docs.Block{{Paragraph: &docs.Paragraph{
+		Bullet: &docs.Bullet{Checklist: true, ListID: "kix.check"},
+		Runs: []docs.Run{
+			{Kind: docs.KindText, Text: "Ask the bank\t", StartIndex: 1, EndIndex: 14},
+			{Kind: docs.KindPerson, StartIndex: 14, EndIndex: 15},
+			{Kind: docs.KindText, Text: "\n", StartIndex: 15, EndIndex: 16},
+		},
+	}}}}
+
+	if warns := tasksLanded(landed, want); len(warns) > 0 {
+		t.Errorf("a task whose token stood after a tab reads as one that did not land: %v", warns)
+	}
+}
+
 // The note everybody publishes today has no task line. It costs no request of
 // any kind, and the check is true because nothing was asked for.
 func TestANoteWithNoTaskSendsNothingNew(t *testing.T) {

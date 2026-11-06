@@ -87,6 +87,42 @@
                 }
               }},
               {"startIndex": 62, "endIndex": 63, "textRun": {"content": "\n", "textStyle": {}}}
+            ]}},
+          {"startIndex": 63, "endIndex": 70, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "bullet": {"listId": "kix.check", "nestingLevel": 0, "textStyle": {}},
+            "elements": [
+              {"startIndex": 63, "endIndex": 68, "textRun": {"content": "Chase", "textStyle": {}}},
+              {"startIndex": 68, "endIndex": 69, "person": {
+                "personId": "kix.person3",
+                "textStyle": {},
+                "personProperties": {"name": "No Space", "email": "glued@example.com"}
+              }},
+              {"startIndex": 69, "endIndex": 70, "textRun": {"content": "\n", "textStyle": {}}}
+            ]}},
+          {"startIndex": 70, "endIndex": 78, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "bullet": {"listId": "kix.check", "nestingLevel": 0, "textStyle": {}},
+            "elements": [
+              {"startIndex": 70, "endIndex": 75, "textRun": {"content": "Both ", "textStyle": {}}},
+              {"startIndex": 75, "endIndex": 76, "person": {
+                "personId": "kix.person4",
+                "textStyle": {},
+                "personProperties": {"name": "Two Chips", "email": "two@example.com"}
+              }},
+              {"startIndex": 76, "endIndex": 77, "dateElement": {
+                "dateId": "kix.date3",
+                "textStyle": {},
+                "dateElementProperties": {
+                  "timestamp": "2026-11-22T12:00:00Z",
+                  "timeZoneId": "Etc/GMT",
+                  "locale": "en",
+                  "dateFormat": "DATE_FORMAT_MONTH_DAY_YEAR_ABBREVIATED",
+                  "timeFormat": "TIME_FORMAT_DISABLED",
+                  "displayText": "Nov 22, 2026"
+                }
+              }},
+              {"startIndex": 77, "endIndex": 78, "textRun": {"content": "\n", "textStyle": {}}}
             ]}}
         ]},
         "lists": {

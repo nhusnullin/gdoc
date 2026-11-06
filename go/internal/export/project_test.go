@@ -1256,6 +1256,13 @@ func TestAnExportedChecklistParsesBackToTheSameTasks(t *testing.T) {
 		{Words: "Call [person: A Placeholder](mailto:placeholder@example.com) today"},
 		{Words: "Ask [person: No Address]"},
 		{Words: "Due", Due: tasks.Due{Text: "2026-11-21", Start: 4, End: 14}},
+		// A chip written against the words is not a token either, and neither
+		// of two chips written against each other is: the parser splits a
+		// token off on a space, so printing them as the notation would hand
+		// this build one word with nobody named in it, and then one address
+		// nobody has.
+		{Words: "Chase[person: No Space](mailto:glued@example.com)"},
+		{Words: "Both [person: Two Chips](mailto:two@example.com)[date: Nov 22, 2026]"},
 	}
 	if len(got) != len(want) {
 		t.Fatalf("the file holds %d task lines, want %d:\n%s", len(got), len(want), body)
