@@ -17,9 +17,23 @@ const (
 	DomainFlag = "--domain"
 )
 
-// dayLayout is the one date form a task takes, the calendar day as the ISO
-// order writes it. Nothing here reads a time of day: a due date is a day.
-const dayLayout = "2006-01-02"
+// DayLayout is the one date form a task takes, the calendar day as the ISO
+// order writes it. Nothing here reads a time of day: a due date is a day, and
+// what a chip makes of it is internal/publish's, which asks this package for
+// the layout rather than spelling a second copy of it.
+// TestADateThatIsNotADayIsRefused and TestADateIsNoonUTCOnItsDay.
+const DayLayout = "2006-01-02"
+
+// BallotEmpty and BallotCrossed are what a task item opens with where there is
+// no box to tick: the character and the space after it. internal/body writes
+// one of the two into the docx, because a file opened in Word has no box, and
+// internal/publish reads the same two off the front of the paragraph that came
+// back, because that is what it takes away when the document gets a real box.
+// Two readers and one writer, so the three cannot drift.
+const (
+	BallotEmpty   = "\u2610 "
+	BallotCrossed = "\u2612 "
+)
 
 // nameRunes are the characters an owner's name may hold beside letters and
 // digits. They are the ones an address's local part commonly carries, and a
@@ -110,17 +124,18 @@ func Parse(source string) (Task, error) {
 			if task.Owner.Present() {
 				return Task{}, fmt.Errorf("a task takes at most one owner, and this one names %s and %s", word, task.Owner.Text)
 			}
-			name, domain, err := readOwner(word)
+			owner, err := ReadOwner(word)
 			if err != nil {
 				return Task{}, err
 			}
-			task.Owner = Owner{Text: word, Name: name, Domain: domain, Start: start, End: len(rest)}
+			owner.Start, owner.End = start, len(rest)
+			task.Owner = owner
 		case looksLikeADay(word):
 			if task.Due.Present() {
 				return Task{}, fmt.Errorf("a task takes at most one date, and this one names %s and %s", word, task.Due.Text)
 			}
-			if _, err := time.Parse(dayLayout, word); err != nil {
-				return Task{}, fmt.Errorf("%s is no day on the calendar; a task's date is a day, written %s", word, dayLayout)
+			if _, err := time.Parse(DayLayout, word); err != nil {
+				return Task{}, fmt.Errorf("%s is no day on the calendar; a task's date is a day, written %s", word, DayLayout)
 			}
 			task.Due = Due{Text: word, Start: start, End: len(rest)}
 		default:
@@ -138,7 +153,7 @@ func Parse(source string) (Task, error) {
 // of this shape is a date somebody meant, so one that is no calendar day is
 // refused rather than read as a word; anything of another shape is a word.
 func looksLikeADay(word string) bool {
-	if len(word) != len(dayLayout) {
+	if len(word) != len(DayLayout) {
 		return false
 	}
 	for i := 0; i < len(word); i++ {
@@ -156,21 +171,31 @@ func looksLikeADay(word string) bool {
 	return true
 }
 
-// readOwner reads the two halves of an owner token, which has already been
-// seen to open with @. The name is refused by the rule below, and a domain
-// somebody wrote out goes through CheckDomain, so @a@b is refused for the one
-// reason the setting would be: it is no domain.
-func readOwner(word string) (string, string, error) {
+// ReadOwner reads one owner token as a note wrote it, "@name" or
+// "@name@domain", into the two halves a caller resolves. The name is refused by
+// the rule below, and a domain somebody wrote out goes through CheckDomain, so
+// @a@b is refused for the one reason the setting would be: it is no domain.
+//
+// Parse asks it of a word that ends an item's line, and cmd/gdoc asks it of a
+// token internal/body already read, because a publish resolves every owner
+// against the domain in effect before it sends anything. The span is the
+// caller's to fill in: a token with no source behind it has none.
+// TestAnOwnerThatIsNotAnAddressIsRefused and
+// TestAnOwnerTokenReadsBackIntoItsTwoHalves.
+func ReadOwner(word string) (Owner, error) {
+	if !strings.HasPrefix(word, "@") {
+		return Owner{}, fmt.Errorf("%q is no owner: a task's owner opens with @, as @anna does", word)
+	}
 	name, domain, written := strings.Cut(strings.TrimPrefix(word, "@"), "@")
 	if err := checkName(name); err != nil {
-		return "", "", fmt.Errorf("%s is no address: %w", word, err)
+		return Owner{}, fmt.Errorf("%s is no address: %w", word, err)
 	}
 	if written {
 		if err := CheckDomain(domain); err != nil {
-			return "", "", fmt.Errorf("%s is no address: %w", word, err)
+			return Owner{}, fmt.Errorf("%s is no address: %w", word, err)
 		}
 	}
-	return name, domain, nil
+	return Owner{Text: word, Name: name, Domain: domain}, nil
 }
 
 // checkName refuses what an address's local part may not be: nothing at all, a

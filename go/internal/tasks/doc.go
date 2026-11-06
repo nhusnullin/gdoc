@@ -66,9 +66,27 @@
 //
 // Letters, digits, hyphens and dots, with at least one dot, no empty label and
 // no label opening or closing with a hyphen. internal/settings asks it of the
-// file and the flag, and readOwner asks it of a domain somebody wrote out, so
+// file and the flag, and ReadOwner asks it of a domain somebody wrote out, so
 // @a@b is refused for the reason domain: b would be: TestADomainIsLettersDigitsHyphensAndDots
 // here, and TestAMalformedDomainIsRefusedByName in internal/settings.
+//
+// # The ballot characters and the day's layout live here, for three readers
+//
+// BallotEmpty and BallotCrossed are what a task item opens with where there is
+// no box: internal/body writes one of the two into the docx, because a file
+// opened in Word has no box to tick, and internal/publish reads the same two
+// off the front of the paragraph the document came back with, because that is
+// what it takes away when the document gets a real box. DayLayout is the one
+// date form, and internal/publish turns a day written that way into the moment
+// a date chip carries. Three readers of one pair of characters would be three
+// spellings of them, and the drift would be a task nothing recognises:
+// TestTaskListsCarryTheirBallotCharacter in internal/body and
+// TestADateIsNoonUTCOnItsDay in internal/publish are what rest on them.
+//
+// ReadOwner is the same reading of an owner token on its own, for a caller
+// holding a token internal/body already read and no line to read it out of: a
+// publish finishes every owner against the domain in effect before it uploads
+// anything. TestAnOwnerTokenReadsBackIntoItsTwoHalves.
 //
 // # Nothing here judges a task
 //

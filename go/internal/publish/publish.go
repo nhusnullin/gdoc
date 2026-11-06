@@ -39,6 +39,14 @@ type Options struct {
 	// A nil OnStep is a caller that does not want to be told, which is every
 	// caller but one: cmd/gdoc's publish.
 	OnStep func(name string)
+	// Tasks is every task line the note held, in reading order, with each
+	// owner already resolved to a whole address. An empty list is a note with
+	// no task, which costs no request of any kind.
+	//
+	// They are handed in rather than read out of the docx, because the note is
+	// the only place the owner and the day were written and the docx keeps
+	// them as plain words. tasks.go is what this package does with them.
+	Tasks []Task
 }
 
 // The two parts of a publish that happen in this room. The render before it
@@ -84,10 +92,14 @@ type Checks struct {
 	ReadBack   bool `json:"read_back"`
 	OneTab     bool `json:"one_tab"`
 	DocxExport bool `json:"docx_export"`
+	// Tasks says the note's task lines read back as checklist items with the
+	// chips they name. A note with no task line is true: nothing was asked
+	// for and nothing is missing. TestANoteWithNoTaskSendsNothingNew.
+	Tasks bool `json:"tasks"`
 }
 
 // all says whether every route held.
-func (c Checks) all() bool { return c.ReadBack && c.OneTab && c.DocxExport }
+func (c Checks) all() bool { return c.ReadBack && c.OneTab && c.DocxExport && c.Tasks }
 
 // Report is what the run left in Drive.
 //
@@ -170,6 +182,15 @@ func Run(ctx context.Context, s Session, o Options) (Report, error) {
 	o.step(stepReadBack)
 	var d *docs.Document
 	d, rep.Checks, rep.Title, rep.Tabs, rep.HeadingsWithoutID, rep.Warnings = verify(ctx, s, id, o.Title)
+
+	// The tasks, from the read the verify just took, and the read that follows
+	// them is what the marker is written from: the batch moves the indexes of
+	// everything after the cover, and a second read is what says where the
+	// contents list now ends. Verified is computed after, because the
+	// checklist is one of the things a publish is verified by.
+	var taskWarns []string
+	d, rep.Checks.Tasks, taskWarns = convert(ctx, s, id, d, o.Tasks)
+	rep.Warnings = append(rep.Warnings, taskWarns...)
 	rep.Verified = rep.Checks.all()
 	if d == nil || !rep.Checks.OneTab {
 		rep.Warnings = append(rep.Warnings, unmarked("the document could not be read back as one tab, so there was no contents list to mark up to"))

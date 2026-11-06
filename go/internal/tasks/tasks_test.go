@@ -247,3 +247,31 @@ func TestADomainIsLettersDigitsHyphensAndDots(t *testing.T) {
 		}
 	}
 }
+
+// A token internal/body already read goes back through ReadOwner, because a
+// publish resolves every owner against the domain in effect and the note kept
+// only what the author typed. The same word through Parse and through
+// ReadOwner is the same owner.
+func TestAnOwnerTokenReadsBackIntoItsTwoHalves(t *testing.T) {
+	for _, c := range []struct {
+		token, name, domain string
+	}{
+		{"@anna", "anna", ""},
+		{"@anna@example.com", "anna", "example.com"},
+		{"@a.b-c_d+e@sub.example.co.uk", "a.b-c_d+e", "sub.example.co.uk"},
+	} {
+		owner, err := ReadOwner(c.token)
+		if err != nil {
+			t.Fatalf("%s is an owner Parse takes and ReadOwner refused: %v", c.token, err)
+		}
+		if owner.Text != c.token || owner.Name != c.name || owner.Domain != c.domain {
+			t.Errorf("ReadOwner(%q) = %+v, want the name %q and the domain %q", c.token, owner, c.name, c.domain)
+		}
+		if owner.Start != 0 || owner.End != 0 {
+			t.Errorf("ReadOwner(%q) named a span %d to %d, and a token with no source behind it has none", c.token, owner.Start, owner.End)
+		}
+	}
+	if _, err := ReadOwner("anna"); err == nil {
+		t.Error("a word with no @ in front of it was read as an owner")
+	}
+}

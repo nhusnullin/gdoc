@@ -13,6 +13,8 @@ import (
 	"github.com/yuin/goldmark/ast"
 	east "github.com/yuin/goldmark/extension/ast"
 	"github.com/yuin/goldmark/util"
+
+	"gdoc/internal/tasks"
 )
 
 // decodeEntities is the text of a run as the document says it: "&amp;" is an
@@ -116,11 +118,13 @@ type Run struct {
 
 // ballotEmpty and ballotCrossed are what a task list item opens with in the
 // docx: the character and the space after it, which is the whole of the box a
-// file opened in Word has. body.go reads the same two off the front of an
-// item's rendered text, so the two sides cannot drift.
+// file opened in Word has. They are internal/tasks's own two, because body.go
+// reads them off the front of an item's rendered text and internal/publish
+// reads them off the paragraph the document came back with, and three readers
+// of one pair of characters must not each spell them.
 const (
-	ballotEmpty   = "\u2610 "
-	ballotCrossed = "\u2612 "
+	ballotEmpty   = tasks.BallotEmpty
+	ballotCrossed = tasks.BallotCrossed
 )
 
 // strikeRange puts the strike on one stretch of the runs' joined text, from

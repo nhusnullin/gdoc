@@ -1,0 +1,56 @@
+{
+  "documentId": "1PuBl15h3D0000000000000000000000000000000",
+  "title": "Supplier Register Policy",
+  "revisionId": "ALm37BXtasks",
+  "tabs": [
+    {
+      "tabProperties": {"tabId": "t.0", "title": "Supplier Register Policy", "index": 0},
+      "documentTab": {
+        "body": {"content": [
+          {"startIndex": 0, "endIndex": 1, "sectionBreak": {"sectionStyle": {}}},
+          {"startIndex": 1, "endIndex": 15, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "elements": [
+              {"startIndex": 1, "endIndex": 15, "textRun": {"content": "Altery Group \n", "textStyle": {}}}
+            ]}},
+          {"startIndex": 15, "endIndex": 41, "tableOfContents": {"content": [
+            {"startIndex": 15, "endIndex": 40, "paragraph": {
+              "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+              "elements": [
+                {"startIndex": 15, "endIndex": 40, "textRun": {"content": "Supplier Register Policy\n", "textStyle": {}}}
+              ]}}
+          ]}},
+          {"startIndex": 41, "endIndex": 66, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "HEADING_1", "headingId": "h.questions"},
+            "elements": [
+              {"startIndex": 41, "endIndex": 66, "textRun": {"content": "Supplier Register Policy\n", "textStyle": {}}}
+            ]}},
+          {"startIndex": 66, "endIndex": 110, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "bullet": {"listId": "kix.disc", "nestingLevel": 0, "textStyle": {}},
+            "elements": [
+              {"startIndex": 66, "endIndex": 110, "textRun": {"content": "☐ Ask the bank @anna@example.com 2026-01-02\n", "textStyle": {}}}
+            ]}},
+          {"startIndex": 110, "endIndex": 131, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "bullet": {"listId": "kix.disc", "nestingLevel": 0, "textStyle": {}},
+            "elements": [
+              {"startIndex": 110, "endIndex": 112, "textRun": {"content": "☒ ", "textStyle": {}}},
+              {"startIndex": 112, "endIndex": 131, "textRun": {"content": "Confirm the scheme\n", "textStyle": {"strikethrough": true}}}
+            ]}},
+          {"startIndex": 131, "endIndex": 142, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "bullet": {"listId": "kix.disc", "nestingLevel": 0, "textStyle": {}},
+            "elements": [
+              {"startIndex": 131, "endIndex": 142, "textRun": {"content": "Not a task\n", "textStyle": {}}}
+            ]}}
+        ]},
+        "lists": {
+          "kix.disc": {"listProperties": {"nestingLevels": [
+            {"glyphType": "GLYPH_TYPE_UNSPECIFIED", "glyphSymbol": "●", "glyphFormat": "%0"}
+          ]}}
+        }
+      }
+    }
+  ]
+}

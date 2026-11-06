@@ -48,6 +48,9 @@
 //     internal/body/testdata/docs, one Google Drawing, one floating picture,
 //     and a second tab titled Appendix with one picture in it. The
 //     measurement creates nothing and writes nothing to Drive.
+//   - GDOC_LIVE_OWNER: the whole address the name chip in M33's task
+//     acceptance carries. It has no default for the guard's reason above and
+//     one of its own: a chip names a person, and gdoc may never guess who.
 //   - GDOC_LIVE_PUBLISHED_DOC_ID: a document publish made, in the test folder.
 //   - GDOC_LIVE_RESTYLED_DOC_ID: a document restyle styled with --fields, in
 //     the test folder. Those two are read only under GDOC_LIVE_RECORD, for the
@@ -123,6 +126,14 @@
 //     directory, so it fills the logo cache and its stamp there, and costs one
 //     request a day across every live run rather than one per test. The
 //     measurement the hash comes from is below.
+//   - TestLivePublishTurnsTasksIntoAChecklist, M33's. It publishes a temp note
+//     whose one list holds three tasks and a plain item, then reads the
+//     document back: three boxes, one name chip carrying GDOC_LIVE_OWNER, one
+//     date chip, the plain item still a bullet, and no ballot character left
+//     anywhere. It trashes the document on the way out. The variable has no
+//     default, so a run that names nobody is skipped: what no fixture can
+//     answer is what Drive's import does with a ballot character and what a
+//     checklist request does to a list that came in as disc bullets.
 //   - TestLiveDrift, M6's. It uploads the built document and the master with
 //     conversion and runs drift.Items over both. That is the measurement that
 //     means something, because Google's import is part of the result.

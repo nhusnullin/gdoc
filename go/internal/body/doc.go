@@ -166,6 +166,11 @@
 // TestTheResultListsEveryTaskInOrder, TestAFullAddressOwnerLeavesNoLink and
 // TestTaskListsCarryTheirBallotCharacter are the pins.
 //
+// The two characters themselves are internal/tasks's, beside the notation they
+// stand for. This package writes one of them and internal/publish takes it off
+// again once Drive has made the document, so one pair of characters has one
+// spelling and the two sides cannot drift.
+//
 // Four refusals, each naming the line. A notation internal/tasks cannot read
 // is its own refusal, said with the line. A task in a numbered list and a task
 // inside another list are refused because a checklist in a document carries no

@@ -103,7 +103,13 @@
 //     TestTheLogoCeilingIsTwentySeconds and
 //     TestAHungDriveCostsTheCeilingAndThenTheCacheAnswers.
 //   - publish --md --folder-id [--house]: that docx into Drive as a Google
-//     Doc. internal/publish.
+//     Doc. internal/publish. A note's task lines become checklist items in the
+//     document afterwards, and this room finishes each bare owner against the
+//     domain in effect before the upload, because a run that cannot name a
+//     whole address must send nothing at all: tasks.go holds the rule, and
+//     TestABareOwnerWithNoDomainIsRefusedBeforeTheUpload is the pin. build
+//     resolves none of them, because nothing it writes is sent to anybody:
+//     TestBuildResolvesNoOwner.
 //   - update [--check] [--major] [--nightly] [--rollback]: this binary
 //     replaced by a newer release of it. internal/update, and the one reach
 //     that carries no credential, gapi.Plain. A run that installed also
