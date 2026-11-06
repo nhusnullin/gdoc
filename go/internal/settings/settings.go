@@ -8,19 +8,26 @@ import (
 	"github.com/goccy/go-yaml"
 
 	"gdoc/internal/plaintext"
+	"gdoc/internal/tasks"
 )
 
-// The two keys the file takes. They are named here because the refusals quote
-// them: the unfinished line, a mark the file names that a thread would show
-// wrong, and a presence that is neither true nor false.
+// The three keys the file takes. They are named here because the refusals
+// quote them: the unfinished line, a mark the file names that a thread would
+// show wrong, a presence that is neither true nor false, and a domain that is
+// no domain. The domain's key is tasks.DomainKey, so the word in the file and
+// the word in a refusal about a bare owner are one word.
 const (
 	key         = "mark"
 	presenceKey = "presence"
+	domainKey   = tasks.DomainKey
 )
 
 // presenceArg is the flag the same value comes in on, named here because two
-// refusals quote it and no file is in either of them.
+// refusals quote it and no file is in either of them. domainArg is the same
+// thing for the domain, and it is tasks.DomainFlag for the reason domainKey is
+// tasks.DomainKey.
 const presenceArg = "--presence"
+const domainArg = tasks.DomainFlag
 
 // presenceTakes is what both sources take, quoted by every refusal of a value
 // that is neither. The argument takes these two words and nothing else, while
@@ -47,6 +54,8 @@ type Given struct {
 	// refusal has to quote what the line said, and a bool that failed to
 	// parse carries none of it.
 	Presence *string
+	// Domain is the domain a bare owner in a note takes, as it was typed.
+	Domain *string
 }
 
 // InEffect is what this run writes, and where each value came from. File is
@@ -65,6 +74,13 @@ type InEffect struct {
 	// TestPresenceFromIsSetOnlyWhenTheFlagIsOn.
 	Presence     bool
 	PresenceFrom string
+	// Domain is the domain a bare owner in a note takes, and DomainFrom
+	// where that came from. There is no built-in default and no source to
+	// name while nobody set one, because a guessed domain is a chip on
+	// somebody at a firm gdoc invented: both are empty then, as Presence's
+	// pair is while it is off. TestNoDomainIsNoDomainAndNoSource.
+	Domain     string
+	DomainFrom string
 }
 
 // file is the settings file's shape. Mark is a pointer so that a key with no
@@ -73,6 +89,7 @@ type InEffect struct {
 type file struct {
 	Mark     *string `yaml:"mark"`
 	Presence *bool   `yaml:"presence"`
+	Domain   *string `yaml:"domain"`
 }
 
 // Resolve reads the settings file in use and lays the arguments over it. The
@@ -119,6 +136,18 @@ func Resolve(given Given, defaultPath string) (InEffect, error) {
 	}
 	if !in.Presence {
 		in.PresenceFrom = ""
+	}
+	if fromFile.Domain != nil {
+		if err := tasks.CheckDomain(*fromFile.Domain); err != nil {
+			return InEffect{}, fmt.Errorf("%s, %s: %w", path, domainKey, err)
+		}
+		in.Domain, in.DomainFrom = *fromFile.Domain, FromFile
+	}
+	if given.Domain != nil {
+		if err := tasks.CheckDomain(*given.Domain); err != nil {
+			return InEffect{}, fmt.Errorf("%s: %w", domainArg, err)
+		}
+		in.Domain, in.DomainFrom = *given.Domain, FromArgument
 	}
 	return in, nil
 }
@@ -167,6 +196,9 @@ func readFile(path string, named bool) (file, bool, error) {
 	}
 	if f.Presence == nil && present(b, presenceKey) {
 		return file{}, true, fmt.Errorf("%s: %s: has no value behind it; write %s: true to record what gdoc is doing, or leave the key out", path, presenceKey, presenceKey)
+	}
+	if f.Domain == nil && present(b, domainKey) {
+		return file{}, true, fmt.Errorf("%s: %s: has no value behind it; write %s: example.com with your own domain, or leave the key out", path, domainKey, domainKey)
 	}
 	return f, true, nil
 }

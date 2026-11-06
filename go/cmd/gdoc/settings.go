@@ -1,4 +1,4 @@
-// The three setting flags, taken off the line before anything else reads it.
+// The four setting flags, taken off the line before anything else reads it.
 //
 // This file is the reading, and internal/settings is the deciding: what the
 // order is, what a mark may be, and what the file may hold are its rules. What
@@ -15,8 +15,8 @@ import (
 	"gdoc/internal/settings"
 )
 
-// takeSettings lifts the three setting flags off the line, wherever they
-// stand, and answers what is left beside what they said. One of the three,
+// takeSettings lifts the four setting flags off the line, wherever they
+// stand, and answers what is left beside what they said. One of the four,
 // --presence, is experimental, and nothing about the reading of it is: a flag
 // in no screen is still a flag the line may carry, and a line that carried it
 // and was read as a document id would be worse than one that refused it.
@@ -93,6 +93,8 @@ func takeSettings(args []string) ([]string, settings.Given, error) {
 			held = &given.Mark
 		case presenceFlag:
 			held = &given.Presence
+		case domainFlag:
+			held = &given.Domain
 		}
 		if *held != nil {
 			refuse(fmt.Errorf("%s is given twice, and which one counts is not decided here", name))
@@ -106,12 +108,12 @@ func takeSettings(args []string) ([]string, settings.Given, error) {
 	return rest, given, nil
 }
 
-// isSettingFlag answers whether this word is one of the three, by the one
+// isSettingFlag answers whether this word is one of the four, by the one
 // spelling each has. It is asked twice in the reading, once for the word under
 // the cursor and once for the word a flag would otherwise take as its value,
-// and both questions have to move together when a fourth flag arrives.
+// and both questions have to move together when a fifth flag arrives.
 func isSettingFlag(name string) bool {
-	return name == configFlag || name == markFlag || name == presenceFlag
+	return name == configFlag || name == markFlag || name == presenceFlag || name == domainFlag
 }
 
 // resolveSettings is what this run writes: the file in use with the line laid

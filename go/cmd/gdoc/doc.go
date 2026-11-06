@@ -366,13 +366,13 @@
 // on stdout, and exits 2, which is the one shape no caller can read.
 // TestAPanicIsStillOneEnvelope is the pin.
 //
-// # Three setting flags, taken off the line first, one of them experimental
+// # Four setting flags, taken off the line first, one of them experimental
 //
-// --config, --mark and --presence belong to no command, because they belong
-// to all of them. They are lifted off the line in route, before the word mcp
-// is looked for and before --help is, so one reading of them serves every
+// --config, --mark, --domain and --presence belong to no command, because they
+// belong to all of them. They are lifted off the line in route, before the word
+// mcp is looked for and before --help is, so one reading of them serves every
 // command, the session and the help alike. What is left is the line as every
-// parser already read it, and nothing below route sees any of the three:
+// parser already read it, and nothing below route sees any of the four:
 // TestEveryCommandTakesTheSettingFlags and
 // TestTheSettingFlagsAreTakenAnywhereOnTheLine.
 //
@@ -436,7 +436,8 @@
 // TestNoSkillPassesThePresenceFlag is where that is held.
 //
 // What they resolved to is one field of the help object, settings, which
-// carries the mark in effect and which of the three sources it came from. A
+// carries the mark in effect and which of the three sources it came from, and
+// the domain in effect where somebody set one. A
 // colleague who is not sure which mark this run writes asks the binary rather
 // than reading a file and a line. The field is always there, and the empty
 // mark is printed as the empty string, because a skill that read an absent

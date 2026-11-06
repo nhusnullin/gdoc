@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"gdoc/internal/emit"
+	"gdoc/internal/tasks"
 )
 
 // kind is what a flag's value is, and it has two readers. Help prints the
@@ -113,16 +114,20 @@ const briefFlag = "--brief"
 // and both completion scripts, which offer it after the word help.
 const markTopic = "marks"
 
-// The three flags every command takes, and the one spelling each has. They are
+// The four flags every command takes, and the one spelling each has. They are
 // named here because three readers take them: takeSettings, which lifts them
 // off the line before any command's parser sees it, the help, which lists
 // them under their own heading, and both completion scripts, which offer them
-// after any command. The third is experimental, so only the first of those
-// three readers meets it.
+// after any command. One of the four is experimental, so only the first of
+// those three readers meets it.
+//
+// domainFlag is tasks.DomainFlag, so the flag a person types and the flag a
+// refusal about a bare owner names are one word.
 const (
 	configFlag   = "--config"
 	markFlag     = "--mark"
 	presenceFlag = "--presence"
+	domainFlag   = tasks.DomainFlag
 )
 
 // settingFlag is a flag that belongs to no command, with the one bit a
@@ -147,7 +152,7 @@ type settingFlag struct {
 // They are not in any entry's flags, and that is the difference: an entry's
 // flag reaches that command's parser, and these three are off the line before
 // the parser runs, including for mcp, which has no parser at all. So they are
-// in no usage line and in no entry of the help object, and the two that are
+// in no usage line and in no entry of the help object, and the three that are
 // not experimental are in the help a person reads and in both completion
 // scripts: TestEverySettingFlagIsInHelpAndInBothScripts.
 //
@@ -157,6 +162,7 @@ func settingFlags() []settingFlag {
 	return []settingFlag{
 		{flag: flag{configFlag, kindFile, needOptional, "the settings file to use instead of settings.yaml in the config folder"}},
 		{flag: flag{markFlag, kindText, needOptional, "the mark gdoc writes in front of its words in a thread; an empty mark writes the words alone, and then nothing in the thread says which words are gdoc's"}},
+		{flag: flag{domainFlag, kindText, needOptional, "the domain a bare owner in a note's task takes, so - [ ] ask @anna writes the chip for anna at that domain; an address written out in full is never changed by it"}},
 		{
 			flag:         flag{presenceFlag, kindText, needOptional, "record what this run is doing into the presence file in the config folder, for the menu bar app to read; true or false, and off unless something says otherwise"},
 			experimental: true,

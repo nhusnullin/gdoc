@@ -1,4 +1,4 @@
-// The three setting flags on the line, one of them experimental: taken off it wherever they stand, turned
+// The four setting flags on the line, one of them experimental: taken off it wherever they stand, turned
 // into what this run writes, and handed down to every command and to the
 // session.
 //
@@ -601,5 +601,66 @@ func TestTheMarkFlagSaysWhatAnEmptyMarkCosts(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("%s is no setting flag", markFlag)
+	}
+}
+
+// --domain is read the way --mark is, wherever it stands, and what it says is
+// the domain in effect for every command on that line. The domain is stated as
+// a literal here: nothing in gdoc has a default one.
+func TestTheDomainFlagIsTheDomainInEffect(t *testing.T) {
+	// Arrange
+	args := []string{"read", domainFlag, "example.com", "https://docs.google.com/document/d/1AbC/edit"}
+	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+
+	// Act
+	set, line, _, code := routed(t, args...)
+
+	// Assert
+	if code != 0 {
+		t.Fatalf("%v reached no command: exit %d", args, code)
+	}
+	if set.Domain != "example.com" {
+		t.Errorf("the domain in effect is %q, want %q", set.Domain, "example.com")
+	}
+	if set.DomainFrom != settings.FromArgument {
+		t.Errorf("the domain came from %q, want the line", set.DomainFrom)
+	}
+	want := []string{"read", "https://docs.google.com/document/d/1AbC/edit"}
+	if len(line) != len(want) || !equalWords(line, want) {
+		t.Errorf("what is left of the line is %v, want %v", line, want)
+	}
+}
+
+// The help object carries the domain in effect where there is one, so a
+// colleague who writes @anna in a note asks the binary which address that is
+// going to be. Where nobody set one, both fields are absent, which is the
+// object every other colleague's help prints.
+func TestHelpCarriesTheDomainWhereThereIsOne(t *testing.T) {
+	// Act
+	with, code := routedHelp(t, domainFlag, "example.com", "help", "--json")
+
+	// Assert
+	if code != 0 || with["ok"] != true {
+		t.Fatalf("the help is an answer: %v (exit %d)", with, code)
+	}
+	set := settingsInObject(t, with)
+	if set["domain"] != "example.com" {
+		t.Errorf("the domain in the object is %v, want %q", set["domain"], "example.com")
+	}
+	if set["domain_from"] != "argument" {
+		t.Errorf("the domain came from %v, want %q", set["domain_from"], "argument")
+	}
+
+	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+	without, code := routedHelp(t, "help", "--json")
+	if code != 0 || without["ok"] != true {
+		t.Fatalf("the help is an answer: %v (exit %d)", without, code)
+	}
+	bare := settingsInObject(t, without)
+	if _, ok := bare["domain"]; ok {
+		t.Errorf("a run with no domain set carries one: %v", bare)
+	}
+	if _, ok := bare["domain_from"]; ok {
+		t.Errorf("a run with no domain set names a source for it: %v", bare)
 	}
 }

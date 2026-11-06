@@ -50,5 +50,9 @@
 [38;2;124;130;150m│[0m                       [38;2;124;130;150m│[0m thread; an empty mark writes the words alone, and    [38;2;124;130;150m│[0m
 [38;2;124;130;150m│[0m                       [38;2;124;130;150m│[0m then nothing in the thread says which words are      [38;2;124;130;150m│[0m
 [38;2;124;130;150m│[0m                       [38;2;124;130;150m│[0m gdoc's                                               [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m [38;2;184;119;8m--domain <text>[0m       [38;2;124;130;150m│[0m the domain a bare owner in a note's task takes, so - [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m                       [38;2;124;130;150m│[0m [ ] ask @anna writes the chip for anna at that       [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m                       [38;2;124;130;150m│[0m domain; an address written out in full is never      [38;2;124;130;150m│[0m
+[38;2;124;130;150m│[0m                       [38;2;124;130;150m│[0m changed by it                                        [38;2;124;130;150m│[0m
 [38;2;124;130;150m└───────────────────────┴──────────────────────────────────────────────────────┘[0m
 [38;2;124;130;150mRun gdoc help <command> for the words and flags one takes.[0m

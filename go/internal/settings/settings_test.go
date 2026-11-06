@@ -465,3 +465,104 @@ func TestTheMarkAndThePresenceComeOutOfOneFile(t *testing.T) {
 		t.Errorf("Presence = %v from %q, want it on from the file", in.Presence, in.PresenceFrom)
 	}
 }
+
+// The file sets the domain a bare owner in a note takes, and InEffect says the
+// file is where it came from.
+func TestTheFileSetsTheDomain(t *testing.T) {
+	// Arrange
+	path := write(t, "domain: example.com\n")
+
+	// Act
+	in, err := Resolve(Given{}, path)
+
+	// Assert
+	if err != nil {
+		t.Fatal(err)
+	}
+	if in.Domain != "example.com" {
+		t.Errorf("Domain = %q, want the domain the file names", in.Domain)
+	}
+	if in.DomainFrom != "file" {
+		t.Errorf("DomainFrom = %q, want %q", in.DomainFrom, "file")
+	}
+}
+
+// No domain anywhere is the empty domain and no source to name, because a
+// domain has no built-in default: a guessed one would be a chip on somebody at
+// a firm gdoc invented.
+func TestNoDomainIsNoDomainAndNoSource(t *testing.T) {
+	in, err := Resolve(Given{}, gone(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if in.Domain != "" {
+		t.Errorf("Domain = %q, want the empty domain", in.Domain)
+	}
+	if in.DomainFrom != "" {
+		t.Errorf("DomainFrom = %q, want no source while there is no domain", in.DomainFrom)
+	}
+}
+
+func TestADomainArgumentOverridesTheFile(t *testing.T) {
+	// Arrange
+	path := write(t, "domain: example.com\n")
+	domain := "example.org"
+
+	// Act
+	in, err := Resolve(Given{Config: &path, Domain: &domain}, gone(t))
+
+	// Assert
+	if err != nil {
+		t.Fatal(err)
+	}
+	if in.Domain != "example.org" {
+		t.Errorf("Domain = %q, want the domain the argument named", in.Domain)
+	}
+	if in.DomainFrom != "argument" {
+		t.Errorf("DomainFrom = %q, want %q", in.DomainFrom, "argument")
+	}
+}
+
+// A domain gdoc half understands is refused naming the line it came from, from
+// the file and from the flag alike. internal/tasks owns the rule.
+func TestAMalformedDomainIsRefusedByName(t *testing.T) {
+	// Arrange
+	path := write(t, "domain: example\n")
+
+	// Act
+	_, err := Resolve(Given{}, path)
+
+	// Assert
+	if err == nil {
+		t.Fatal("Resolve() with a domain that has no dot, want a refusal")
+	}
+	for _, want := range []string{path, "domain", "example"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("refusal %q, want it to name %q", err, want)
+		}
+	}
+
+	bad := "someone@example.com"
+	_, err = Resolve(Given{Domain: &bad}, gone(t))
+	if err == nil {
+		t.Fatal("Resolve() with an address as the domain argument, want a refusal")
+	}
+	for _, want := range []string{"--domain", "someone@example.com"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("refusal %q, want it to name %q", err, want)
+		}
+	}
+}
+
+// A key with nothing behind it is a line somebody did not finish, refused the
+// way mark: and presence: are.
+func TestADomainKeyWithNoValueIsRefused(t *testing.T) {
+	path := write(t, "domain:\n")
+	_, err := Resolve(Given{}, path)
+	if err == nil {
+		t.Fatal("Resolve() with an unfinished domain line, want a refusal")
+	}
+	if !strings.Contains(err.Error(), "domain") {
+		t.Errorf("refusal %q, want it to name the key", err)
+	}
+}
