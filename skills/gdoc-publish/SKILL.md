@@ -221,7 +221,9 @@ judges neither count.
 
 **If the note holds tasks, read the notation back to the person.** A line
 written `- [ ] words` becomes a box in the document a reader ticks, and a
-`- [x] ` line arrives done with its words struck through. At the end of such a
+`- [x] ` line arrives with its words struck through and its box still empty: no
+Docs request can tick one, so the strike is what says the task is done. At the
+end of such a
 line, after the words, one owner and one due date become chips:
 `@anna@example.com` and `2026-11-20`, in either order. A bare `@anna` needs the
 `domain` setting or `--domain`, and a publish of one without it is refused

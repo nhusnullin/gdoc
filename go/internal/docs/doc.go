@@ -210,9 +210,13 @@
 // that states nothing about its marker is a level whose marker went missing
 // rather than a box. isChecklist holds the rule and names the measurement.
 //
-// The inference is allowed to stand because of what it reaches: the marker a
-// reader prints, and no request a write sends. A wrong answer draws the wrong
-// marker in a file and changes no document. Whether a box is ticked is not in
+// The inference is allowed to stand because of what it reaches: a marker a
+// reader prints and a check a publish reports, and no request a write sends.
+// internal/view draws the marker, and internal/publish counts the boxes its
+// own batch put on to answer checks.tasks, so a level misread either way is a
+// wrong marker in a file or a publish reporting tasks false with a warning on
+// a document whose boxes are there. Neither costs a document a character:
+// the misread cannot reach a request. Whether a box is ticked is not in
 // the answer at all, and nothing here guesses one: internal/view prints every
 // item unticked and says so in a warning.
 // TestAChecklistLevelIsAChecklist and TestADiscBulletIsNotAChecklist are the

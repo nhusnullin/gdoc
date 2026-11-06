@@ -182,14 +182,20 @@
 // far. Its one caller is cmd/gdoc's chat server, and
 // TestChatRefusesABareOwner is the pin.
 //
-// Four shapes are refused, each because it is a notation gdoc would half
+// Five shapes are refused, each because it is a notation gdoc would half
 // understand. A ticked task, because a block's marks are bold, italic and a
 // link and a block has no strike to write a done item with. A task in a
 // numbered list, because a Docs checklist carries no numbers. A nested task
-// list, by the nested-list rule every list has. And a list that holds a task
+// list, by the nested-list rule every list has. A list that holds a task
 // item beside a plain one, because a checklist request covers the whole list
-// it lands in, so one preset would reach the other items. Each is a case of
-// TestContentRefusesWhatTheSubsetDoesNotHold.
+// it lands in, so one preset would reach the other items. And a task that is
+// nothing but its tokens, by the words rule a heading and a plain list item
+// are held to: the tokens come off in trimRuns, so what would reach the
+// document is one space per chip, and layOutBlock is built on every paragraph
+// having words in it. Each is a case of
+// TestContentRefusesWhatTheSubsetDoesNotHold, and
+// TestTheFirstNewLineSkipsAParagraphOfNothingButSpace holds the second
+// question's own half of that last one.
 //
 // Each chip is one space in the inserted text and nothing more. A chip is a
 // unit of the document that no run of the content holds, so Para.Text leaves
@@ -237,7 +243,7 @@
 // task item beside a plain one, a task whose notation gdoc half understands,
 // a line break inside a paragraph, a heading inside a list item, a list item
 // with more than one paragraph, a numbered list that does not begin at 1, a
-// paragraph or a heading with no words in it, and
+// paragraph, a heading or a task with no words in it, and
 // content that is empty or nothing but space. Three of them are decisions rather
 // than gaps: a nested list, because nesting a suggested list goes in through
 // leading tabs and that is unmeasured in SUGGEST mode, a table, because

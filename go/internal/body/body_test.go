@@ -1332,3 +1332,25 @@ func TestATokenInsideEmphasisIsRefused(t *testing.T) {
 		t.Errorf("the refusal is %q, want it to say a token is the item's own plain words", got)
 	}
 }
+
+// TestALineBreakInsideATaskIsRefusedAsOne: a task's owner and day are read off
+// the end of one line, and taskSource joins the item's lines with a space while
+// the runs carry the break itself. The two readings then disagree about where
+// the line ends, so the item is refused; the refusal has to name the break,
+// because "markup around it" sends the author looking for emphasis that is not
+// there.
+func TestALineBreakInsideATaskIsRefusedAsOne(t *testing.T) {
+	for _, md := range []string{
+		"- [ ] Ask the bank\\\n  @anna@example.com 2026-01-02\n",
+		"- [ ] Ask the bank  \n  @anna@example.com\n",
+	} {
+		got := refused(t, md)
+
+		if !strings.Contains(got, "line break") {
+			t.Errorf("the refusal for %q is %q, want it to name the line break", md, got)
+		}
+		if strings.Contains(got, "markup") {
+			t.Errorf("the refusal for %q is %q, and there is no markup in it", md, got)
+		}
+	}
+}

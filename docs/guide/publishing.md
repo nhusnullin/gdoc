@@ -306,6 +306,15 @@ ballot box, and `publish` turns it into a checklist item in the document: a box
 a reader ticks in Docs. A `- [x] ` line is done, and its words are struck
 through.
 
+The box itself arrives unticked whatever the note said. No Docs request can tick
+one, so a done line reaches the document as an empty box with its words struck:
+the strike is what says it is done. Ticking the box is a reader's own click.
+
+A task line only counts as a task where a list can be. Inside a table cell it is
+not one: the characters `- [ ] ` stay in the cell as words, with no box and no
+chips, and gdoc has no way to say so in the note. Write the tasks as a list of
+their own.
+
 At the end of the line, after the words, a task may say who and by when:
 
 ```markdown
@@ -406,7 +415,7 @@ because a document that exists is a document that exists, and being told the run
 failed is what makes somebody upload a second one. A note with no task line has
 `tasks: true`: nothing was asked for and nothing is missing.
 
-`headings_without_id` is a fact beside those three rather than one of them. It
+`headings_without_id` is a fact beside those four rather than one of them. It
 counts the headings the read-back came back with no id on. Zero is what you
 want, and it means the contents list will open its sections once somebody
 refreshes it. Any other number comes with a warning saying what it costs, and

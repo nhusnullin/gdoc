@@ -243,9 +243,12 @@ func deleteRange(start, end int) map[string]any {
 //
 // The ballot character is the only thing marking a task in the uploaded
 // document: the docx carries no style and no bookmark on a task item, so this
-// is what there is to find them by. A paragraph inside a table is not one: a
-// task in a table cell is out of scope and would be refused by internal/body
-// before a document was ever made.
+// is what there is to find them by. A paragraph inside a table is not one, and
+// nothing in a cell can be: a table cell's content never parses as a list, so
+// internal/body reads no task there, emits no ballot character and lists
+// nothing for this to match. A cell line written "- [ ] " keeps those
+// characters as the words the author typed. docs/guide/publishing.md says so,
+// because gdoc has no way to say it in the note.
 func taskParagraphs(tab docs.Tab) []taskPara {
 	var found []taskPara
 	for i, b := range tab.Body {
@@ -270,10 +273,12 @@ func taskParagraphs(tab docs.Tab) []taskPara {
 // joinRuns is a paragraph's text as one string, with the newline that closes
 // it taken off, and where each run's text begins on both sides.
 //
-// Only the text runs. A chip or a picture carries no text and is one unit of
-// the document's own count, so a paragraph holding one joins to something the
-// note's own line cannot equal, and that paragraph is a task gdoc does not
-// recognise rather than one it half writes.
+// Only the text runs. A chip, a picture or a footnote mark carries no text and
+// is one unit of the document's own count, so the join leaves no gap where one
+// stood and the joined text can equal the note's own line exactly. That is why
+// the spans carry each run's own StartIndex rather than an offset from the
+// paragraph's start: indexAt counts inside one run, so a unit the join skipped
+// moves no index the write is built from.
 func joinRuns(p *docs.Paragraph) (string, []textSpan) {
 	var b strings.Builder
 	var spans []textSpan
@@ -403,6 +408,14 @@ func taskWarning(why string) string {
 // A note with no task is the whole of the common case today, and it costs
 // nothing: no request of any kind, the read unchanged, and the check true
 // because nothing was asked for.
+//
+// Where the batch was sent and the read after it could not be taken, the
+// answer is the read from before it, which is the one thing there is. The
+// caller writes the marker from it, and that is safe for one reason worth
+// stating: every task line stands after the contents list, so no request this
+// batch sends can move the index coverEnd reads. A task the cover itself held
+// would break that, which is why this says so rather than leaving it to be
+// rediscovered.
 func convert(ctx context.Context, s Session, id string, d *docs.Document, want []Task) (*docs.Document, bool, []string) {
 	if len(want) == 0 {
 		return d, true, nil

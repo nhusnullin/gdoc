@@ -216,11 +216,15 @@ func blockPreviewHolds(d *docs.Document, place Placement, content []Para) (bool,
 // stands on said already. What that empty string means is blockPreviewHolds's
 // own answer, and it is not always a pass.
 //
-// An empty line is skipped because Carries finds one in any document at all.
+// A line with nothing but space in it is skipped because Carries finds one in
+// any document at all, so asking about it would report every suggestion as a
+// possible direct edit. ParseContent refuses the one content that could build
+// such a paragraph, a task carrying only its tokens; this is the same rule
+// where the paragraph came from somewhere else.
 func firstNewLine(place Placement, content []Para) string {
 	for _, p := range content {
 		text := p.Text()
-		if text == "" || alreadyStoodOn(place.Paragraphs, text) {
+		if strings.TrimSpace(text) == "" || alreadyStoodOn(place.Paragraphs, text) {
 			continue
 		}
 		return text

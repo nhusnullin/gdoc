@@ -409,6 +409,16 @@ func (w *blockWalk) task(node ast.Node, box *east.TaskCheckBox, runs []Run) (Par
 			"%s is a task's date with markup around it, and a task's date is the item's own plain words",
 			either(shown.Due.Text, written.Due.Text)))
 	}
+	// An item that is nothing but its tokens carries no words, and a block
+	// proposes words, which is the rule the heading and the plain list item
+	// above are held to. It is refused here rather than by the len(runs) == 0
+	// check, because the tokens are runs until trimRuns takes them off: what
+	// would reach the document is a space for each chip and nothing else, and
+	// layOutBlock is built on every paragraph having words in it.
+	if shown.Words == "" {
+		return Para{}, w.refuseAt(line,
+			"this task carries no words, only the owner or date it is tagged with, and a block proposes words")
+	}
 	if shown.Owner.Present() && shown.Owner.Domain == "" && w.bare == "" {
 		w.bare = shown.Owner.Text
 	}

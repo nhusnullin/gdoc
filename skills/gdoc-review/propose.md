@@ -183,9 +183,14 @@ reads is the words of the call, and an address gdoc finished from a setting
 would not be on it. So never write a name you were not given in full, and never
 guess a colleague's address from their first name.
 
+The document shows the name chip before the date chip whichever order the line
+wrote the two tokens in, because both land at the end of the words. Say the
+words of the task rather than the order of its chips.
+
 `[x]` is refused, because a block carries no strike to give a done task.
-Two owners, two dates, a date that is not a calendar day, a nested task and a
-task in a numbered list are each refused by name before anything is sent.
+Two owners, two dates, a date that is not a calendar day, a nested task, a task
+in a numbered list and a task that is nothing but its tokens are each refused
+by name before anything is sent.
 
 A chip names a person and does nothing to them: the proposal emails nobody,
 shares nothing and assigns nothing. The boxes and the chips carry the block's

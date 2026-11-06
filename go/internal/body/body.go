@@ -1217,6 +1217,15 @@ func (r *renderer) task(node ast.Node, box *east.TaskCheckBox, runs []Run,
 	}
 	whole := plainText(runs)
 	shown := strings.TrimPrefix(whole, ballot)
+	// A break before the two readings are compared, because they disagree
+	// about it rather than about markup: taskSource joins the item's lines
+	// with a space and the runs carry the newline itself, so the tokens are at
+	// the end of the line in one and not in the other. Left to the comparison
+	// the refusal reads "with markup around it", which sends the author
+	// looking for emphasis that is not there.
+	if strings.Contains(shown, "\n") {
+		return nil, fmt.Errorf("line %d: this task item carries a line break, and a task's owner and date are read off the end of one line; write the task on one line", line)
+	}
 	seen, err := tasks.Parse(shown)
 	switch {
 	case err != nil:

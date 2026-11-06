@@ -795,3 +795,22 @@ func TestAChipWithoutTheBlocksIdStopsTheRun(t *testing.T) {
 		t.Errorf("the warnings are %v, and one of them should name the chip that carried it", warns)
 	}
 }
+
+// TestTheFirstNewLineSkipsAParagraphOfNothingButSpace is the belt-and-braces
+// half of the wordless-task refusal. Carries finds a space in any document at
+// all, so a line that is nothing but the room its chips need would make the
+// second question answer "the preview carries this line" about every document
+// there is, and report a suggestion that landed as a direct edit. ParseContent
+// refuses every content that could build such a paragraph; this holds the rule
+// where the paragraph came from somewhere else.
+func TestTheFirstNewLineSkipsAParagraphOfNothingButSpace(t *testing.T) {
+	place, _ := afterPlace(t)
+	content := []Para{
+		{Style: NormalStyle, List: TaskList, Owner: "anna@example.com", Due: "2026-11-20"},
+		{Style: NormalStyle, Runs: []Run{{Text: "A line nothing stood on."}}},
+	}
+
+	if got := firstNewLine(place, content); got != "A line nothing stood on." {
+		t.Errorf("firstNewLine = %q, want the first line with words in it", got)
+	}
+}
