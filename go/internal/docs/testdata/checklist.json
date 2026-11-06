@@ -123,6 +123,18 @@
                 }
               }},
               {"startIndex": 77, "endIndex": 78, "textRun": {"content": "\n", "textStyle": {}}}
+            ]}},
+          {"startIndex": 78, "endIndex": 86, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "bullet": {"listId": "kix.check", "nestingLevel": 0, "textStyle": {}},
+            "elements": [
+              {"startIndex": 78, "endIndex": 84, "textRun": {"content": "Email ", "textStyle": {}}},
+              {"startIndex": 84, "endIndex": 85, "person": {
+                "personId": "kix.person5",
+                "textStyle": {},
+                "personProperties": {"name": "Not A Notation Name", "email": "müller@example.com"}
+              }},
+              {"startIndex": 85, "endIndex": 86, "textRun": {"content": "\n", "textStyle": {}}}
             ]}}
         ]},
         "lists": {

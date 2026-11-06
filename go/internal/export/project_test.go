@@ -1263,6 +1263,11 @@ func TestAnExportedChecklistParsesBackToTheSameTasks(t *testing.T) {
 		// nobody has.
 		{Words: "Chase[person: No Space](mailto:glued@example.com)"},
 		{Words: "Both [person: Two Chips](mailto:two@example.com)[date: Nov 22, 2026]"},
+		// An address this package's own parser refuses is no token either, so
+		// the line it comes home on is one this build takes. Written as a
+		// token it would be a line the build refuses, and the refusal stops
+		// the whole note.
+		{Words: "Email [person: Not A Notation Name](mailto:müller@example.com)"},
 	}
 	if len(got) != len(want) {
 		t.Fatalf("the file holds %d task lines, want %d:\n%s", len(got), len(want), body)

@@ -31,6 +31,7 @@ import (
 
 	"gdoc/internal/docs"
 	"gdoc/internal/markers"
+	"gdoc/internal/tasks"
 )
 
 // The markup the projection adds. Every one of these is two characters, so a
@@ -860,10 +861,6 @@ func (e *emitter) prefix(p *docs.Paragraph) string {
 // because Docs' answer carries no tick to read.
 const checklistMarker = "- [ ] "
 
-// dayLayout is the calendar day as the notation writes it, which is the one
-// form a date chip prints as.
-const dayLayout = "2006-01-02"
-
 // checklistTicksWarning is the one sentence a read says about a checklist. It
 // is a fact about Google's answer rather than about this document, and it is
 // here rather than guessed at because a box printed ticked that nobody ticked
@@ -956,6 +953,12 @@ func spacedBefore(before []docs.Run) bool {
 // and the label the chip shows is a name: writing "@A Placeholder" would put a
 // name where an address belongs, and the next build would refuse the line. The
 // placeholder and its warning say what is there instead.
+//
+// An address the notation refuses is the same case. Google takes addresses
+// internal/tasks does not, a name in another script among them, so the address
+// goes through the reader the next build uses: a token that build would refuse
+// stops the whole note rather than one task, and a name left in the document is
+// the smaller loss. TestAnAddressTheNotationRefusesIsNoToken is the pin.
 func chipToken(r docs.Run) string {
 	if r.Detail == nil {
 		return ""
@@ -965,7 +968,11 @@ func chipToken(r docs.Run) string {
 		if r.Detail.Email == "" {
 			return ""
 		}
-		return "@" + r.Detail.Email
+		token := "@" + r.Detail.Email
+		if _, err := tasks.ReadOwner(token); err != nil {
+			return ""
+		}
+		return token
 	case docs.KindDate:
 		return chipDay(*r.Detail)
 	}
@@ -1000,7 +1007,7 @@ func chipDay(d docs.Detail) string {
 		}
 		zone = loc
 	}
-	return at.In(zone).Format(dayLayout)
+	return at.In(zone).Format(tasks.DayLayout)
 }
 
 // indent is the column this item's marker starts at: the column its parent's

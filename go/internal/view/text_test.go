@@ -1056,6 +1056,28 @@ func TestTwoChipsAgainstEachOtherAreNoTokens(t *testing.T) {
 	}
 }
 
+// TestAnAddressTheNotationRefusesIsNoToken is the third thing a person chip's
+// address can be. Google takes an address the notation does not: a name in
+// another script, an apostrophe, a dot at the end. Printed as a token,
+// "@müller@example.com" is a line the next build refuses by name, and the
+// refusal stops the whole note rather than one task. The placeholder and its
+// warning say the name is in the document, which is the route the chip with no
+// address already takes.
+func TestAnAddressTheNotationRefusesIsNoToken(t *testing.T) {
+	got, warnings := Text(fixture(t, "checklist.json"))
+
+	want := "- [ ] Email [person: Not A Notation Name]\n"
+	if !strings.Contains(got, want) {
+		t.Errorf("%q is not in the text:\n%s", want, got)
+	}
+	if strings.Contains(got, "@müller@example.com") {
+		t.Errorf("an address the notation refuses printed as a token:\n%s", got)
+	}
+	if !warned(warnings, "a person chip at index 84") {
+		t.Errorf("the chip the notation cannot write raised no warning: %v", warnings)
+	}
+}
+
 // TestAReadWithAChecklistSaysTheTicksAreNotRead is the fact the envelope
 // carries instead of a guess. It is said once however many items the document
 // holds, and not at all for a document with no checklist in it.

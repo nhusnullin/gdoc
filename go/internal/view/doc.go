@@ -171,6 +171,13 @@
 // TestAChipAgainstTheWordsIsNoToken and TestTwoChipsAgainstEachOtherAreNoTokens
 // are the pins.
 //
+// An address the notation refuses is one of those as well. Google takes
+// addresses internal/tasks does not, a name in another script among them, so
+// every address a token would carry goes through internal/tasks.ReadOwner
+// first: a line the next build refuses stops the whole note rather than the one
+// task, and a name left in the document is the smaller loss.
+// TestAnAddressTheNotationRefusesIsNoToken is the pin.
+//
 // A date chip's day is worked out in the chip's own zone, not the reader's: a
 // chip at local midnight in Asia/Dubai is 20:00 UTC the day before, and the
 // UTC day would move the deadline back a day on every read.
