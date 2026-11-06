@@ -177,6 +177,11 @@
 // behind their back would not be on it. The bare-owner case of
 // TestContentRefusesWhatTheSubsetDoesNotHold is the pin.
 //
+// BareOwner answers that same question without refusing anything, so a caller
+// that may finish no address can say so in its own words before it gets this
+// far. Its one caller is cmd/gdoc's chat server, and
+// TestChatRefusesABareOwner is the pin.
+//
 // Four shapes are refused, each because it is a notation gdoc would half
 // understand. A ticked task, because a block's marks are bold, italic and a
 // link and a block has no strike to write a done item with. A task in a

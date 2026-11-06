@@ -139,6 +139,26 @@ func ParseContent(content, domain string) ([]Para, error) {
 	return w.paras, nil
 }
 
+// BareOwner answers the first owner a block's content names as a bare name,
+// "@anna" with no domain behind it, and the empty string where the content
+// names none.
+//
+// It is the question chat asks before it writes the call's file, because chat
+// may finish no address: the card shows the words a model wrote, and a domain
+// taken from a setting nobody is looking at would not be on it. The terminal
+// asks nothing here, because the domain in effect finishes the name there.
+//
+// It answers rather than refuses. Content this package cannot read at all is
+// content the walk stops in, and what is wrong with it is the refusal
+// ParseContent gives the caller a moment later, in words about the line.
+// TestChatRefusesABareOwner in cmd/gdoc is the pin.
+func BareOwner(content string) string {
+	source := []byte(content)
+	w := &blockWalk{source: source}
+	_ = w.blocks(parseBlock().Parser().Parse(text.NewReader(source)), NotAList)
+	return w.bare
+}
+
 // parseBlock is goldmark with the GFM extensions and nothing else.
 //
 // GFM is on so that a table, a struck-out word and a task list are parsed and
@@ -160,6 +180,10 @@ type blockWalk struct {
 	source []byte
 	domain string
 	paras  []Para
+	// bare is the first owner the content named as a bare name, which is what
+	// BareOwner answers. It is kept whatever the domain in effect is, because
+	// the question is what the author wrote rather than what it resolves to.
+	bare string
 }
 
 // blocks reads every block in a subtree. list is the list the blocks belong to,
@@ -384,6 +408,9 @@ func (w *blockWalk) task(node ast.Node, box *east.TaskCheckBox, runs []Run) (Par
 		return Para{}, w.refuseAt(line, fmt.Sprintf(
 			"%s is a task's date with markup around it, and a task's date is the item's own plain words",
 			either(shown.Due.Text, written.Due.Text)))
+	}
+	if shown.Owner.Present() && shown.Owner.Domain == "" && w.bare == "" {
+		w.bare = shown.Owner.Text
 	}
 	// The address is finished here, before a request exists, so nothing half
 	// read reaches a document and the refusal names the setting rather than a

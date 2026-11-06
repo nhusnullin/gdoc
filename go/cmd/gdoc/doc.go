@@ -89,7 +89,12 @@
 //     in effect, its words on the line or in a file. internal/reply.
 //   - propose <url> --from [--md] [--folder]: a change as a suggestion, either
 //     words inside one paragraph or a block of new paragraphs.
-//     internal/propose.
+//     internal/propose. A block may hold a task list, and this room puts the
+//     domain in effect on every entry of the file, so a bare "@anna" owner is
+//     finished where there is a domain and the run is refused by name where
+//     there is none, before the session is opened:
+//     TestTheTerminalResolvesABareOwner and
+//     TestTheTerminalRefusesABareOwnerWithNoDomain.
 //   - withdraw <url> <suggestion id> --md: gdoc taking back its own proposal.
 //     internal/withdraw.
 //   - annotate <url> --quote | --from [--body-file]: a comment on the words a
@@ -128,7 +133,11 @@
 //     document is refused with nothing sent, which is TestAWrongTitleIsRefused
 //     and TestAThreadQuoteDifferingOnlyInQuotesOrSpacingPasses. One item per
 //     write call, and no field in it the card does not draw:
-//     TestASecondItemIsRefused and TestAssigneeIsRefused. Every chat write is
+//     TestASecondItemIsRefused and TestAssigneeIsRefused. A task a chat
+//     proposal writes carries the whole address and never a bare name,
+//     whatever the domain in effect is, because the card a person agrees to is
+//     the call's own arguments and an address finished from a setting would
+//     not be on it: TestChatRefusesABareOwner and TestChatTakesAFullAddress. Every chat write is
 //     then judged by internal/chat's hold rules before anything is sent, and a
 //     held write reaches no wire: the answer is ok false, sent false, and the
 //     hold's id, rule, value and words, with one fixed sentence that says to
