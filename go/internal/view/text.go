@@ -832,6 +832,14 @@ func (e *emitter) breakPlaceholder(index int) string {
 // character, and both change the shape of the document on the way home.
 // TestASubListIndentsToItsParentsColumn and TestASubListUnderAWideMarkerClearsIt
 // are the pins.
+//
+// The box is the one marker whose width is not that column. GFM reads "[ ] "
+// as the item's own first inline content and not as part of the list marker,
+// so a task list item's content column is the two characters of "- ".
+// Recording six put a child four columns past it, which CommonMark reads as an
+// indented code block and the next build leaves out with a warning: the child's
+// words never reach the document.
+// TestAChecklistItemsColumnIsItsBulletsWidth is the pin.
 func (e *emitter) prefix(p *docs.Paragraph) string {
 	if p.Bullet != nil {
 		e.enter(p.Bullet)
@@ -843,16 +851,44 @@ func (e *emitter) prefix(p *docs.Paragraph) string {
 		return ""
 	}
 	marker := "- "
+	column := len(marker)
 	switch {
 	case p.Bullet.Ordered:
 		marker = strconv.Itoa(e.number(p.Bullet)) + ". "
-	case p.Bullet.Checklist:
+		column = len(marker)
+	case taskItem(p.Bullet):
 		marker = checklistMarker
 		e.sayTicks()
+	case p.Bullet.Checklist:
+		e.sayNestedBox(p.StartIndex)
 	}
-	indent := e.indent(p.Bullet, len(marker))
-	e.setColumn(p.Bullet, indent+len(marker))
+	indent := e.indent(p.Bullet, column)
+	e.setColumn(p.Bullet, indent+column)
 	return strings.Repeat(" ", indent) + marker
+}
+
+// taskItem answers whether this bullet is a checklist item the note's notation
+// can write, which is one at the top level of its list.
+//
+// A note's checklist stands at one level, because internal/body refuses a task
+// inside another list by name. So an item below the top level keeps the plain
+// bullet and takes no tokens, and a warning names the box it lost: printing
+// the box there would write a note the next build refuses whole, which loses
+// the document rather than one box.
+// TestANestedChecklistItemPrintsAsAPlainBullet and
+// TestANestedChecklistItemsChipsKeepTheirPlaceholders are the pins.
+func taskItem(b *docs.Bullet) bool {
+	return b.Checklist && b.NestingLevel == 0
+}
+
+// nestedBoxWarning is what a read says about a checklist item below the top
+// level of its list, once for each one, because each is a box a person can see
+// in the document and will not find in the note.
+const nestedBoxWarning = "a checklist item at index %d is below the top level of its list and prints as a plain bullet: a note's checklist stands at one level"
+
+// sayNestedBox names one such item.
+func (e *emitter) sayNestedBox(index int) {
+	e.warnings = append(e.warnings, fmt.Sprintf(nestedBoxWarning, index))
 }
 
 // checklistMarker is what a checklist item opens with: GFM's unticked task
@@ -892,12 +928,14 @@ func (e *emitter) sayTicks() {
 //
 // A paragraph that is not a checklist item has no tokens at all. A chip in a
 // bullet list or in prose is not a task's, and a box is the only thing that
-// says this line is one.
+// says this line is one. An item below the top level of its list is one of
+// those: it prints no box, so a token on it would be a name written into the
+// prose rather than a task's owner.
 // TestChipsThatEndAChecklistItemPrintAsTheNotation,
 // TestAChipInsideTheWordsPrintsAsToday and
 // TestAPersonChipWithNoEmailPrintsAsToday are the pins.
 func (e *emitter) tokensOf(p *docs.Paragraph) map[int]string {
-	if p.Bullet == nil || !p.Bullet.Checklist {
+	if p.Bullet == nil || !taskItem(p.Bullet) {
 		return nil
 	}
 	out := map[int]string{}

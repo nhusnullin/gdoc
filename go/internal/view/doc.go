@@ -154,6 +154,21 @@
 // it. TestChipsThatEndAChecklistItemPrintAsTheNotation and internal/export's
 // TestAnExportedChecklistParsesBackToTheSameTasks are the pins.
 //
+// Only an item at the top level of its list takes the box. A note's checklist
+// stands at one level, because internal/body refuses a task inside another
+// list by name, so a deeper item prints as a plain bullet and takes no tokens,
+// and a warning names the box it lost. Printing the box there would write a
+// note the next build refuses whole, which loses the document rather than one
+// box. TestANestedChecklistItemPrintsAsAPlainBullet and
+// TestANestedChecklistItemsChipsKeepTheirPlaceholders are the pins.
+//
+// The box is also the one marker whose width is not the column its children
+// indent to. GFM reads "[ ] " as the item's own first inline content, so a
+// task item's content column is the two characters of "- ": a child indented
+// to six stands four columns past it, which CommonMark reads as an indented
+// code block and the next build leaves out with a warning, losing the child's
+// words. TestAChecklistItemsColumnIsItsBulletsWidth is the pin.
+//
 // Only a chip at the end of the line is a token, with at least one space or
 // tab between it and the words or the other chip and nothing else, and at most
 // one of each kind. That is where the notation puts a token, so a chip in the
