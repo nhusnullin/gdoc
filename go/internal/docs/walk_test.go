@@ -756,3 +756,83 @@ func TestARunKeepsItsBackgroundAndTextColour(t *testing.T) {
 		t.Errorf("an unmarked run = %q/%q, want neither", got.Background, got.Colour)
 	}
 }
+
+// TestAChecklistLevelIsAChecklist is the tell the probe measured on 2026-11-05:
+// a checklist level comes back with no glyph type, no glyph symbol and the
+// format "%0". Nothing in Google's reference says so, which is why the
+// measurement is written down and this test reads it as literals.
+func TestAChecklistLevelIsAChecklist(t *testing.T) {
+	ps := paragraphs(fixture(t, "checklist.json").Tabs[0].Body)
+
+	first := ps[0].Bullet
+	if first == nil {
+		t.Fatal("the first item carries no bullet")
+	}
+	if !first.Checklist {
+		t.Errorf("the first item = %+v, want a checklist", first)
+	}
+	if first.Ordered || first.Glyph != "" {
+		t.Errorf("a checklist item is numbered: %+v", first)
+	}
+}
+
+// TestADiscBulletIsNotAChecklist is the other side: the same unspecified glyph
+// type with a symbol on it is the disc every list had before this, and reading
+// it as a checklist would print a box over every bullet in the tree.
+func TestADiscBulletIsNotAChecklist(t *testing.T) {
+	ps := paragraphs(fixture(t, "checklist.json").Tabs[0].Body)
+
+	disc := ps[2].Bullet
+	if disc == nil || disc.ListID != "kix.disc" {
+		t.Fatalf("the third item = %+v", disc)
+	}
+	if disc.Checklist {
+		t.Errorf("a disc bullet read as a checklist: %+v", disc)
+	}
+
+	// No list in the tree's own list fixture is a checklist: the numbered
+	// levels, the disc level that states the unspecified type and the disc
+	// level that states no type at all are all markers that were there before
+	// a box could be read, and a box over any of them is a box the document
+	// does not draw.
+	for i, tab := range fixture(t, "lists.json").Tabs {
+		for _, p := range paragraphs(tab.Body) {
+			if p.Bullet != nil && p.Bullet.Checklist {
+				t.Errorf("lists.json tab %d: %+v read as a checklist", i, p.Bullet)
+			}
+		}
+	}
+
+	// A level the tab does not describe at all is not a checklist either: a
+	// missing level leaves the marker unknown, and a box is a claim about the
+	// marker.
+	if isChecklist("", "", "") {
+		t.Error("a level that states nothing read as a checklist")
+	}
+}
+
+// TestADateChipCarriesItsTimestampAndZone is the day a date chip stands for,
+// which displayText alone does not give: "Sep 9, 2026" is a month name in one
+// locale's spelling, and the notation a read prints is the calendar day.
+func TestADateChipCarriesItsTimestampAndZone(t *testing.T) {
+	p := paragraphs(fixture(t, "elements.json").Tabs[0].Body)[0]
+
+	var got *Detail
+	for _, r := range p.Runs {
+		if r.Kind == KindDate {
+			got = r.Detail
+		}
+	}
+	if got == nil {
+		t.Fatal("the paragraph holds no date chip")
+	}
+	if got.Timestamp != "2026-09-09T00:00:00Z" {
+		t.Errorf("the chip's timestamp = %q, want 2026-09-09T00:00:00Z", got.Timestamp)
+	}
+	if got.TimeZoneID != "Etc/GMT" {
+		t.Errorf("the chip's zone = %q, want Etc/GMT", got.TimeZoneID)
+	}
+	if got.Label != "Sep 9, 2026" {
+		t.Errorf("the chip's label = %q, want Sep 9, 2026", got.Label)
+	}
+}

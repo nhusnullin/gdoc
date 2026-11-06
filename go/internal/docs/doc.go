@@ -200,6 +200,34 @@
 // reference, and TestABulletCarriesItsListAndGlyph is the pin, with
 // TestAParagraphCarriesItsHeadingID over the heading id a link points at.
 //
+// # A checklist level is read off three glyph fields, because Google names none
+//
+// Checklist is the fourth fact about a level, and the one the reference has no
+// field for. The probe of 2026-11-05 measured what a checklist comes back as:
+// GLYPH_TYPE_UNSPECIFIED, no glyphSymbol, and glyphFormat "%0". A disc bullet
+// states the same unspecified type with the symbol "●" on it, so the symbol is
+// what tells the two apart, and the format is asked as well because a level
+// that states nothing about its marker is a level whose marker went missing
+// rather than a box. isChecklist holds the rule and names the measurement.
+//
+// The inference is allowed to stand because of what it reaches: the marker a
+// reader prints, and no request a write sends. A wrong answer draws the wrong
+// marker in a file and changes no document. Whether a box is ticked is not in
+// the answer at all, and nothing here guesses one: internal/view prints every
+// item unticked and says so in a warning.
+// TestAChecklistLevelIsAChecklist and TestADiscBulletIsNotAChecklist are the
+// pins, over testdata/checklist.json.
+//
+// # A date chip carries its instant, not only the day it draws
+//
+// Detail held the chip's displayText alone, which is the day in one locale's
+// month names. A reader writing the notation back into a note needs the
+// calendar day, and "Nov 20, 2026" is not it. So Timestamp and TimeZoneID come
+// across as the answer states them, and the reader works the day out from the
+// two: a chip at local midnight in Asia/Dubai is the day before in UTC, and a
+// reader printing the UTC day would move somebody's deadline.
+// TestADateChipCarriesItsTimestampAndZone is the pin.
+//
 // # The contents element is a block, because it is a boundary
 //
 // blocks() dropped tableOfContents with the section breaks, as an element

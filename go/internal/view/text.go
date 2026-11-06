@@ -12,6 +12,14 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
+	// The zone database goes in the binary rather than being read off the host.
+	// A date chip names its zone as an IANA id, and the day it stands for is
+	// worked out in that zone; a host with no database would answer for none of
+	// them, and Windows has none at all. A deadline that moves by a day
+	// depending on which machine read the document is the kind of answer
+	// nothing here may give.
+	_ "time/tzdata"
 	"unicode"
 
 	"github.com/yuin/goldmark"
@@ -427,7 +435,17 @@ type emitter struct {
 	// "---" in a cell as three hyphens of text, so each of those keeps the
 	// placeholder and the warning that says the break was lost.
 	breakOwnsItsLine bool
-	warnings         []string
+	// tokenChips are the chips of the checklist item being written that print
+	// as the notation rather than as a placeholder, by the run's start index.
+	// It is the paragraph's own question, so paragraph() fills it before the
+	// runs are written and empties it after: a table cell hands its runs over
+	// directly and takes no prefix, so no chip in a cell is a token.
+	tokenChips map[int]string
+	// saidTicks says the tick sentence is already in the warnings. It is one
+	// fact about the document rather than one per item, and a hundred items
+	// would otherwise say it a hundred times.
+	saidTicks bool
+	warnings  []string
 }
 
 func (e *emitter) chunk(s string) {
@@ -750,9 +768,11 @@ func (e *emitter) paragraph(p *docs.Paragraph) {
 	// another, so one flag of each is enough.
 	e.inHeading = headingLevel(p.Style) > 0
 	e.breakOwnsItsLine = !e.inHeading && p.Bullet == nil
+	e.tokenChips = e.tokensOf(p)
 	text := e.capture(func() { e.runs(p.Runs) })
 	e.inHeading = false
 	e.breakOwnsItsLine = false
+	e.tokenChips = nil
 	// The prefix is taken even when the text is empty, so an item of a numbered
 	// list that holds no text still counts: the numbers then say what the
 	// document shows rather than closing the gap over an item nobody typed into.
@@ -822,12 +842,140 @@ func (e *emitter) prefix(p *docs.Paragraph) string {
 		return ""
 	}
 	marker := "- "
-	if p.Bullet.Ordered {
+	switch {
+	case p.Bullet.Ordered:
 		marker = strconv.Itoa(e.number(p.Bullet)) + ". "
+	case p.Bullet.Checklist:
+		marker = checklistMarker
+		e.sayTicks()
 	}
 	indent := e.indent(p.Bullet, len(marker))
 	e.setColumn(p.Bullet, indent+len(marker))
 	return strings.Repeat(" ", indent) + marker
+}
+
+// checklistMarker is what a checklist item opens with: GFM's unticked task
+// list item, which is what a note writes a task as and what the next build
+// reads back. Every item takes the unticked box, whatever the document draws,
+// because Docs' answer carries no tick to read.
+const checklistMarker = "- [ ] "
+
+// dayLayout is the calendar day as the notation writes it, which is the one
+// form a date chip prints as.
+const dayLayout = "2006-01-02"
+
+// checklistTicksWarning is the one sentence a read says about a checklist. It
+// is a fact about Google's answer rather than about this document, and it is
+// here rather than guessed at because a box printed ticked that nobody ticked
+// is worse than a box nobody can tell about.
+// TestAReadWithAChecklistSaysTheTicksAreNotRead is the pin.
+const checklistTicksWarning = "a checklist's ticks are not in Google's answer, so every item prints unticked"
+
+// sayTicks adds that sentence once per projection.
+func (e *emitter) sayTicks() {
+	if e.saidTicks {
+		return
+	}
+	e.saidTicks = true
+	e.warnings = append(e.warnings, checklistTicksWarning)
+}
+
+// tokensOf is the chips at the end of a checklist item that print as the
+// notation: the owner as "@address" and the due date as the calendar day. They
+// are what publish put there, and writing them back this way is what lets the
+// note publish again into the same checklist.
+//
+// Only a chip at the end of the line counts, with nothing but spaces between it
+// and the words or the other chip, because that is where the note's own
+// notation puts a token: a chip in the middle of a sentence is a chip, and
+// writing it as a token would move somebody's name into the prose. At most one
+// of each kind, for the same reason: two owners are a line the next build
+// refuses by name.
+//
+// A paragraph that is not a checklist item has no tokens at all. A chip in a
+// bullet list or in prose is not a task's, and a box is the only thing that
+// says this line is one.
+// TestChipsThatEndAChecklistItemPrintAsTheNotation,
+// TestAChipInsideTheWordsPrintsAsToday and
+// TestAPersonChipWithNoEmailPrintsAsToday are the pins.
+func (e *emitter) tokensOf(p *docs.Paragraph) map[int]string {
+	if p.Bullet == nil || !p.Bullet.Checklist {
+		return nil
+	}
+	out := map[int]string{}
+	taken := map[string]bool{}
+	for i := len(p.Runs) - 1; i >= 0; i-- {
+		r := p.Runs[i]
+		if r.Kind == docs.KindText {
+			// The spaces between the tokens, and the newline the paragraph
+			// ends with. Anything else is the words, and the tokens stop here.
+			if strings.TrimSpace(r.Text) == "" {
+				continue
+			}
+			return out
+		}
+		token := chipToken(r)
+		if token == "" || taken[r.Kind] {
+			return out
+		}
+		taken[r.Kind] = true
+		out[r.StartIndex] = token
+	}
+	return out
+}
+
+// chipToken is one chip as the notation writes it, or the empty string for a
+// chip the notation has no form for.
+//
+// A person chip with no address is one of those. The notation is an address,
+// and the label the chip shows is a name: writing "@A Placeholder" would put a
+// name where an address belongs, and the next build would refuse the line. The
+// placeholder and its warning say what is there instead.
+func chipToken(r docs.Run) string {
+	if r.Detail == nil {
+		return ""
+	}
+	switch r.Kind {
+	case docs.KindPerson:
+		if r.Detail.Email == "" {
+			return ""
+		}
+		return "@" + r.Detail.Email
+	case docs.KindDate:
+		return chipDay(*r.Detail)
+	}
+	return ""
+}
+
+// chipDay is the calendar day a date chip stands for, in the chip's own zone.
+//
+// The zone is the chip's and not the reader's: a chip at local midnight in
+// Asia/Dubai is 20:00 UTC the day before, and a reader printing the UTC day
+// would move the deadline back a day every time the document came home. A chip
+// the answer states no zone on is read in UTC, which is the instant's own.
+//
+// A timestamp the answer does not carry, or a zone the database does not know,
+// gives the empty string, and the chip keeps the placeholder and its warning.
+// The day is the whole of what the notation says, so a guessed one is a
+// deadline gdoc invented.
+// TestADateChipPrintsTheDayInItsOwnZone is the pin.
+func chipDay(d docs.Detail) string {
+	if d.Timestamp == "" {
+		return ""
+	}
+	at, err := time.Parse(time.RFC3339, d.Timestamp)
+	if err != nil {
+		return ""
+	}
+	zone := time.UTC
+	if d.TimeZoneID != "" {
+		loc, err := time.LoadLocation(d.TimeZoneID)
+		if err != nil {
+			return ""
+		}
+		zone = loc
+	}
+	return at.In(zone).Format(dayLayout)
 }
 
 // indent is the column this item's marker starts at: the column its parent's
@@ -2090,6 +2238,14 @@ func (e *emitter) one(r docs.Run) {
 			e.drain(r.EndIndex, true)
 			return
 		}
+		if token := e.tokenChips[r.StartIndex]; token != "" {
+			// The chip is a task's token, written as the note writes it.
+			// Nothing was lost, so there is nothing to warn about, and no
+			// target goes behind it: the address is the token itself.
+			e.write(token)
+			e.drain(r.EndIndex, true)
+			return
+		}
 		p, ok := placeholders[r.Kind]
 		if !ok {
 			p = placeholders[docs.KindObject]
@@ -2184,6 +2340,10 @@ func (e *emitter) plain(rs []docs.Run) {
 			// footnote returns the number the first copy already recorded, so
 			// the note is listed once and both copies name it.
 			e.write("[^" + e.footnote(r) + "]")
+			continue
+		}
+		if token := e.tokenChips[r.StartIndex]; token != "" {
+			e.write(token)
 			continue
 		}
 		e.write(e.markOf(r))

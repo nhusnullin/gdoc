@@ -936,3 +936,122 @@ func TestARepeatedIDTakesTheNextSuffix(t *testing.T) {
 		}
 	}
 }
+
+// checklistTicks is the one sentence a read says about a checklist it printed.
+// The tests below hold the words as literals, because it is what a person
+// reads and it is the whole of what gdoc knows about a tick.
+const checklistTicks = "a checklist's ticks are not in Google's answer, so every item prints unticked"
+
+// TestAChecklistItemPrintsUnticked is the marker a checklist item takes. The
+// box is empty whatever the document draws, because the answer carries no tick
+// to read, and the warning beside it says so.
+func TestAChecklistItemPrintsUnticked(t *testing.T) {
+	got, _ := Text(fixture(t, "checklist.json"))
+
+	if !strings.Contains(got, "- [ ] Plain task\n") {
+		t.Errorf("the plain task is not a checklist line:\n%s", got)
+	}
+	// The disc bullet in the same tab keeps the marker every bullet had.
+	if !strings.Contains(got, "- A bullet\n") {
+		t.Errorf("the disc bullet took a box:\n%s", got)
+	}
+}
+
+// TestChipsThatEndAChecklistItemPrintAsTheNotation is the round trip the
+// notation exists for: the chips a publish put on the line come back as the
+// tokens a note writes, so the note publishes again into the same checklist.
+func TestChipsThatEndAChecklistItemPrintAsTheNotation(t *testing.T) {
+	got, _ := Text(fixture(t, "checklist.json"))
+
+	want := "- [ ] Ask the bank @placeholder@example.com 2026-11-20\n"
+	if !strings.Contains(got, want) {
+		t.Errorf("%q is not in the text:\n%s", want, got)
+	}
+	// The two chips printed as the notation raise no placeholder warning:
+	// nothing was lost, so there is nothing to name.
+	_, warnings := Text(fixture(t, "checklist.json"))
+	for _, w := range warnings {
+		if strings.Contains(w, "index 14") || strings.Contains(w, "index 16") {
+			t.Errorf("a chip printed as the notation still warned: %s", w)
+		}
+	}
+}
+
+// TestAChipInsideTheWordsPrintsAsToday is the rule that the tokens are read
+// only at the end of the line, which the note's own notation already holds. A
+// chip in the middle of a sentence is a chip, and the placeholder and its
+// warning are what it printed before this.
+func TestAChipInsideTheWordsPrintsAsToday(t *testing.T) {
+	got, warnings := Text(fixture(t, "checklist.json"))
+
+	want := "- [ ] Call [person: A Placeholder] today\n"
+	if !strings.Contains(got, want) {
+		t.Errorf("%q is not in the text:\n%s", want, got)
+	}
+	if !warned(warnings, "a person chip at index 43") {
+		t.Errorf("the chip inside the words raised no warning: %v", warnings)
+	}
+}
+
+// TestAPersonChipWithNoEmailPrintsAsToday is the other half: the notation is
+// an address, and a chip that carries none cannot be written as one. Writing
+// the label instead would put a name where an address belongs and the next
+// publish would refuse the line.
+func TestAPersonChipWithNoEmailPrintsAsToday(t *testing.T) {
+	got, warnings := Text(fixture(t, "checklist.json"))
+
+	want := "- [ ] Ask [person: No Address]\n"
+	if !strings.Contains(got, want) {
+		t.Errorf("%q is not in the text:\n%s", want, got)
+	}
+	if !warned(warnings, "a person chip at index 55") {
+		t.Errorf("the chip with no address raised no warning: %v", warnings)
+	}
+}
+
+// TestADateChipPrintsTheDayInItsOwnZone is the day somebody wrote rather than
+// the day UTC was on at that instant. The chip stands at local midnight in
+// Asia/Dubai, which is 20:00 UTC the day before, and printing the UTC day
+// would move the deadline back a day every time the note came home.
+func TestADateChipPrintsTheDayInItsOwnZone(t *testing.T) {
+	got, _ := Text(fixture(t, "checklist.json"))
+
+	want := "- [ ] Due 2026-11-21\n"
+	if !strings.Contains(got, want) {
+		t.Errorf("%q is not in the text:\n%s", want, got)
+	}
+}
+
+// TestAReadWithAChecklistSaysTheTicksAreNotRead is the fact the envelope
+// carries instead of a guess. It is said once however many items the document
+// holds, and not at all for a document with no checklist in it.
+func TestAReadWithAChecklistSaysTheTicksAreNotRead(t *testing.T) {
+	_, warnings := Text(fixture(t, "checklist.json"))
+
+	count := 0
+	for _, w := range warnings {
+		if strings.Contains(w, checklistTicks) {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Errorf("the tick sentence was said %d times, want once: %v", count, warnings)
+	}
+
+	_, plain := Text(fixture(t, "lists.json"))
+	for _, w := range plain {
+		if strings.Contains(w, checklistTicks) {
+			t.Errorf("a document with no checklist was told about ticks: %s", w)
+		}
+	}
+}
+
+// warned says whether any warning holds this phrase.
+func warned(warnings []string, phrase string) bool {
+	for _, w := range warnings {
+		if strings.Contains(w, phrase) {
+			return true
+		}
+	}
+	return false
+}

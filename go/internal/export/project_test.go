@@ -11,6 +11,7 @@ import (
 	"gdoc/internal/frontmatter"
 	"gdoc/internal/house"
 	"gdoc/internal/prelude"
+	"gdoc/internal/tasks"
 )
 
 // fixture parses a recorded Docs answer. The prelude fixtures are this
@@ -1217,5 +1218,55 @@ func TestWordsHoldingTheOldPencilSpanAreNamed(t *testing.T) {
 		oneMarked(docs.Run{Text: "it was ]{.pencil} before", Colour: "#9A9A9A"}), nil, palette(t))
 	if !warnedAbout(inside, "]{.pencil}") {
 		t.Errorf("a grey run holding the old spelling raised %v, and the next build refuses it", inside)
+	}
+}
+
+// TestAnExportedChecklistParsesBackToTheSameTasks is the round trip the
+// notation exists for: a checklist in the document comes home as task list
+// items, and internal/tasks reads the same words, the same owner and the same
+// day out of each one. So the note publishes again into the checklist it came
+// from, rather than into a line somebody has to retype.
+//
+// The chips print as the notation and take no mailto target, which the export
+// puts behind every other person chip: the address is the token itself, and a
+// target behind it would be a line the next build refuses.
+func TestAnExportedChecklistParsesBackToTheSameTasks(t *testing.T) {
+	files, _, _, _ := Project(fixture(t, "checklist.json"), nil, nil)
+	body := files[0].Body
+
+	var got []tasks.Task
+	for _, line := range strings.Split(body, "\n") {
+		source, ok := strings.CutPrefix(line, "- [ ] ")
+		if !ok {
+			continue
+		}
+		task, err := tasks.Parse(source)
+		if err != nil {
+			t.Fatalf("tasks.Parse(%q): %v", source, err)
+		}
+		got = append(got, task)
+	}
+
+	want := []tasks.Task{
+		{Words: "Ask the bank", Owner: tasks.Owner{Text: "@placeholder@example.com", Name: "placeholder", Domain: "example.com", Start: 13, End: 37}, Due: tasks.Due{Text: "2026-11-20", Start: 38, End: 48}},
+		{Words: "Plain task"},
+		// A chip in the middle of the words is not a token, so it keeps the
+		// placeholder and the target the export puts behind every other
+		// person chip.
+		{Words: "Call [person: A Placeholder](mailto:placeholder@example.com) today"},
+		{Words: "Ask [person: No Address]"},
+		{Words: "Due", Due: tasks.Due{Text: "2026-11-21", Start: 4, End: 14}},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("the file holds %d task lines, want %d:\n%s", len(got), len(want), body)
+	}
+	for i, task := range got {
+		if task != want[i] {
+			t.Errorf("task %d = %+v, want %+v", i, task, want[i])
+		}
+	}
+
+	if strings.Contains(body, "mailto:placeholder@example.com)\n") {
+		t.Errorf("a token chip carried a target:\n%s", body)
 	}
 }

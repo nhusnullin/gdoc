@@ -29,6 +29,9 @@
 //	<!-- tab t.0: Title -->          the tab that follows, printed only when
 //	                                 there is more than one
 //	# to ######                      a HEADING_1 to HEADING_6 paragraph
+//	- [ ] words @a@b.com 2026-11-20  a checklist item, always unticked, with
+//	                                 the owner and the due date a chip at the
+//	                                 end of its line stands for
 //	[image] [drawing] [equation]     content this read does not take
 //	[object]
 //	[person: Name] [date: Sep 9,     a smart chip, with the label the document
@@ -139,6 +142,39 @@
 // A document character after a marker that does not pair with it needs nothing:
 // the reader takes gdoc's markup first, left to right, and what is left is the
 // document's own.
+//
+// # A checklist item is the notation a note writes a task in
+//
+// A checklist item prints as GFM's task list item, and the chips at the end of
+// its line print as the tokens the note's own notation uses: the owner as
+// "@address" and the due date as the calendar day. That is what makes the
+// round trip: a note publishes into a checklist, the document comes home
+// through this projection, and the same note publishes again into the same
+// checklist. internal/tasks owns the notation itself and this file only writes
+// it. TestChipsThatEndAChecklistItemPrintAsTheNotation and internal/export's
+// TestAnExportedChecklistParsesBackToTheSameTasks are the pins.
+//
+// Only a chip at the end of the line is a token, with nothing but spaces
+// between it and the words or the other chip, and at most one of each kind.
+// That is where the notation puts a token, so a chip in the middle of a
+// sentence keeps its placeholder and its warning, and so does a person chip
+// with no address: the notation is an address and the label is a name, and
+// "@A Placeholder" is a line the next build refuses.
+// TestAChipInsideTheWordsPrintsAsToday and
+// TestAPersonChipWithNoEmailPrintsAsToday are the pins.
+//
+// A date chip's day is worked out in the chip's own zone, not the reader's: a
+// chip at local midnight in Asia/Dubai is 20:00 UTC the day before, and the
+// UTC day would move the deadline back a day on every read.
+// TestADateChipPrintsTheDayInItsOwnZone is the pin. The zone database is in the
+// binary, through a blank import of time/tzdata, so the day never depends on
+// the machine that read the document.
+//
+// Every item prints unticked, because the tick is not in Google's answer at
+// all. One warning per projection says so, rather than once per item, and
+// nothing guesses a box somebody ticked.
+// TestAChecklistItemPrintsUnticked and
+// TestAReadWithAChecklistSaysTheTicksAreNotRead are the pins.
 //
 // # A chip's placeholder carries the label the document shows
 //

@@ -1,0 +1,103 @@
+{
+  "documentId": "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789chek",
+  "title": "A checklist, its chips, and a disc bullet beside it",
+  "revisionId": "ALm37BXchecklist",
+  "tabs": [
+    {
+      "tabProperties": {"tabId": "t.0", "title": "", "index": 0},
+      "documentTab": {
+        "body": {"content": [
+          {"startIndex": 0, "endIndex": 1, "sectionBreak": {"sectionStyle": {}}},
+          {"startIndex": 1, "endIndex": 18, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "bullet": {"listId": "kix.check", "nestingLevel": 0, "textStyle": {}},
+            "elements": [
+              {"startIndex": 1, "endIndex": 14, "textRun": {"content": "Ask the bank ", "textStyle": {}}},
+              {"startIndex": 14, "endIndex": 15, "person": {
+                "personId": "kix.person1",
+                "textStyle": {},
+                "personProperties": {"name": "A Placeholder", "email": "placeholder@example.com"}
+              }},
+              {"startIndex": 15, "endIndex": 16, "textRun": {"content": " ", "textStyle": {}}},
+              {"startIndex": 16, "endIndex": 17, "dateElement": {
+                "dateId": "kix.date1",
+                "textStyle": {},
+                "dateElementProperties": {
+                  "timestamp": "2026-11-20T12:00:00Z",
+                  "timeZoneId": "Etc/GMT",
+                  "locale": "en",
+                  "dateFormat": "DATE_FORMAT_MONTH_DAY_YEAR_ABBREVIATED",
+                  "timeFormat": "TIME_FORMAT_DISABLED",
+                  "displayText": "Nov 20, 2026"
+                }
+              }},
+              {"startIndex": 17, "endIndex": 18, "textRun": {"content": "\n", "textStyle": {}}}
+            ]}},
+          {"startIndex": 18, "endIndex": 29, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "bullet": {"listId": "kix.check", "nestingLevel": 0, "textStyle": {}},
+            "elements": [
+              {"startIndex": 18, "endIndex": 29, "textRun": {"content": "Plain task\n", "textStyle": {}}}
+            ]}},
+          {"startIndex": 29, "endIndex": 38, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "bullet": {"listId": "kix.disc", "nestingLevel": 0, "textStyle": {}},
+            "elements": [
+              {"startIndex": 29, "endIndex": 38, "textRun": {"content": "A bullet\n", "textStyle": {}}}
+            ]}},
+          {"startIndex": 38, "endIndex": 51, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "bullet": {"listId": "kix.check", "nestingLevel": 0, "textStyle": {}},
+            "elements": [
+              {"startIndex": 38, "endIndex": 43, "textRun": {"content": "Call ", "textStyle": {}}},
+              {"startIndex": 43, "endIndex": 44, "person": {
+                "personId": "kix.person2",
+                "textStyle": {},
+                "personProperties": {"name": "A Placeholder", "email": "placeholder@example.com"}
+              }},
+              {"startIndex": 44, "endIndex": 51, "textRun": {"content": " today\n", "textStyle": {}}}
+            ]}},
+          {"startIndex": 51, "endIndex": 57, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "bullet": {"listId": "kix.check", "nestingLevel": 0, "textStyle": {}},
+            "elements": [
+              {"startIndex": 51, "endIndex": 55, "textRun": {"content": "Ask ", "textStyle": {}}},
+              {"startIndex": 55, "endIndex": 56, "person": {
+                "personId": "kix.person3",
+                "textStyle": {},
+                "personProperties": {"name": "No Address"}
+              }},
+              {"startIndex": 56, "endIndex": 57, "textRun": {"content": "\n", "textStyle": {}}}
+            ]}},
+          {"startIndex": 57, "endIndex": 63, "paragraph": {
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "bullet": {"listId": "kix.check", "nestingLevel": 0, "textStyle": {}},
+            "elements": [
+              {"startIndex": 57, "endIndex": 61, "textRun": {"content": "Due ", "textStyle": {}}},
+              {"startIndex": 61, "endIndex": 62, "dateElement": {
+                "dateId": "kix.date2",
+                "textStyle": {},
+                "dateElementProperties": {
+                  "timestamp": "2026-11-20T20:00:00Z",
+                  "timeZoneId": "Asia/Dubai",
+                  "locale": "en",
+                  "dateFormat": "DATE_FORMAT_MONTH_DAY_YEAR_ABBREVIATED",
+                  "timeFormat": "TIME_FORMAT_DISABLED",
+                  "displayText": "Nov 21, 2026"
+                }
+              }},
+              {"startIndex": 62, "endIndex": 63, "textRun": {"content": "\n", "textStyle": {}}}
+            ]}}
+        ]},
+        "lists": {
+          "kix.check": {"listProperties": {"nestingLevels": [
+            {"glyphType": "GLYPH_TYPE_UNSPECIFIED", "glyphFormat": "%0", "indentFirstLine": {"magnitude": 18, "unit": "PT"}}
+          ]}},
+          "kix.disc": {"listProperties": {"nestingLevels": [
+            {"glyphType": "GLYPH_TYPE_UNSPECIFIED", "glyphSymbol": "●", "glyphFormat": "%0"}
+          ]}}
+        }
+      }
+    }
+  ]
+}
