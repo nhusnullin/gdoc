@@ -92,6 +92,13 @@ signed-in account and has no access to the document, once direct and once
 in SUGGEST mode. He then says whether a mail arrived and whether the
 document's sharing list changed.
 
+Taken 2026-11-06 by `TestLivePersonChipToAnotherAddress`: two documents
+kept in the test folder, a chip naming Nail's personal address (not the
+signed-in account, no access to the folder), one written directly at
+05:18:07Z and one suggested at 05:18:11Z. Sharing, read through the Drive
+permissions list of each: the address was not added, and both lists are the
+shared drive's members alone. The inbox: waiting on Nail.
+
 **Ticks and Docs tasks.**
 
 `TestLiveChecklistForHands` left one document in the test folder:

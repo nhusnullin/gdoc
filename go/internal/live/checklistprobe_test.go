@@ -267,3 +267,57 @@ func trimTo(s string, n int) string {
 	}
 	return s[:n] + "…"
 }
+
+// TestLivePersonChipToAnotherAddress is the trust guardian's measurement:
+// does a person chip naming an address that is not the signed-in account, and
+// that has no access, mail that person or share the document? It makes two
+// documents and keeps them, one with the chip written directly and one with it
+// suggested, because only a person can say what reached the inbox and what the
+// sharing list shows. GDOC_PROBE_OTHER is that address.
+func TestLivePersonChipToAnotherAddress(t *testing.T) {
+	if os.Getenv(liveVar) != "1" || os.Getenv(writeVar) != "1" {
+		t.Skipf("skipped: set %s=1 and %s=1", liveVar, writeVar)
+	}
+	other := strings.TrimSpace(os.Getenv("GDOC_PROBE_OTHER"))
+	if other == "" {
+		t.Fatal("GDOC_PROBE_OTHER names an address that is not the signed-in account")
+	}
+	folder := strings.TrimSpace(os.Getenv(folderVar))
+	if folder == "" {
+		folder = testFolder
+	}
+	p := guard.NewPolicy()
+	p.AllowCreateIn(folder)
+	s, err := gapi.Open(p, nil)
+	if err != nil {
+		t.Fatalf("the session could not be opened: %v", err)
+	}
+	ctx := context.Background()
+	for _, suggest := range []bool{false, true} {
+		title := "gdoc CHIP PROBE - direct"
+		if suggest {
+			title = "gdoc CHIP PROBE - suggested"
+		}
+		id, err := createDoc(ctx, s, folder, title)
+		if err != nil {
+			t.Fatalf("create: %v", err)
+		}
+		url := "https://docs.googleapis.com/v1/documents/" + id + ":batchUpdate"
+		if err := s.PostJSON(ctx, url, map[string]any{"requests": []map[string]any{
+			req("insertText", map[string]any{"location": map[string]any{"index": 1}, "text": "Owner: "}),
+		}}, nil); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+		chip := req("insertPerson", map[string]any{"location": map[string]any{"index": 8}, "personProperties": map[string]any{"email": other}})
+		if suggest {
+			err = suggestBatch(ctx, s, id, chip)
+		} else {
+			err = s.PostJSON(ctx, url, map[string]any{"requests": []map[string]any{chip}}, nil)
+		}
+		if err != nil {
+			t.Logf("%s REFUSED: %s", title, docsReason(err))
+			continue
+		}
+		t.Logf("%s at %s: https://docs.google.com/document/d/%s/edit", title, time.Now().UTC().Format(time.RFC3339), id)
+	}
+}
