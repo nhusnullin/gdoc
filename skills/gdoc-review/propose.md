@@ -161,6 +161,36 @@ renumbered where nobody would see it. There is also a size limit, so a whole doc
 block, and the refusal names it. When the answer needs one of those, say so in a
 reply and leave the shape to the person.
 
+### A task list in a block
+
+`content` may hold one task list, one level deep, and the document gets boxes a
+reader ticks. A line is `- [ ] words`, and at the end of it, after the words,
+one owner and one due date become chips: `@anna@example.com` and `2026-11-20`,
+in either order.
+
+```json
+{
+  "kind": "block",
+  "after": "the operations team reviews it",
+  "content": "- [ ] Confirm the limit with the bank @anna@example.com 2026-11-20\n- [ ] Write the two tiers down 2026-12-01\n",
+  "why": "the section promises two numbers and names nobody to get them"
+}
+```
+
+Write the whole address. From chat there is no domain to finish a bare `@anna`
+with, and a bare one is refused in a sentence saying so: the card the person
+reads is the words of the call, and an address gdoc finished from a setting
+would not be on it. So never write a name you were not given in full, and never
+guess a colleague's address from their first name.
+
+`[x]` is refused, because a block carries no strike to give a done task.
+Two owners, two dates, a date that is not a calendar day, a nested task and a
+task in a numbered list are each refused by name before anything is sent.
+
+A chip names a person and does nothing to them: the proposal emails nobody,
+shares nothing and assigns nothing. The boxes and the chips carry the block's
+one suggestion id, so `withdraw` takes them back with the rest of it.
+
 ### Before a replace, read what is in the run
 
 A replace deletes the paragraphs it stands in for, and that is the one proposal

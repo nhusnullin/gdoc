@@ -126,66 +126,16 @@ front matter is untouched.
 
 ## If a picture is refused
 
-`build` and `publish` read PNG and JPEG only. An SVG is refused, and the refusal
-names the line and the format. Google Docs does not import SVG out of a docx, so
-the PNG has to come from this session.
+`build` and `publish` read PNG and JPEG only. An SVG is refused naming the line
+and the format, on this machine before anything leaves it: no document was
+created and the note is untouched, so rendering the picture and running again is
+not a second publish. Google Docs imports no SVG out of a docx, so the PNG has
+to come from this session.
 
-The refusal happens on this machine before anything leaves it: no document was
-created and the note is untouched. So rendering the picture and running again is
-not a second publish.
-
-What to do, in order:
-
-1. Read the refusal. It names the file and the line. Read the SVG's root element
-   for `width` and `height`; when only `viewBox` is there, take its third and
-   fourth numbers.
-2. Render it at scale 2, which lands at about 400 ppi once gdoc scales the picture
-   to the text column. Not higher: it only makes the docx bigger.
-3. Render to the session's scratchpad first and look at the PNG before anything
-   goes near the hub. Arrowheads present, text at the right weight. Both dead
-   ends below were found by looking, not by an exit code.
-4. The PNG goes beside the SVG with the same stem. A PNG already there under that
-   name is a stop, not an overwrite: this session cannot tell stale output from
-   somebody's own picture.
-5. Repoint the one link on the named line from `.svg` to `.png`. The SVG stays.
-   It is the master.
-6. Run `build` to the scratchpad. A clean object means publish, once.
-
-### What renders it
-
-On macOS nothing has to be installed. `svg2png.js` sits beside this file, in the
-base directory Claude Code printed when it loaded this skill, and it drives
-WebKit, which ships with the OS:
-
-```bash
-osascript -l JavaScript svg2png.js in.svg out.png <width> <height> 2
-```
-
-It prints `ok <pixels>` or the reason it could not. Measured on 2026-09-19 over
-four diagrams: the same pixels a headless Chrome run gave, a fifth of a second
-each, and `build` embedded the result.
-
-When it says the legacy WebView is unavailable, which a later macOS may do, fall
-back to a Chromium-family browser by its app path:
-
-```bash
-"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new \
-  --disable-gpu --hide-scrollbars --force-device-scale-factor=2 \
-  --window-size=<width>,<height> --screenshot=out.png "file://$PWD/in.svg"
-```
-
-`rsvg-convert --zoom 2 in.svg -o out.png` is cheaper still where librsvg is
-installed, and `brew install librsvg` is what installs it.
-
-When none of them is present, stop and say so: name the picture, name what to
-install, and offer the other door, a PNG you export by hand and link from the
-note. Never download a browser or a package to get one. That would be this
-session fetching code onto your machine on its own.
-
-Four dead ends, one line each, so nobody spends the calls again: QuickLook
-(`qlmanage -t`) crops to a square, `cairosvg` needs libcairo, `NSImage` drops
-`marker-end` so every arrowhead vanishes and semibold text comes out regular, and
-`safaridriver` needs a one-time `sudo` and opens a visible window.
+`pictures.md`, beside this file, is how: what renders one on this machine,
+`svg2png.js` beside it on macOS and two fallbacks elsewhere, the scale to use, where the PNG goes and which name is a stop rather than an
+overwrite, and the four dead ends nobody should spend the calls on again. Read
+it when a picture is refused.
 
 ## Step 1: Read the note's front matter
 
@@ -269,6 +219,21 @@ three dividers can come back as two. Say the number and carry on. Whether the
 document breaks where the author wanted is the author's to read, and this skill
 judges neither count.
 
+**If the note holds tasks, read the notation back to the person.** A line
+written `- [ ] words` becomes a box in the document a reader ticks, and a
+`- [x] ` line arrives done with its words struck through. At the end of such a
+line, after the words, one owner and one due date become chips:
+`@anna@example.com` and `2026-11-20`, in either order. A bare `@anna` needs the
+`domain` setting or `--domain`, and a publish of one without it is refused
+before anything is uploaded, naming the token. Two owners, two dates, a day
+that is not a calendar day, a nested task and a task in a numbered list are
+refused by name too. Say nothing about tasks when the note has none.
+
+A chip names a person, so say this once where a note carries one: the publish
+emails nobody, shares the document with nobody and assigns nothing. A chip is
+text that knows an address. Never tell the person a task was sent to anybody,
+and never offer to notify somebody: gdoc has no request that does it.
+
 Then run `$GDOC help publish --json`, and build the call from what it printed:
 the note, and the folder you named in this request.
 
@@ -289,11 +254,16 @@ The binary prints facts and judges none of them. Read the object and say, in
 this order:
 
 - **The URL**, so you can open it.
-- **`verified`, and each of the three checks under `checks`.** They are three
+- **`verified`, and each of the four checks under `checks`.** They are four
   read-backs on separate routes: the Docs read says the document is there and
   readable, the tab count says it is one document rather than a shape a later
-  command would refuse, and the docx export says Drive can hand it back. Name
-  the ones that came back false. `verified: false` is not a failed publish. The
+  command would refuse, the docx export says Drive can hand it back, and
+  `tasks` says the note's task lines came back as checklist items with the
+  chips they named. Name the ones that came back false. `tasks: false` with a
+  warning is a document whose boxes or chips did not land, and the note and the
+  document are both still there: say which the warning names and leave the next
+  move to the person. A note with no task line reads `tasks: true`.
+  `verified: false` is not a failed publish. The
   document exists. A route that did not hold is a route that did not hold, and
   saying the run failed is how a second document gets made.
 - **`headings_without_id`.** How many headings came back from the read with no

@@ -299,6 +299,75 @@ colour on the run is what survives Google's import, because Google Docs has no
 character styles. That is also what brings a mark home again:
 [`gdoc export`](exporting.md) writes it back as the syntax you typed.
 
+## Tasks: a box, a name and a date
+
+A line written `- [ ] words` is a task. `build` keeps it in the docx as a
+ballot box, and `publish` turns it into a checklist item in the document: a box
+a reader ticks in Docs. A `- [x] ` line is done, and its words are struck
+through.
+
+At the end of the line, after the words, a task may say who and by when:
+
+```markdown
+- [ ] Ask the bank which account holds the float @anna@example.com 2026-11-20
+- [ ] Draft the register section 2026-12-01
+- [x] Agree the three tiers @anna@example.com
+```
+
+An owner is `@name@domain`. A due date is `YYYY-MM-DD`. At most one of each, in
+either order, and only at the end of the line: `@anna` or `2026-11-20` among
+the words is words, and so is either of them in a line that is not a task.
+
+In the document the owner becomes a name chip and the date a date chip, the
+same two chips a person inserts by typing `@` in Docs. A chip is text that
+knows an address: the publish emails nobody, shares the document with nobody
+and assigns nothing. That was measured on 2026-11-06 against an address that is
+not the signed-in account, written directly and suggested, and neither mailed
+nor shared.
+
+A bare `@anna` takes the domain in effect, so a note can leave the rest to a
+setting:
+
+```yaml
+# settings.yaml in the config folder
+domain: example.com
+```
+
+`--domain example.com` is the same thing for one run, and an argument beats the
+file. A bare owner with no domain in effect is refused by name before anything
+is uploaded, because a chip gdoc finished by guessing would name somebody else.
+The `domain` setting is strict: letters, digits, hyphens and dots, at least one
+dot, and no `@`.
+
+Each of these is refused naming the line, and nothing is sent:
+
+| Refused | Because |
+|---|---|
+| two owners, or two dates | one line names one person and one day, and gdoc may not pick |
+| a date that is not a calendar day, such as `2026-02-30` | there is no such day to put on a chip |
+| an owner that is not an address, such as `@a@b` or `@anna@` | a chip takes an address, and half of one is not one |
+| a nested task | a checklist one level deep is what this notation carries |
+| a task in a numbered list | a numbered list and a box are two different lists |
+| an owner or a date inside `**` or `*` | a chip has no emphasis, so the markup would reach the document as words |
+
+Reading goes one way only. **A box you tick in the document comes back
+unticked in the note.** Google's answer carries no ticked state at all, so
+[`gdoc read`](reading.md) and [`gdoc export`](exporting.md) print every
+checklist item as `- [ ] ` and say so in a warning on that read. What comes
+home with the words is the owner and the date: a name chip that ends an item
+prints as `@anna@example.com` and a date chip as `2026-11-20`, the day in the
+chip's own time zone, so an exported line parses back as the task it was. A
+chip among the words, and a name chip Google answered with no address on it,
+print as they always have.
+
+The publish does the conversion after the upload, from the read it already
+took: it finds the paragraphs that came in carrying the ballot box, turns that
+run into a checklist, puts each chip where its token stood, and takes the two
+ballot characters off. If the document came back with a different count of
+those paragraphs, or different words on them, nothing is sent and
+`checks.tasks` is false. The docx keeps the owner and the date as you typed
+them, so a `build`, and a publish whose last batch did not land, lose nothing.
+
 ## Publishing the document
 
 `gdoc publish` does what `build` does and then puts the result into Drive as a
@@ -328,12 +397,14 @@ never replaces the body of a document: that request is a merge, and a merge
 travels as suggestions through `/gdoc-align`. `restyle --new` is not being
 built either.
 
-Three things are checked after the upload, and each answers something the other
-two cannot: the document reads back through the Docs API, it has exactly one
-tab, and Drive can export it as a .docx again. `verified` is the three together.
-Fewer than three is still `ok: true` with the check that did not hold named,
+Four things are checked after the upload, and each answers something the others
+cannot: the document reads back through the Docs API, it has exactly one tab,
+Drive can export it as a .docx again, and the note's tasks read back as
+checklist items with the chips they named. `verified` is the four together.
+Fewer than four is still `ok: true` with the check that did not hold named,
 because a document that exists is a document that exists, and being told the run
-failed is what makes somebody upload a second one.
+failed is what makes somebody upload a second one. A note with no task line has
+`tasks: true`: nothing was asked for and nothing is missing.
 
 `headings_without_id` is a fact beside those three rather than one of them. It
 counts the headings the read-back came back with no id on. Zero is what you
@@ -362,7 +433,7 @@ at is one the next publish makes a second of.
     "bytes": 48213,
     "tabs": 1,
     "verified": true,
-    "checks": {"read_back": true, "one_tab": true, "docx_export": true},
+    "checks": {"read_back": true, "one_tab": true, "docx_export": true, "tasks": true},
     "headings_without_id": 0,
     "files_changed": ["/Users/you/notes/supplier-register-policy.md"],
     "body": {"paragraphs": 41, "headings": 9, "lists": 3, "tables": 2, "images": 1,

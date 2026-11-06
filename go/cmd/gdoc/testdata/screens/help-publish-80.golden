@@ -3,6 +3,20 @@
 │ ▸ gdoc v2.10.0 is published and this is v2.9.0. gdoc update installs it.     │
 ├─ Usage ──────────────────────────────────────────────────────────────────────┤
 │ gdoc publish --md <file> --folder-id <folder id> [--house <file>]            │
+├─ Notes ──────────────────────────────────────────────────────────────────────┤
+│ A line the note writes as - [ ] words is a task, and the document gets a box │
+│ a reader ticks. At the end of that line, after the words, one owner and one  │
+│ due date become chips: @anna@example.com or a bare @anna with --domain or    │
+│ the domain setting in effect, and 2026-11-20, in either order. A - [x] line  │
+│ is done and its words are struck through. A bare owner with no domain in     │
+│ effect, two owners, two dates, a date that is not a calendar day, a nested   │
+│ task and a task in a numbered list are each refused by name before anything  │
+│ is uploaded.                                                                 │
+│                                                                              │
+│ A chip is text that knows an address: this publish emails nobody, shares the │
+│ document with nobody and assigns nothing. checks.tasks on the envelope is    │
+│ the read-back of the boxes and the chips, and it is true for a note with no  │
+│ task.                                                                        │
 ├─ Flags ─────────────────┬────────────────────────────────────────────────────┤
 │ --md <file>             │ the note to publish                                │
 │ --folder-id <folder id> │ the Drive folder the document is created in        │

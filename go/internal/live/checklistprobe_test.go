@@ -11,6 +11,23 @@ package live
 //
 // Like the other probes it asserts almost nothing. It fails only when it
 // cannot create, set up or trash.
+//
+// What each test here costs, because a probe spends documents:
+//
+//   - TestLiveChecklistProbe: four documents, created and trashed. Needs
+//     GDOC_PROBE_PERSON.
+//   - TestLiveChecklistProbeOverBullets: five documents, created and trashed.
+//     Needs GDOC_PROBE_PERSON.
+//   - TestLiveChecklistForHands: one document, kept with its URL in the log,
+//     for a person to tick a box in and press "Assign as a task" on. With
+//     GDOC_PROBE_READ_ID it reads that document back instead and creates
+//     nothing.
+//   - TestLivePersonChipToAnotherAddress: two documents, kept, because only a
+//     person can say what reached an inbox and what the sharing list shows.
+//     Needs GDOC_PROBE_OTHER, an address that is not the signed-in account.
+//
+// All four need GDOC_LIVE_TEST=1 and GDOC_LIVE_WRITE=1, and create in
+// GDOC_LIVE_FOLDER_ID or the Drive test folder it defaults to.
 
 import (
 	"context"

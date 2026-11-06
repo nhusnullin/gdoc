@@ -60,12 +60,14 @@
 // TestPublishRollsBackWhenTheNoteCannotBePaired, false in
 // TestPublishReportsTheLiveIDWhenTheRollbackFailed.
 //
-// # verified is three read-backs, and false is not a failure
+// # verified is four read-backs, and false is not a failure
 //
 // The Docs read says the document is there and readable, the tab count says it
-// is one document rather than a shape a later command would refuse, and the
-// docx export says Drive can hand it back as the format it came in as. Fewer
-// than three is the document reported with the route that did not hold named:
+// is one document rather than a shape a later command would refuse, the docx
+// export says Drive can hand it back as the format it came in as, and tasks
+// says the note's task lines came back as checklist items carrying the chips
+// they named, which is true for a note with no task. Fewer
+// than four is the document reported with the route that did not hold named:
 // a document that exists is a document that exists, and a caller told the run
 // failed is a caller that uploads a second one. The export check reuses
 // internal/docx's ExportURL, Export and Parse rather than a second export path.

@@ -83,11 +83,13 @@ func (o Options) Check() error {
 	return nil
 }
 
-// Checks is which of the three read-backs held. They are three routes to one
-// question, and each answers a part of it the other two cannot: the Docs read
+// Checks is which of the four read-backs held. They are four routes to one
+// question, and each answers a part of it the others cannot: the Docs read
 // says the document is there and readable, the tab count says it is one
-// document rather than a shape a later command would refuse, and the export
-// says Drive can hand the document back as the format it came in as.
+// document rather than a shape a later command would refuse, the export
+// says Drive can hand the document back as the format it came in as, and
+// Tasks says the note's task lines came back as the boxes and chips they
+// asked for.
 type Checks struct {
 	ReadBack   bool `json:"read_back"`
 	OneTab     bool `json:"one_tab"`

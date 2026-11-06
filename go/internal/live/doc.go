@@ -52,6 +52,19 @@
 //     acceptances carries, the published one and the proposed one. It has no
 //     default for the guard's reason above and one of its own: a chip names a
 //     person, and gdoc may never guess who.
+//   - GDOC_PROBE_PERSON: the same thing for M33's two checklist probes, which
+//     send a chip through a hand-written batch rather than through a writer.
+//     It is a separate word from the one above because a probe and an
+//     acceptance are two runs, and a probe is often pointed at the signed-in
+//     account while an acceptance names a colleague.
+//   - GDOC_PROBE_READ_ID: the document TestLiveChecklistForHands left in the
+//     folder, read back once a person has ticked a box in it and pressed
+//     "Assign as a task" on another. With it that test reads and creates
+//     nothing; without it the same test makes the document and keeps it.
+//   - GDOC_PROBE_OTHER: an address that is not the signed-in account, for the
+//     trust guardian's measurement. It keeps the two documents it makes,
+//     because only a person can say what reached an inbox and what the sharing
+//     list shows. Measured 2026-11-06: no mail and no share, either way.
 //   - GDOC_LIVE_PUBLISHED_DOC_ID: a document publish made, in the test folder.
 //   - GDOC_LIVE_RESTYLED_DOC_ID: a document restyle styled with --fields, in
 //     the test folder. Those two are read only under GDOC_LIVE_RECORD, for the
@@ -135,6 +148,16 @@
 //     default, so a run that names nobody is skipped: what no fixture can
 //     answer is what Drive's import does with a ballot character and what a
 //     checklist request does to a list that came in as disc bullets.
+//   - TestLiveChecklistProbe and TestLiveChecklistProbeOverBullets, M33's,
+//     and the measurements the tasks design was taken from. One throwaway
+//     document per case, each set up with a direct write and then asked for a
+//     checklist, a person chip and a date chip, directly and in SUGGEST mode,
+//     and in the second test over paragraphs that are already a disc list the
+//     way a published docx arrives. Nine documents between them, all trashed.
+//     Like the other probes they assert almost nothing: they name
+//     GDOC_PROBE_PERSON and fail only when they cannot create, set up or
+//     trash. Measured 2026-11-05, MEASURED.md "Checklists, person chips and
+//     date chips, direct and suggested".
 //   - TestLiveDrift, M6's. It uploads the built document and the master with
 //     conversion and runs drift.Items over both. That is the measurement that
 //     means something, because Google's import is part of the result.
@@ -320,7 +343,7 @@
 // cannot accept its own suggestion, so the probe leaves that document in the
 // folder and prints its URL.
 //
-// # Four tests leave their document behind, on purpose
+// # Six tests leave their document behind, on purpose
 //
 // The anchors test, the prelude acceptance and the named range probe's accept
 // row each leave a document in the folder with its URL in the log. The numbers
@@ -346,6 +369,17 @@
 // measurement passed on 2026-10-16. The URL is in the log. It names no
 // variable of its own: GDOC_LIVE_TEST, GDOC_LIVE_WRITE and GDOC_LIVE_FOLDER_ID
 // with its default are the whole of what it reads.
+//
+// TestLiveChecklistForHands and TestLivePersonChipToAnotherAddress are the
+// fifth and the sixth, M33's, and they keep three documents between them for
+// the same reason: what they ask can only be answered in a browser and in an
+// inbox. The first makes one checklist document and prints its URL, for a
+// person to tick a box in and press "Assign as a task" on, and reads it back
+// later under GDOC_PROBE_READ_ID, where it creates nothing. The second is the
+// trust guardian's measurement: one document with a chip naming
+// GDOC_PROBE_OTHER written directly and one with it suggested, kept so a
+// person can say whether anything was mailed or shared. Neither asserts what
+// it was sent to find out. Trash them once you have looked.
 //
 // # The export measurement asserts nothing
 //

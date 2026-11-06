@@ -54,3 +54,54 @@ func TestBuildResolvesNoOwner(t *testing.T) {
 		t.Fatalf("a build of a note with a bare owner and no domain failed: %v", got)
 	}
 }
+
+// `gdoc help publish` and `gdoc help propose` are the two screens read before
+// a task is written, by a person and by a skill, so each carries the notation
+// as a line of its own. They are notes rather than flag sentences, because a
+// task is syntax the command reads out of a file and belongs to no flag, and
+// they reach the object as well as the screen, because the other reader of
+// this help is a session building a note.
+func TestHelpPublishAndProposeNameTheTaskNotation(t *testing.T) {
+	t.Setenv("GDOC_CONFIG_DIR", t.TempDir())
+
+	for _, c := range []struct {
+		command string
+		wants   []string
+	}{
+		{"publish", []string{"- [ ]", "chip", "emails nobody"}},
+		{"propose", []string{"- [ ]", "chip"}},
+	} {
+		got, prose, code := runHelp(t, "help", c.command, "--json")
+		if code != 0 || got["ok"] != true {
+			t.Fatalf("gdoc help %s must be answered: %v (exit %d)", c.command, got, code)
+		}
+		list := helpCommands(t, got)
+		if len(list) != 1 {
+			t.Fatalf("gdoc help %s is one entry and %d came back: %v", c.command, len(list), list)
+		}
+		entry, ok := list[0].(map[string]any)
+		if !ok {
+			t.Fatalf("the entry is not an object: %v", list[0])
+		}
+		notes, ok := entry["notes"].([]any)
+		if !ok || len(notes) == 0 {
+			t.Fatalf("%s's entry carries no notes, and the task notation is one: %v", c.command, entry)
+		}
+		joined := ""
+		for _, n := range notes {
+			line, _ := n.(string)
+			joined += line + "\n"
+			// The words a person reads carry every note, so a
+			// colleague who typed the help without --json is not
+			// sent to the object for it.
+			if !strings.Contains(prose, line) {
+				t.Errorf("the words gdoc help %s prints leave out %q", c.command, line)
+			}
+		}
+		for _, want := range c.wants {
+			if !strings.Contains(joined, want) {
+				t.Errorf("gdoc help %s never says %q in its notes: %q", c.command, want, joined)
+			}
+		}
+	}
+}

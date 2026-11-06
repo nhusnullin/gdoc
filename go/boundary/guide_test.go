@@ -268,3 +268,53 @@ func TestThePresencePageWalksTheThirdLooksPanel(t *testing.T) {
 		at = next
 	}
 }
+
+// TestTheGuidePagesSayTheTaskNotation holds the two pages a colleague reads
+// before writing a task. A task is notation gdoc refuses by name wherever it
+// half understands it, so a page that shows the shape without the rules sends
+// somebody to a refusal with nothing to read. The publish page carries the
+// note's side: the box, the owner, the date, the setting that finishes a bare
+// owner, and the one thing that cannot come home, a tick. The writing page
+// carries the proposal's side, where a block may hold a task list and chat
+// needs the whole address.
+func TestTheGuidePagesSayTheTaskNotation(t *testing.T) {
+	publishing := guidePage(t, "publishing.md")
+	for _, want := range []string{
+		// What an author types, both states.
+		"- [ ] ",
+		"- [x] ",
+		// The owner as an address, and the date.
+		"@anna@example.com",
+		"2026-11-20",
+		// Where a bare owner is finished, as a setting and as a flag.
+		"`domain`",
+		"--domain",
+		// What the document gets.
+		"checklist",
+		"name chip",
+		"date chip",
+		// The two sentences a chip raises, and the refusal.
+		"emails nobody",
+		"refused",
+		// The one direction that does not come home.
+		"unticked",
+	} {
+		if !strings.Contains(publishing, want) {
+			t.Errorf("docs/guide/publishing.md never says %q, and a colleague writing a task has nowhere to read it", want)
+		}
+	}
+	writing := guidePage(t, "writing.md")
+	for _, want := range []string{
+		"- [ ] ",
+		"@anna@example.com",
+		"2026-11-20",
+		// A block has no strike, so a ticked task is refused there.
+		"`[x]`",
+		// Chat writes only the address it shows.
+		"whole address",
+	} {
+		if !strings.Contains(writing, want) {
+			t.Errorf("docs/guide/writing.md never says %q, and a colleague proposing a task has nowhere to read it", want)
+		}
+	}
+}

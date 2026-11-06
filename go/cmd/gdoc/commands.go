@@ -209,15 +209,16 @@ type command struct {
 	// TestBothCompletionScriptsListTheMarksTopic.
 	topics []string
 	// notes are the lines about this command that belong to no flag: syntax
-	// it reads out of a note, and where the binary answers the rest. One
-	// sentence each, in the order a reader meets them, and only build has
-	// any today.
+	// it reads out of a note or a proposals file, and where the binary
+	// answers the rest. One sentence each, in the order a reader meets
+	// them, and build, publish and propose have them today.
 	//
 	// They reach the object as well as the screen, unlike group, because a
 	// note is a fact about what the command carries and a group is a way to
 	// find it on a page. The field is absent for a command with none: here
 	// "takes none" and "said nothing" are the same answer, which is not
-	// true of words and flags: TestHelpBuildNamesFootnotesAndMarks.
+	// true of words and flags: TestHelpBuildNamesFootnotesAndMarks and
+	// TestHelpPublishAndProposeNameTheTaskNotation.
 	notes []string
 	// report is whether a run of this command reaches the presence record:
 	// the start and the end internal/presence writes where the flag is on.
@@ -424,7 +425,10 @@ func commands() []command {
 				{"--md", kindFile, needOptional, "the note to record the proposals in, so they can be taken back later"},
 				{"--folder", kindFolderID, needOptional, "ignored: propose no longer creates a working copy, and the flag will be removed in a later release"},
 			},
-			summary:   "Propose changes as native suggestions, each with the comment that says why.",
+			summary: "Propose changes as native suggestions, each with the comment that says why.",
+			notes: []string{
+				"A block's content may hold one task list, one level deep: - [ ] words becomes a box in the document, and at the end of that line one owner and one due date become chips, @anna@example.com or a bare @anna with --domain or the domain setting in effect, and 2026-11-20. A - [x] line is refused here, because a block carries no strike, and from chat an owner is written out as the whole address.",
+			},
 			example:   "gdoc propose https://docs.google.com/document/d/1AbC.../edit --from changes.json --md note.md",
 			report:    true,
 			readsBack: true,
@@ -492,7 +496,11 @@ func commands() []command {
 				{"--folder-id", kindFolderID, needRequired, "the Drive folder the document is created in"},
 				{"--house", kindFile, needOptional, "a house style file other than the one inside gdoc"},
 			},
-			summary:   "Build the note as a house-style document and upload it into one folder.",
+			summary: "Build the note as a house-style document and upload it into one folder.",
+			notes: []string{
+				"A line the note writes as - [ ] words is a task, and the document gets a box a reader ticks. At the end of that line, after the words, one owner and one due date become chips: @anna@example.com or a bare @anna with --domain or the domain setting in effect, and 2026-11-20, in either order. A - [x] line is done and its words are struck through. A bare owner with no domain in effect, two owners, two dates, a date that is not a calendar day, a nested task and a task in a numbered list are each refused by name before anything is uploaded.",
+				"A chip is text that knows an address: this publish emails nobody, shares the document with nobody and assigns nothing. checks.tasks on the envelope is the read-back of the boxes and the chips, and it is true for a note with no task.",
+			},
 			example:   "gdoc publish --md note.md --folder-id 1AbC...",
 			report:    true,
 			readsBack: true,
