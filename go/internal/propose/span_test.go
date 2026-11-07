@@ -245,7 +245,7 @@ func TestMoreThanOneTabIsATypedRefusal(t *testing.T) {
 	})
 	t.Run("Apply", func(t *testing.T) {
 		f := script(t, "two-tabs.json", "after.json", "preview.json", "batch-saved.json", withComment)
-		_, err := Apply(context.Background(), f, testDocID, testProposal, "🤖")
+		_, err := Apply(context.Background(), f, testDocID, testProposal, nil, "🤖")
 		if err == nil {
 			t.Fatal("a two-tab document was written to")
 		}

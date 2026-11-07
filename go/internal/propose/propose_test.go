@@ -96,7 +96,7 @@ func TestBatchCarriesTheAssigneeWhenThereIsOne(t *testing.T) {
 func TestApplyVerifiesTheHappyPathThreeWays(t *testing.T) {
 	f := script(t, "before.json", "after.json", "preview.json", "batch-saved.json", withComment)
 
-	res, err := Apply(context.Background(), f, testDocID, testProposal, "🤖")
+	res, err := Apply(context.Background(), f, testDocID, testProposal, nil, "🤖")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -127,7 +127,7 @@ func TestApplyVerifiesTheHappyPathThreeWays(t *testing.T) {
 func TestApplyReadsTheCommentIDFromTheCommentThread(t *testing.T) {
 	f := script(t, "before.json", "after.json", "preview.json", "batch-saved-measured.json", withComment)
 
-	res, err := Apply(context.Background(), f, testDocID, testProposal, "🤖")
+	res, err := Apply(context.Background(), f, testDocID, testProposal, nil, "🤖")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -148,7 +148,7 @@ func TestApplyReadsTheCommentIDFromTheCommentThread(t *testing.T) {
 func TestApplyReadsTheDocumentItselfThenWritesOnce(t *testing.T) {
 	f := script(t, "before.json", "after.json", "preview.json", "batch-saved.json", withComment)
 
-	if _, err := Apply(context.Background(), f, testDocID, testProposal, "🤖"); err != nil {
+	if _, err := Apply(context.Background(), f, testDocID, testProposal, nil, "🤖"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(f.calls) < 2 {
@@ -171,7 +171,7 @@ func TestApplyReadsTheDocumentItselfThenWritesOnce(t *testing.T) {
 func TestApplyReportsAPartialFailureFromTheCommentUpdateState(t *testing.T) {
 	f := script(t, "before.json", "after.json", "preview.json", "batch-failed.json", withComment)
 
-	res, err := Apply(context.Background(), f, testDocID, testProposal, "🤖")
+	res, err := Apply(context.Background(), f, testDocID, testProposal, nil, "🤖")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -193,7 +193,7 @@ func TestApplyReportsAPartialFailureFromTheCommentUpdateState(t *testing.T) {
 func TestApplyFailsThePreviewCheckWhenTheWriteWasADirectEdit(t *testing.T) {
 	f := script(t, "before.json", "after.json", "preview-edited.json", "batch-saved.json", withComment)
 
-	res, err := Apply(context.Background(), f, testDocID, testProposal, "🤖")
+	res, err := Apply(context.Background(), f, testDocID, testProposal, nil, "🤖")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -208,7 +208,7 @@ func TestApplyFailsThePreviewCheckWhenTheWriteWasADirectEdit(t *testing.T) {
 func TestApplyFailsTheDocxCheckWhenTheCommentIsNotInTheExport(t *testing.T) {
 	f := script(t, "before.json", "after.json", "preview.json", "batch-saved.json", withoutComment)
 
-	res, err := Apply(context.Background(), f, testDocID, testProposal, "🤖")
+	res, err := Apply(context.Background(), f, testDocID, testProposal, nil, "🤖")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -226,7 +226,7 @@ func TestApplyFailsTheDocxCheckWhenTheCommentIsNotInTheExport(t *testing.T) {
 func TestApplyAcceptsAnInsertDocsCutIntoTwoRuns(t *testing.T) {
 	f := script(t, "before.json", "after-split.json", "preview.json", "batch-saved.json", withComment)
 
-	res, err := Apply(context.Background(), f, testDocID, testProposal, "🤖")
+	res, err := Apply(context.Background(), f, testDocID, testProposal, nil, "🤖")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -241,7 +241,7 @@ func TestApplyAcceptsAnInsertDocsCutIntoTwoRuns(t *testing.T) {
 func TestApplyRefusesAMultiTabDocumentBeforeAnyWrite(t *testing.T) {
 	f := script(t, "two-tabs.json", "after.json", "preview.json", "batch-saved.json", withComment)
 
-	_, err := Apply(context.Background(), f, testDocID, testProposal, "🤖")
+	_, err := Apply(context.Background(), f, testDocID, testProposal, nil, "🤖")
 	if err == nil {
 		t.Fatal("a two-tab document was written to")
 	}
@@ -259,7 +259,7 @@ func TestApplyRefusesAQuoteItCannotPlaceBeforeAnyWrite(t *testing.T) {
 	f := script(t, "before.json", "after.json", "preview.json", "batch-saved.json", withComment)
 
 	_, err := Apply(context.Background(), f, testDocID, Proposal{
-		Quoted: "reviewed monthly", Replacement: "reviewed weekly", Why: "so"}, "🤖")
+		Quoted: "reviewed monthly", Replacement: "reviewed weekly", Why: "so"}, nil, "🤖")
 	if err == nil {
 		t.Fatal("a quote that is not in the document was written")
 	}
@@ -349,7 +349,7 @@ func TestApplyRefusesADeletionOnlyProposalBeforeAnyWrite(t *testing.T) {
 	f := script(t, "before.json", "after.json", "preview.json", "batch-saved.json", withComment)
 
 	_, err := Apply(context.Background(), f, testDocID, Proposal{
-		Quoted: "reviewed annually", Why: "the sentence says nothing"}, "🤖")
+		Quoted: "reviewed annually", Why: "the sentence says nothing"}, nil, "🤖")
 	if err == nil {
 		t.Fatal("a proposal replacing words with nothing was written")
 	}
@@ -366,7 +366,7 @@ func TestApplyReportsABatchWhoseAnswerCouldNotBeRead(t *testing.T) {
 	f := script(t, "before.json", "after.json", "preview.json", "batch-saved.json", withComment)
 	f.failAt[1] = acceptedError{errors.New("the answer could not be read: unexpected EOF")}
 
-	res, err := Apply(context.Background(), f, testDocID, testProposal, "🤖")
+	res, err := Apply(context.Background(), f, testDocID, testProposal, nil, "🤖")
 	if err != nil {
 		t.Fatalf("a batch the server accepted was reported as never sent: %v", err)
 	}
@@ -400,7 +400,7 @@ func TestApplyKeepsACommentIdDecodedFromAnAnswerThatFailed(t *testing.T) {
 	f := script(t, "before.json", "after.json", "preview.json", "batch-saved.json", withComment)
 	f.afterBatch = acceptedError{errors.New("the answer could not be read: json: cannot unmarshal number into Go struct field")}
 
-	res, err := Apply(context.Background(), f, testDocID, testProposal, "🤖")
+	res, err := Apply(context.Background(), f, testDocID, testProposal, nil, "🤖")
 	if err != nil {
 		t.Fatalf("a batch the server accepted was reported as never sent: %v", err)
 	}
@@ -516,7 +516,7 @@ func TestRecordLeavesTheNoteAloneWhenNothingCanBeRemembered(t *testing.T) {
 // test does not list.
 func TestTheGuardCarriesEveryOneOfProposesRequests(t *testing.T) {
 	f := script(t, "before.json", "after.json", "preview.json", "batch-saved.json", withComment)
-	if _, err := Apply(context.Background(), f, testDocID, testProposal, "🤖"); err != nil {
+	if _, err := Apply(context.Background(), f, testDocID, testProposal, nil, "🤖"); err != nil {
 		t.Fatal(err)
 	}
 

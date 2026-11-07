@@ -290,7 +290,7 @@ func proposeInto(t *testing.T, ctx context.Context, s *gapi.Session, docID strin
 		Quoted:      subjectQuoted,
 		Replacement: subjectNew,
 		Why:         subjectWhy,
-	}, liveMark)
+	}, nil, liveMark)
 	for _, w := range result.Warnings {
 		t.Logf("propose warning: %s", w)
 	}

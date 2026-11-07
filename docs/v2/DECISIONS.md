@@ -122,6 +122,7 @@ replaced it)`, or `measured`. Nothing else.
 | 2026-11-03 | A sign within seconds: a live session acknowledges every marked thread a window hands over before it reads the window, and the poll is every second | superseded 2026-11-05 (the sentence "the session posts it, not the binary" only: under `--follow` the watch posts the sign itself from the words the call carries; the sign first, the two-message rule, the one-shot rule and the poll hold) | DECISIONS.md |
 | 2026-11-05 | The watch posts the sign itself within seconds, and a reply sent from a draft is news when it is sent | holds | DECISIONS.md |
 | 2026-11-05 | A task in a note is a checklist item in the document, with a name chip and a date chip | holds | DECISIONS.md |
+| 2026-11-07 | Body text is 12pt whatever gdoc is doing: a block's new paragraphs take the house look restyle writes, and a block is at most five kilobytes | holds | DECISIONS.md |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -2153,3 +2154,82 @@ Serves principle 3, uncertainty never resolves toward the destructive answer:
 a notation gdoc half understands is refused rather than guessed, a tick the
 binary cannot see is said rather than assumed, and nobody is emailed by a
 publish they did not ask for.
+
+## 2026-11-07. Body text is 12pt whatever gdoc is doing: a block's new paragraphs take the house look restyle writes, and a block is at most five kilobytes.
+
+Nail, 2026-11-07, looking at a suggestion gdoc had proposed into a published
+document: "interesting that smth text on 11 fronts size not 12 as usually i
+expected". Then: "so, i expect then that irrespectivelly which activity i do,
+body text must be 12".
+
+**What was wrong.** The house style has two sizes for prose. The Normal style
+is 11pt, and body text is 12pt, justified, with 12pt below, written directly
+on every paragraph by `build` and by `restyle`. A block proposal stated only
+the named style on its new paragraphs and cleared only the five marks the
+content can carry, so a new paragraph showed Normal's 11pt, left aligned. In
+front of a heading in a document gdoc had not restyled it could take the
+heading's face and colour instead. The words kind was never affected: its new
+words go inside a paragraph that already has its look.
+`docs/backlog/a-block-inherits-the-look-of-what-it-lands-in-front-of.md`, removed
+by this change, held the open question: does a block match its neighbours or
+the house? This is the answer: the house.
+
+**The rule.** Every new paragraph of a block takes the house look of its named
+style, except in a block after the document's last paragraph, which is the look a restyle writes over a paragraph of that style:
+body text at the body size, alignment and spacing, a list item with the list
+gap and the last one with the body's, and a heading at its own size.
+`restyle.BlockLook` is restyle's own `paragraphLook` and `textLook` handed to
+propose as a `propose.Look`, so a proposed paragraph and a restyled one
+cannot drift apart. propose does not read the house style itself; the command
+hands it the look, as it hands the words. The paragraph half goes in the
+request that names the style, and the text half after the clearing request
+and before the marks, one request per run of neighbouring paragraphs that look
+the same. A block after the document's last paragraph takes no look: see what
+was measured below.
+
+**What it costs, and the new limit.** The look makes a batch larger. One text
+request per paragraph took the worst block MaxContent allowed past the guard's
+one-megabyte peek, which `TestALargeBlockStaysUnderThePeek` caught; the text
+look is now grouped by neighbours. The review the same day found what that test
+could not see, because its look was the same for every style: headings
+alternating with body text group nothing, and at eight kilobytes that shape
+built 1.35 megabytes. The guard would refuse it with a sentence about a
+truncated body, which tells the author nothing. Asked, Nail chose a smaller
+limit over keeping eight kilobytes and measuring each batch before it is sent:
+"ok 5 then". MaxContent is five kilobytes, about 800 words, and the worst shape
+now builds about 840 kilobytes.
+`TestTheWorstBlockWithTheHouseLookStaysUnderThePeek` in restyle builds it with
+the real house look.
+
+**What was measured, 2026-11-07.** Whether the extra style requests still fold
+into one suggestion id is Google's answer, not ours. `TestLiveProposeBlock`
+now hands the house look to all three of its blocks and counts their ids across
+every suggested key, where it used to count only the last block's. The after
+block came back with one id. The replace block came back with two, the second
+under `ListPropertiesChanges`, and the same run with no look left the same
+second id: it is older than the look, and
+`docs/backlog/a-replace-blocks-list-leaves-a-second-suggestion-id.md` holds it.
+With those two accepted, all eight body paragraphs they added read 12pt and
+justified.
+
+The review found that the test's third block, the one meant to sit after the
+document's last paragraph, never did: the setup ended its paragraphs with a
+newline, so the document kept an empty last paragraph behind them. With that
+fixed, the batch gdoc has sent since M14 left two ids at the end, and with the
+look five. Asked, Nail chose "Ship, end stays as today": a block at the end
+takes no look, so it is still 11pt and still two ids, and
+`docs/backlog/a-block-at-the-end-of-a-document-is-not-one-suggestion.md` holds
+both defects. The test counts the replace block and the end block at two ids
+each, so a third fails it, and the three withdrawals left the document reading
+as it did before.
+
+The pins: `TestBlockBatchWritesTheLookItIsHandedOnEveryNewParagraph`,
+`TestTheLookComesBetweenTheClearingAndTheMarks`,
+`TestNeighboursThatLookTheSameShareOneTextRequest`,
+`TestABlockAtTheEndTakesNoLook`,
+`TestNoLookWritesTheBatchItAlwaysWrote`, `TestAListEndsWhereTheListItemsEnd`,
+`TestBlockLookIsTheHouseBodyLook`,
+`TestTheWorstBlockWithTheHouseLookStaysUnderThePeek` and
+`TestProposeWritesTheHouseBodyLookIntoABlock`.
+
+A domain choice with no principle above it: the house style, and Nail made it.

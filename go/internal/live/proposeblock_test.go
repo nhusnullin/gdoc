@@ -15,8 +15,10 @@ package live
 // begins at a list item, so the paragraphs going in front of it arrive
 // bulleted unless deleteParagraphBullets holds. The third is the end of the
 // document, where the block's last paragraph owns the body's existing final
-// mark: MEASURED.md row 7 sent that as a hand-written batch, and this is the
-// production batch, which restates nothing on that mark.
+// mark: MEASURED.md row 7 sent that as a hand-written batch with one id, and
+// this production batch leaves two there. The setup only reached the end of the
+// document from 2026-11-07, and MEASURED.md's section of that day holds what
+// came back.
 //
 // Everything is asserted rather than logged. The unit tests already cover a
 // route that did not hold, and what this run is for is Google agreeing with
@@ -29,6 +31,7 @@ package live
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"sort"
 	"strings"
@@ -40,8 +43,10 @@ import (
 	"gdoc/internal/frontmatter"
 	"gdoc/internal/gapi"
 	"gdoc/internal/guard"
+	"gdoc/internal/house"
 	"gdoc/internal/probe"
 	"gdoc/internal/propose"
+	"gdoc/internal/restyle"
 	"gdoc/internal/view"
 	"gdoc/internal/withdraw"
 )
@@ -157,12 +162,24 @@ func TestLiveProposeBlock(t *testing.T) {
 	docID := blockSubject(t, ctx, s, folder)
 	before := blockBodyText(t, ctx, s, docID, "before the proposals")
 
+	// Every block restates the house look on its new paragraphs since
+	// 2026-11-07, and a style restated in SUGGEST mode is recorded under a
+	// suggested key propose's own walk does not read. So the after block is
+	// counted with the wider walk too, not only the one at the end. The replace
+	// block is not: its new list leaves a ListPropertiesChanges id of its own,
+	// with or without the look, measured both ways on 2026-11-07, and
+	// docs/backlog/a-replace-blocks-list-leaves-a-second-suggestion-id.md holds
+	// it. It is counted against the ids around it instead, so the look it adds
+	// is still asked whether it brought one more.
+	idsBefore := blockSuggestionIDs(t, ctx, s, docID, "before the after block")
 	after := proposeBlock(t, ctx, s, docID, "the after block", propose.Proposal{
 		Kind:    propose.KindBlock,
 		After:   blockAfterQuoted,
 		Content: blockAfterContent,
 		Why:     blockAfterWhy,
 	})
+	idsAfter := blockSuggestionIDs(t, ctx, s, docID, "after the after block")
+	blockAddedOneID(t, "the after block", idsBefore, idsAfter, after)
 	replace := proposeBlock(t, ctx, s, docID, "the replace block", propose.Proposal{
 		Kind:        propose.KindBlock,
 		ReplaceFrom: blockReplaceFrom,
@@ -170,6 +187,8 @@ func TestLiveProposeBlock(t *testing.T) {
 		Content:     blockReplaceContent,
 		Why:         blockReplaceWhy,
 	})
+	idsReplace := blockSuggestionIDs(t, ctx, s, docID, "after the replace block")
+	blockAddedIDs(t, "the replace block", idsAfter, idsReplace, replace, 2)
 
 	// The end of the document is the one placement whose last new paragraph
 	// owns a mark the document already had, and that is the mark a second
@@ -178,15 +197,26 @@ func TestLiveProposeBlock(t *testing.T) {
 	// that mark is recorded under a suggested key of its own. So this one
 	// proposal is measured with the probe's wider walk, across every key,
 	// which is the question this case exists to ask.
-	idsBefore := blockSuggestionIDs(t, ctx, s, docID, "before the block after the last paragraph")
+	blockPlacesAtEnd(t, ctx, s, docID)
 	atEnd := proposeBlock(t, ctx, s, docID, "the block after the last paragraph", propose.Proposal{
 		Kind:    propose.KindBlock,
 		After:   blockAtEndQuoted,
 		Content: blockAtEndContent,
 		Why:     blockAtEndWhy,
 	})
-	blockAddedOneID(t, "the block after the last paragraph", idsBefore,
-		blockSuggestionIDs(t, ctx, s, docID, "after the block after the last paragraph"), atEnd)
+	// Two ids, measured on 2026-11-07 once the setup really ended on the
+	// document's final mark: the batch gdoc sent before the look left two, and
+	// with the look it left five, so a block here takes none.
+	// docs/backlog/a-block-at-the-end-of-a-document-is-not-one-suggestion.md
+	// holds the case, and a third id fails this.
+	blockAddedIDs(t, "the block after the last paragraph", idsReplace,
+		blockSuggestionIDs(t, ctx, s, docID, "after the block after the last paragraph"), atEnd, 2)
+
+	// What a reader sees once every suggestion is accepted: each body
+	// paragraph the after block and the replace block added is 12pt and
+	// justified, whatever the subject document's own Normal style says. The
+	// block at the end takes no look, so it is not asked.
+	blockBodyIsTheHouseLook(t, ctx, s, docID, blockAfterContent, blockReplaceContent)
 
 	// They go back in the order a person would take: the last change made is
 	// the first one undone.
@@ -221,7 +251,12 @@ func blockSubject(t *testing.T, ctx context.Context, s *gapi.Session, folder str
 		t.Logf("subject document %s trashed", docID)
 	})
 
-	body := strings.Join(blockSubjectParagraphs, "")
+	// The last paragraph goes in without its own mark, so it ends on the
+	// document's final one rather than in front of the empty paragraph a new
+	// document starts with. Without this the block after it was an ordinary
+	// placement, and the end-of-document case was never asked (review of
+	// 2026-11-07).
+	body := strings.TrimSuffix(strings.Join(blockSubjectParagraphs, ""), "\n")
 	item := blockSubjectParagraphs[blockSubjectItem]
 	start := blockParagraphStart(blockSubjectItem)
 	if err := batch(ctx, s, docID,
@@ -276,7 +311,11 @@ func blockBodyText(t *testing.T, ctx context.Context, s *gapi.Session, docID, wh
 // measured shape still holds today.
 func proposeBlock(t *testing.T, ctx context.Context, s *gapi.Session, docID, name string, p propose.Proposal) propose.Result {
 	t.Helper()
-	result, err := propose.Apply(ctx, s, docID, p, liveMark)
+	cfg, err := house.Load()
+	if err != nil {
+		t.Fatalf("house.Load: %v", err)
+	}
+	result, err := propose.Apply(ctx, s, docID, p, restyle.BlockLook(cfg), liveMark)
 	for _, w := range result.Warnings {
 		t.Logf("%s warning: %s", name, w)
 	}
@@ -303,6 +342,114 @@ func proposeBlock(t *testing.T, ctx context.Context, s *gapi.Session, docID, nam
 	}
 	t.Logf("%s: suggestion %v, comment %s, state %s", name, result.SuggestionIDs, result.CommentID, result.CommentUpdateState)
 	return result
+}
+
+// blockBodyIsTheHouseLook reads the document as it would read with every
+// suggestion accepted and asks each body paragraph the blocks added for the
+// house body look: 12pt on every run, and justified. The paragraphs are found by
+// their words, which the subject document holds once each.
+func blockBodyIsTheHouseLook(t *testing.T, ctx context.Context, s *gapi.Session, docID string, contents ...string) {
+	t.Helper()
+	var raw json.RawMessage
+	url := "https://docs.googleapis.com/v1/documents/" + docID +
+		"?includeTabsContent=true&suggestionsViewMode=PREVIEW_SUGGESTIONS_ACCEPTED"
+	if err := s.GetJSON(ctx, url, &raw); err != nil {
+		t.Fatalf("the document %q could not be read with suggestions accepted: %v", docID, err)
+	}
+	var d struct {
+		Tabs []struct {
+			DocumentTab struct {
+				Body struct {
+					Content []struct {
+						Paragraph *struct {
+							ParagraphStyle struct {
+								Alignment string `json:"alignment"`
+							} `json:"paragraphStyle"`
+							Elements []struct {
+								TextRun *struct {
+									Content   string `json:"content"`
+									TextStyle struct {
+										FontSize *struct {
+											Magnitude float64 `json:"magnitude"`
+										} `json:"fontSize"`
+									} `json:"textStyle"`
+								} `json:"textRun"`
+							} `json:"elements"`
+						} `json:"paragraph"`
+					} `json:"content"`
+				} `json:"body"`
+			} `json:"documentTab"`
+		} `json:"tabs"`
+	}
+	if err := json.Unmarshal(raw, &d); err != nil || len(d.Tabs) == 0 {
+		t.Fatalf("the accepted view did not decode: %v", err)
+	}
+	want := map[string]bool{}
+	for _, c := range contents {
+		paras, err := propose.ParseContent(c)
+		if err != nil {
+			t.Fatalf("parsing a block's content: %v", err)
+		}
+		for _, p := range paras {
+			if p.Style == "NORMAL_TEXT" {
+				want[p.Text()] = true
+			}
+		}
+	}
+	seen := 0
+	for _, el := range d.Tabs[0].DocumentTab.Body.Content {
+		if el.Paragraph == nil {
+			continue
+		}
+		var words strings.Builder
+		for _, e := range el.Paragraph.Elements {
+			if e.TextRun != nil {
+				words.WriteString(e.TextRun.Content)
+			}
+		}
+		text := strings.TrimSuffix(words.String(), "\n")
+		if !want[text] {
+			continue
+		}
+		seen++
+		if got := el.Paragraph.ParagraphStyle.Alignment; got != "JUSTIFIED" {
+			t.Errorf("%q is aligned %q, want JUSTIFIED", text, got)
+		}
+		for _, e := range el.Paragraph.Elements {
+			if e.TextRun == nil {
+				continue
+			}
+			if fs := e.TextRun.TextStyle.FontSize; fs == nil || fs.Magnitude != 12 {
+				t.Errorf("a run of %q is %v, want 12pt", text, fs)
+			}
+		}
+	}
+	if seen != len(want) {
+		t.Errorf("found %d of the %d body paragraphs the blocks added", seen, len(want))
+	}
+	t.Logf("accepted view: %d body paragraphs at 12pt checked", seen)
+}
+
+// blockPlacesAtEnd says the block after the last paragraph really is placed at
+// the end of the document, which is the one placement whose last new paragraph
+// owns a mark the document already had.
+func blockPlacesAtEnd(t *testing.T, ctx context.Context, s *gapi.Session, docID string) {
+	t.Helper()
+	d, err := docs.Fetch(ctx, s, docID)
+	if err != nil {
+		t.Fatalf("the document %q could not be read before the end block: %v", docID, err)
+	}
+	content, err := propose.ParseContent(blockAtEndContent)
+	if err != nil {
+		t.Fatalf("parsing the end block's content: %v", err)
+	}
+	place, err := propose.PlaceAfter(d, blockAtEndQuoted, content)
+	if err != nil {
+		t.Fatalf("the end block could not be placed: %v", err)
+	}
+	if !place.AtEnd {
+		t.Fatalf("the end block is placed at %d and not at the end of the document, so the case it is here for is not asked", place.Insert)
+	}
 }
 
 // blockSuggestionIDs is every distinct suggestion id the document carries,
@@ -348,6 +495,26 @@ func blockAddedOneID(t *testing.T, name string, before, after map[string]bool, r
 	}
 	if len(result.SuggestionIDs) == 0 || added[0] != result.SuggestionIDs[0] {
 		t.Errorf("%s left the id %q behind and the note records %v", name, added[0], result.SuggestionIDs)
+	}
+}
+
+// blockAddedIDs is blockAddedOneID for a proposal measured to leave more than
+// one id behind: exactly want ids, and the one the note records among them.
+// A look that brought another id would make it want+1.
+func blockAddedIDs(t *testing.T, name string, before, after map[string]bool, result propose.Result, want int) {
+	t.Helper()
+	var added []string
+	for id := range after {
+		if !before[id] {
+			added = append(added, id)
+		}
+	}
+	sort.Strings(added)
+	if len(added) != want {
+		t.Fatalf("%s left %d suggestion ids behind across every suggested key (%v), and it was measured at %d", name, len(added), added, want)
+	}
+	if len(result.SuggestionIDs) == 0 || !after[result.SuggestionIDs[0]] || before[result.SuggestionIDs[0]] {
+		t.Errorf("%s left %v behind and the note records %v", name, added, result.SuggestionIDs)
 	}
 }
 

@@ -109,6 +109,40 @@ func TestProposeReadsABlockEntry(t *testing.T) {
 	}
 }
 
+// TestProposeWritesTheHouseBodyLookIntoABlock is the command half of Nail's
+// rule of 2026-11-07: body text is 12pt whatever gdoc is doing. propose writes
+// the look it is handed and a nil one writes the named style alone, so this is
+// the test that says the command hands the house one: the block's batch states
+// 12pt and a justified body, the values build and restyle write.
+func TestProposeWritesTheHouseBodyLookIntoABlock(t *testing.T) {
+	f := &fakeWire{answers: blockAnswers(t)}
+	stubWire(t, f)
+	from := tempFile(t, "proposals.json", oneBlock)
+
+	got, code := runJSONSet(t, robotInEffect(), "propose", proposeDocID, "--from", from)
+	if code != 0 || got["ok"] != true {
+		t.Fatalf("a block proposal must run: %v (exit %d)", got, code)
+	}
+	var batch []byte
+	for _, c := range f.writes() {
+		if strings.Contains(c.URL, proposeDocID+":batchUpdate") {
+			batch = c.Body
+		}
+	}
+	if batch == nil {
+		t.Fatal("no batch reached the document")
+	}
+	for _, want := range []string{
+		`"fontSize":{"magnitude":12,"unit":"PT"}`,
+		`"alignment":"JUSTIFIED"`,
+		`"fontFamily":"Calibri"`,
+	} {
+		if !bytes.Contains(batch, []byte(want)) {
+			t.Errorf("the block's batch does not state %s: %s", want, batch)
+		}
+	}
+}
+
 // TestProposeRefusesAnUnknownFieldInABlockEntry is the strict read. A block
 // entry is decoded with the same rule as a words entry, so a misspelled field
 // is refused rather than dropped: a dropped `content` is a block with nothing
