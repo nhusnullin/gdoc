@@ -50,6 +50,7 @@ Two rules about the documents themselves:
 | `go/internal/drive/` | the trash, its confirming read, and nothing else Drive does |
 | `go/internal/plaintext/` | what gdoc may write into a comment thread: the mark, and no markdown |
 | `go/internal/frontmatter/` | the `gdoc:` block in a note's YAML front matter, and nothing else in the file |
+| `go/internal/tasks/` | the task notation, `- [ ] words @owner YYYY-MM-DD`: one owner and one due date at the end of the line, and a bare owner resolved against the `domain` setting |
 | `go/internal/house/` | the Altery house style as a parsed file, embedded in the binary |
 | `go/internal/render/`, `go/internal/body/`, `go/internal/cover/` | the docx itself: the thirteen parts and the logo, the cover, the tables, the header and footer, the contents field; and the note's markdown walked with goldmark into the house style's own paragraphs, and the words that reach the cover and the running head |
 | `go/internal/drift/` | the one list of measured values, read out of a docx and out of a Docs answer |
@@ -268,8 +269,7 @@ TDD. Write the failing test first.
 `~/.local/bin/gdoc` is one of two things. From a checkout it is a link to this
 repo's `bin/gdoc`, so `make build` refreshes what a person typing `gdoc` gets.
 Where `gdoc update` has installed, it is that release's binary with
-`gdoc.previous` beside it, and `make build` changes nothing a person types.
-Nail's machine is the second one.
+`gdoc.previous` beside it, so `make build` changes nothing. Nail's is the second.
 
 The live tests are opt-in and each needs its own variable, because a live write
 is a document that did not exist a second ago. `GDOC_LIVE_TEST=1` with
