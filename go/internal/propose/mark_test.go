@@ -50,7 +50,7 @@ func TestProposeWritesTheMarkInEffect(t *testing.T) {
 		t.Errorf("the words proposal wrote %q, want %q", got, want)
 	}
 	place, content := blockPlacement(t)
-	if got, want := commentOf(t, BlockBatch(place, content, testWhy, "", "∴")), "∴ the limits section was missing"; got != want {
+	if got, want := commentOf(t, BlockBatch(place, content, nil, testWhy, "", "∴")), "∴ the limits section was missing"; got != want {
 		t.Errorf("the block proposal wrote %q, want %q", got, want)
 	}
 }
@@ -66,7 +66,7 @@ func TestAnEmptyMarkWritesTheWordsAlone(t *testing.T) {
 	})
 	t.Run("block", func(t *testing.T) {
 		place, content := blockPlacement(t)
-		if got, want := commentOf(t, BlockBatch(place, content, testWhy, "", "")), "the limits section was missing"; got != want {
+		if got, want := commentOf(t, BlockBatch(place, content, nil, testWhy, "", "")), "the limits section was missing"; got != want {
 			t.Errorf("content = %q, want %q", got, want)
 		}
 	})
@@ -110,7 +110,7 @@ func TestAReasonOpeningWithAnyKnownMarkIsRefused(t *testing.T) {
 func TestTheReadBackComparesTheMarkThatWasSent(t *testing.T) {
 	t.Run("the mark that was sent is the mark the export carries", func(t *testing.T) {
 		f := script(t, "before.json", "after.json", "preview.json", "batch-saved.json", withComment)
-		res, err := Apply(context.Background(), f, testDocID, testProposal, "🤖")
+		res, err := Apply(context.Background(), f, testDocID, testProposal, nil, "🤖")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -120,7 +120,7 @@ func TestTheReadBackComparesTheMarkThatWasSent(t *testing.T) {
 	})
 	t.Run("another mark is another comment", func(t *testing.T) {
 		f := script(t, "before.json", "after.json", "preview.json", "batch-saved.json", withComment)
-		res, err := Apply(context.Background(), f, testDocID, testProposal, "∴")
+		res, err := Apply(context.Background(), f, testDocID, testProposal, nil, "∴")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}

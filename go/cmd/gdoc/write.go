@@ -167,11 +167,13 @@ import (
 	"gdoc/internal/emit"
 	"gdoc/internal/frontmatter"
 	"gdoc/internal/guard"
+	"gdoc/internal/house"
 	"gdoc/internal/markers"
 	"gdoc/internal/probe"
 	"gdoc/internal/propose"
 	"gdoc/internal/publish"
 	"gdoc/internal/reply"
+	"gdoc/internal/restyle"
 	"gdoc/internal/withdraw"
 )
 
@@ -439,6 +441,16 @@ func cmdPropose(ctx context.Context, a *args) emit.Result {
 func runPropose(ctx context.Context, r *reach, proposals []propose.Proposal, note *notePath, mark string, seed ...string) emit.Result {
 	warns := append([]string{}, seed...)
 
+	// The house look a block's new paragraphs take, read before any request:
+	// body text is 12pt whatever gdoc is doing (DECISIONS.md, 2026-11-07), and
+	// propose writes the look it is handed rather than reading the house style
+	// itself. TestProposeWritesTheHouseBodyLookIntoABlock is the pin.
+	cfg, err := house.Load()
+	if err != nil {
+		return emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings(warns...)}
+	}
+	look := restyle.BlockLook(cfg)
+
 	d, err := docs.Fetch(ctx, r.session, r.id)
 	if err != nil {
 		return withStop(emit.Result{OK: false, Error: err.Error(), Warnings: r.warnings(warns...)}, err)
@@ -493,7 +505,7 @@ func runPropose(ctx context.Context, r *reach, proposals []propose.Proposal, not
 		if i == 0 {
 			held = d
 		}
-		res, err := propose.ApplyFrom(context.WithoutCancel(ctx), r.session, r.id, one, held, mark)
+		res, err := propose.ApplyFrom(context.WithoutCancel(ctx), r.session, r.id, one, held, look, mark)
 		if err != nil {
 			data.FilesChanged, warns = record(note, results, warns)
 			if res.Outcome == propose.OutcomeUnknown {

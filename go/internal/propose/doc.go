@@ -496,9 +496,10 @@
 // # One batch per block too, and the order of its requests is the measurement
 //
 // BlockBatch writes, in this order: insertText at the placement; one
-// updateParagraphStyle per new paragraph naming namedStyleType; one
-// updateTextStyle clearing the marks the insert inherited; one updateTextStyle
-// per marked run; createParagraphBullets per stretch of list items of one kind;
+// updateParagraphStyle per new paragraph naming namedStyleType and the
+// paragraph half of the look; one updateTextStyle clearing the marks the insert
+// inherited; one updateTextStyle per run of neighbours stating the text half of
+// the look; one updateTextStyle per marked run; createParagraphBullets per stretch of list items of one kind;
 // deleteParagraphBullets per stretch of new paragraphs that are not list items;
 // deleteContentRange for a replace; and insertComment. Every index is counted in
 // UTF-16 code units, the way FindSpan counts. TestBlockBatchForAnAfterBlock,
@@ -523,6 +524,40 @@
 // boolean, but nothing states "no link" except naming the field in the mask and
 // leaving it out of the object. TestBlockBatchClearsTheMarksTheInsertInherited
 // is the pin, over a document whose next paragraph opens bold and linked.
+//
+// # A block's new paragraphs take the house look, because body text is 12pt
+//
+// Nail's rule of 2026-11-07 is that body text is 12pt whatever gdoc is doing.
+// The house's Normal style is 11pt, and build and restyle write the body size,
+// alignment and spacing directly on every paragraph, so a new paragraph that
+// took its named style alone showed 11pt, left aligned, beside 12pt justified
+// text. So BlockBatch takes a Look, the paragraph and run properties for each
+// named style, and states it on every new paragraph: the paragraph half in the
+// request naming the style, and the text half after the clearing request and
+// before the marks, so a bold run is still bold. A list item is told it is
+// bulleted and whether it is the last of its list, because the house spaces the
+// two differently. This package does not read the house style: the command hands
+// it restyle.BlockLook, which is the look a restyle writes, and a nil Look
+// writes the named style alone. DECISIONS.md, 2026-11-07, holds the decision.
+// TestBlockBatchWritesTheLookItIsHandedOnEveryNewParagraph,
+// TestTheLookComesBetweenTheClearingAndTheMarks and
+// TestNoLookWritesTheBatchItAlwaysWrote are the pins, with
+// TestProposeWritesTheHouseBodyLookIntoABlock in cmd/gdoc for the command
+// handing the house one.
+//
+// The text half is one request per run of neighbouring paragraphs that look the
+// same, rather than one per paragraph, because of the size of a batch: one per
+// paragraph took the worst block MaxContent allows past the guard's peek.
+// TestNeighboursThatLookTheSameShareOneTextRequest and
+// TestALargeBlockStaysUnderThePeek are the pins.
+//
+// A block after the document's last paragraph takes no look at all. Its own last
+// paragraph owns the body's old final mark, and measured live on 2026-11-07 the
+// batch there already left two suggestion ids where the promise is one, and the
+// look made it five. Nail chose to ship the look everywhere else and keep the
+// end as it was, so a block there is still 11pt and still two ids, which
+// docs/backlog/a-block-at-the-end-of-a-document-is-not-one-suggestion.md holds:
+// TestABlockAtTheEndTakesNoLook.
 //
 // deleteParagraphBullets covers every new paragraph that is not a list item, and
 // no paragraph that was already there, because new text takes the list
@@ -549,12 +584,15 @@
 // past its peek arrives there truncated and is refused rather than carried
 // unread. That refusal names the guard and a truncated body, which is nothing a
 // person writing a block can act on, so MaxContent is refused first and says
-// what a block is for. The number is a measurement: the batch grows fastest in
-// requests per byte where the shortest paragraphs alternate with list items,
-// because then each paragraph costs a named style and a bullet request of its
-// own, and that shape at MaxContent builds around half the guard's ceiling.
-// TestALargeBlockStaysUnderThePeek builds that shape and three more at exactly
-// the limit and has the real policy judge each one, and the content over the
+// what a block is for. The number is a measurement: with the house look on
+// every new paragraph, the batch grows fastest where the shortest headings
+// alternate with body text, because no two neighbours look the same and every
+// paragraph costs its own requests, and that shape at MaxContent builds around
+// 840 kilobytes of the guard's one megabyte. MaxContent is five kilobytes since
+// 2026-11-07 for that reason, and it was eight before the look.
+// TestTheWorstBlockWithTheHouseLookStaysUnderThePeek in restyle builds that
+// shape and four more with the house look at exactly the limit, and
+// TestALargeBlockStaysUnderThePeek has the real policy judge four shapes, and the content over the
 // ceiling case of TestCheckRefusesEachBadBlockByName is the refusal that keeps
 // the guard's words off the screen.
 //

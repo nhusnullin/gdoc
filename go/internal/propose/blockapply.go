@@ -30,7 +30,7 @@ import (
 // the machine, which is what Check exists for: a third entry refused after the
 // first two have landed is a run that half happened in somebody's document.
 // ApplyBlock reads it again because it needs the paragraphs rather than the
-// answer, and eight kilobytes parsed twice costs nothing.
+// answer, and five kilobytes parsed twice costs nothing.
 // TestProposeRefusesBlockContentBeforeAnythingIsSent is the pin.
 func (p Proposal) checkBlock(mark string) error {
 	if err := p.checkPlacement(); err != nil {
@@ -93,13 +93,13 @@ func (p Proposal) checkPlacement() error {
 //
 // It fails only before the write. After the batch has gone out the block is in
 // the document, and everything from there is reported rather than raised.
-func ApplyBlock(ctx context.Context, s Session, docID string, p Proposal, mark string) (Result, error) {
-	return applyBlock(ctx, s, docID, p, nil, mark)
+func ApplyBlock(ctx context.Context, s Session, docID string, p Proposal, look Look, mark string) (Result, error) {
+	return applyBlock(ctx, s, docID, p, nil, look, mark)
 }
 
 // applyBlock is ApplyBlock placed from a read the caller may already hold; see
 // ApplyFrom.
-func applyBlock(ctx context.Context, s Session, docID string, p Proposal, held *docs.Document, mark string) (Result, error) {
+func applyBlock(ctx context.Context, s Session, docID string, p Proposal, held *docs.Document, look Look, mark string) (Result, error) {
 	out := Result{After: p.After, ReplaceFrom: p.ReplaceFrom, ReplaceTo: p.ReplaceTo}
 	if err := p.Check(mark); err != nil {
 		return out, err
@@ -119,7 +119,7 @@ func applyBlock(ctx context.Context, s Session, docID string, p Proposal, held *
 		return out, err
 	}
 	comment := plaintext.Prefixed(mark, p.Why)
-	if err := send(ctx, s, docID, BlockBatch(place, content, p.Why, p.Assignee, mark), &out); err != nil {
+	if err := send(ctx, s, docID, BlockBatch(place, content, look, p.Why, p.Assignee, mark), &out); err != nil {
 		return out, err
 	}
 

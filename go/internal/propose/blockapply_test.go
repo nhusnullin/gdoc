@@ -50,7 +50,7 @@ func TestApplyBlockReadsPlacesWritesOnceAndVerifies(t *testing.T) {
 	f := blockApplyScript(t, "block-body.json", "block-after-inline.json", "block-body.json",
 		"batch-saved.json", blockExport(t, "🤖 "+testWhy, "3.6 Limits"))
 
-	res, err := ApplyBlock(context.Background(), f, testDocID, testBlock, "🤖")
+	res, err := ApplyBlock(context.Background(), f, testDocID, testBlock, nil, "🤖")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -81,7 +81,7 @@ func TestApplyBlockSendsTheBatchTheBuilderBuilt(t *testing.T) {
 	f := blockApplyScript(t, "block-body.json", "block-after-inline.json", "block-body.json",
 		"batch-saved.json", blockExport(t, "🤖 "+testWhy, "3.6 Limits"))
 
-	if _, err := ApplyBlock(context.Background(), f, testDocID, testBlock, "🤖"); err != nil {
+	if _, err := ApplyBlock(context.Background(), f, testDocID, testBlock, nil, "🤖"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	sent := posts(f)
@@ -89,7 +89,7 @@ func TestApplyBlockSendsTheBatchTheBuilderBuilt(t *testing.T) {
 		t.Fatalf("POSTs = %d, want one", len(sent))
 	}
 	place, content := afterPlace(t)
-	want := BlockBatch(place, content, testBlock.Why, testBlock.Assignee, "🤖")
+	want := BlockBatch(place, content, nil, testBlock.Why, testBlock.Assignee, "🤖")
 	if !bytes.Equal(bytes.TrimSpace(sent[0].body), bytes.TrimSpace(want)) {
 		t.Errorf("the batch sent is not the one BlockBatch builds.\n--- sent ---\n%s\n--- built ---\n%s", sent[0].body, want)
 	}
@@ -105,7 +105,7 @@ func TestApplyBlockCarriesThePlacementItWasAskedFor(t *testing.T) {
 	f := blockApplyScript(t, "block-body.json", "block-after-inline.json", "block-body.json",
 		"batch-saved.json", blockExport(t, "🤖 "+testWhy, "3.6 Limits"))
 
-	res, err := ApplyBlock(context.Background(), f, testDocID, testBlock, "🤖")
+	res, err := ApplyBlock(context.Background(), f, testDocID, testBlock, nil, "🤖")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -126,7 +126,7 @@ func TestApplyBlockCarriesBothQuotesOfAReplace(t *testing.T) {
 	p := Proposal{Kind: KindBlock, ReplaceFrom: "reviewed annually", ReplaceTo: "risk matrix",
 		Content: testContent, Why: testWhy}
 
-	res, err := ApplyBlock(context.Background(), f, testDocID, p, "🤖")
+	res, err := ApplyBlock(context.Background(), f, testDocID, p, nil, "🤖")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -150,7 +150,7 @@ func TestApplyBlockRefusesContentItCannotReadBeforeAnyRequest(t *testing.T) {
 	p := testBlock
 	p.Content = "| a | b |\n| - | - |\n| c | d |\n"
 
-	_, err := ApplyBlock(context.Background(), f, testDocID, p, "🤖")
+	_, err := ApplyBlock(context.Background(), f, testDocID, p, nil, "🤖")
 	if err == nil {
 		t.Fatal("a block carrying a table was written")
 	}
@@ -171,7 +171,7 @@ func TestApplyBlockRefusesAPlacementItCannotMakeBeforeAnyWrite(t *testing.T) {
 	p := testBlock
 	p.After = "reviewed monthly"
 
-	_, err := ApplyBlock(context.Background(), f, testDocID, p, "🤖")
+	_, err := ApplyBlock(context.Background(), f, testDocID, p, nil, "🤖")
 	if err == nil {
 		t.Fatal("a block whose anchor is not in the document was written")
 	}
@@ -184,7 +184,7 @@ func TestApplyBlockRefusesAMultiTabDocumentBeforeAnyWrite(t *testing.T) {
 	f := blockApplyScript(t, "two-tabs.json", "block-after-inline.json", "block-body.json",
 		"batch-saved.json", blockExport(t, "🤖 "+testWhy, "3.6 Limits"))
 
-	_, err := ApplyBlock(context.Background(), f, testDocID, testBlock, "🤖")
+	_, err := ApplyBlock(context.Background(), f, testDocID, testBlock, nil, "🤖")
 	if err == nil {
 		t.Fatal("a two-tab document was written to")
 	}
@@ -205,7 +205,7 @@ func TestApplyBlockReportsALostAnswerRatherThanRaising(t *testing.T) {
 		"batch-saved.json", blockExport(t, "🤖 "+testWhy, "3.6 Limits"))
 	f.failAt[1] = acceptedError{errors.New("the answer could not be read: unexpected EOF")}
 
-	res, err := ApplyBlock(context.Background(), f, testDocID, testBlock, "🤖")
+	res, err := ApplyBlock(context.Background(), f, testDocID, testBlock, nil, "🤖")
 	if err != nil {
 		t.Fatalf("a batch the server accepted was reported as never sent: %v", err)
 	}
@@ -227,7 +227,7 @@ func TestApplyBlockReportsMoreThanOneSuggestionAsUnverified(t *testing.T) {
 	f := blockApplyScript(t, "block-body.json", "block-after-inline-two-ids.json", "block-body.json",
 		"batch-saved.json", blockExport(t, "🤖 "+testWhy, "3.6 Limits"))
 
-	res, err := ApplyBlock(context.Background(), f, testDocID, testBlock, "🤖")
+	res, err := ApplyBlock(context.Background(), f, testDocID, testBlock, nil, "🤖")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -316,7 +316,7 @@ func TestApplyDispatchesOnTheKind(t *testing.T) {
 	f := blockApplyScript(t, "block-body.json", "block-after-inline.json", "block-body.json",
 		"batch-saved.json", blockExport(t, "🤖 "+testWhy, "3.6 Limits"))
 
-	res, err := Apply(context.Background(), f, testDocID, testBlock, "🤖")
+	res, err := Apply(context.Background(), f, testDocID, testBlock, nil, "🤖")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -345,7 +345,7 @@ func TestAnEmptyKindIsStillTheWordsKind(t *testing.T) {
 	}
 	f := script(t, "before.json", "after.json", "preview.json", "batch-saved.json", withComment)
 
-	res, err := Apply(context.Background(), f, testDocID, testProposal, "🤖")
+	res, err := Apply(context.Background(), f, testDocID, testProposal, nil, "🤖")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

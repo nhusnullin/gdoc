@@ -36,18 +36,22 @@ const (
 // writing a block can act on, so Check refuses a content longer than this first
 // and says what a block is for.
 //
-// The number is a measurement rather than a guess. The batch grows fastest in
-// requests per byte on the shortest paragraphs there are, and fastest of all
-// when they alternate with list items, because then every paragraph costs a
-// named style and a bullet request of its own: "a\n\n- b\n\n" repeated to this
-// length builds around 500 kilobytes, which is under half the guard's ceiling.
-// TestALargeBlockStaysUnderThePeek builds that shape and three more at exactly
-// this length and has the real policy judge each one.
+// The number is a measurement rather than a guess. Every new paragraph carries
+// the house look since 2026-11-07, so the batch grows fastest in bytes per byte
+// where paragraphs are shortest and no two neighbours look the same: a heading
+// alternating with body text, "# a\n\nb\n\n" repeated to this length, builds
+// around 840 kilobytes, under the guard's ceiling of one megabyte. The limit
+// was eight kilobytes until that day, and that shape at eight built 1.35
+// megabytes. TestTheWorstBlockWithTheHouseLookStaysUnderThePeek in restyle builds
+// it and four more shapes with the house look at exactly this length, and
+// TestALargeBlockStaysUnderThePeek here has the real policy judge the shapes
+// with a look of the house's size.
 //
-// It is a section rather than a document. Eight kilobytes is over a thousand
-// words, and a review answer longer than that is a note that wants publishing
-// rather than a block that wants proposing.
-const MaxContent = 8 << 10
+// It is a section rather than a document. Five kilobytes is about 800 words,
+// and a review answer longer than that is a note that wants publishing rather
+// than a block that wants proposing. Nail chose five over keeping eight and
+// measuring each batch, on 2026-11-07.
+const MaxContent = 5 << 10
 
 // clearedMarks is the field mask of the one request that clears what the insert
 // inherited.
@@ -61,12 +65,83 @@ const MaxContent = 8 << 10
 //
 // It is the marks the content can carry, and not the face, the size or the
 // colour, which are inherited too and are not put right by clearing them: a
-// restyled document carries those directly on every paragraph, so a block
-// cleared back to the document's defaults would be the one paragraph that
-// matches nothing around it. docs/backlog/a-block-inherits-the-look-of-what-it-
-// lands-in-front-of.md holds what would settle that, and it is a measurement
-// and a decision rather than a wider mask.
+// published or restyled document carries those directly on every paragraph, so
+// a block cleared back to the document's defaults would be the one paragraph
+// that matches nothing around it. The Look a caller hands states them instead,
+// after this request (DECISIONS.md, 2026-11-07).
 const clearedMarks = "bold,italic,underline,strikethrough,link"
+
+// Look is the house look one new paragraph takes, for the named style it
+// carries: its paragraph properties and its run properties. A list item is told
+// it is bulleted, and whether it is the last of its list, because the house
+// spaces list items by a gap of their own and the last one by the body's.
+//
+// The caller hands it over rather than this package reading the house style,
+// because propose writes what it is told: restyle.BlockLook is the one look a
+// command hands, and it is the look restyle writes, so a proposed paragraph and
+// a restyled one cannot drift apart. A nil Look writes the named style alone,
+// and so does a block after the document's last paragraph, whatever look it is
+// handed.
+// Nail's rule of 2026-11-07, that body text is 12pt whatever gdoc is doing, is
+// why it exists: DECISIONS.md holds the entry.
+type Look func(style string, bulleted, lastInList bool) (paragraph, text *docsreq.Fields)
+
+// lookOf is the look for the block's paragraph i, or nothing when there is no
+// look to hand.
+func lookOf(look Look, content []Para, i int) (*docsreq.Fields, *docsreq.Fields) {
+	if look == nil {
+		return nil, nil
+	}
+	p := content[i]
+	bulleted := p.List != NotAList
+	// The last of a list is the one before a paragraph that is not a list item,
+	// which is restyle's lastInList: a bulleted list straight after a numbered
+	// one is one run of list items to both, so the two cannot space it apart.
+	last := bulleted && (i == len(content)-1 || content[i+1].List == NotAList)
+	return look(p.Style, bulleted, last)
+}
+
+// lookStretch is a run of neighbouring paragraphs whose text look is the same.
+type lookStretch struct {
+	from, to int
+	text     *docsreq.Fields
+}
+
+// textLookStretches is the block's paragraphs grouped by their text look, so
+// one request covers every neighbour that looks the same.
+//
+// One per paragraph would be simpler, and it is what the size of a batch rules
+// out. A block at MaxContent built of the shortest paragraphs there are would
+// carry a thousand of them, and with the house look on each the body passed the
+// guard's peek: TestALargeBlockStaysUnderThePeek is the pin. Body paragraphs and
+// list items share the body's text look, so most blocks need one request or a
+// handful.
+func textLookStretches(look Look, content []Para) []lookStretch {
+	var out []lookStretch
+	for i := range content {
+		_, text := lookOf(look, content, i)
+		if text == nil || text.Empty() {
+			continue
+		}
+		if n := len(out); n > 0 && out[n-1].to == i-1 && sameFields(out[n-1].text, text) {
+			out[n-1].to = i
+			continue
+		}
+		out = append(out, lookStretch{from: i, to: i, text: text})
+	}
+	return out
+}
+
+// sameFields says whether two style objects state the same fields with the same
+// values. The marshal cannot fail on maps a look is built from.
+func sameFields(a, b *docsreq.Fields) bool {
+	if a.Mask() != b.Mask() {
+		return false
+	}
+	x, _ := json.Marshal(a.Set)
+	y, _ := json.Marshal(b.Set)
+	return string(x) == string(y)
+}
 
 // bulletPresets is the preset each list kind takes. The two kinds are two
 // presets, which is the whole reason Para carries the kind rather than a flag.
@@ -141,11 +216,15 @@ func layOutBlock(place Placement, content []Para) blockLayout {
 //     one suggestion id;
 //   - updateParagraphStyle per new paragraph, because an inserted paragraph
 //     takes the named style of the paragraph it landed in and a list item in
-//     front of somebody's Heading 1 would be a heading. After the document's
-//     last paragraph the block's own last one is left out, because it owns the
-//     body's old final mark and MEASURED.md row 7 restated nothing there;
+//     front of somebody's Heading 1 would be a heading. The same request states
+//     the paragraph half of the look. After the document's last paragraph the
+//     block's own last one is left out, because it owns the body's old final
+//     mark and MEASURED.md row 7 restated nothing there;
 //   - one updateTextStyle clearing what the insert inherited, before the block's
 //     own marks, so a run that really is bold is written bold again after it;
+//   - updateTextStyle per run of neighbouring paragraphs that look the same,
+//     stating the text half of the look, after the clearing and before the
+//     marks. A block after the document's last paragraph takes no look at all;
 //   - updateTextStyle per marked run;
 //   - createParagraphBullets per stretch of list items of one kind, with a
 //     deleteParagraphBullets in front of it on a task stretch, because a
@@ -170,8 +249,15 @@ func layOutBlock(place Placement, content []Para) blockLayout {
 // counts. One batch, because each request is built at the indexes the ones
 // before it leave behind: two batches would mean computing the second from a
 // document the first had already changed.
-func BlockBatch(place Placement, content []Para, why, assignee, mark string) []byte {
+func BlockBatch(place Placement, content []Para, look Look, why, assignee, mark string) []byte {
 	l := layOutBlock(place, content)
+	if place.AtEnd {
+		// After the document's last paragraph every style request near the
+		// body's old final mark came back as a suggestion id of its own, measured
+		// live on 2026-11-07, so a block there is written as it was before the
+		// look. Nail's choice; TestABlockAtTheEndTakesNoLook is the pin.
+		look = nil
+	}
 	var reqs []any
 	add := func(kind string, body map[string]any) {
 		reqs = append(reqs, map[string]any{kind: body})
@@ -190,10 +276,17 @@ func BlockBatch(place Placement, content []Para, why, assignee, mark string) []b
 			// the style the block asked for.
 			continue
 		}
+		style := docsreq.NewFields()
+		style.Put("namedStyleType", p.Style)
+		if para, _ := lookOf(look, content, i); para != nil && !para.Empty() {
+			for _, name := range strings.Split(para.Mask(), ",") {
+				style.Put(name, para.Set[name])
+			}
+		}
 		add("updateParagraphStyle", map[string]any{
 			"range":          spanOf(l.Paras[i].Start, l.Paras[i].End),
-			"paragraphStyle": map[string]any{"namedStyleType": p.Style},
-			"fields":         "namedStyleType",
+			"paragraphStyle": style.Set,
+			"fields":         style.Mask(),
 		})
 	}
 	add("updateTextStyle", map[string]any{
@@ -201,6 +294,13 @@ func BlockBatch(place Placement, content []Para, why, assignee, mark string) []b
 		"textStyle": map[string]any{},
 		"fields":    clearedMarks,
 	})
+	for _, s := range textLookStretches(look, content) {
+		add("updateTextStyle", map[string]any{
+			"range":     spanOf(l.Paras[s.from].Start, l.Paras[s.to].End),
+			"textStyle": s.text.Set,
+			"fields":    s.text.Mask(),
+		})
+	}
 	for i, p := range content {
 		at := l.Paras[i].Start
 		for _, r := range p.Runs {

@@ -317,8 +317,11 @@ type Session interface {
 // The dispatch is here so the command has one call. A proposals file holds both
 // kinds in one list, and the loop that walks it asks nothing about which kind
 // an entry is.
-func Apply(ctx context.Context, s Session, docID string, p Proposal, mark string) (Result, error) {
-	return ApplyFrom(ctx, s, docID, p, nil, mark)
+//
+// look is the house look a block's new paragraphs take, and the words kind
+// does not read it: new words go inside a paragraph that already has its look.
+func Apply(ctx context.Context, s Session, docID string, p Proposal, look Look, mark string) (Result, error) {
+	return ApplyFrom(ctx, s, docID, p, nil, look, mark)
 }
 
 // ApplyFrom is Apply placed from a read the caller already holds, which must
@@ -331,9 +334,9 @@ func Apply(ctx context.Context, s Session, docID string, p Proposal, mark string
 // read, because the one before it moved the ground:
 // TestProposeReadsTheDocumentOnceBeforeTheFirstWrite and
 // TestEveryLaterProposalStillReadsFresh in cmd/gdoc.
-func ApplyFrom(ctx context.Context, s Session, docID string, p Proposal, d *docs.Document, mark string) (Result, error) {
+func ApplyFrom(ctx context.Context, s Session, docID string, p Proposal, d *docs.Document, look Look, mark string) (Result, error) {
 	if p.Kind == KindBlock {
-		return applyBlock(ctx, s, docID, p, d, mark)
+		return applyBlock(ctx, s, docID, p, d, look, mark)
 	}
 	return applyWords(ctx, s, docID, p, d, mark)
 }

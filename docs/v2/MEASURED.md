@@ -47,6 +47,7 @@ earlier sections are frozen in [MEASURED-archive.md](MEASURED-archive.md).
 | 2026-10-30 | The two covers in a PDF export: v2.25.0 against v2.27.0 | MEASURED.md |
 | 2026-11-05 | Checklists, person chips and date chips, direct and suggested | MEASURED.md |
 | 2026-11-06 | A person chip naming another address mails and shares with nobody | MEASURED.md |
+| 2026-11-07 | A block's suggestion ids with the house look, and at the end of a document | MEASURED.md |
 
 A measurement is never edited to match a later reading; a different answer is a
 new section in this file rather than a change in the archive, and the old one
@@ -1075,3 +1076,31 @@ So a chip in the body is text that names a person, not a share and not a
 notification. A browser shows the person typing a prompt to share, which an
 API write never sees. Ask again if Google's help starts to describe body
 mentions as notifying, or if a colleague reports a mail after a publish.
+
+## A block's suggestion ids with the house look, and at the end of a document
+
+2026-11-07, `TestLiveProposeBlock`. How taken: the real token, one document
+created in the Drive test folder and trashed after, holding five paragraphs, the
+third a bulleted list item, and the last one ending on the document's own final
+mark. Three blocks were proposed through the production writer, and after each
+one the document was read with suggestions inline and every suggested key was
+walked for ids. Each case ran twice, once with the house look on every new
+paragraph and once with none, which is the batch gdoc sent before that day.
+
+| Block | Ids with no look | Ids with the house look |
+|---|---|---|
+| after the first paragraph | 1 | 1 |
+| replacing the list item and the paragraph after it, with a list in the block | 2, the second under `ListPropertiesChanges` | 2, the same |
+| after the document's last paragraph | 2, the second under `TextStyleChanges` | 5, four under `TextStyleChanges` |
+
+Read with suggestions accepted, every body paragraph the first two blocks added
+was 12pt and justified. Withdrawing each block's recorded id left the document's
+words as they were before. The other ids were not read after the withdrawal.
+
+Row 7 of "A block of new paragraphs, proposed in one SUGGEST batch" measured one
+id at the end of a document with a hand-written batch. This is the production
+batch, and it is not one there. Until this run the live test never placed a
+block there: its setup left the empty paragraph a new document starts with
+behind the five it wrote. Ask again when a fix for
+`docs/backlog/a-block-at-the-end-of-a-document-is-not-one-suggestion.md` is
+tried.

@@ -10,9 +10,14 @@
     },
     {
       "updateParagraphStyle": {
-        "fields": "namedStyleType",
+        "fields": "namedStyleType,alignment,spaceBelow",
         "paragraphStyle": {
-          "namedStyleType": "HEADING_2"
+          "alignment": "JUSTIFIED",
+          "namedStyleType": "HEADING_2",
+          "spaceBelow": {
+            "magnitude": 12,
+            "unit": "PT"
+          }
         },
         "range": {
           "endIndex": 104,
@@ -22,9 +27,14 @@
     },
     {
       "updateParagraphStyle": {
-        "fields": "namedStyleType",
+        "fields": "namedStyleType,alignment,spaceBelow",
         "paragraphStyle": {
-          "namedStyleType": "NORMAL_TEXT"
+          "alignment": "JUSTIFIED",
+          "namedStyleType": "NORMAL_TEXT",
+          "spaceBelow": {
+            "magnitude": 12,
+            "unit": "PT"
+          }
         },
         "range": {
           "endIndex": 125,
@@ -34,9 +44,14 @@
     },
     {
       "updateParagraphStyle": {
-        "fields": "namedStyleType",
+        "fields": "namedStyleType,alignment,spaceBelow",
         "paragraphStyle": {
-          "namedStyleType": "NORMAL_TEXT"
+          "alignment": "JUSTIFIED",
+          "namedStyleType": "NORMAL_TEXT",
+          "spaceBelow": {
+            "magnitude": 3,
+            "unit": "PT"
+          }
         },
         "range": {
           "endIndex": 129,
@@ -46,9 +61,14 @@
     },
     {
       "updateParagraphStyle": {
-        "fields": "namedStyleType",
+        "fields": "namedStyleType,alignment,spaceBelow",
         "paragraphStyle": {
-          "namedStyleType": "NORMAL_TEXT"
+          "alignment": "JUSTIFIED",
+          "namedStyleType": "NORMAL_TEXT",
+          "spaceBelow": {
+            "magnitude": 12,
+            "unit": "PT"
+          }
         },
         "range": {
           "endIndex": 133,
@@ -64,6 +84,36 @@
           "startIndex": 93
         },
         "textStyle": {}
+      }
+    },
+    {
+      "updateTextStyle": {
+        "fields": "fontSize",
+        "range": {
+          "endIndex": 104,
+          "startIndex": 93
+        },
+        "textStyle": {
+          "fontSize": {
+            "magnitude": 14,
+            "unit": "PT"
+          }
+        }
+      }
+    },
+    {
+      "updateTextStyle": {
+        "fields": "fontSize",
+        "range": {
+          "endIndex": 133,
+          "startIndex": 104
+        },
+        "textStyle": {
+          "fontSize": {
+            "magnitude": 12,
+            "unit": "PT"
+          }
+        }
       }
     },
     {
