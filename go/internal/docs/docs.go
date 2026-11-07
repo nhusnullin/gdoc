@@ -167,11 +167,21 @@ type Paragraph struct {
 // projection asks of it: a glyph type Docs names is a number of some kind, and
 // GLYPH_TYPE_UNSPECIFIED is Docs saying this list is not numbered.
 // TestABulletCarriesItsListAndGlyph is the pin.
+//
+// Checklist says this level of this list is drawn with a box a person can
+// tick. Google names no field for it, so it is read off the three glyph fields
+// the probe of 2026-11-05 measured, and isChecklist in walk.go holds the rule
+// and why an inference is allowed there. Whether the box is ticked is not in
+// the answer at all, which is a fact about Docs rather than about this type:
+// the projection says so in a warning and prints every item unticked.
+// TestAChecklistLevelIsAChecklist and TestADiscBulletIsNotAChecklist are the
+// pins.
 type Bullet struct {
 	NestingLevel int    `json:"nesting_level"`
 	ListID       string `json:"list_id,omitempty"`
 	Ordered      bool   `json:"ordered,omitempty"`
 	Glyph        string `json:"glyph,omitempty"`
+	Checklist    bool   `json:"checklist,omitempty"`
 }
 
 // Table is one table: where it starts, and its rows of cells in reading order.
@@ -251,6 +261,16 @@ type Detail struct {
 	Email    string `json:"email,omitempty"`
 	URI      string `json:"uri,omitempty"`
 	MimeType string `json:"mime_type,omitempty"`
+	// Timestamp and TimeZoneID are a date chip's instant and the zone it was
+	// written in, as the answer states them. Label is that instant as the
+	// document draws it, in one locale's month names, so the day itself is
+	// only reachable through these two: a chip at local midnight in Asia/Dubai
+	// is the day before in UTC, and a reader printing the UTC day would move
+	// somebody's deadline. A chip the answer states no timestamp on carries
+	// neither, and a reader then has the label alone.
+	// TestADateChipCarriesItsTimestampAndZone is the pin.
+	Timestamp  string `json:"timestamp,omitempty"`
+	TimeZoneID string `json:"time_zone_id,omitempty"`
 	// Type is an auto text's own type: PAGE_NUMBER, PAGE_COUNT and the rest.
 	Type string `json:"type,omitempty"`
 	// Member is the JSON member of a paragraph element this read does not name.

@@ -12,7 +12,7 @@ import (
 // document allows.
 func plainBlock(t *testing.T) []Para {
 	t.Helper()
-	paras, err := ParseContent("## Limits\n\nThe register holds ten suppliers.\n")
+	paras, err := ParseContent("## Limits\n\nThe register holds ten suppliers.\n", "")
 	if err != nil {
 		t.Fatalf("parsing the content: %v", err)
 	}
@@ -107,11 +107,11 @@ func TestAfterTheLastParagraphGoesBeforeTheFinalNewline(t *testing.T) {
 }
 
 func TestPlaceRefusesWhatItCannotPlaceAndNamesIt(t *testing.T) {
-	heading, err := ParseContent("Body text first.\n\n## And a heading last\n")
+	heading, err := ParseContent("Body text first.\n\n## And a heading last\n", "")
 	if err != nil {
 		t.Fatalf("parsing the content: %v", err)
 	}
-	listLast, err := ParseContent("Body text first.\n\n- one\n- two\n")
+	listLast, err := ParseContent("Body text first.\n\n- one\n- two\n", "")
 	if err != nil {
 		t.Fatalf("parsing the content: %v", err)
 	}

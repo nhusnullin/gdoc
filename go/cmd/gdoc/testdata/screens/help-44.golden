@@ -27,6 +27,7 @@ Usage: gdoc <command> [words] [flags]
 Every command takes:
   --config <file>  the settings file to use instead of settings.yaml in the config folder
   --mark <text>    the mark gdoc writes in front of its words in a thread; an empty mark writes the words alone, and then nothing in the thread says which words are gdoc's
+  --domain <text>  the domain a bare owner in a note's task takes, so - [ ] ask @anna writes the chip for anna at that domain; an address written out in full is never changed by it
 
 Run gdoc help <command> for the words and flags one takes.
 Add --json to print the JSON object a skill

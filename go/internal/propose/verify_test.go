@@ -601,7 +601,7 @@ func TestVerifyBlockCatchesADirectEditInThePreview(t *testing.T) {
 // block, and the line behind it is the one that answers.
 func TestVerifyBlockHoldsForAReplaceThatKeepsItsFirstLine(t *testing.T) {
 	place, _ := replacePlace(t)
-	kept, err := ParseContent("The supplier register is reviewed annually by the operations team.\n\nAnd a new sentence behind it.\n")
+	kept, err := ParseContent("The supplier register is reviewed annually by the operations team.\n\nAnd a new sentence behind it.\n", "")
 	if err != nil {
 		t.Fatalf("parsing the content: %v", err)
 	}
@@ -623,8 +623,8 @@ func TestVerifyBlockHoldsForAReplaceThatKeepsItsFirstLine(t *testing.T) {
 // too, which a suggestion would have hidden.
 func TestVerifyBlockGivesNoAnswerWhenAReplaceKeepsEveryOldParagraph(t *testing.T) {
 	place, _ := replacePlace(t)
-	kept, err := ParseContent("The supplier register is reviewed annually by the operations team.\n\n" +
-		"Each supplier is scored against the risk matrix. The scores are published each quarter.\n")
+	kept, err := ParseContent("The supplier register is reviewed annually by the operations team.\n\n"+
+		"Each supplier is scored against the risk matrix. The scores are published each quarter.\n", "")
 	if err != nil {
 		t.Fatalf("parsing the content: %v", err)
 	}
@@ -647,8 +647,8 @@ func TestVerifyBlockGivesNoAnswerWhenAReplaceKeepsEveryOldParagraph(t *testing.T
 // exists to catch as a route that held.
 func TestVerifyBlockGivesNoAnswerWhenAReplaceOnlyReshapes(t *testing.T) {
 	place, _ := replacePlace(t)
-	listed, err := ParseContent("- The supplier register is reviewed annually by the operations team.\n" +
-		"- Each supplier is scored against the risk matrix.\n")
+	listed, err := ParseContent("- The supplier register is reviewed annually by the operations team.\n"+
+		"- Each supplier is scored against the risk matrix.\n", "")
 	if err != nil {
 		t.Fatalf("parsing the content: %v", err)
 	}
@@ -669,7 +669,7 @@ func TestVerifyBlockGivesNoAnswerWhenAReplaceOnlyReshapes(t *testing.T) {
 // inside its own anchor leaves the second question nothing to ask about.
 func TestVerifyBlockGivesNoAnswerWhenAnAfterBlockSaysNothingNew(t *testing.T) {
 	place, _ := afterPlace(t)
-	inside, err := ParseContent("## The supplier register\n\nreviewed annually by the operations team\n")
+	inside, err := ParseContent("## The supplier register\n\nreviewed annually by the operations team\n", "")
 	if err != nil {
 		t.Fatalf("parsing the content: %v", err)
 	}
@@ -690,7 +690,7 @@ func TestVerifyBlockGivesNoAnswerWhenAnAfterBlockSaysNothingNew(t *testing.T) {
 // old paragraphs out, which is the first question's own answer.
 func TestVerifyBlockHoldsWhenAReplaceOnlyShortens(t *testing.T) {
 	place, _ := replacePlace(t)
-	shorter, err := ParseContent("The supplier register is reviewed annually by the operations team.\n")
+	shorter, err := ParseContent("The supplier register is reviewed annually by the operations team.\n", "")
 	if err != nil {
 		t.Fatalf("parsing the content: %v", err)
 	}
@@ -719,5 +719,98 @@ func TestVerifyBlockGivesNoAnswerWhenThePreviewCarriesTheFirstLine(t *testing.T)
 	joined := strings.Join(warns, " ")
 	if !strings.Contains(joined, "no answer") || !strings.Contains(joined, "3.6 Limits") {
 		t.Errorf("warnings = %v, and one should say the route gives no answer and name the line", warns)
+	}
+}
+
+// taskPlace is the task block behind the anchor, which is what the two
+// fixtures below were written from: the words at the indexes layOutBlock
+// computes, and each chip one unit further on than the paragraph it is in.
+func taskPlace(t *testing.T) (Placement, []Para) {
+	t.Helper()
+	content, err := ParseContent(testTasks, "")
+	if err != nil {
+		t.Fatalf("parsing the task content: %v", err)
+	}
+	place, err := PlaceAfter(document(t, "block-body.json"), "reviewed annually", content)
+	if err != nil {
+		t.Fatalf("placing the block: %v", err)
+	}
+	return place, content
+}
+
+// TestTheBlockReadBackHoldsWithChips is the inline question asked of a block
+// whose paragraphs carry chips. A chip is a unit of the document that no run
+// of the content holds, so the paragraph behind it sits one place further on
+// than the layout says, and the words are compared with the chips taken out.
+func TestTheBlockReadBackHoldsWithChips(t *testing.T) {
+	place, content := taskPlace(t)
+	f := blockScript(t, "block-task-inline.json", "block-body.json", blockExport(t, "🤖 "+testWhy, "Confirm the bank "))
+
+	checks, _, warns := VerifyBlock(context.Background(), f, testDocID, place, content, "🤖 "+testWhy)
+
+	if checks != (Checks{SuggestionsInline: true, PreviewWithoutSuggestions: true, DocxAnchored: true}) {
+		t.Errorf("checks = %+v, warnings = %v", checks, warns)
+	}
+	if len(warns) != 0 {
+		t.Errorf("warnings = %v on a run where everything held", warns)
+	}
+}
+
+// TestABlockWithTasksIsStillOneSuggestion is the promise the kind rests on,
+// read over a block that sent three request kinds: the text, the boxes and the
+// chips. The note records one id and withdraw takes back the one it recorded,
+// so a block that came back as two is one gdoc cannot take back whole.
+func TestABlockWithTasksIsStillOneSuggestion(t *testing.T) {
+	place, content := taskPlace(t)
+	f := blockScript(t, "block-task-inline.json", "block-body.json", blockExport(t, "🤖 "+testWhy, "Confirm the bank "))
+
+	checks, ids, warns := VerifyBlock(context.Background(), f, testDocID, place, content, "🤖 "+testWhy)
+
+	if len(ids) != 1 || ids[0] != "suggest.block" {
+		t.Errorf("ids = %v, want the one id the text, the boxes and the chips folded into", ids)
+	}
+	if !checks.SuggestionsInline {
+		t.Errorf("suggestions_inline = false on a block that is one suggestion: %v", warns)
+	}
+}
+
+// TestAChipWithoutTheBlocksIdStopsTheRun is the trust guardian's condition on
+// this milestone. A chip carrying a suggestion id that is not the block's own,
+// or no id at all, is a change in somebody's document that withdraw would
+// leave behind, so the route does not hold and the run stops at this proposal
+// rather than going on to the next.
+func TestAChipWithoutTheBlocksIdStopsTheRun(t *testing.T) {
+	place, content := taskPlace(t)
+	f := blockScript(t, "block-task-inline-foreign-chip.json", "block-body.json", blockExport(t, "🤖 "+testWhy, "Confirm the bank "))
+
+	checks, _, warns := VerifyBlock(context.Background(), f, testDocID, place, content, "🤖 "+testWhy)
+
+	if checks.SuggestionsInline {
+		t.Error("suggestions_inline = true where a chip carries an id the block never got")
+	}
+	if len(warns) == 0 || !strings.Contains(strings.Join(warns, " "), "suggest.other") {
+		t.Errorf("the warnings are %v, and one of them should name the id the chip came back with", warns)
+	}
+	if !strings.Contains(strings.Join(warns, " "), "date") {
+		t.Errorf("the warnings are %v, and one of them should name the chip that carried it", warns)
+	}
+}
+
+// TestTheFirstNewLineSkipsAParagraphOfNothingButSpace is the belt-and-braces
+// half of the wordless-task refusal. Carries finds a space in any document at
+// all, so a line that is nothing but the room its chips need would make the
+// second question answer "the preview carries this line" about every document
+// there is, and report a suggestion that landed as a direct edit. ParseContent
+// refuses every content that could build such a paragraph; this holds the rule
+// where the paragraph came from somewhere else.
+func TestTheFirstNewLineSkipsAParagraphOfNothingButSpace(t *testing.T) {
+	place, _ := afterPlace(t)
+	content := []Para{
+		{Style: NormalStyle, List: TaskList, Owner: "anna@example.com", Due: "2026-11-20"},
+		{Style: NormalStyle, Runs: []Run{{Text: "A line nothing stood on."}}},
+	}
+
+	if got := firstNewLine(place, content); got != "A line nothing stood on." {
+		t.Errorf("firstNewLine = %q, want the first line with words in it", got)
 	}
 }

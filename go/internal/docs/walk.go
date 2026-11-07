@@ -191,14 +191,17 @@ type rawPositionedObject struct {
 	} `json:"positionedObjectProperties"`
 }
 
-// rawList is one list, keyed in the tab by the id a bullet names. Only the
-// glyph type of each nesting level is read: it is what says whether the level
-// is numbered, and the rest of a nesting level is indentation gdoc does not
-// print.
+// rawList is one list, keyed in the tab by the id a bullet names. Three fields
+// of each nesting level are read: the glyph type, which says whether the level
+// is numbered, and the symbol and the format beside it, which together are the
+// only tell a checklist has. The rest of a nesting level is indentation gdoc
+// does not print.
 type rawList struct {
 	ListProperties struct {
 		NestingLevels []struct {
-			GlyphType string `json:"glyphType"`
+			GlyphType   string `json:"glyphType"`
+			GlyphSymbol string `json:"glyphSymbol"`
+			GlyphFormat string `json:"glyphFormat"`
 		} `json:"nestingLevels"`
 	} `json:"listProperties"`
 }
@@ -348,11 +351,16 @@ type rawRichLink struct {
 }
 
 // rawDateElement is a date chip. displayText is the date as the document shows
-// it, which is what a reader sees and the only part of it gdoc prints.
+// it, which is what a reader sees, and the timestamp with its zone is the
+// instant behind it, which is the only way to the calendar day the chip stands
+// for: "Nov 20, 2026" is one locale's spelling of a month name, and the
+// notation a task is written in is the day in ISO order.
 type rawDateElement struct {
 	DateID                string `json:"dateId"`
 	DateElementProperties struct {
 		DisplayText string `json:"displayText"`
+		Timestamp   string `json:"timestamp"`
+		TimeZoneID  string `json:"timeZoneId"`
 	} `json:"dateElementProperties"`
 	rawSuggested
 }
@@ -535,6 +543,7 @@ func bullet(listID string, level int, lists map[string]rawList) *Bullet {
 	if listID == "" || level < 0 || level >= len(levels) {
 		return out
 	}
+	out.Checklist = isChecklist(levels[level].GlyphType, levels[level].GlyphSymbol, levels[level].GlyphFormat)
 	glyph := levels[level].GlyphType
 	// GLYPH_TYPE_UNSPECIFIED is Docs saying this level is not numbered, and it
 	// is the answer's own word for it rather than an absence. NONE is the enum
@@ -546,6 +555,27 @@ func bullet(listID string, level int, lists map[string]rawList) *Bullet {
 	out.Glyph = glyph
 	out.Ordered = true
 	return out
+}
+
+// checklistFormat is the glyph format a checklist level comes back with, and
+// the one value this file compares against. It is a literal here because it is
+// a measurement rather than a documented enum.
+const checklistFormat = "%0"
+
+// isChecklist is the tell the probe of 2026-11-05 measured: a checklist level
+// states GLYPH_TYPE_UNSPECIFIED, carries no glyph symbol, and formats as "%0".
+// A disc bullet states the same unspecified type with the symbol "●" on it, so
+// the symbol is what tells the two apart, and the format is asked as well
+// because a level that says nothing at all about its marker is a level whose
+// marker went missing rather than a box.
+//
+// Google documents no field for a checklist, so this answer is inferred. It
+// decides what a reader prints and nothing a write sends, which is why an
+// inference is allowed to stand here: a wrong answer prints the wrong marker
+// and changes no document.
+// TestAChecklistLevelIsAChecklist and TestADiscBulletIsNotAChecklist.
+func isChecklist(glyphType, symbol, format string) bool {
+	return glyphType == "GLYPH_TYPE_UNSPECIFIED" && symbol == "" && format == checklistFormat
 }
 
 // objects reads a tab's floating objects, each with the kind an inline object
@@ -620,8 +650,10 @@ func run(e rawParaElement, objs map[string]rawInlineObject) Run {
 	case e.DateElement != nil:
 		r.Kind = KindDate
 		r.Detail = &Detail{
-			ID:    e.DateElement.DateID,
-			Label: e.DateElement.DateElementProperties.DisplayText,
+			ID:         e.DateElement.DateID,
+			Label:      e.DateElement.DateElementProperties.DisplayText,
+			Timestamp:  e.DateElement.DateElementProperties.Timestamp,
+			TimeZoneID: e.DateElement.DateElementProperties.TimeZoneID,
 		}
 		r.InsertionIDs, r.DeletionIDs = e.DateElement.ids()
 	case e.AutoText != nil:

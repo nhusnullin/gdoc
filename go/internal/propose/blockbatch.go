@@ -9,9 +9,22 @@ package propose
 import (
 	"encoding/json"
 	"strings"
+	"time"
 
 	"gdoc/internal/docsreq"
 	"gdoc/internal/plaintext"
+	"gdoc/internal/tasks"
+)
+
+// dateFormat is how a due date is shown in the document, and dueHour the hour
+// of the day it is sent at, in UTC. They are internal/publish's two values,
+// stated here as literals because that is the house rule for a value a test
+// pins: a task proposed into a document and a task published into one show the
+// same day in the same words. internal/publish's package comment says why the
+// hour is the middle of the day.
+const (
+	dateFormat = "DATE_FORMAT_MONTH_DAY_YEAR_ABBREVIATED"
+	dueHour    = 12
 )
 
 // MaxContent is how long a block's content may be, in bytes.
@@ -135,6 +148,7 @@ func sameFields(a, b *docsreq.Fields) bool {
 var bulletPresets = map[ListKind]string{
 	Bulleted: "BULLET_DISC_CIRCLE_SQUARE",
 	Numbered: "NUMBERED_DECIMAL_ALPHA_ROMAN",
+	TaskList: "BULLET_CHECKBOX",
 }
 
 // paraSpan is one new paragraph's span in the document the insert makes, from
@@ -212,13 +226,24 @@ func layOutBlock(place Placement, content []Para) blockLayout {
 //     stating the text half of the look, after the clearing and before the
 //     marks. A block after the document's last paragraph takes no look at all;
 //   - updateTextStyle per marked run;
-//   - createParagraphBullets per stretch of list items of one kind;
+//   - createParagraphBullets per stretch of list items of one kind, with a
+//     deleteParagraphBullets in front of it on a task stretch, because a
+//     checkbox preset over the list the insert inherited is a second
+//     suggestion;
 //   - deleteParagraphBullets per stretch of new paragraphs that are not list
 //     items, because stating a named style does not clear an inherited bullet,
 //     and with the same last paragraph left out at the end of a document;
 //   - deleteContentRange for a replace, at the indexes the insert left the old
 //     paragraphs at;
-//   - insertComment on the words of the first new paragraph.
+//   - insertComment on the words of the first new paragraph;
+//   - insertPerson and insertDate for a task list's chips, last of all.
+//
+// The chips are last because each one is a unit the document did not have, so
+// every index behind it moves: sent earlier, a chip would move the old
+// paragraphs under a replace's deletion and the words under the comment's
+// anchor. They go from the last paragraph to the first, and inside a paragraph
+// from the end back, so no index a later chip names has moved either. Each one
+// goes in the space Para.Text left for it.
 //
 // Every index is counted in UTF-16 code units, which is what the Docs API
 // counts. One batch, because each request is built at the indexes the ones
@@ -291,8 +316,22 @@ func BlockBatch(place Placement, content []Para, look Look, why, assignee, mark 
 		}
 	}
 	for _, s := range listStretches(content) {
+		from, to := l.Paras[s.from].Start, l.Paras[s.to].End
+		if content[s.from].List == TaskList {
+			// The bullets come off before the boxes go on. New text takes the
+			// list membership of the paragraph it lands in front of, and a
+			// checkbox preset over an inherited list is a change to that
+			// list's own properties, which Docs records as a second
+			// suggestion: TestLiveProposeSuggestsATaskList measured two ids on
+			// 2026-11-07 for a task block placed in front of a disc bullet,
+			// and a block withdraw cannot take back whole is not one this
+			// package will make. Off the list first, the boxes make a list of
+			// their own inside the one insertion, which is the shape
+			// MEASURED.md's 2026-11-05 row came back with one id on.
+			reqs = append(reqs, docsreq.DeleteBullets(from, to))
+		}
 		add("createParagraphBullets", map[string]any{
-			"range":        spanOf(l.Paras[s.from].Start, l.Paras[s.to].End),
+			"range":        spanOf(from, to),
 			"bulletPreset": bulletPresets[content[s.from].List],
 		})
 	}
@@ -321,6 +360,12 @@ func BlockBatch(place Placement, content []Para, look Look, why, assignee, mark 
 		comment["assigneeEmailAddress"] = assignee
 	}
 	add("insertComment", comment)
+
+	for i := len(content) - 1; i >= 0; i-- {
+		for _, c := range chipRequests(content[i], l.Paras[i].Start) {
+			reqs = append(reqs, c)
+		}
+	}
 
 	body := map[string]any{
 		"requests":     reqs,
@@ -358,6 +403,64 @@ func runMarks(r Run) (map[string]any, string) {
 		put("link", map[string]any{"url": r.Link})
 	}
 	return set, strings.Join(names, ",")
+}
+
+// chipRequests is one paragraph's chips, from the last to the first, each at
+// the index of the space Para.Text left for it.
+//
+// A name chip is written before a date chip whichever order the item wrote the
+// two tokens in, because both land at the end of the words rather than where
+// the token stood: internal/publish keeps the written order, because there the
+// tokens are in the document and each chip replaces one.
+func chipRequests(p Para, start int) []map[string]any {
+	chips := p.chips()
+	if chips == 0 {
+		return nil
+	}
+	// The first space is one unit behind the words, and each chip goes in the
+	// space of its own.
+	at := start + utf16Len(p.words()) + chips
+	var out []map[string]any
+	if p.Due != "" {
+		out = append(out, dateChip(p.Due, at))
+		at--
+	}
+	if p.Owner != "" {
+		out = append(out, personChip(p.Owner, at))
+	}
+	return out
+}
+
+// personChip is a name chip for one whole address, at one index.
+func personChip(email string, at int) map[string]any {
+	return map[string]any{"insertPerson": map[string]any{
+		"location":         map[string]any{"index": at},
+		"personProperties": map[string]any{"email": email},
+	}}
+}
+
+// dateChip is a date chip for one calendar day, at one index.
+//
+// The day is sent as noon UTC on that day, in the format the probe of
+// 2026-11-05 measured a date chip reading back in. internal/publish says why
+// the hour is noon, and both packages ask internal/tasks for the layout rather
+// than spelling a second copy of it. A day internal/tasks has already read is
+// a day on the calendar, so a parse that fails here cannot happen and the chip
+// is left out rather than guessed: the read-back then says the chip is
+// missing.
+func dateChip(day string, at int) map[string]any {
+	d, err := time.Parse(tasks.DayLayout, day)
+	if err != nil {
+		return map[string]any{}
+	}
+	stamp := time.Date(d.Year(), d.Month(), d.Day(), dueHour, 0, 0, 0, time.UTC)
+	return map[string]any{"insertDate": map[string]any{
+		"location": map[string]any{"index": at},
+		"dateElementProperties": map[string]any{
+			"timestamp":  stamp.Format(time.RFC3339),
+			"dateFormat": dateFormat,
+		},
+	}}
 }
 
 // stretch is a run of neighbouring new paragraphs, both ends inclusive.

@@ -1054,3 +1054,77 @@ func TestAlignProposesASectionOnlyTheNoteHolds(t *testing.T) {
 		}
 	}
 }
+
+// A task in a note reaches the document as a box with chips on it, and the two
+// skills that put one there say so in a short paragraph each. The publish
+// skill, because the person writing `- [ ]` lines in a note is the one it
+// answers, and it carries the sentence a chip raises: a publish emails nobody
+// and shares with nobody. The review skill's propose page, because a block may
+// hold a task list, and there a ticked task and a bare owner are both refused.
+func TestTheTwoSkillsSayTheTaskNotation(t *testing.T) {
+	for _, c := range []struct {
+		path  []string
+		wants []string
+	}{
+		{
+			path: []string{"gdoc-publish", "SKILL.md"},
+			wants: []string{
+				"- [ ] ",
+				"- [x] ",
+				"@anna@example.com",
+				"2026-11-20",
+				"domain",
+				"emails nobody",
+				"tasks",
+			},
+		},
+		{
+			path: []string{"gdoc-review", "propose.md"},
+			wants: []string{
+				"- [ ] ",
+				"`[x]`",
+				"@anna@example.com",
+				"2026-11-20",
+				"whole address",
+			},
+		},
+	} {
+		path := filepath.Join(append([]string{skillsDir}, c.path...)...)
+		b, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("%s is named by this test and is not there: %v", path, err)
+		}
+		for _, want := range c.wants {
+			if !strings.Contains(string(b), want) {
+				t.Errorf("%s never says %q, and a session writing a task has nowhere to read it", path, want)
+			}
+		}
+	}
+}
+
+// The SVG recipe is one file beside the publish skill, pointed at rather than
+// carried. Most notes hold no SVG, and the SKILL.md loads on every run, so the
+// recipe moved to pictures.md when the task notation arrived and the body was
+// six characters under its budget. A pointer at a file that is not there sends
+// a session looking for a recipe nobody can read, so both halves are held
+// here, the way the marker rules are.
+func TestTheSvgRecipeIsOneFileAndThePublishSkillNamesIt(t *testing.T) {
+	const pictures = "pictures.md"
+	path := filepath.Join(skillsDir, "gdoc-publish", pictures)
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("%s is not there: %v. It is the one copy of the SVG recipe", path, err)
+	}
+	for _, want := range []string{"svg2png.js", "rsvg-convert", "scale 2"} {
+		if !strings.Contains(string(b), want) {
+			t.Errorf("%s never says %q, and it is the whole of what a session has to go on", path, want)
+		}
+	}
+	skill, err := os.ReadFile(filepath.Join(skillsDir, "gdoc-publish", "SKILL.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(skill), pictures) {
+		t.Errorf("skills/gdoc-publish/SKILL.md names no %s, so a refused picture has no recipe to read", pictures)
+	}
+}

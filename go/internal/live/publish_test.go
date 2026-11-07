@@ -561,6 +561,10 @@ type noteDocument struct {
 	docx  []byte
 	title string
 	house string
+	// tasks is every task line the note held, as internal/body read it. A
+	// publish resolves each owner before it uploads, which is what
+	// TestLivePublishTurnsTasksIntoAChecklist does with them.
+	tasks []body.Task
 }
 
 // renderNoteFile runs the generator over one note with the placeholder mark,
@@ -614,7 +618,7 @@ func renderNoteFileWithLogo(t *testing.T, path string, logo []byte) noteDocument
 	if err := pkg.Write(&buf); err != nil {
 		t.Fatalf("the document did not zip: %v", err)
 	}
-	return noteDocument{docx: buf.Bytes(), title: fields.CoverTitle(), house: "embedded"}
+	return noteDocument{docx: buf.Bytes(), title: fields.CoverTitle(), house: "embedded", tasks: walked.Tasks}
 }
 
 // uploadForDrift puts one docx into the folder with conversion and hands back

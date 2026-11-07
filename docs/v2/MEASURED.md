@@ -1043,6 +1043,21 @@ folder, each trashed after. The full tables are in
 - The schema, revision 20261028, has no field for a ticked box or a Docs task,
   to read or to write.
 
+Measured 2026-11-07 by `TestLiveProposeSuggestsATaskList`, over the production
+writer rather than a hand-written batch, on a block placed in front of a disc
+bullet so the new paragraphs inherit that list:
+
+- A checkbox preset over the list a block's text inherited is a change to that
+  list's own properties, and Docs records it as a second suggestion:
+  `BulletChanges` and `ListPropertiesChanges` came back under an id of their
+  own, beside the insertion's. `deleteParagraphBullets` over the task
+  paragraphs first takes them out of that list, and the same run then came
+  back with one id on everything: the text, the boxes, the name chip and the
+  date chip.
+- The bulleted and the numbered stretches of a block still carry that second
+  id, and no route in `internal/propose` reads the key it is recorded under:
+  `docs/backlog/a-blocks-list-preset-over-an-inherited-list-is-a-second-suggestion.md`.
+
 Ask again when the Docs discovery document's `Paragraph`, `Bullet` or
 `NestingLevel` gains a field, or when a published checklist reads differently.
 

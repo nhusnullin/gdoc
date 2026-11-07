@@ -1,0 +1,260 @@
+{
+  "documentId": "1PrOpOsEbLoCk00000000000000000000000000bo",
+  "title": "Supplier register policy",
+  "revisionId": "ALm37BXtaskinline",
+  "tabs": [
+    {
+      "tabProperties": {
+        "tabId": "t.0",
+        "title": "",
+        "index": 0
+      },
+      "documentTab": {
+        "body": {
+          "content": [
+            {
+              "startIndex": 0,
+              "endIndex": 1,
+              "sectionBreak": {
+                "sectionStyle": {}
+              }
+            },
+            {
+              "startIndex": 1,
+              "endIndex": 26,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "HEADING_1"
+                },
+                "elements": [
+                  {
+                    "startIndex": 1,
+                    "endIndex": 26,
+                    "textRun": {
+                      "content": "Supplier register policy\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 26,
+              "endIndex": 93,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 26,
+                    "endIndex": 93,
+                    "textRun": {
+                      "content": "The supplier register is reviewed annually by the operations team.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 93,
+              "endIndex": 112,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "bullet": {
+                  "listId": "kix.check",
+                  "nestingLevel": 0,
+                  "textStyle": {}
+                },
+                "suggestedBulletChanges": {
+                  "suggest.block": {}
+                },
+                "elements": [
+                  {
+                    "startIndex": 93,
+                    "endIndex": 110,
+                    "textRun": {
+                      "content": "Confirm the bank ",
+                      "textStyle": {},
+                      "suggestedInsertionIds": [
+                        "suggest.block"
+                      ]
+                    }
+                  },
+                  {
+                    "startIndex": 110,
+                    "endIndex": 111,
+                    "person": {
+                      "personId": "kix.person1",
+                      "textStyle": {},
+                      "personProperties": {
+                        "name": "Anna Placeholder",
+                        "email": "anna@example.com"
+                      },
+                      "suggestedInsertionIds": [
+                        "suggest.block"
+                      ]
+                    }
+                  },
+                  {
+                    "startIndex": 111,
+                    "endIndex": 112,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {},
+                      "suggestedInsertionIds": [
+                        "suggest.block"
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 112,
+              "endIndex": 134,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "bullet": {
+                  "listId": "kix.check",
+                  "nestingLevel": 0,
+                  "textStyle": {}
+                },
+                "suggestedBulletChanges": {
+                  "suggest.block": {}
+                },
+                "elements": [
+                  {
+                    "startIndex": 112,
+                    "endIndex": 132,
+                    "textRun": {
+                      "content": "Confirm the licence ",
+                      "textStyle": {},
+                      "suggestedInsertionIds": [
+                        "suggest.block"
+                      ]
+                    }
+                  },
+                  {
+                    "startIndex": 132,
+                    "endIndex": 133,
+                    "dateElement": {
+                      "dateId": "kix.date1",
+                      "textStyle": {},
+                      "dateElementProperties": {
+                        "timestamp": "2026-11-20T12:00:00Z",
+                        "timeZoneId": "Etc/GMT",
+                        "locale": "en",
+                        "dateFormat": "DATE_FORMAT_MONTH_DAY_YEAR_ABBREVIATED",
+                        "timeFormat": "TIME_FORMAT_DISABLED",
+                        "displayText": "Nov 20, 2026"
+                      },
+                      "suggestedInsertionIds": [
+                        "suggest.block"
+                      ]
+                    }
+                  },
+                  {
+                    "startIndex": 133,
+                    "endIndex": 134,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {},
+                      "suggestedInsertionIds": [
+                        "suggest.block"
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 134,
+              "endIndex": 183,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 134,
+                    "endIndex": 183,
+                    "textRun": {
+                      "content": "Each supplier is scored against the risk matrix.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "startIndex": 183,
+              "endIndex": 226,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 183,
+                    "endIndex": 226,
+                    "textRun": {
+                      "content": "Quarterly review of the top ten suppliers.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "bullet": {
+                  "listId": "kix.listone",
+                  "nestingLevel": 0,
+                  "textStyle": {}
+                }
+              }
+            },
+            {
+              "startIndex": 226,
+              "endIndex": 265,
+              "paragraph": {
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT"
+                },
+                "elements": [
+                  {
+                    "startIndex": 226,
+                    "endIndex": 265,
+                    "textRun": {
+                      "content": "Escalations go to the operations lead.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "lists": {
+          "kix.check": {
+            "listProperties": {
+              "nestingLevels": [
+                {
+                  "glyphType": "GLYPH_TYPE_UNSPECIFIED",
+                  "glyphFormat": "%0",
+                  "indentFirstLine": {
+                    "magnitude": 18,
+                    "unit": "PT"
+                  }
+                }
+              ]
+            },
+            "suggestedInsertionId": "suggest.block"
+          }
+        }
+      }
+    }
+  ]
+}

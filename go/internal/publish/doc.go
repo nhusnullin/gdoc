@@ -60,12 +60,14 @@
 // TestPublishRollsBackWhenTheNoteCannotBePaired, false in
 // TestPublishReportsTheLiveIDWhenTheRollbackFailed.
 //
-// # verified is three read-backs, and false is not a failure
+// # verified is four read-backs, and false is not a failure
 //
 // The Docs read says the document is there and readable, the tab count says it
-// is one document rather than a shape a later command would refuse, and the
-// docx export says Drive can hand it back as the format it came in as. Fewer
-// than three is the document reported with the route that did not hold named:
+// is one document rather than a shape a later command would refuse, the docx
+// export says Drive can hand it back as the format it came in as, and tasks
+// says the note's task lines came back as checklist items carrying the chips
+// they named, which is true for a note with no task. Fewer
+// than four is the document reported with the route that did not hold named:
 // a document that exists is a document that exists, and a caller told the run
 // failed is a caller that uploads a second one. The export check reuses
 // internal/docx's ExportURL, Export and Parse rather than a second export path.
@@ -121,6 +123,53 @@
 // TestAMarkerTheReadBackDoesNotCarryIsNotMarked and
 // TestAMarkerBatchThatFailedIsAWarningNotAFailure are the pins, with
 // TestThePublishedMarkerNeedsNoGrantOnACreatedDocument in internal/prelude.
+//
+// # The tasks become a checklist after the upload, from the read already taken
+//
+// A docx has no box anybody can tick, so internal/body writes the character
+// ☐ or ☒ in front of a task item's words and leaves the owner and the
+// day as the note wrote them. After the read-back, publish turns each of those
+// paragraphs into a real checklist item: the bullets off and the boxes on,
+// each token taken out and its chip put where it stood, and the ballot
+// character taken off the front. One batch, and no read before it: the indexes
+// are the ones verify's own read carried.
+//
+// The order inside that batch is the whole of the arithmetic. Bullets move no
+// character, so they go first, over each run of adjacent task paragraphs:
+// taking them off before the boxes go on is what keeps a plain item beside a
+// task the bullet it was, because a checklist request over part of a list
+// turns the whole list (MEASURED.md, 2026-11-05). The text comes after, from
+// the last task to the first and inside a paragraph from the end back, so
+// every index still to be used names the character the read named.
+//
+// Nothing is sent where the document and the note disagree. The count of
+// paragraphs opening with a ballot character and their words are checked
+// first, and either one differing stops the batch whole: a document that is
+// not this note's render is one this batch would write the wrong indexes into.
+// An owner is already a whole address by the time it arrives, because
+// cmd/gdoc finishes a bare "@anna" against the domain in effect before the
+// upload, and a publish that could not finish one sends nothing at all.
+//
+// A date is sent as noon UTC on the day the note named, which is the same
+// calendar day in every zone a colleague reads it in.
+//
+// Then one read, which is both the check and what the marker is written from:
+// the batch moved every index after the cover. tasks is a fourth check beside
+// the other three, true for a note with no task because nothing was asked for,
+// and a note with no task costs no request of any kind.
+// TestTheBulletsComeFirstAndTheTextFromTheLastTaskToTheFirst,
+// TestTheBulletsComeOffBeforeTheChecklistGoesOn,
+// TestEachTokenBecomesItsChipWhereItStood, TestAMixedListKeepsItsPlainItems,
+// TestADateIsNoonUTCOnItsDay, TestADifferentTaskCountSendsNothing,
+// TestAMissingChipIsTasksFalseAndAWarning, TestANoteWithNoTaskSendsNothingNew,
+// TestVerifiedIsComputedAfterTheTasks and TestMarkIsHandedTheReadAfterTheTasks
+// are the pins, with TestLivePublishTurnsTasksIntoAChecklist in internal/live
+// against the real import.
+//
+// Whether a box is ticked is in no answer Google gives, so nothing here reads
+// one and nothing writes one. A publish emails nobody: a name chip is not an
+// assigned comment, and the measurement of 2026-11-06 found a chip naming
+// another address mails nobody and shares nothing.
 //
 // # The title is two different facts
 //

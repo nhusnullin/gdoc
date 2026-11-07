@@ -133,6 +133,12 @@ type noteDocx struct {
 	Counts      body.Counts
 	Sources     []string
 	Warnings    []string
+	// Tasks is every task line the note held, in reading order, with the owner
+	// and the day as the note wrote them. A build writes them into the file as
+	// they stand and resolves nothing; a publish resolves each owner against
+	// the domain in effect before it uploads anything.
+	// TestBuildResolvesNoOwner is the pin on this side.
+	Tasks []body.Task
 }
 
 // noteSource reads the note both commands start from. It is one function because
@@ -192,7 +198,7 @@ func renderNote(ctx context.Context, source []byte, md string, a *args) (*noteDo
 		return doc, err
 	}
 	doc.Warnings = append(doc.Warnings, walked.Warnings...)
-	doc.Counts, doc.Sources = walked.Counts, walked.Sources
+	doc.Counts, doc.Sources, doc.Tasks = walked.Counts, walked.Sources, walked.Tasks
 
 	pkg, err := render.Build(cfg, logo, fields, walked.Blocks, walked.Media, walked.Footnotes, walked.NumberedLists)
 	if err != nil {

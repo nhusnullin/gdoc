@@ -78,6 +78,13 @@ type helpSettings struct {
 	// TestAnExperimentalFlagIsInTheTableAndInNoScreen.
 	Presence     bool   `json:"presence,omitempty"`
 	PresenceFrom string `json:"presence_from,omitempty"`
+	// Domain and DomainFrom are the domain a bare owner in a note's task
+	// takes, and both are absent while nobody has set one. That is Mark's
+	// rule turned around, because there is nothing to print: a domain has
+	// no default, and an empty string in the object would read as a domain
+	// somebody chose. TestHelpCarriesTheDomainWhereThereIsOne.
+	Domain     string `json:"domain,omitempty"`
+	DomainFrom string `json:"domain_from,omitempty"`
 }
 
 // helpCommand is one entry of the table as JSON. Words and Flags are always
@@ -239,6 +246,8 @@ func settingsAsked(set settings.InEffect) helpSettings {
 		MarkFrom:     set.MarkFrom,
 		Presence:     set.Presence,
 		PresenceFrom: set.PresenceFrom,
+		Domain:       set.Domain,
+		DomainFrom:   set.DomainFrom,
 	}
 }
 

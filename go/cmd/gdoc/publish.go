@@ -116,6 +116,15 @@ func cmdPublish(ctx context.Context, a *args) emit.Result {
 			Data: publishData{FolderID: folder, House: doc.House, Logo: doc.Logo}}, err)
 	}
 
+	// Every owner finished against the domain in effect, before anything is
+	// sent. A bare name with no domain stops the run here, with no document in
+	// anybody's folder: tasks.go holds why this is where it happens.
+	taskList, err := resolveTasks(doc.Tasks, a.set.Domain)
+	if err != nil {
+		return withStop(emit.Result{OK: false, Error: err.Error(), Warnings: doc.Warnings,
+			Data: publishData{FolderID: folder, House: doc.House, Logo: doc.Logo}}, err)
+	}
+
 	// One door, and it is the folder. No file is named, so the document this
 	// run is about is unreachable until the create the guard carried teaches
 	// the policy its id.
@@ -130,12 +139,12 @@ func cmdPublish(ctx context.Context, a *args) emit.Result {
 		return withStop(emit.Result{OK: false, Error: err.Error(), Warnings: doc.Warnings,
 			Data: publishData{FolderID: folder, House: doc.House, Logo: doc.Logo}}, err)
 	}
-	return runPublish(ctx, s, md, source, folder, doc)
+	return runPublish(ctx, s, md, source, folder, doc, taskList)
 }
 
 // runPublish is the run itself: upload, verify, pair, and take the document
 // back if the pairing could not be recorded.
-func runPublish(ctx context.Context, s session, md string, source []byte, folder string, doc *noteDocx) emit.Result {
+func runPublish(ctx context.Context, s session, md string, source []byte, folder string, doc *noteDocx, taskList []publish.Task) emit.Result {
 	warns := append([]string{}, doc.Warnings...)
 	data := publishData{
 		FolderID: folder,
@@ -152,6 +161,9 @@ func runPublish(ctx context.Context, s session, md string, source []byte, folder
 		// names them and knows nothing about the record; the title is this
 		// room's, because the render that learned it is this room's.
 		OnStep: func(name string) { presence.Step(ctx, name, doc.Title) },
+		// Already resolved, because a publish that could not finish an owner
+		// stopped before the session was opened.
+		Tasks: taskList,
 	})
 	data.DocumentID = rep.DocumentID
 	data.URL = rep.URL

@@ -13,6 +13,8 @@ import (
 	"github.com/yuin/goldmark/ast"
 	east "github.com/yuin/goldmark/extension/ast"
 	"github.com/yuin/goldmark/util"
+
+	"gdoc/internal/tasks"
 )
 
 // decodeEntities is the text of a run as the document says it: "&amp;" is an
@@ -114,6 +116,52 @@ type Run struct {
 	Footnote int
 }
 
+// ballotEmpty and ballotCrossed are what a task list item opens with in the
+// docx: the character and the space after it, which is the whole of the box a
+// file opened in Word has. They are internal/tasks's own two, because body.go
+// reads them off the front of an item's rendered text and internal/publish
+// reads them off the paragraph the document came back with, and three readers
+// of one pair of characters must not each spell them.
+const (
+	ballotEmpty   = tasks.BallotEmpty
+	ballotCrossed = tasks.BallotCrossed
+)
+
+// strikeRange puts the strike on one stretch of the runs' joined text, from
+// the byte at from up to the byte at to, and leaves the rest as it was. A run
+// the stretch starts or ends inside is split, so a done task's words carry the
+// strike and the ballot character and the tokens beside them do not.
+//
+// A run with no text is a footnote mark, which carries a number and nothing to
+// strike, so it is passed through whole: cut into pieces it would be dropped.
+func strikeRange(runs []Run, from, to int) []Run {
+	out := make([]Run, 0, len(runs)+2)
+	at := 0
+	for _, run := range runs {
+		if run.Text == "" {
+			out = append(out, run)
+			continue
+		}
+		for i := 0; i < len(run.Text); {
+			end := len(run.Text)
+			for _, edge := range []int{from - at, to - at} {
+				if edge > i && edge < end {
+					end = edge
+				}
+			}
+			piece := run
+			piece.Text = run.Text[i:end]
+			if at+i >= from && at+i < to {
+				piece.Strike = true
+			}
+			out = append(out, piece)
+			i = end
+		}
+		at += len(run.Text)
+	}
+	return merge(out)
+}
+
 type marks struct {
 	bold   bool
 	italic bool
@@ -212,9 +260,9 @@ func appendInline(out *[]Run, node ast.Node, source []byte, m marks, ctx inlineC
 		case *east.TaskCheckBox:
 			// The reference renderer takes these from pandoc, which writes the
 			// ballot characters into the text rather than marking the item.
-			glyph := "\u2610 "
+			glyph := ballotEmpty
 			if typed.IsChecked {
-				glyph = "\u2612 "
+				glyph = ballotCrossed
 			}
 			*out = append(*out, Run{Text: glyph, Bold: m.bold, Italic: m.italic,
 				Strike: m.strike, Mono: m.mono, Mark: m.mark, Link: m.link})

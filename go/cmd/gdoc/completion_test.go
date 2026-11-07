@@ -481,16 +481,16 @@ func TestATextFlagIsOpaqueToBothScripts(t *testing.T) {
 		t.Errorf("the zsh script must carry the spec the flag makes: %q", zsh)
 	}
 
-	// Both offered setting flags are in every script, because every command
-	// takes them: --config is the one file flag of this table, and --mark is a
-	// text flag like --quote and stands in the same arm. The experimental
-	// third is in neither script, which is what
+	// Every offered setting flag is in every script, because every command
+	// takes them: --config is the one file flag of this table, and --mark and
+	// --domain are text flags like --quote and stand in the same arm. The
+	// experimental fourth is in neither script, which is what
 	// TestAnExperimentalFlagIsInTheTableAndInNoScreen holds.
 	files, opaque := bashFlagArms(table)
 	if files != configFlag {
 		t.Errorf("the only file flag here is the settings file: %q", files)
 	}
-	if want := "--quote|" + markFlag; opaque != want {
+	if want := "--quote|" + markFlag + "|" + domainFlag; opaque != want {
 		t.Errorf("a text flag belongs in the opaque arm: %q, want %q", opaque, want)
 	}
 
@@ -499,7 +499,7 @@ func TestATextFlagIsOpaqueToBothScripts(t *testing.T) {
 		t.Fatal(err)
 	}
 	body := withoutComments(bash)
-	if !strings.Contains(body, "--quote|"+markFlag+") return ;;") {
+	if !strings.Contains(body, "--quote|"+markFlag+"|"+domainFlag+") return ;;") {
 		t.Errorf("the bash script must answer for --quote with nothing: %q", bash)
 	}
 	for _, arm := range flagArms(body) {

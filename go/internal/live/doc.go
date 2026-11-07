@@ -48,6 +48,23 @@
 //     internal/body/testdata/docs, one Google Drawing, one floating picture,
 //     and a second tab titled Appendix with one picture in it. The
 //     measurement creates nothing and writes nothing to Drive.
+//   - GDOC_LIVE_OWNER: the whole address the name chip in M33's two task
+//     acceptances carries, the published one and the proposed one. It has no
+//     default for the guard's reason above and one of its own: a chip names a
+//     person, and gdoc may never guess who.
+//   - GDOC_PROBE_PERSON: the same thing for M33's two checklist probes, which
+//     send a chip through a hand-written batch rather than through a writer.
+//     It is a separate word from the one above because a probe and an
+//     acceptance are two runs, and a probe is often pointed at the signed-in
+//     account while an acceptance names a colleague.
+//   - GDOC_PROBE_READ_ID: the document TestLiveChecklistForHands left in the
+//     folder, read back once a person has ticked a box in it and pressed
+//     "Assign as a task" on another. With it that test reads and creates
+//     nothing; without it the same test makes the document and keeps it.
+//   - GDOC_PROBE_OTHER: an address that is not the signed-in account, for the
+//     trust guardian's measurement. It keeps the two documents it makes,
+//     because only a person can say what reached an inbox and what the sharing
+//     list shows. Measured 2026-11-06: no mail and no share, either way.
 //   - GDOC_LIVE_PUBLISHED_DOC_ID: a document publish made, in the test folder.
 //   - GDOC_LIVE_RESTYLED_DOC_ID: a document restyle styled with --fields, in
 //     the test folder. Those two are read only under GDOC_LIVE_RECORD, for the
@@ -123,6 +140,24 @@
 //     directory, so it fills the logo cache and its stamp there, and costs one
 //     request a day across every live run rather than one per test. The
 //     measurement the hash comes from is below.
+//   - TestLivePublishTurnsTasksIntoAChecklist, M33's. It publishes a temp note
+//     whose one list holds three tasks and a plain item, then reads the
+//     document back: three boxes, one name chip carrying GDOC_LIVE_OWNER, one
+//     date chip, the plain item still a bullet, and no ballot character left
+//     anywhere. It trashes the document on the way out. The variable has no
+//     default, so a run that names nobody is skipped: what no fixture can
+//     answer is what Drive's import does with a ballot character and what a
+//     checklist request does to a list that came in as disc bullets.
+//   - TestLiveChecklistProbe and TestLiveChecklistProbeOverBullets, M33's,
+//     and the measurements the tasks design was taken from. One throwaway
+//     document per case, each set up with a direct write and then asked for a
+//     checklist, a person chip and a date chip, directly and in SUGGEST mode,
+//     and in the second test over paragraphs that are already a disc list the
+//     way a published docx arrives. Nine documents between them, all trashed.
+//     Like the other probes they assert almost nothing: they name
+//     GDOC_PROBE_PERSON and fail only when they cannot create, set up or
+//     trash. Measured 2026-11-05, MEASURED.md "Checklists, person chips and
+//     date chips, direct and suggested".
 //   - TestLiveDrift, M6's. It uploads the built document and the master with
 //     conversion and runs drift.Items over both. That is the measurement that
 //     means something, because Google's import is part of the result.
@@ -211,6 +246,16 @@
 //     above names a variable of its own: GDOC_LIVE_TEST, GDOC_LIVE_WRITE and
 //     GDOC_LIVE_FOLDER_ID with its default are the whole of what they read, and
 //     every document they touch is one they made.
+//   - TestLiveProposeSuggestsATaskList, M33's. It creates the same five
+//     paragraphs and proposes one block whose list is a checklist, one task
+//     naming GDOC_LIVE_OWNER and one naming a day, in front of the list item
+//     so the new paragraphs inherit that list. It asserts one suggestion id
+//     across every key Docs records one under, two boxes, one name chip
+//     carrying the address and one date chip, each under the block's own id,
+//     and then withdraws it and compares the projection character for
+//     character. It is the run that found the second id a checkbox preset over
+//     an inherited list leaves behind, which is why the batch takes the
+//     bullets off first: MEASURED.md, 2026-11-07.
 //   - TestLiveFootnoteImportProbe, M18's, and the gate Part A of that
 //     milestone rests on. It uploads testdata/footnote-probe.docx, the built
 //     04-minimal.md with one Word footnote added by hand, and prints three
@@ -298,7 +343,7 @@
 // cannot accept its own suggestion, so the probe leaves that document in the
 // folder and prints its URL.
 //
-// # Four tests leave their document behind, on purpose
+// # Six tests leave their document behind, on purpose
 //
 // The anchors test, the prelude acceptance and the named range probe's accept
 // row each leave a document in the folder with its URL in the log. The numbers
@@ -324,6 +369,17 @@
 // measurement passed on 2026-10-16. The URL is in the log. It names no
 // variable of its own: GDOC_LIVE_TEST, GDOC_LIVE_WRITE and GDOC_LIVE_FOLDER_ID
 // with its default are the whole of what it reads.
+//
+// TestLiveChecklistForHands and TestLivePersonChipToAnotherAddress are the
+// fifth and the sixth, M33's, and they keep three documents between them for
+// the same reason: what they ask can only be answered in a browser and in an
+// inbox. The first makes one checklist document and prints its URL, for a
+// person to tick a box in and press "Assign as a task" on, and reads it back
+// later under GDOC_PROBE_READ_ID, where it creates nothing. The second is the
+// trust guardian's measurement: one document with a chip naming
+// GDOC_PROBE_OTHER written directly and one with it suggested, kept so a
+// person can say whether anything was mailed or shared. Neither asserts what
+// it was sent to find out. Trash them once you have looked.
 //
 // # The export measurement asserts nothing
 //

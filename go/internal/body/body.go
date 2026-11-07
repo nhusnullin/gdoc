@@ -26,6 +26,7 @@ import (
 	"gdoc/internal/house"
 	"gdoc/internal/markers"
 	"gdoc/internal/render"
+	"gdoc/internal/tasks"
 	"gdoc/internal/view"
 )
 
@@ -54,6 +55,37 @@ type Counts struct {
 	Marks map[string]int `json:"marks"`
 }
 
+// Task is one task list item the note holds, read apart: the words the
+// document will carry, the owner and the day as the note wrote them, and
+// whether the author ticked the box.
+//
+// Words and Tokens are what the docx says, with the ballot character in front
+// of them taken off, so the two joined are the paragraph a reader of the
+// document finds. Owner and Due are what the note said, because resolving a
+// bare owner against the domain in effect is the caller's: a build resolves
+// nothing, and a publish resolves before it sends.
+//
+// Nothing in here says whether a task matters or whether anybody will do it.
+// TestTheResultListsEveryTaskInOrder is the pin.
+type Task struct {
+	// Words is the item's own words, the tokens and the spaces in front of
+	// them taken off.
+	Words string
+	// Owner is the owner token as the note wrote it, "@name" or
+	// "@name@domain", and empty where the item names nobody.
+	Owner string
+	// Due is the day token as the note wrote it, and empty where the item
+	// names no day.
+	Due string
+	// Done is whether the box was ticked. The docx strikes a done item's
+	// words, because a file has no box to tick.
+	Done bool
+	// Tokens is the owner and the day as the docx carries them, the spaces in
+	// front of them included, so Words and Tokens joined are the item's text
+	// after the ballot character. It is empty for an item that names neither.
+	Tokens string
+}
+
 // Result is one walk: the blocks, the relationships they name, what could not
 // be rendered, the counts, and the files the walk read.
 //
@@ -76,6 +108,10 @@ type Result struct {
 	// hold one note per mark.
 	Footnotes []Footnote
 
+	// Tasks is every task list item the note held, in reading order. A note
+	// with no task list has none, and a plain bullet is not one.
+	Tasks []Task
+
 	// NumberedLists is how many w:num entries word/numbering.xml needs for the
 	// numbered lists in these blocks. It is plumbing for render.Build rather
 	// than a fact for a reader, which is why it is not on Counts and not in the
@@ -97,6 +133,7 @@ type renderer struct {
 	counts    Counts
 	sources   []string
 	footnotes []Footnote
+	tasks     []Task
 
 	// footnoteOrder is every footnote mark in the prose, in reading order, and
 	// footnoteNumber the number each one takes. Both are read before the
@@ -243,7 +280,7 @@ func Render(cfg *house.Config, markdown []byte, base string, numbering bool) (Re
 	}
 	return Result{Blocks: r.blocks, Media: r.media, Warnings: r.warnings,
 		Counts: r.counts, Sources: r.sources, Footnotes: r.footnotes,
-		NumberedLists: r.numberedLists}, nil
+		Tasks: r.tasks, NumberedLists: r.numberedLists}, nil
 }
 
 // parse is goldmark, configured to the extension set the previous generator
@@ -1129,8 +1166,123 @@ func (r *renderer) paragraphBlock(node ast.Node, level int, list listCtx) error 
 		return nil
 	}
 
+	if box := taskBox(node); box != nil {
+		marked, err := r.task(node, box, runs, level, list, line)
+		if err != nil {
+			return err
+		}
+		runs = marked
+	}
+
 	r.emitRuns(runs, level, list)
 	return nil
+}
+
+// taskBox is the ballot box a task list item's first paragraph opens with, or
+// nil for every other paragraph. goldmark puts the box on that paragraph alone,
+// so a continuation paragraph of a task item is a paragraph like any other.
+func taskBox(node ast.Node) *east.TaskCheckBox {
+	box, _ := node.FirstChild().(*east.TaskCheckBox)
+	return box
+}
+
+// task reads one task list item apart, strikes a done item's words and lists
+// the task on the Result. It answers the runs the item is written with, which
+// are the runs handed in for an item nobody ticked.
+//
+// What it refuses, it refuses by line, because a notation gdoc half understood
+// becomes a chip on the wrong person or no chip at all, and the note is the
+// only place the author can see what they wrote. doc.go holds the reason for
+// each of the four.
+func (r *renderer) task(node ast.Node, box *east.TaskCheckBox, runs []Run,
+	level int, list listCtx, line int) ([]Run, error) {
+	if list.ordered {
+		return nil, fmt.Errorf("line %d: this is a task in a numbered list, and a checklist in a document carries no numbers; write the task as a bullet, \"- [ ] \", or take the box off", line)
+	}
+	if level > 1 {
+		return nil, fmt.Errorf("line %d: this is a task inside another list, and a checklist in a document stands at one level; write the task at the top level of its list", line)
+	}
+	written, err := tasks.Parse(taskSource(node, r.source))
+	if err != nil {
+		return nil, fmt.Errorf("line %d: %w", line, err)
+	}
+	// The item as the document will show it, the ballot character off the
+	// front. The source said what the author wrote; this says what a reader
+	// will find, and the two have to name the same owner and the same day.
+	// A token with emphasis, a code span or a link around it is in one and not
+	// the other, and that is the fourth refusal.
+	ballot := ballotEmpty
+	if box.IsChecked {
+		ballot = ballotCrossed
+	}
+	whole := plainText(runs)
+	shown := strings.TrimPrefix(whole, ballot)
+	// A break before the two readings are compared, because they disagree
+	// about it rather than about markup: taskSource joins the item's lines
+	// with a space and the runs carry the newline itself, so the tokens are at
+	// the end of the line in one and not in the other. Left to the comparison
+	// the refusal reads "with markup around it", which sends the author
+	// looking for emphasis that is not there.
+	if strings.Contains(shown, "\n") {
+		return nil, fmt.Errorf("line %d: this task item carries a line break, and a task's owner and date are read off the end of one line; write the task on one line", line)
+	}
+	seen, err := tasks.Parse(shown)
+	switch {
+	case err != nil:
+		return nil, fmt.Errorf("line %d: %w, and a task's owner and date are the item's own plain words, with no emphasis, code span or link around them", line, err)
+	case seen.Owner.Text != written.Owner.Text:
+		return nil, fmt.Errorf("line %d: %s is a task's owner with markup around it, and a task's owner is the item's own plain words", line, either(seen.Owner.Text, written.Owner.Text))
+	case seen.Due.Text != written.Due.Text:
+		return nil, fmt.Errorf("line %d: %s is a task's date with markup around it, and a task's date is the item's own plain words", line, either(seen.Due.Text, written.Due.Text))
+	}
+	r.tasks = append(r.tasks, Task{
+		Words:  seen.Words,
+		Owner:  written.Owner.Text,
+		Due:    written.Due.Text,
+		Done:   box.IsChecked,
+		Tokens: shown[len(seen.Words):],
+	})
+	if !box.IsChecked {
+		return runs, nil
+	}
+	// The words alone. The ballot character in front of them is the box the
+	// document will get, and the tokens after them become chips: a strike on
+	// either reads as something somebody took off.
+	return strikeRange(runs, len(ballot), len(ballot)+len(seen.Words)), nil
+}
+
+// either is the first of two strings that says something, for a refusal that
+// names a token the item's source holds or the document would show, whichever
+// of the two it is.
+func either(first, second string) string {
+	if first != "" {
+		return first
+	}
+	return second
+}
+
+// taskSource is a task list item's own markdown, which is what internal/tasks
+// reads: its lines joined by the space a soft break renders as, with the
+// author's own "[ ]" or "[x]" taken off the front.
+//
+// The source rather than the runs, because GFM linkifies an address and the
+// owner would arrive in pieces. The runs are asked separately, for what the
+// document will show.
+func taskSource(node ast.Node, source []byte) string {
+	lines := node.Lines()
+	var b strings.Builder
+	for i := 0; i < lines.Len(); i++ {
+		if i > 0 {
+			b.WriteString(" ")
+		}
+		at := lines.At(i)
+		b.Write(bytes.TrimRight(at.Value(source), "\r\n"))
+	}
+	words := b.String()
+	if len(words) >= 3 && words[0] == '[' && words[2] == ']' {
+		words = words[3:]
+	}
+	return strings.TrimLeft(words, " \t")
 }
 
 // emitRuns writes one paragraph of runs where the walk stands: a body

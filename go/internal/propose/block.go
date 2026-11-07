@@ -22,6 +22,7 @@ import (
 	"github.com/yuin/goldmark/util"
 
 	"gdoc/internal/docsreq"
+	"gdoc/internal/tasks"
 )
 
 // NormalStyle is the named style a paragraph of body text takes, and the style
@@ -37,6 +38,10 @@ const (
 	NotAList ListKind = ""
 	Bulleted ListKind = "bullet"
 	Numbered ListKind = "number"
+	// TaskList is a GFM task list, which lands as a Docs checklist: a box on
+	// every item, and the owner and the day the item names as chips behind its
+	// words (DECISIONS.md, 2026-11-05).
+	TaskList ListKind = "task"
 )
 
 // Run is one stretch of a new paragraph's text and the marks on it. The marks
@@ -51,21 +56,55 @@ type Run struct {
 }
 
 // Para is one new paragraph the block writes: the named style it takes, the
-// list it belongs to, and its runs.
+// list it belongs to, its runs, and on a task list item the owner and the day
+// its chips carry.
+//
+// Owner is the whole address, never a bare name: ParseContent finishes one
+// against the domain in effect and refuses a bare name with no domain, so a
+// Para never carries half an address. Due is the calendar day, written
+// YYYY-MM-DD. Both are empty on every paragraph that is not a task, and on a
+// task that named neither.
 type Para struct {
 	Style string
 	List  ListKind
 	Runs  []Run
+	Owner string
+	Due   string
 }
 
 // Text is what the paragraph reads as once the marks are dropped, which is what
 // the insert carries.
+//
+// A task's chips are one space each, and nothing else: a chip is a unit of the
+// document that no run holds, so the insert leaves room for it where it will
+// go, which is also what keeps the words and the chips from reading as one
+// word. BlockBatch puts each chip in that space, and the read-back compares
+// this same text with the chips taken out again.
 func (p Para) Text() string {
+	return p.words() + strings.Repeat(" ", p.chips())
+}
+
+// words is the paragraph's runs joined, which is the text without the room its
+// chips need.
+func (p Para) words() string {
 	var b strings.Builder
 	for _, r := range p.Runs {
 		b.WriteString(r.Text)
 	}
 	return b.String()
+}
+
+// chips is how many chips this paragraph's tokens become: one for an owner and
+// one for a day.
+func (p Para) chips() int {
+	n := 0
+	if p.Owner != "" {
+		n++
+	}
+	if p.Due != "" {
+		n++
+	}
+	return n
 }
 
 // ParseContent reads a block's content into the paragraphs the write is built
@@ -76,15 +115,21 @@ func (p Para) Text() string {
 // refusal naming the line, because a block that quietly lost its table is a
 // suggestion nobody can read and nobody can explain.
 //
+// domain is the domain in effect for this run, which a bare "@anna" owner on a
+// task takes. It is a setting rather than a field of the file, like the mark,
+// and an empty one refuses a bare owner by name: chat sends none, because the
+// card shows the words a person wrote and a domain resolved behind their back
+// would not be on it.
+//
 // gdoc's own markers are not asked about here. Every route into a document asks,
 // and for the proposals file that is cmd/gdoc, which asks it of every field at
 // once rather than of this one string.
-func ParseContent(content string) ([]Para, error) {
+func ParseContent(content, domain string) ([]Para, error) {
 	if strings.TrimSpace(content) == "" {
 		return nil, errors.New("the block carries no content, and a block proposes paragraphs")
 	}
 	source := []byte(content)
-	w := &blockWalk{source: source}
+	w := &blockWalk{source: source, domain: domain}
 	if err := w.blocks(parseBlock().Parser().Parse(text.NewReader(source)), NotAList); err != nil {
 		return nil, err
 	}
@@ -92,6 +137,26 @@ func ParseContent(content string) ([]Para, error) {
 		return nil, errors.New("the block carries no content, and a block proposes paragraphs")
 	}
 	return w.paras, nil
+}
+
+// BareOwner answers the first owner a block's content names as a bare name,
+// "@anna" with no domain behind it, and the empty string where the content
+// names none.
+//
+// It is the question chat asks before it writes the call's file, because chat
+// may finish no address: the card shows the words a model wrote, and a domain
+// taken from a setting nobody is looking at would not be on it. The terminal
+// asks nothing here, because the domain in effect finishes the name there.
+//
+// It answers rather than refuses. Content this package cannot read at all is
+// content the walk stops in, and what is wrong with it is the refusal
+// ParseContent gives the caller a moment later, in words about the line.
+// TestChatRefusesABareOwner in cmd/gdoc is the pin.
+func BareOwner(content string) string {
+	source := []byte(content)
+	w := &blockWalk{source: source}
+	_ = w.blocks(parseBlock().Parser().Parse(text.NewReader(source)), NotAList)
+	return w.bare
 }
 
 // parseBlock is goldmark with the GFM extensions and nothing else.
@@ -113,7 +178,12 @@ func parseBlock() goldmark.Markdown {
 // refusal names, and the paragraphs so far.
 type blockWalk struct {
 	source []byte
+	domain string
 	paras  []Para
+	// bare is the first owner the content named as a bare name, which is what
+	// BareOwner answers. It is kept whatever the domain in effect is, because
+	// the question is what the author wrote rather than what it resolves to.
+	bare string
 }
 
 // blocks reads every block in a subtree. list is the list the blocks belong to,
@@ -133,7 +203,7 @@ func (w *blockWalk) block(node ast.Node, list ListKind) error {
 		if list != NotAList {
 			return w.refuse(node, "a heading inside a list item is not something a block proposes; write the heading above the list")
 		}
-		runs, err := w.runs(node)
+		runs, err := w.runs(node, nil)
 		if err != nil {
 			return err
 		}
@@ -144,12 +214,27 @@ func (w *blockWalk) block(node ast.Node, list ListKind) error {
 		return nil
 
 	case *ast.Paragraph, *ast.TextBlock:
-		runs, err := w.runs(node)
+		// The box is the one inline the walk skips rather than refuses, and
+		// only where the list it belongs to is a task list. Anywhere else a
+		// checkbox is the refusal appendRuns gives it.
+		box := taskBox(node)
+		if box != nil && list != TaskList {
+			return w.refuse(node, "a task list is not something a block proposes here; write the tasks as a list of their own")
+		}
+		runs, err := w.runs(node, box)
 		if err != nil {
 			return err
 		}
 		if len(runs) == 0 {
 			return w.refuse(node, "this paragraph carries no text, and a block proposes words")
+		}
+		if box != nil {
+			para, err := w.task(node, box, runs)
+			if err != nil {
+				return err
+			}
+			w.paras = append(w.paras, para)
+			return nil
 		}
 		w.paras = append(w.paras, Para{Style: NormalStyle, List: list, Runs: runs})
 		return nil
@@ -162,20 +247,9 @@ func (w *blockWalk) block(node ast.Node, list ListKind) error {
 		if list != NotAList {
 			return w.refuse(node, "a nested list is not something a block proposes; nesting a suggested list is unmeasured, so write the list one level deep")
 		}
-		kind := Bulleted
-		if typed.IsOrdered() {
-			// createParagraphBullets carries no start number, so the preset
-			// begins at 1 whatever the author wrote, and "3." would arrive as
-			// "1." with nothing in the three read-backs able to see it: they
-			// read the words, and the number is drawn rather than written.
-			// internal/body carries the same failure as a warning, because a
-			// publish rewrites a whole note. Here the content is a few lines a
-			// review wrote and renumbering them is cheap.
-			if typed.Start != 1 {
-				return w.refuse(node, fmt.Sprintf(
-					"a numbered list beginning at %d is not something a block proposes; a suggested list is numbered from 1, so write the list starting at 1", typed.Start))
-			}
-			kind = Numbered
+		kind, err := w.listKind(typed)
+		if err != nil {
+			return err
 		}
 		for item := typed.FirstChild(); item != nil; item = item.NextSibling() {
 			before := len(w.paras)
@@ -232,6 +306,200 @@ func (w *blockWalk) block(node ast.Node, list ListKind) error {
 		}
 		return w.refuse(node, fmt.Sprintf("%s is not something a block proposes", node.Kind().String()))
 	}
+}
+
+// listKind is which of the three kinds of list this one is, or the refusal it
+// earns.
+//
+// A list is a task list when its items carry a box, and every item has to
+// carry one. A list that is part tasks and part plain items is refused rather
+// than sent as two stretches: a checklist request covers the whole list it
+// lands in (MEASURED.md, 2026-11-05), and two bullet presets over neighbouring
+// paragraphs of one list is unmeasured, so the plain items would arrive with
+// boxes or the tasks without them. Writing the tasks as a list of their own is
+// what the refusal asks for.
+//
+// A numbered task list is refused because a Docs checklist carries no numbers:
+// the preset is the box, and the author's "1." would be gone with nothing in
+// the read-backs able to see it. internal/body refuses the same shape in a
+// note, in the same words.
+func (w *blockWalk) listKind(l *ast.List) (ListKind, error) {
+	tasks, plain := 0, 0
+	for item := l.FirstChild(); item != nil; item = item.NextSibling() {
+		if taskBox(item.FirstChild()) != nil {
+			tasks++
+			continue
+		}
+		plain++
+	}
+	switch {
+	case tasks > 0 && plain > 0:
+		return "", w.refuseAt(w.itemLine(l.FirstChild()),
+			"this list holds a task item and a plain item, and a checklist request covers the whole list it lands in; write the tasks as a list of their own")
+	case tasks > 0 && l.IsOrdered():
+		return "", w.refuseAt(w.itemLine(l.FirstChild()),
+			"this is a task in a numbered list, and a checklist in a document carries no numbers; write the task as a bullet, \"- [ ] \", or take the box off")
+	case tasks > 0:
+		return TaskList, nil
+	case l.IsOrdered():
+		// createParagraphBullets carries no start number, so the preset
+		// begins at 1 whatever the author wrote, and "3." would arrive as
+		// "1." with nothing in the three read-backs able to see it: they
+		// read the words, and the number is drawn rather than written.
+		// internal/body carries the same failure as a warning, because a
+		// publish rewrites a whole note. Here the content is a few lines a
+		// review wrote and renumbering them is cheap.
+		if l.Start != 1 {
+			return "", w.refuse(l, fmt.Sprintf(
+				"a numbered list beginning at %d is not something a block proposes; a suggested list is numbered from 1, so write the list starting at 1", l.Start))
+		}
+		return Numbered, nil
+	}
+	return Bulleted, nil
+}
+
+// taskBox is the ballot box a task list item's first paragraph opens with, or
+// nothing for every other paragraph. goldmark puts the box on that paragraph
+// alone, so a continuation paragraph of a task item carries none, and the
+// one-paragraph rule above refuses it anyway.
+func taskBox(node ast.Node) *east.TaskCheckBox {
+	if node == nil {
+		return nil
+	}
+	box, _ := node.FirstChild().(*east.TaskCheckBox)
+	return box
+}
+
+// task is one task list item read as a paragraph: the item's own words as
+// runs, and the owner and the day off the end of its line as the two fields
+// the chips are built from.
+//
+// The notation is read twice, which is how markup around a token is caught.
+// The source says what the author typed, and the runs say what the document
+// will show: "**@anna**" is a token in the second and a word in the first, and
+// a token gdoc turned into a chip would lose the emphasis the author put on
+// it. internal/body reads the same two and compares them the same way, one
+// package over, for the same reason.
+//
+// A ticked task is refused rather than written. A done item is struck through
+// in a note and in a docx, and the marks a block carries are bold, italic and
+// a link: a block has no strike, and an unticked box with its words intact is
+// an item nobody did rather than one somebody finished.
+func (w *blockWalk) task(node ast.Node, box *east.TaskCheckBox, runs []Run) (Para, error) {
+	line := w.inlineLine(node)
+	if box.IsChecked {
+		return Para{}, w.refuseAt(line,
+			"this task is ticked, and a block has no strike to write a done item with; propose the task unticked, or say it is done in the reason")
+	}
+	written, err := tasks.Parse(taskItemSource(node, w.source))
+	if err != nil {
+		return Para{}, w.refuseAt(line, err.Error())
+	}
+	shown, err := tasks.Parse(plainRunText(runs))
+	switch {
+	case err != nil:
+		return Para{}, w.refuseAt(line, fmt.Sprintf(
+			"%v, and a task's owner and date are the item's own plain words, with no markup around them", err))
+	case shown.Owner.Text != written.Owner.Text:
+		return Para{}, w.refuseAt(line, fmt.Sprintf(
+			"%s is a task's owner with markup around it, and a task's owner is the item's own plain words",
+			either(shown.Owner.Text, written.Owner.Text)))
+	case shown.Due.Text != written.Due.Text:
+		return Para{}, w.refuseAt(line, fmt.Sprintf(
+			"%s is a task's date with markup around it, and a task's date is the item's own plain words",
+			either(shown.Due.Text, written.Due.Text)))
+	}
+	// An item that is nothing but its tokens carries no words, and a block
+	// proposes words, which is the rule the heading and the plain list item
+	// above are held to. It is refused here rather than by the len(runs) == 0
+	// check, because the tokens are runs until trimRuns takes them off: what
+	// would reach the document is a space for each chip and nothing else, and
+	// layOutBlock is built on every paragraph having words in it.
+	if shown.Words == "" {
+		return Para{}, w.refuseAt(line,
+			"this task carries no words, only the owner or date it is tagged with, and a block proposes words")
+	}
+	if shown.Owner.Present() && shown.Owner.Domain == "" && w.bare == "" {
+		w.bare = shown.Owner.Text
+	}
+	// The address is finished here, before a request exists, so nothing half
+	// read reaches a document and the refusal names the setting rather than a
+	// chip on nobody.
+	owner, err := shown.Owner.Resolve(w.domain)
+	if err != nil {
+		return Para{}, w.refuseAt(line, err.Error())
+	}
+	return Para{
+		Style: NormalStyle,
+		List:  TaskList,
+		Runs:  trimRuns(runs, len(shown.Words)),
+		Owner: owner,
+		Due:   shown.Due.Text,
+	}, nil
+}
+
+// either is the first of two strings that says something, for a refusal
+// naming a token the source holds or the document would show, whichever of the
+// two it is.
+func either(first, second string) string {
+	if first != "" {
+		return first
+	}
+	return second
+}
+
+// taskItemSource is a task list item's own markdown, which is what
+// internal/tasks reads: its lines joined by the space a wrapped line renders
+// as, with the author's own "[ ]" taken off the front.
+//
+// The source rather than the runs, because the runs are what the document will
+// show and the two are compared. internal/body holds the same twelve lines
+// over its own walk: the two packages walk goldmark separately, one for the
+// docx and one for the request list, and neither reads the other's runs.
+func taskItemSource(node ast.Node, source []byte) string {
+	lines := node.Lines()
+	var b strings.Builder
+	for i := 0; i < lines.Len(); i++ {
+		if i > 0 {
+			b.WriteString(" ")
+		}
+		at := lines.At(i)
+		b.Write(bytes.TrimRight(at.Value(source), "\r\n"))
+	}
+	words := b.String()
+	if len(words) >= 3 && words[0] == '[' && words[2] == ']' {
+		words = words[3:]
+	}
+	return strings.TrimLeft(words, " \t")
+}
+
+// plainRunText is the runs joined, which is what the document will show once
+// the marks are dropped.
+func plainRunText(runs []Run) string {
+	var b strings.Builder
+	for _, r := range runs {
+		b.WriteString(r.Text)
+	}
+	return b.String()
+}
+
+// trimRuns is the runs up to one byte offset of their joined text, which is
+// how a task's tokens come off the words while every mark on the words stays
+// where it was. A run the offset falls inside is cut; the rest are dropped.
+func trimRuns(runs []Run, n int) []Run {
+	var out []Run
+	at := 0
+	for _, r := range runs {
+		if at >= n {
+			break
+		}
+		if at+len(r.Text) > n {
+			r.Text = r.Text[:n-at]
+		}
+		at += len(r.Text)
+		out = append(out, r)
+	}
+	return mergeRuns(out)
 }
 
 // maxReference is the longest an entity reference can be, in bytes, counted
@@ -375,9 +643,9 @@ type marks struct {
 // deleteContentRange of a replace and before the comment anchor, so one tab at
 // the start of a list item moves both one place out: the deletion would leave a
 // character of the run it replaces and take one of the paragraph behind it.
-func (w *blockWalk) runs(node ast.Node) ([]Run, error) {
+func (w *blockWalk) runs(node ast.Node, box *east.TaskCheckBox) ([]Run, error) {
 	var out []Run
-	if err := w.appendRuns(&out, node, marks{}); err != nil {
+	if err := w.appendRuns(&out, node, marks{}, box); err != nil {
 		return nil, err
 	}
 	out = mergeRuns(out)
@@ -401,7 +669,7 @@ func (w *blockWalk) runs(node ast.Node) ([]Run, error) {
 	return out, nil
 }
 
-func (w *blockWalk) appendRuns(out *[]Run, node ast.Node, m marks) error {
+func (w *blockWalk) appendRuns(out *[]Run, node ast.Node, m marks, box *east.TaskCheckBox) error {
 	for child := node.FirstChild(); child != nil; child = child.NextSibling() {
 		switch typed := child.(type) {
 		case *ast.Text:
@@ -429,7 +697,7 @@ func (w *blockWalk) appendRuns(out *[]Run, node ast.Node, m marks) error {
 			} else {
 				next.italic = true
 			}
-			if err := w.appendRuns(out, typed, next); err != nil {
+			if err := w.appendRuns(out, typed, next, nil); err != nil {
 				return err
 			}
 		case *ast.Link:
@@ -445,7 +713,7 @@ func (w *blockWalk) appendRuns(out *[]Run, node ast.Node, m marks) error {
 			}
 			next := m
 			next.link = dest
-			if err := w.appendRuns(out, typed, next); err != nil {
+			if err := w.appendRuns(out, typed, next, nil); err != nil {
 				return err
 			}
 		case *ast.AutoLink:
@@ -462,13 +730,20 @@ func (w *blockWalk) appendRuns(out *[]Run, node ast.Node, m marks) error {
 		case *east.Strikethrough:
 			return w.refuseAt(w.inlineLine(typed), "struck-out words are not one of the marks a block carries, which are bold, italic and a link")
 		case *east.TaskCheckBox:
-			return w.refuseAt(w.inlineLine(typed), "a task list is not something a block proposes; write the items as a plain list")
+			// The item's own box is the marker of the list it belongs to and
+			// not words: the list is a checklist, and the box the document
+			// draws is Docs' own. A box anywhere else is a notation gdoc half
+			// understands, so it is refused by name.
+			if typed == box {
+				continue
+			}
+			return w.refuseAt(w.inlineLine(typed), "a task list is not something a block proposes here; write the items as a plain list")
 		case *ast.Image:
 			return w.refuseAt(w.inlineLine(typed), "a picture is not something a block proposes; propose the words and add the picture by hand")
 		case *ast.RawHTML:
 			return w.refuseAt(w.inlineLine(typed), "HTML is not something a block proposes; it would arrive in the document as words")
 		default:
-			if err := w.appendRuns(out, child, m); err != nil {
+			if err := w.appendRuns(out, child, m, nil); err != nil {
 				return err
 			}
 		}

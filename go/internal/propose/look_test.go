@@ -219,7 +219,7 @@ func TestABlockAtTheEndTakesNoLook(t *testing.T) {
 // the change of kind an end, a restyle over the accepted block would move that
 // gap, and the two looks would drift apart.
 func TestAListEndsWhereTheListItemsEnd(t *testing.T) {
-	content, err := ParseContent("1. a\n\n- b\n\nc\n")
+	content, err := ParseContent("1. a\n\n- b\n\nc\n", "")
 	if err != nil {
 		t.Fatalf("parsing the content: %v", err)
 	}

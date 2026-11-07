@@ -288,7 +288,7 @@ func main() {
 // --help prints the usage line rather than starting a server that waits on a
 // pipe nobody is going to fill. TestMcpIsRoutedBeforeRun is the pin.
 //
-// The three setting flags come off the line here, before the word mcp is looked
+// The four setting flags come off the line here, before the word mcp is looked
 // for and before --help is, so one reading of them serves every command and
 // the session alike. What is left is the line as it always was, and the
 // settings go down beside it. settings.go holds the reading, and the refusal

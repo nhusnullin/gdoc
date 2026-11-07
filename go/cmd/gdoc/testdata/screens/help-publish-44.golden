@@ -5,6 +5,10 @@ gdoc v2.9.0
 Usage: gdoc publish --md <file> --folder-id <folder id> [--house <file>]
   Build the note as a house-style document and upload it into one folder.
 
+  A line the note writes as - [ ] words is a task, and the document gets a box a reader ticks. At the end of that line, after the words, one owner and one due date become chips: @anna@example.com or a bare @anna with --domain or the domain setting in effect, and 2026-11-20, in either order. A - [x] line is done and its words are struck through. A bare owner with no domain in effect, two owners, two dates, a date that is not a calendar day, a nested task and a task in a numbered list are each refused by name before anything is uploaded.
+
+  A chip is text that knows an address: this publish emails nobody, shares the document with nobody and assigns nothing. checks.tasks on the envelope is the read-back of the boxes and the chips, and it is true for a note with no task.
+
   --md <file>              the note to publish
   --folder-id <folder id>  the Drive folder the document is created in
   --house <file>           a house style file other than the one inside gdoc
@@ -14,5 +18,6 @@ Usage: gdoc publish --md <file> --folder-id <folder id> [--house <file>]
 Every command takes:
   --config <file>  the settings file to use instead of settings.yaml in the config folder
   --mark <text>    the mark gdoc writes in front of its words in a thread; an empty mark writes the words alone, and then nothing in the thread says which words are gdoc's
+  --domain <text>  the domain a bare owner in a note's task takes, so - [ ] ask @anna writes the chip for anna at that domain; an address written out in full is never changed by it
 Add --json to print the JSON object a skill
 reads.

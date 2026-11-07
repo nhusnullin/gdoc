@@ -136,6 +136,33 @@ paragraph of it that the block never proposed, and a tab, because Docs removes a
 leading one from a list item and that moves every index behind it. An empty line
 is still how the next paragraph starts.
 
+A block may also hold one task list, one level deep. A line written `- [ ] `
+becomes a box in the document, and at the end of that line one owner and one
+due date become chips, the same notation a note uses for
+[`publish`](publishing.md):
+
+```json
+[{
+  "kind": "block",
+  "after": "the operations team reviews it",
+  "content": "- [ ] Confirm the limit with the bank @anna@example.com 2026-11-20\n- [ ] Write the two tiers down 2026-12-01\n",
+  "why": "the section promises two numbers and names nobody to get them"
+}]
+```
+
+A bare `@anna` takes the domain in effect, from `--domain` or the `domain`
+setting, and a bare owner with no domain is refused before anything is sent.
+From chat there is no resolving at all: the card shows the words of the call,
+and an address finished from a setting would not be on it, so a task written
+there carries the whole address or it is refused. `[x]` is refused in a block
+whichever route it came by, because a block has no strike to give a done task.
+
+The boxes and the chips are part of the one suggestion the block is, so
+`withdraw` takes the lot back in one call, and the read-back compares each
+paragraph's text with its chips taken out. A chip that came back without the
+block's own suggestion id stops the run: it would be a chip nobody can take
+back.
+
 The placement refusals are the other half, and each says what would work:
 
 | Refused | Because |

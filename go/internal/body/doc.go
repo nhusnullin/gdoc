@@ -149,6 +149,40 @@
 // to line 1, which in a note is the front matter's own delimiter: the wrong end
 // of the file to send somebody to. TestAnEmptyFenceNamesARealLine is the pin.
 //
+// # A task list item keeps every character, and a ticked one is struck
+//
+// "- [ ] words @anna@example.com 2026-01-02" is a task: the words, at most one
+// owner and at most one day, each counted only where it ends the item.
+// internal/tasks is the one reader of that notation and holds why each rule is
+// the rule. The docx keeps all of it, the ballot character included, because a
+// build is a file somebody opens in Word, where a chip is nothing, and because
+// a publish whose last batch fails leaves a file that still says who and when.
+// A ticked box is a strike on the words alone: a file has no box to tick, and a
+// struck address or a struck day reads as one somebody took off. Result.Tasks
+// lists each task as a fact, with the owner and the day as the note wrote
+// them, because resolving a bare owner against the domain in effect is the
+// caller's: a build resolves nothing and a publish resolves before it sends.
+// TestATaskItemKeepsItsTokensAndItsBallot, TestADoneTaskIsStruckThrough,
+// TestTheResultListsEveryTaskInOrder, TestAFullAddressOwnerLeavesNoLink and
+// TestTaskListsCarryTheirBallotCharacter are the pins.
+//
+// The two characters themselves are internal/tasks's, beside the notation they
+// stand for. This package writes one of them and internal/publish takes it off
+// again once Drive has made the document, so one pair of characters has one
+// spelling and the two sides cannot drift.
+//
+// Four refusals, each naming the line. A notation internal/tasks cannot read
+// is its own refusal, said with the line. A task in a numbered list and a task
+// inside another list are refused because a checklist in a document carries no
+// numbers and stands at one level, so one of the two things the author wrote
+// would be lost either way. A token with emphasis, a code span or a link
+// around it is refused because the item's source and the item's runs then name
+// different owners: the source is what internal/tasks reads, since GFM
+// linkifies an address and the owner would arrive in pieces, the runs are what
+// the document will show, and the two are asked to agree.
+// TestATaskTheNotationRefusesStopsTheBuild, TestATaskInANumberedListIsRefused,
+// TestANestedTaskIsRefused and TestATokenInsideEmphasisIsRefused are the pins.
+//
 // # What the walker will not render is a warning naming the line, never a
 // silent drop
 //

@@ -236,3 +236,75 @@ func TestAHeadingLinkInsideAHeadingStillResolves(t *testing.T) {
 		t.Errorf("the projection is %q, want it to carry %q", text, want)
 	}
 }
+
+// task is one checklist item at a level, in the list the id names.
+func task(level int, listID, s string, at int) docs.Block {
+	return docs.Block{Paragraph: &docs.Paragraph{
+		Style:      "NORMAL_TEXT",
+		Bullet:     &docs.Bullet{NestingLevel: level, ListID: listID, Checklist: true},
+		Runs:       []docs.Run{run(s, at)},
+		StartIndex: at,
+	}}
+}
+
+// TestAChecklistItemsColumnIsItsBulletsWidth: a task list item's content
+// column is the two characters of "- ", not the six of "- [ ] ". GFM reads
+// "[ ] " as the item's own first inline content and not as part of the marker,
+// so a child indented to six stands four columns past the content column,
+// which CommonMark reads as an indented code block. The next build leaves a
+// code block out with a warning, so the child's words never reach the
+// document: the one case where the column is wrong loses text rather than
+// nesting it.
+func TestAChecklistItemsColumnIsItsBulletsWidth(t *testing.T) {
+	got := body(
+		task(0, "l6", "one", 1),
+		item(false, 1, "l6", "sub", 10),
+	)
+	if want := "- [ ] one\n\n  - sub\n"; got != want {
+		t.Errorf("the projection is %q, want %q", got, want)
+	}
+}
+
+// TestANestedChecklistItemPrintsAsAPlainBullet: a note's checklist stands at
+// one level, because internal/body refuses a task inside another list by name.
+// So an item below the top level keeps the plain bullet and a warning names
+// the box it lost. Printing the box there would write a note the next build
+// refuses whole, which loses the document rather than one box.
+func TestANestedChecklistItemPrintsAsAPlainBullet(t *testing.T) {
+	d := &docs.Document{Tabs: []docs.Tab{{ID: "t.0", Body: []docs.Block{
+		task(0, "l7", "one", 1),
+		task(1, "l7", "sub", 10),
+	}}}}
+	got, warnings := Text(d)
+
+	if want := "- [ ] one\n\n  - sub\n"; got != want {
+		t.Errorf("the projection is %q, want %q", got, want)
+	}
+	if !warned(warnings, "index 10") {
+		t.Errorf("the nested box raised no warning naming the item: %v", warnings)
+	}
+}
+
+// TestANestedChecklistItemsChipsKeepTheirPlaceholders: an item that prints no
+// box is not a task line, so its chips are not tokens. Written as the notation
+// they would put an address into the prose of a plain bullet, and the next
+// build would read it as words rather than as an owner.
+func TestANestedChecklistItemsChipsKeepTheirPlaceholders(t *testing.T) {
+	nested := task(1, "l8", "sub ", 10)
+	nested.Paragraph.Runs = append(nested.Paragraph.Runs, docs.Run{
+		Kind: docs.KindPerson, StartIndex: 14, EndIndex: 15,
+		Detail: &docs.Detail{Label: "A Placeholder", Email: "placeholder@example.com"},
+	})
+	d := &docs.Document{Tabs: []docs.Tab{{ID: "t.0", Body: []docs.Block{
+		task(0, "l8", "one", 1),
+		nested,
+	}}}}
+	got, _ := Text(d)
+
+	if strings.Contains(got, "@placeholder@example.com") {
+		t.Errorf("a nested item's chip printed as a token:\n%s", got)
+	}
+	if want := "  - sub [person: A Placeholder]\n"; !strings.Contains(got, want) {
+		t.Errorf("the projection is %q, want it to carry %q", got, want)
+	}
+}

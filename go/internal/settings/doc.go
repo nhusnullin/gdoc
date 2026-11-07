@@ -97,6 +97,31 @@
 // the help object every other colleague reads is the object it was before this
 // flag existed: TestPresenceFromIsSetOnlyWhenTheFlagIsOn.
 //
+// # domain is the domain a bare owner takes, and it has no default
+//
+// A note's task line may name an owner as @anna, which is how colleagues write
+// to each other. The address a chip carries has to be whole, so the domain
+// comes from this setting: the file's domain: key or --domain, in the order
+// every other setting is laid out in. internal/tasks owns what a domain may be
+// and refuses what gdoc half understands, naming the file and its key or the
+// flag, because that is the line somebody goes and changes:
+// TestTheFileSetsTheDomain, TestADomainArgumentOverridesTheFile,
+// TestAMalformedDomainIsRefusedByName and TestADomainKeyWithNoValueIsRefused.
+//
+// There is no built-in default and no source to name while nobody set one.
+// Every other setting has an answer gdoc can stand behind with nothing
+// configured, and this one does not: a guessed domain would be a chip on
+// somebody at a firm gdoc invented. So the empty domain is the empty domain,
+// DomainFrom is empty beside it, and a bare owner is refused naming this key
+// before anything is sent: TestNoDomainIsNoDomainAndNoSource, and
+// TestABareNameWithNoDomainIsRefusedNamingTheSetting in internal/tasks.
+//
+// An address a person wrote out in full is never rewritten by it. The setting
+// finishes the names that are short of an address and touches nothing else.
+//
+// `domain:` with nothing behind it is refused the way `mark:` and `presence:`
+// are, and for the same reason.
+//
 // # The token is not a setting
 //
 // Neither the token, nor its path, nor the update stamp. They are a credential

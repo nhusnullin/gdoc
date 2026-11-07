@@ -363,7 +363,7 @@ func mcpCommands() []mcpCommand {
 				`"after":{"type":"string","description":"The exact words the new paragraphs go after, for a block change."},` +
 				`"replace_from":{"type":"string","description":"The first words of the paragraphs a block change replaces."},` +
 				`"replace_to":{"type":"string","description":"The last words of the paragraphs a block change replaces."},` +
-				`"content":{"type":"string","description":"The new paragraphs, for a block change."},` +
+				`"content":{"type":"string","description":"The new paragraphs, for a block change. A line written - [ ] words becomes a box in the document, and at the end of such a line a whole address like @anna@example.com or a date like 2026-11-20 becomes a chip."},` +
 				`"why":{"type":"string","description":"The comment that says why the change is proposed."}` +
 				`},"required":["why"],"additionalProperties":false}}` +
 				`},"required":["code","url","title","proposals"],"additionalProperties":false}`,
@@ -944,8 +944,41 @@ func (c mcpCommand) fileBody(f mcpArg, raw json.RawMessage) (string, error) {
 			sort.Strings(unknown)
 			return "", fmt.Errorf("%s takes no field called %q", f.prop, unknown[0])
 		}
+		if err := mcpWholeAddress(f.prop, i, got); err != nil {
+			return "", err
+		}
 	}
 	return string(raw), nil
+}
+
+// mcpWholeAddress refuses an item whose content names a task owner as a bare
+// name. The whole address is what chat writes, because the card a person says
+// yes to is the call's own arguments: a name gdoc finished from the domain
+// setting would put a chip on somebody whose address was never on the card.
+// The terminal does finish one, where the note and the setting are both in
+// front of the person who typed the command.
+//
+// It asks the propose package, so the notation is read in one place: the
+// markdown subset a block carries is that package's, and a token at the end of
+// a task's line is only a token where the item is a task.
+// TestChatRefusesABareOwner and TestChatTakesAFullAddress.
+func mcpWholeAddress(prop string, index int, item map[string]json.RawMessage) error {
+	raw, ok := item["content"]
+	if !ok {
+		return nil
+	}
+	var content string
+	if err := json.Unmarshal(raw, &content); err != nil {
+		// A content field that is not a string is refused by the command
+		// underneath, in words about the file it reads.
+		return nil
+	}
+	bare := propose.BareOwner(content)
+	if bare == "" {
+		return nil
+	}
+	return fmt.Errorf("%s item %d names %s, and a task written here carries the whole address: write %s@ and the domain, because the card shows the words of this call and an address finished from a setting would not be on it",
+		prop, index+1, bare, bare)
 }
 
 // itemRule is what the schema says about a list property: how many items it

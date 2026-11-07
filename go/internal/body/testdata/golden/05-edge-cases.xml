@@ -669,7 +669,7 @@
         <w:sz w:val="24"/>
         <w:szCs w:val="24"/>
       </w:rPr>
-      <w:t xml:space="preserve">☐ An unchecked item.</w:t>
+      <w:t xml:space="preserve">☐ An unchecked item, with somebody to do it. @anna@example.com</w:t>
     </w:r>
   </w:p>
   <w:p>
@@ -691,7 +691,22 @@
         <w:sz w:val="24"/>
         <w:szCs w:val="24"/>
       </w:rPr>
-      <w:t xml:space="preserve">☒ A checked item.</w:t>
+      <w:t xml:space="preserve">☒ </w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:strike w:val="1"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve">A checked item, with the day it was due.</w:t>
+    </w:r>
+    <w:r>
+      <w:rPr>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+      <w:t xml:space="preserve"> 2026-01-02</w:t>
     </w:r>
   </w:p>
   <w:p>

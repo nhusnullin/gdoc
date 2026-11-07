@@ -389,7 +389,7 @@ func cmdPropose(ctx context.Context, a *args) emit.Result {
 	if err != nil {
 		return failed(err)
 	}
-	proposals, err := readProposals(from, a.set.Mark)
+	proposals, err := readProposals(from, a.set.Mark, a.set.Domain)
 	if err != nil {
 		return failed(err)
 	}
@@ -760,7 +760,15 @@ func readNote(path, docID string) (*notePath, error) {
 // kind, because they are fields it knows: Check does that, by name, and the
 // tests for it are TestProposeRefusesAnUnknownFieldInABlockEntry and
 // TestProposeRefusesABlockFieldWithNoKind.
-func readProposals(path, mark string) ([]propose.Proposal, error) {
+//
+// domain is the domain in effect for this run, which a bare "@anna" owner on a
+// task list item in a block takes. The file never says it: it is a setting,
+// like the mark, so it is put on every entry here rather than read out of the
+// list. A bare owner with no domain in effect is refused a few lines down, by
+// Check, before the session is opened and before anything is sent:
+// TestTheTerminalResolvesABareOwner and
+// TestTheTerminalRefusesABareOwnerWithNoDomain.
+func readProposals(path, mark, domain string) ([]propose.Proposal, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("the proposals file could not be read: %w", err)
@@ -771,6 +779,11 @@ func readProposals(path, mark string) ([]propose.Proposal, error) {
 	}
 	if len(out) == 0 {
 		return nil, fmt.Errorf("%s carries no proposals, so there is nothing to write", path)
+	}
+	// The setting goes on every entry before the first one is checked, because
+	// Check is what refuses a bare owner no domain can finish.
+	for i := range out {
+		out[i].Domain = domain
 	}
 	// Every proposal is checked here, before the session is opened and before
 	// the first write, for the reason the empty list is refused here: all of

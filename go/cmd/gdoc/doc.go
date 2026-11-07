@@ -89,7 +89,12 @@
 //     in effect, its words on the line or in a file. internal/reply.
 //   - propose <url> --from [--md] [--folder]: a change as a suggestion, either
 //     words inside one paragraph or a block of new paragraphs.
-//     internal/propose.
+//     internal/propose. A block may hold a task list, and this room puts the
+//     domain in effect on every entry of the file, so a bare "@anna" owner is
+//     finished where there is a domain and the run is refused by name where
+//     there is none, before the session is opened:
+//     TestTheTerminalResolvesABareOwner and
+//     TestTheTerminalRefusesABareOwnerWithNoDomain.
 //   - withdraw <url> <suggestion id> --md: gdoc taking back its own proposal.
 //     internal/withdraw.
 //   - annotate <url> --quote | --from [--body-file]: a comment on the words a
@@ -103,7 +108,13 @@
 //     TestTheLogoCeilingIsTwentySeconds and
 //     TestAHungDriveCostsTheCeilingAndThenTheCacheAnswers.
 //   - publish --md --folder-id [--house]: that docx into Drive as a Google
-//     Doc. internal/publish.
+//     Doc. internal/publish. A note's task lines become checklist items in the
+//     document afterwards, and this room finishes each bare owner against the
+//     domain in effect before the upload, because a run that cannot name a
+//     whole address must send nothing at all: tasks.go holds the rule, and
+//     TestABareOwnerWithNoDomainIsRefusedBeforeTheUpload is the pin. build
+//     resolves none of them, because nothing it writes is sent to anybody:
+//     TestBuildResolvesNoOwner.
 //   - update [--check] [--major] [--nightly] [--rollback]: this binary
 //     replaced by a newer release of it. internal/update, and the one reach
 //     that carries no credential, gapi.Plain. A run that installed also
@@ -122,7 +133,11 @@
 //     document is refused with nothing sent, which is TestAWrongTitleIsRefused
 //     and TestAThreadQuoteDifferingOnlyInQuotesOrSpacingPasses. One item per
 //     write call, and no field in it the card does not draw:
-//     TestASecondItemIsRefused and TestAssigneeIsRefused. Every chat write is
+//     TestASecondItemIsRefused and TestAssigneeIsRefused. A task a chat
+//     proposal writes carries the whole address and never a bare name,
+//     whatever the domain in effect is, because the card a person agrees to is
+//     the call's own arguments and an address finished from a setting would
+//     not be on it: TestChatRefusesABareOwner and TestChatTakesAFullAddress. Every chat write is
 //     then judged by internal/chat's hold rules before anything is sent, and a
 //     held write reaches no wire: the answer is ok false, sent false, and the
 //     hold's id, rule, value and words, with one fixed sentence that says to
@@ -366,13 +381,13 @@
 // on stdout, and exits 2, which is the one shape no caller can read.
 // TestAPanicIsStillOneEnvelope is the pin.
 //
-// # Three setting flags, taken off the line first, one of them experimental
+// # Four setting flags, taken off the line first, one of them experimental
 //
-// --config, --mark and --presence belong to no command, because they belong
-// to all of them. They are lifted off the line in route, before the word mcp
-// is looked for and before --help is, so one reading of them serves every
+// --config, --mark, --domain and --presence belong to no command, because they
+// belong to all of them. They are lifted off the line in route, before the word
+// mcp is looked for and before --help is, so one reading of them serves every
 // command, the session and the help alike. What is left is the line as every
-// parser already read it, and nothing below route sees any of the three:
+// parser already read it, and nothing below route sees any of the four:
 // TestEveryCommandTakesTheSettingFlags and
 // TestTheSettingFlagsAreTakenAnywhereOnTheLine.
 //
@@ -436,7 +451,8 @@
 // TestNoSkillPassesThePresenceFlag is where that is held.
 //
 // What they resolved to is one field of the help object, settings, which
-// carries the mark in effect and which of the three sources it came from. A
+// carries the mark in effect and which of the three sources it came from, and
+// the domain in effect where somebody set one. A
 // colleague who is not sure which mark this run writes asks the binary rather
 // than reading a file and a line. The field is always there, and the empty
 // mark is printed as the empty string, because a skill that read an absent

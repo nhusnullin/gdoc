@@ -13,6 +13,9 @@ const testContent = "## 3.6 Limits\n\nBody text with **bold**.\n\n- one\n- two\n
 // runs together. A test that compared only the text would pass over a heading
 // read as body text.
 func samePara(got, want Para) bool {
+	if got.Owner != want.Owner || got.Due != want.Due {
+		return false
+	}
 	if got.Style != want.Style || got.List != want.List || len(got.Runs) != len(want.Runs) {
 		return false
 	}
@@ -26,7 +29,7 @@ func samePara(got, want Para) bool {
 
 func checkParas(t *testing.T, content string, want []Para) {
 	t.Helper()
-	got, err := ParseContent(content)
+	got, err := ParseContent(content, "")
 	if err != nil {
 		t.Fatalf("ParseContent(%q) = %v, want the paragraphs", content, err)
 	}
@@ -168,7 +171,7 @@ func TestContentJoinsAWrappedLineWithASpace(t *testing.T) {
 // Text is what the paragraph reads as once its marks are dropped, which is what
 // the insert carries.
 func TestParaTextIsTheWordsWithoutTheMarks(t *testing.T) {
-	paras, err := ParseContent(testContent)
+	paras, err := ParseContent(testContent, "")
 	if err != nil {
 		t.Fatalf("ParseContent: %v", err)
 	}
@@ -201,7 +204,18 @@ func TestContentRefusesWhatTheSubsetDoesNotHold(t *testing.T) {
 		{"nothing but space", "   \n\n\t\n", "no content"},
 		{"code in a sentence", "Use `gdoc read` first\n", "code in a sentence"},
 		{"struck-out words", "~~gone~~ words\n", "struck"},
-		{"a task list", "- [ ] do it\n", "task list"},
+		{"a nested task list", "- [ ] one\n    - [ ] deeper\n", "nested list"},
+		{"a task in a numbered list", "1. [ ] do it\n", "numbered list"},
+		{"a ticked task", "- [x] done already\n", "ticked"},
+		{"a list with task items and plain ones", "- [ ] do it\n- and this\n", "plain item"},
+		{"a task whose owner is no address", "- [ ] ask @a@b\n", "no address"},
+		{"a task naming two owners", "- [ ] ask @anna@x.com @bob@x.com\n", "one owner"},
+		{"a task whose date is no day", "- [ ] ask 2026-02-30\n", "no day"},
+		{"a task owner inside emphasis", "- [ ] ask **@anna@x.com**\n", "markup"},
+		{"a task that is only an owner", "- [ ] @anna@x.com\n", "no words"},
+		{"a task that is only a date", "- [ ] 2026-11-20\n", "no words"},
+		{"a task that is only an owner and a date", "- [ ] @anna@x.com 2026-11-20\n", "no words"},
+		{"a bare owner with no domain in effect", "- [ ] ask @anna\n", "domain"},
 		{"a line break inside a paragraph", "one  \ntwo\n", "line break"},
 		{"a heading with no words", "##\n", "no text"},
 		{"a list item with no words", "- one\n-\n", "no text"},
@@ -220,7 +234,7 @@ func TestContentRefusesWhatTheSubsetDoesNotHold(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			paras, err := ParseContent(c.content)
+			paras, err := ParseContent(c.content, "")
 			if err == nil {
 				t.Fatalf("ParseContent(%q) = %+v, want a refusal naming %s", c.content, paras, c.name)
 			}
@@ -234,7 +248,7 @@ func TestContentRefusesWhatTheSubsetDoesNotHold(t *testing.T) {
 // A refusal names the line the author can look at, because content is a file a
 // person wrote and a block is tens of lines long.
 func TestARefusedConstructNamesItsLine(t *testing.T) {
-	_, err := ParseContent("one\n\ntwo\n\n> quoted\n")
+	_, err := ParseContent("one\n\ntwo\n\n> quoted\n", "")
 	if err == nil {
 		t.Fatal("a block quote is refused")
 	}
@@ -248,7 +262,7 @@ func TestARefusedConstructNamesItsLine(t *testing.T) {
 // paragraph above it. Line 1 would send the author to the top of a file whose
 // break is further down, which is the wrong end of it.
 func TestARuleWithNoSourcePositionStillNamesItsLine(t *testing.T) {
-	_, err := ParseContent("one\n\n---\n\ntwo\n")
+	_, err := ParseContent("one\n\n---\n\ntwo\n", "")
 	if err == nil {
 		t.Fatal("a page break is refused")
 	}
@@ -314,5 +328,66 @@ func TestCheckRefusesABlockFieldWithoutTheBlockKind(t *testing.T) {
 				t.Errorf("the refusal must name the kind the field belongs to: %v", err)
 			}
 		})
+	}
+}
+
+// testTasks is the block content whose list is a checklist: two items, the
+// first naming an owner and the second a day. It is the content every task
+// test in this package is built from, so the batch, the read-back and the
+// refusals all describe one write.
+const testTasks = "- [ ] Confirm the bank @anna@example.com\n- [ ] Confirm the licence 2026-11-20\n"
+
+// TestContentReadsATaskList is the notation inside a block. The item's own
+// words become its runs, and the owner and the day come off the end of the
+// line into the two fields the chips are built from: a token is a token only
+// where it ends the line, so "2026-01-02" in the middle of a sentence stays a
+// word.
+func TestContentReadsATaskList(t *testing.T) {
+	checkParas(t, testTasks, []Para{
+		{Style: NormalStyle, List: TaskList, Owner: "anna@example.com",
+			Runs: []Run{{Text: "Confirm the bank"}}},
+		{Style: NormalStyle, List: TaskList, Due: "2026-11-20",
+			Runs: []Run{{Text: "Confirm the licence"}}},
+	})
+	checkParas(t, "- [ ] Ask about 2026-01-02 today\n", []Para{
+		{Style: NormalStyle, List: TaskList, Runs: []Run{{Text: "Ask about 2026-01-02 today"}}},
+	})
+}
+
+// TestATaskParagraphCarriesOneSpacePerChip is the text the insert carries. Each
+// chip is one unit of the document that no run of the content holds, so the
+// paragraph makes room for it: one space per chip, which is also what keeps
+// the words and the chips from reading as one word.
+func TestATaskParagraphCarriesOneSpacePerChip(t *testing.T) {
+	paras, err := ParseContent("- [ ] Confirm the bank @anna@example.com 2026-11-20\n- [ ] Nothing at the end\n", "")
+	if err != nil {
+		t.Fatalf("ParseContent: %v", err)
+	}
+	if got := paras[0].Text(); got != "Confirm the bank  " {
+		t.Errorf("the task's text is %q, want the words and one space per chip", got)
+	}
+	if got := paras[1].Text(); got != "Nothing at the end" {
+		t.Errorf("a task naming nobody and no day reads %q, want the words alone", got)
+	}
+}
+
+// TestABareOwnerTakesTheDomainInEffect is the one thing ParseContent needs a
+// setting for. A bare name is finished here, before a request is built, so a
+// Para never carries half an address: the refusal of a bare name with no
+// domain is the row in TestContentRefusesWhatTheSubsetDoesNotHold.
+func TestABareOwnerTakesTheDomainInEffect(t *testing.T) {
+	paras, err := ParseContent("- [ ] Ask the bank @anna\n", "example.org")
+	if err != nil {
+		t.Fatalf("ParseContent: %v", err)
+	}
+	if paras[0].Owner != "anna@example.org" {
+		t.Errorf("the owner is %q, want the bare name finished against the domain in effect", paras[0].Owner)
+	}
+	whole, err := ParseContent("- [ ] Ask the bank @anna@elsewhere.com\n", "example.org")
+	if err != nil {
+		t.Fatalf("ParseContent: %v", err)
+	}
+	if whole[0].Owner != "anna@elsewhere.com" {
+		t.Errorf("the owner is %q, want the address the item wrote out in full", whole[0].Owner)
 	}
 }

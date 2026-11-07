@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/beevik/etree"
 	"github.com/yuin/goldmark/ast"
 	east "github.com/yuin/goldmark/extension/ast"
 	"github.com/yuin/goldmark/text"
@@ -284,5 +285,74 @@ func TestAnExportedLinkTextRoundTrips(t *testing.T) {
 	}
 	if got.Link != "https://example.com/h" {
 		t.Errorf("link = %q, want the destination to survive", got.Link)
+	}
+}
+
+// itemRuns is what the runs of one rendered block say, each with the strike it
+// carries, so a test can ask which stretch of a task item was struck through
+// and which was left alone.
+func itemRuns(t *testing.T, block *etree.Element) []Run {
+	t.Helper()
+	var out []Run
+	for _, r := range findAll(block, "w:r") {
+		run := Run{Strike: find(r, "w:strike") != nil}
+		for _, text := range findAll(r, "w:t") {
+			run.Text += text.Text()
+		}
+		out = append(out, run)
+	}
+	return out
+}
+
+// TestATaskItemKeepsItsTokensAndItsBallot: the docx keeps every character the
+// note held. The owner and the date stay in the words, because a build is a
+// file somebody opens in Word, where a chip is nothing: the chips are the
+// document's, and a publish whose last batch fails leaves a file that still
+// says who and when.
+func TestATaskItemKeepsItsTokensAndItsBallot(t *testing.T) {
+	out := walk(t, "- [ ] Ask the bank @anna@example.com 2026-01-02\n")
+
+	got := joined(itemRuns(t, out.Blocks[0]))
+	if got != "☐ Ask the bank @anna@example.com 2026-01-02" {
+		t.Errorf("the item reads %q, want the ballot box, the words and both tokens", got)
+	}
+}
+
+// TestADoneTaskIsStruckThrough: a ticked box is a done task, and the docx has
+// no box to tick, so the words carry the strike instead. The ballot character
+// and the tokens do not: a struck address reads as an address somebody took
+// off.
+func TestADoneTaskIsStruckThrough(t *testing.T) {
+	out := walk(t, "- [x] Ask the bank @anna@example.com 2026-01-02\n")
+
+	runs := itemRuns(t, out.Blocks[0])
+	want := []Run{
+		{Text: "☒ "},
+		{Text: "Ask the bank", Strike: true},
+		{Text: " @anna@example.com 2026-01-02"},
+	}
+	if len(runs) != len(want) {
+		t.Fatalf("the item is %d runs, want %d: %#v", len(runs), len(want), runs)
+	}
+	for i := range want {
+		if runs[i].Text != want[i].Text || runs[i].Strike != want[i].Strike {
+			t.Errorf("run %d is %q strike=%v, want %q strike=%v",
+				i, runs[i].Text, runs[i].Strike, want[i].Text, want[i].Strike)
+		}
+	}
+}
+
+// TestAFullAddressOwnerLeavesNoLink: GFM linkifies a bare address, and an
+// owner is not one: the "@" in front of it is part of the token. A mailto
+// relationship written for it would be a link in the document on a word that
+// becomes a chip.
+func TestAFullAddressOwnerLeavesNoLink(t *testing.T) {
+	out := walk(t, "- [ ] Ask the bank @anna@example.com\n")
+
+	if link := find(out.Blocks[0], "w:hyperlink"); link != nil {
+		t.Errorf("the item carries a hyperlink, want the owner left as words")
+	}
+	if len(out.Media) != 0 {
+		t.Errorf("the walk named %d relationships, want none", len(out.Media))
 	}
 }

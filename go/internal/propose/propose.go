@@ -53,6 +53,14 @@ type Proposal struct {
 	Content     string `json:"content,omitempty"`
 	Why         string `json:"why"`
 	Assignee    string `json:"assignee,omitempty"`
+	// Domain is the address domain in effect for this run, which a bare
+	// "@anna" owner on a task list item takes. It carries no tag because the
+	// file may not say it: it is a setting, like the mark this run writes in
+	// front of every reason, and the caller puts it on every entry it
+	// decoded. An empty one refuses a bare owner by name, which is what chat
+	// sends, because the card shows the words a person wrote and a domain
+	// resolved behind their back would not be on it.
+	Domain string `json:"-"`
 }
 
 // Fields is the sentence a refusal gives when an entry of a proposals file

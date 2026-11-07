@@ -92,7 +92,7 @@ func TestTheWorstBlockWithTheHouseLookStaysUnderThePeek(t *testing.T) {
 		"the shortest paragraphs there are":     "a\n\n",
 	} {
 		content := strings.Repeat(unit, propose.MaxContent/len(unit))
-		paras, err := propose.ParseContent(content)
+		paras, err := propose.ParseContent(content, "")
 		if err != nil {
 			t.Fatalf("%s: parsing the content: %v", name, err)
 		}

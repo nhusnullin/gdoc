@@ -39,13 +39,14 @@ type call struct {
 // net/http: the rooms that may are the ones the boundary test lists, and this
 // is not one of them.
 type fakeSession struct {
-	calls   []call
-	create  []byte        // the files.create answer
-	read    []byte        // the documents.get answer
-	marked  []byte        // the documents.get answer once a batchUpdate went out, nil for read
-	export  []byte        // the docx export
-	trashed []byte        // the files.get?fields=trashed answer
-	failAt  map[int]error // fail the nth call, counted from zero
+	calls    []call
+	create   []byte        // the files.create answer
+	read     []byte        // the documents.get answer
+	marked   []byte        // the documents.get answer once a batchUpdate went out, nil for read
+	taskRead []byte        // the documents.get answer after the first batch, nil for marked
+	export   []byte        // the docx export
+	trashed  []byte        // the files.get?fields=trashed answer
+	failAt   map[int]error // fail the nth call, counted from zero
 }
 
 func (f *fakeSession) record(c call) error {
@@ -60,21 +61,28 @@ func (f *fakeSession) GetJSON(_ context.Context, rawURL string, into any) error 
 	switch {
 	case strings.Contains(rawURL, "fields=trashed"):
 		return decodeInto(f.trashed, into)
-	case f.marked != nil && f.sentBatch():
+	case f.batches() == 0:
+		return decodeInto(f.read, into)
+	case f.batches() == 1 && f.taskRead != nil:
+		return decodeInto(f.taskRead, into)
+	case f.marked != nil:
 		return decodeInto(f.marked, into)
 	default:
 		return decodeInto(f.read, into)
 	}
 }
 
-// sentBatch says whether a batchUpdate was asked for before this read.
-func (f *fakeSession) sentBatch() bool {
+// batches is how many batchUpdates were asked for before this read. A publish
+// sends at most two, the tasks and then the marker, so the count is what says
+// which answer this read is.
+func (f *fakeSession) batches() int {
+	n := 0
 	for _, c := range f.calls {
 		if strings.HasSuffix(c.url, ":batchUpdate") {
-			return true
+			n++
 		}
 	}
-	return false
+	return n
 }
 
 func (f *fakeSession) PostJSON(_ context.Context, rawURL string, body any, into any) error {
@@ -210,7 +218,7 @@ func TestAPublishUploadsVerifiesAndReportsTheDocument(t *testing.T) {
 	if !rep.Verified {
 		t.Errorf("Verified is false on a run where all three routes held: %+v %v", rep.Checks, rep.Warnings)
 	}
-	want := Checks{ReadBack: true, OneTab: true, DocxExport: true}
+	want := Checks{ReadBack: true, OneTab: true, DocxExport: true, Tasks: true}
 	if rep.Checks != want {
 		t.Errorf("Checks = %+v, want %+v", rep.Checks, want)
 	}
@@ -649,7 +657,7 @@ func TestADocumentWithNoContentsListIsNotMarked(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if f.sentBatch() {
+	if f.batches() > 0 {
 		t.Error("the run sent a marker on a document with no contents list")
 	}
 	if rep.Marked {

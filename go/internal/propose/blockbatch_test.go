@@ -39,7 +39,7 @@ func checkGolden(t *testing.T, name string, raw []byte) {
 // TestABlockProposalNeedsNoGrant sends, read into paragraphs.
 func blockContent(t *testing.T) []Para {
 	t.Helper()
-	paras, err := ParseContent(testContent)
+	paras, err := ParseContent(testContent, "")
 	if err != nil {
 		t.Fatalf("parsing the content: %v", err)
 	}
@@ -120,7 +120,7 @@ func TestBlockBatchAfterTheLastParagraphRestatesNothingOnTheFinalMark(t *testing
 // package has. A run behind an emoji is two units further on than its bytes
 // say, and a mark written at the wrong offset lands on the wrong words.
 func TestBlockBatchCountsInUTF16CodeUnits(t *testing.T) {
-	content, err := ParseContent("Body 🤖 **bold** tail\n")
+	content, err := ParseContent("Body 🤖 **bold** tail\n", "")
 	if err != nil {
 		t.Fatalf("parsing the content: %v", err)
 	}
@@ -194,7 +194,7 @@ func TestBlockBatchClearsTheMarksTheInsertInherited(t *testing.T) {
 func TestBlockBatchRemovesBulletsFromItsOwnParagraphsOnly(t *testing.T) {
 	// A heading, a list, and a paragraph behind it, so the new paragraphs that
 	// are not list items are two stretches with the list between them.
-	content, err := ParseContent("## Limits\n\n- one\n- two\n\nAnd a closing line.\n")
+	content, err := ParseContent("## Limits\n\n- one\n- two\n\nAnd a closing line.\n", "")
 	if err != nil {
 		t.Fatalf("parsing the content: %v", err)
 	}
@@ -227,7 +227,7 @@ func TestBlockBatchRemovesBulletsFromItsOwnParagraphsOnly(t *testing.T) {
 // TestBlockBatchNumbersANumberedList is the other bullet preset. The two list
 // kinds are two presets, which is why the content carries the kind.
 func TestBlockBatchNumbersANumberedList(t *testing.T) {
-	content, err := ParseContent("1. first\n2. second\n")
+	content, err := ParseContent("1. first\n2. second\n", "")
 	if err != nil {
 		t.Fatalf("parsing the content: %v", err)
 	}
@@ -325,7 +325,7 @@ func buildLargest(t *testing.T, content string) []byte {
 	if len(content) > MaxContent {
 		t.Fatalf("the test content is %d bytes, past the limit of %d it is meant to sit at", len(content), MaxContent)
 	}
-	paras, err := ParseContent(content)
+	paras, err := ParseContent(content, "")
 	if err != nil {
 		t.Fatalf("parsing the content: %v", err)
 	}
@@ -377,4 +377,157 @@ func rangeIn(t *testing.T, req map[string]any, kind string) [2]int {
 		t.Fatalf("the %s names no range: %v", kind, body)
 	}
 	return [2]int{int(at["startIndex"].(float64)), int(at["endIndex"].(float64))}
+}
+
+// taskBlock is testTasks read into paragraphs, placed after the anchor every
+// other block test stands behind. The block goes in at 93: the first task
+// paragraph is 93..111 and the second 111..132, counted from the words and one
+// space per chip.
+func taskBlock(t *testing.T) (Placement, []Para) {
+	t.Helper()
+	content, err := ParseContent(testTasks, "")
+	if err != nil {
+		t.Fatalf("parsing the task content: %v", err)
+	}
+	place, err := PlaceAfter(document(t, "block-body.json"), "reviewed annually", content)
+	if err != nil {
+		t.Fatalf("placing the block: %v", err)
+	}
+	return place, content
+}
+
+// TestABlockTaskListIsACheckboxStretch is the preset a task list takes. One
+// request covers the whole stretch, because the two tasks are neighbours of
+// one kind, and BULLET_CHECKBOX is the one preset Docs draws a box for.
+func TestABlockTaskListIsACheckboxStretch(t *testing.T) {
+	place, content := taskBlock(t)
+	var found [][2]int
+	for _, r := range requestsOf(t, BlockBatch(place, content, nil, testWhy, "", "🤖")) {
+		body, ok := r["createParagraphBullets"].(map[string]any)
+		if !ok {
+			continue
+		}
+		if body["bulletPreset"] != "BULLET_CHECKBOX" {
+			t.Errorf("the preset is %v, want the checkbox one", body["bulletPreset"])
+		}
+		found = append(found, rangeIn(t, r, "createParagraphBullets"))
+	}
+	if len(found) != 1 || found[0] != [2]int{93, 132} {
+		t.Errorf("the checklist is %v, want one request over both task paragraphs 93..132", found)
+	}
+}
+
+// TestTheChipsGoLastFromTheLastToTheFirst is the order the chips rest on.
+//
+// Each chip is a unit the document did not have, so every index behind it
+// moves. They go last so that no index the rest of the batch names has moved
+// when it is used, and from the last paragraph to the first, and inside a
+// paragraph from the end back, so no index a later chip names has moved
+// either.
+func TestTheChipsGoLastFromTheLastToTheFirst(t *testing.T) {
+	content, err := ParseContent("- [ ] Confirm the bank @anna@example.com 2026-11-20\n- [ ] Confirm the licence @bob@example.com\n", "")
+	if err != nil {
+		t.Fatalf("parsing the task content: %v", err)
+	}
+	place, err := PlaceAfter(document(t, "block-body.json"), "reviewed annually", content)
+	if err != nil {
+		t.Fatalf("placing the block: %v", err)
+	}
+	reqs := requestsOf(t, BlockBatch(place, content, nil, testWhy, "", "🤖"))
+
+	// "Confirm the bank" is sixteen units at 93, so its two chips go at 110
+	// and 111, and the paragraph runs to 112. "Confirm the licence" is
+	// nineteen units at 112, so its one chip goes at 132.
+	type chip struct {
+		kind  string
+		index int
+	}
+	var got []chip
+	for i, r := range reqs {
+		for _, kind := range []string{"insertPerson", "insertDate"} {
+			body, ok := r[kind].(map[string]any)
+			if !ok {
+				continue
+			}
+			if i < len(reqs)-len(content)-2 {
+				t.Errorf("the %s at request %d of %d is not among the last of the batch", kind, i, len(reqs))
+			}
+			at := body["location"].(map[string]any)
+			got = append(got, chip{kind, int(at["index"].(float64))})
+		}
+	}
+	want := []chip{{"insertPerson", 132}, {"insertDate", 111}, {"insertPerson", 110}}
+	if len(got) != len(want) {
+		t.Fatalf("the batch carries %d chips, want %d: %+v", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("chip %d is %+v, want %+v", i, got[i], want[i])
+		}
+	}
+}
+
+// TestTheReplaceShiftIsUnchangedByChips is why the chips go after the
+// deletion. A replace deletes the old paragraphs at the indexes the insert
+// left them at, which is their own plus the length of the inserted text. A
+// chip inserted before that request would move them one unit further on, and
+// the deletion would take a character of the paragraph behind them.
+func TestTheReplaceShiftIsUnchangedByChips(t *testing.T) {
+	content, err := ParseContent(testTasks, "")
+	if err != nil {
+		t.Fatalf("parsing the task content: %v", err)
+	}
+	place, err := PlaceReplace(document(t, "block-body.json"), "reviewed annually", "risk matrix")
+	if err != nil {
+		t.Fatalf("placing the block: %v", err)
+	}
+	reqs := requestsOf(t, BlockBatch(place, content, nil, testWhy, "", "🤖"))
+
+	shift := utf16Len(layOutBlock(place, content).Text)
+	deletion, chips := -1, 0
+	for i, r := range reqs {
+		if _, ok := r["deleteContentRange"]; ok {
+			deletion = i
+			at := rangeIn(t, r, "deleteContentRange")
+			if at != [2]int{place.Delete.Start + shift, place.Delete.End + shift} {
+				t.Errorf("the deletion covers %v, want the old paragraphs moved by the inserted text alone", at)
+			}
+			continue
+		}
+		if _, ok := r["insertPerson"]; ok {
+			chips++
+			if deletion < 0 {
+				t.Error("a chip is sent before the deletion, so the old paragraphs have already moved under it")
+			}
+		}
+		if _, ok := r["insertDate"]; ok {
+			chips++
+			if deletion < 0 {
+				t.Error("a chip is sent before the deletion, so the old paragraphs have already moved under it")
+			}
+		}
+	}
+	if deletion < 0 || chips != 2 {
+		t.Fatalf("the batch carries %d chips and its deletion is at %d", chips, deletion)
+	}
+}
+
+// TestTheGuardCarriesATaskBatchAtLevelSuggest is the wire's side of the two
+// new request kinds. A chip is written into a document somebody handed in, so
+// the batch has to pass the real policy at the level a handed-in document is
+// held at: nothing in the guard names a request kind there, because the bound
+// is writeMode and every one of these is a suggestion somebody can reject.
+func TestTheGuardCarriesATaskBatchAtLevelSuggest(t *testing.T) {
+	place, content := taskBlock(t)
+	raw := BlockBatch(place, content, nil, testWhy, "", "🤖")
+
+	p := guard.NewPolicy()
+	p.AllowFile(testDocID, guard.LevelSuggest)
+	u, err := url.Parse(BatchURL(testDocID))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := p.Judge("POST", u, raw); err != nil {
+		t.Errorf("the guard refused a task block's batch at the level a handed-in document is held at: %v", err)
+	}
 }

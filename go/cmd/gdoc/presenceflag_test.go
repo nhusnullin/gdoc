@@ -30,13 +30,14 @@ import (
 // line `gdoc auth logout` adds to the table, re-taken twice in M32, for the
 // two lines `help --brief` adds to the help entry and for the flag line and
 // the example `comments --follow` moves, re-taken in M32a for the one line
-// `completion --loader` adds, re-taken in M32f for logo_path and re-taken in
-// M32h for logo_url. That is the only reason to re-take them: a command or a
-// flag a milestone adds names itself in this object, and pipe_test.go holds
-// the same exception over the goldens beside it.
+// `completion --loader` adds, re-taken in M32f for logo_path, re-taken in
+// M32h for logo_url and re-taken in M33 for the task notation, which is three
+// notes on publish and propose. That is the only reason to re-take them: a
+// command, a flag or a note a milestone adds names itself in this object, and
+// pipe_test.go holds the same exception over the goldens beside it.
 const (
-	helpObjectBytes  = 10112
-	helpObjectSHA256 = "baa223a7e54d88e3cd933c88db841db85872cffd9bc79e81253693e775f429f1"
+	helpObjectBytes  = 11303
+	helpObjectSHA256 = "31485358cdfcc5664fc2583e27baac7feb16077f1ad03dcc5ae4b0bcef6ddc09"
 )
 
 // frozenLogoPath stands in for where this machine caches the house logo. The
