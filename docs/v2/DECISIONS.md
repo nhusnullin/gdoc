@@ -123,6 +123,7 @@ replaced it)`, or `measured`. Nothing else.
 | 2026-11-05 | The watch posts the sign itself within seconds, and a reply sent from a draft is news when it is sent | holds | DECISIONS.md |
 | 2026-11-05 | A task in a note is a checklist item in the document, with a name chip and a date chip | holds | DECISIONS.md |
 | 2026-11-07 | Body text is 12pt whatever gdoc is doing: a block's new paragraphs take the house look restyle writes, and a block is at most five kilobytes | holds | DECISIONS.md |
+| 2026-11-22 | A skill offers to install gdoc when the machine has none, and signs in after | holds | DECISIONS.md |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -2233,3 +2234,37 @@ The pins: `TestBlockBatchWritesTheLookItIsHandedOnEveryNewParagraph`,
 `TestProposeWritesTheHouseBodyLookIntoABlock`.
 
 A domain choice with no principle above it: the house style, and Nail made it.
+
+## 2026-11-22. A skill offers to install gdoc when the machine has none, and signs in after.
+
+Nail's decision, taken in chat on the date above: "if gdoc is missing install
+from github then auth". The hub is a folder a team syncs, so a colleague has
+the skills the moment the folder arrives and may have no binary yet. Until now
+a skill on such a machine failed on its first call and said nothing a person
+could act on.
+
+**What a skill does now.** It looks for `gdoc` on PATH and then in
+`~/.local/bin`, where the release installer writes, because the installer
+never edits PATH. Finding none, it says so, asks, and on a yes runs the
+release installer with no flag, then `gdoc auth login`, then starts again. On
+a no it stops. The five skills say it in the same words.
+
+**What is unchanged.** `gdoc update` still runs when a person types it and
+never otherwise. The session runs the installer only where there is no gdoc
+to replace, and only after a yes. The binary still comes from a GitHub release
+checked against its checksum, and the token still lives beside the config and
+never in the hub.
+
+**The alternative, declined for now.** The binary carried in the hub itself,
+run in place or installed from there. It moves the source of the binary from a
+checked release to whoever can write to the synced folder, and whether a
+binary that arrives through the sync client runs at all is not measured.
+
+**Not tested.** No run on a machine without gdoc has been made. The tests
+below read the skills' words, not a session following them.
+
+The pins: `TestEverySkillOffersTheInstallWhenGdocIsMissing` and
+`TestAMissingGdocStepThatDoesNotAskIsCaught`.
+
+A domain choice with no principle above it: how a colleague gets the binary,
+and Nail made it.

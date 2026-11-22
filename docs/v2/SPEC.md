@@ -969,6 +969,11 @@ wrote, and an administrator names the same two keys in
 `managed-settings.json`. A checkout still links its skills and never copies
 them, and nothing in the binary copies a skill folder.
 
+**A skill offers the install when the machine has no gdoc.** It looks on PATH
+and then in `~/.local/bin`, and finding none it asks, runs the release
+installer with no flag on a yes, signs in with `gdoc auth login` and starts
+again (DECISIONS.md, 2026-11-22). It never replaces a gdoc that is there.
+
 **`gdoc update` installs when a person types it and never otherwise.** It reads
 one page of releases, asking for a hundred, because GitHub answers thirty by
 default and the nightly would push the last hand-cut stable release off a page

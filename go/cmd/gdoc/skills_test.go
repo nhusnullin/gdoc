@@ -1128,3 +1128,93 @@ func TestTheSvgRecipeIsOneFileAndThePublishSkillNamesIt(t *testing.T) {
 		t.Errorf("skills/gdoc-publish/SKILL.md names no %s, so a refused picture has no recipe to read", pictures)
 	}
 }
+
+// installLine is the one line a session may run to put gdoc on a machine that
+// has none: the release installer with no flag, which installs the binary and
+// touches no skill folder.
+const installLine = "curl -fsSL https://raw.githubusercontent.com/nhusnullin/gdoc/main/release/install.sh | bash"
+
+// missingGdocOpener is how the paragraph about a machine with no gdoc opens,
+// in every skill.
+const missingGdocOpener = "A shell that finds no `gdoc`"
+
+// missingGdocStep is the paragraph of one skill that says what a session does
+// when gdoc is not installed, with its line breaks folded, or what is wrong
+// with it.
+func missingGdocStep(src string) (string, error) {
+	var hits []string
+	for _, block := range strings.Split(src, "\n\n") {
+		folded := strings.Join(strings.Fields(block), " ")
+		if strings.HasPrefix(folded, missingGdocOpener) {
+			hits = append(hits, folded)
+		}
+	}
+	if len(hits) != 1 {
+		return "", fmt.Errorf("want one paragraph opening %q, found %d", missingGdocOpener, len(hits))
+	}
+	for _, must := range []string{
+		"ask before installing",
+		"On a yes",
+		"`~/.local/bin`",
+		"`$GDOC auth login`",
+		"On a no, stop.",
+	} {
+		if !strings.Contains(hits[0], must) {
+			return "", fmt.Errorf("the paragraph about a missing gdoc does not say %q", must)
+		}
+	}
+	return hits[0], nil
+}
+
+// A colleague who opens the hub has the skills before they have the binary.
+// Every skill looks for gdoc on PATH and then where the installer puts it,
+// asks before it installs, gives the installer alone on a line, and signs in
+// after, in the same words in each.
+func TestEverySkillOffersTheInstallWhenGdocIsMissing(t *testing.T) {
+	files, err := skillFiles(skillsDir)
+	if err != nil {
+		t.Fatalf("looking for the skills: %v", err)
+	}
+	if len(files) == 0 {
+		t.Fatalf("no SKILL.md under %s. A moved skills directory is a failure, not an empty pass", skillsDir)
+	}
+	steps := map[string][]string{}
+	for _, file := range files {
+		b, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatalf("reading %s: %v", file, err)
+		}
+		src := string(b)
+		lines := strings.Split(src, "\n")
+		if !slices.Contains(lines, installLine) {
+			t.Errorf("%s never gives the installer alone on a line, so a session on a machine with no gdoc has nothing to run", file)
+		}
+		if !slices.Contains(lines, `command -v gdoc >/dev/null || GDOC="$HOME/.local/bin/gdoc"`) {
+			t.Errorf("%s looks for gdoc on PATH only. The installer never edits PATH, so the skill also looks in ~/.local/bin", file)
+		}
+		step, err := missingGdocStep(src)
+		if err != nil {
+			t.Errorf("%s: %v", file, err)
+			continue
+		}
+		steps[step] = append(steps[step], file)
+	}
+	if len(steps) > 1 {
+		t.Errorf("the skills say what to do about a missing gdoc in %d different ways. One paragraph, in the same words in each", len(steps))
+	}
+}
+
+// The installer line a session may run is the plain one. A skill that asked a
+// session to install without asking the person first has to be refused.
+func TestAMissingGdocStepThatDoesNotAskIsCaught(t *testing.T) {
+	// Arrange
+	src := "A shell that finds no `gdoc` means it is not installed. Run the\nline below, then `$GDOC auth login`. It lands in `~/.local/bin`.\n"
+
+	// Act
+	_, err := missingGdocStep(src)
+
+	// Assert
+	if err == nil || !strings.Contains(err.Error(), "ask before installing") {
+		t.Errorf("want the step refused for not asking, got %v", err)
+	}
+}

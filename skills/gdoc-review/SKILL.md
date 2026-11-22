@@ -27,11 +27,20 @@ Google suggestion with a comment explaining why. Never edit the document.
 
 ```bash
 GDOC=gdoc
+command -v gdoc >/dev/null || GDOC="$HOME/.local/bin/gdoc"
 ROOT="$PWD"
 $GDOC help --brief --json
 ```
 
 If it is refused, run `$GDOC help --json` instead.
+
+A shell that finds no `gdoc` means it is not installed. Say so and ask before
+installing. On a yes, run the line below, which puts one binary in
+`~/.local/bin`, then `$GDOC auth login`, then start again. On a no, stop.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nhusnullin/gdoc/main/release/install.sh | bash
+```
 
 `gdoc` is the v2 binary, on PATH. It prints exactly one JSON object and exits.
 Exit 0 means the object says `ok`. Read the object, never the exit code alone.
