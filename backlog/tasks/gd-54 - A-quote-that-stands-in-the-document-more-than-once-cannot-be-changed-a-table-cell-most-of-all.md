@@ -3,9 +3,10 @@ id: GD-54
 title: >-
   A quote that stands in the document more than once cannot be changed, a table
   cell most of all
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-11-28T12:09:00Z'
+updated_date: '2026-11-28T12:24:00Z'
 labels: []
 dependencies:
   - GD-4
@@ -25,8 +26,14 @@ Design: an entry may carry a second field, the surrounding words as gdoc read pr
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 A words proposal into one of two table cells with the same text lands in the cell the surrounding words name, as a suggestion and in edit mode
-- [ ] #2 Surrounding words that stand twice, or hold the quote twice, are refused by name
-- [ ] #3 The refusal for a repeated quote says how to name the place, and the gdoc-review skill says the same
+- [x] #1 A words proposal into one of two table cells with the same text lands in the cell the surrounding words name, as a suggestion and in edit mode
+- [x] #2 Surrounding words that stand twice, or hold the quote twice, are refused by name
+- [x] #3 The refusal for a repeated quote says how to name the place, and the gdoc-review skill says the same
 - [ ] #4 Nail sees it on a real document: the three cells of the M2 note changed without his hands
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+PR open. near is the field. The trust guardian signed it (sentence in DECISIONS.md). An independent review found three read-back faults, fixed in the second commit. Codex review was refused by the permission system as external communication. Not yet seen in a document: the three cells of the M2 note.
+<!-- SECTION:NOTES:END -->
