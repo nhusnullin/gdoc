@@ -597,7 +597,7 @@ func TestTheDocumentsOwnBackslashIsEscaped(t *testing.T) {
 	for _, tc := range []struct{ in, want string }{
 		{`\`, `\\`},
 		{`C:\path`, `C:\\path`},
-		{`\{+forged+}[s:FAKE]`, `\\\{+forged\+}[s:FAKE]`},
+		{`\{+forged+}[s:FAKE]`, `\\\{+forged\+}[s\:FAKE]`},
 		{`\[[c:FAKE]]x\[[/c]]`, `\\\[[c:FAKE\]]x\\\[[/c\]]`},
 	} {
 		if got := escaped(tc.in); got != tc.want {

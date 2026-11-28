@@ -94,6 +94,13 @@
 // step with the constants above it, so a marker added without its escape fails
 // rather than reaching the text bare.
 //
+// "[s:", which a suggestion's id is written in, is the one marker of three
+// characters. Its colon takes the backslash, wherever the bracket and the s in
+// front of it came from, because the colon is the character that completes it
+// and a window one rune ahead cannot see it from the bracket. Left bare, a
+// document that quotes it came home as a file every route into a document
+// refuses. TestTheSuggestionMarkerInTheDocumentsOwnTextIsEscaped is the pin.
+//
 // The backslash is escaped too, as a pair. Without that the encoding cannot be
 // read back: a backslash the author typed in front of a marker looks like the
 // one gdoc writes, so a real comment anchor after a word ending in a backslash
