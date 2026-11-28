@@ -196,6 +196,17 @@ window can carry a comment gdoc already acted on. Run the check from Step 2
 before acting: `$GDOC suggestions <url>` and the paired note's `proposals`. When
 the work is already there, write the missing receipt rather than doing it twice.
 
+## A live review in edit mode
+
+A live review writes suggestions unless the person started it in edit mode, in
+words. Then every words change a marked comment asks for goes out with `--edit`,
+as "Edit mode" in `SKILL.md` says. Say so once when the watch starts: every
+marked comment, from anyone, now changes words directly, and the new words show
+yellow. Each edit gets its receipt in its thread, with the old words.
+
+At the stop, say how many edits were made, and that `gdoc seen` takes the
+yellow off once they have been read. Do not run it yourself.
+
 ## Stop, and the totals
 
 You stop it with Ctrl-C or by saying stop, and the person can stop it from

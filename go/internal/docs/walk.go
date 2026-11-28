@@ -381,13 +381,46 @@ type rawSuggested struct {
 }
 
 type rawTextRun struct {
-	Content   string `json:"content"`
-	TextStyle struct {
-		Link            *rawLink   `json:"link"`
-		BackgroundColor *rawColour `json:"backgroundColor"`
-		ForegroundColor *rawColour `json:"foregroundColor"`
-	} `json:"textStyle"`
+	Content   string       `json:"content"`
+	TextStyle rawTextStyle `json:"textStyle"`
 	rawSuggested
+}
+
+// rawTextStyle is the three style fields a read names, and the whole style
+// beside them as one comparable string.
+type rawTextStyle struct {
+	Link            *rawLink   `json:"link"`
+	BackgroundColor *rawColour `json:"backgroundColor"`
+	ForegroundColor *rawColour `json:"foregroundColor"`
+	look            string
+}
+
+// UnmarshalJSON reads the named fields and keeps the look: every field of the
+// style except the background, with its keys in one order. Two runs with one
+// look are styled alike apart from a highlight, which is the question an edit
+// asks before it writes and again when it reads back. It names no field, so a
+// style property Docs adds later is compared without being decoded.
+func (s *rawTextStyle) UnmarshalJSON(b []byte) error {
+	type plain rawTextStyle
+	var p plain
+	if err := json.Unmarshal(b, &p); err != nil {
+		return err
+	}
+	*s = rawTextStyle(p)
+	var all map[string]any
+	if err := json.Unmarshal(b, &all); err != nil {
+		return err
+	}
+	delete(all, "backgroundColor")
+	if len(all) == 0 {
+		return nil
+	}
+	look, err := json.Marshal(all)
+	if err != nil {
+		return err
+	}
+	s.look = string(look)
+	return nil
 }
 
 // rawColour is the API's OptionalColor: a colour, or the field stated with no
@@ -611,6 +644,7 @@ func run(e rawParaElement, objs map[string]rawInlineObject) Run {
 		r.Text = e.TextRun.Content
 		r.Link = e.TextRun.TextStyle.Link.link()
 		r.Background = e.TextRun.TextStyle.BackgroundColor.hex()
+		r.Look = e.TextRun.TextStyle.look
 		r.Colour = e.TextRun.TextStyle.ForegroundColor.hex()
 		r.InsertionIDs, r.DeletionIDs = e.TextRun.ids()
 	case e.InlineObjectElement != nil:

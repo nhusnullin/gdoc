@@ -221,7 +221,7 @@ func TestTheUsageLineNamesEveryCommand(t *testing.T) {
 	}
 	msg, _ := got["error"].(string)
 	for _, command := range []string{"auth status", "auth login", "auth logout", "read", "comments",
-		"suggestions", "export", "restyle", "probe", "reply", "propose", "withdraw", "annotate", "build",
+		"suggestions", "export", "restyle", "probe", "reply", "propose", "withdraw", "seen", "annotate", "build",
 		"publish", "update", "mcp", "help", "completion"} {
 		if !strings.Contains(msg, command) {
 			t.Errorf("the usage line must name %q: %q", command, msg)

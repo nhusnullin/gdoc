@@ -29,7 +29,7 @@ var flagsNeverOffered = map[string][]string{
 	"suggestions": {"--md"},
 	"reply":       {"--body-file"},
 	"annotate":    {"--quote", "--body-file"},
-	"propose":     {"--md", "--folder"},
+	"propose":     {"--md", "--folder", "--edit"},
 }
 
 // propertiesThatMapToNoFlag are the properties that fill nothing on the line,

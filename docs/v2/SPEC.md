@@ -273,8 +273,18 @@ Serves principle 3. This is the safety property everything else stands on.
   set cannot grow through it. Added 2026-10-17, DECISIONS.md.
 - **Every id carries a write level:** an id learned from a create is fully
   writable, because gdoc made it; a handed-in id is read and suggest only, never
-  direct-editable; and the styling grant is the one exception, given for one id
-  and one run, never inherited and never remembered.
+  direct-editable; and two grants are the exceptions, each given for one id
+  and one run, never inherited and never remembered: the styling grant, and
+  the edit grant below.
+- **The edit level is two exact grammars over granted spans.** `GrantEdit`
+  raises one handed-in id for one run, for `propose --edit` and `seen` and
+  nothing else. A batch there is an edit, which deletes one span, inserts
+  words at its start and paints exactly those words `#FFF59D`, or a clear,
+  which sets the background of spans to no colour. The command grants the
+  spans it found in its own read, with that read's revision, through
+  `AllowEditSpans`, and the guard refuses any other span, any other revision,
+  a segment, a tab, and every other request kind, a suggestion batch included.
+  Added 2026-11-28, DECISIONS.md.
 - **Seven grants stand beside the set**, each naming one object for one run,
   never inherited and nowhere written down: `AllowCreateIn`, `AllowReject`,
   `AllowCopy`, `AllowMarker`, `AllowUpdateFrom`, `AllowAccountRead` and
@@ -513,6 +523,28 @@ the read-back above, and the run stops at the first proposal either the inline
 read or the preview read cannot confirm. On a handed-in id this is the only
 write level the guard allows, which is the point, and an `assigneeEmailAddress`
 may be set when the skill knows who should answer.
+
+**Edit mode.** With `--edit` nothing is proposed. Each words entry replaces
+its quote in the document itself, the new words are painted the edit yellow
+`#FFF59D`, and no comment is left. The flag is on the command line or nowhere,
+it takes no `--md`, and `gdoc mcp` never offers it. An entry that is a block, a
+quote that already carries a background or a link, and a quote at a style edge
+are refused, and stay suggestions in a run without the flag. Each edit is sent
+against the revision it was read in and is never retried; it is read back as
+written, painted, not pending, and in the look of the words it replaced. The
+envelope carries `mode: "edit"` and one entry under `edits` per entry in the
+file. Added 2026-11-28, DECISIONS.md.
+
+### `seen`
+
+`gdoc seen <url>` takes the edit yellow off every body run that carries
+exactly that colour, in one batch, and changes no character. It takes no quote
+and no range: what it clears is what its own read found. A highlight of any
+other colour stays, the house yellow included, and so does a yellow run inside
+a pending suggestion, which it counts under `pending`. It reports `cleared`,
+`left` and `verified`, which is true when no yellow run is left and the text
+read back is the text read before. A person asks for it once the edits are
+read; no skill runs it unasked. Added 2026-11-28, DECISIONS.md.
 
 **One writer per document.** Work fans out across documents freely, and replies
 within one document may run in parallel, because they target thread ids rather
@@ -1251,7 +1283,10 @@ The hard list, transport-enforced where the guard can reach it and a skill rule
 where it cannot.
 
 - Never direct-edit a document gdoc did not create, **except the one document a
-  restyle was granted, for the one run it was granted in**. Guard-enforced both
+  restyle or an edit run was granted, for the one run it was granted in**. The
+  edit grant is the person's own word for edit mode, carried as `--edit` or
+  `seen` on the command line, and it opens words for words painted yellow, or
+  that yellow cleared, over spans the command read. Added 2026-11-28. Guard-enforced both
   ways: a handed-in id refuses a direct edit, and the grant raises one id to the
   styling level, where four styling request kinds carry, anything else is refused
   whatever it is called, and none of the four can change a character.

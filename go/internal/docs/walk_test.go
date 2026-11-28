@@ -836,3 +836,26 @@ func TestADateChipCarriesItsTimestampAndZone(t *testing.T) {
 		t.Errorf("the chip's label = %q, want Sep 9, 2026", got.Label)
 	}
 }
+
+// TestARunKeepsItsLookWithoutTheBackground: two runs styled alike apart from a
+// highlight carry one look, and a run that is bold carries another. An edit
+// asks that before it writes, so its new words take the look of the old ones.
+func TestARunKeepsItsLookWithoutTheBackground(t *testing.T) {
+	raw := `{"documentId":"D","revisionId":"R","tabs":[{"tabProperties":{"tabId":"t.0"},"documentTab":{"body":{"content":[{"paragraph":{"elements":[
+	 {"startIndex":1,"endIndex":6,"textRun":{"content":"plain","textStyle":{}}},
+	 {"startIndex":6,"endIndex":12,"textRun":{"content":"yellow","textStyle":{"backgroundColor":{"color":{"rgbColor":{"red":1,"green":1}}}}}},
+	 {"startIndex":12,"endIndex":16,"textRun":{"content":"bold","textStyle":{"bold":true}}},
+	 {"startIndex":16,"endIndex":22,"textRun":{"content":"marked","textStyle":{"backgroundColor":{},"bold":true}}}
+	]}}]}}}]}`
+	d, err := Parse([]byte(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	runs := d.Tabs[0].Body[0].Paragraph.Runs
+	if runs[0].Look != "" || runs[1].Look != "" {
+		t.Errorf("a plain run and a highlighted one carry the looks %q and %q, want both empty", runs[0].Look, runs[1].Look)
+	}
+	if runs[2].Look == "" || runs[2].Look != runs[3].Look {
+		t.Errorf("two bold runs carry the looks %q and %q, want one look that is not empty", runs[2].Look, runs[3].Look)
+	}
+}

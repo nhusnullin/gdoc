@@ -48,6 +48,7 @@ earlier sections are frozen in [MEASURED-archive.md](MEASURED-archive.md).
 | 2026-11-05 | Checklists, person chips and date chips, direct and suggested | MEASURED.md |
 | 2026-11-06 | A person chip naming another address mails and shares with nobody | MEASURED.md |
 | 2026-11-07 | A block's suggestion ids with the house look, and at the end of a document | MEASURED.md |
+| 2026-11-28 | A painted direct edit, a stale revision, and two ways to clear a highlight | MEASURED.md |
 
 A measurement is never edited to match a later reading; a different answer is a
 new section in this file rather than a change in the archive, and the old one
@@ -1104,3 +1105,33 @@ block there: its setup left the empty paragraph a new document starts with
 behind the five it wrote. Ask again when a fix for
 `docs/backlog/a-block-at-the-end-of-a-document-is-not-one-suggestion.md` is
 tried.
+
+## A painted direct edit, a stale revision, and two ways to clear a highlight
+
+2026-11-28, `TestLiveEditModeProbe`. How taken: the real token, one document
+created in the Drive test folder and trashed after, holding three paragraphs
+with one run painted the house yellow `#FFD500`. Every write went out as a
+plain `batchUpdate`, not SUGGEST, and after each one the document was read with
+suggestions inline and every run was printed with its background.
+
+| Asked | Answer |
+|---|---|
+| One batch: delete a span, insert words at its start, paint exactly the insertion `#FFF59D`, with `requiredRevisionId` from the read just made | carried. The run read back is exactly the inserted words, its background reads `#FFF59D`, and no run carries a suggestion id |
+| The same shape with the revision the document had before that edit | refused: "The required revision ID ... does not match". The document read after it is unchanged, revision included |
+| `updateTextStyle` with `fields: backgroundColor` and an empty `textStyle` | the background is gone |
+| `updateTextStyle` with `fields: backgroundColor` and `textStyle: {backgroundColor: {}}` | the background is gone, the same |
+| The house yellow run, after both clears of the other span | still `#FFD500` |
+
+The colour comes back as the hex that was sent: the channels are sent as a
+byte over 255 and read back to the same byte. gdoc sends the second clear
+spelling, because the field is set rather than left out.
+
+`TestLiveEditModeWritesPaintsAndClears` then ran the production writer through
+the real guard at the edit level: one edit verified, a SUGGEST batch on the
+same policy was refused in the process, and the clear took the edit yellow off
+and left the house yellow on its run.
+
+Not asked: what style inserted words take at a bold edge or behind a link.
+gdoc refuses an edit there instead. Ask it when somebody wants those edits.
+Not asked either: what a direct edit does to a comment anchored on the words
+it replaces.

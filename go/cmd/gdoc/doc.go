@@ -87,9 +87,13 @@
 //     internal/probe.
 //   - reply <url> <comment id> --body | --body-file: one reply under the mark
 //     in effect, its words on the line or in a file. internal/reply.
-//   - propose <url> --from [--md] [--folder]: a change as a suggestion, either
-//     words inside one paragraph or a block of new paragraphs.
-//     internal/propose. A block may hold a task list, and this room puts the
+//   - propose <url> --from [--md] [--folder] [--edit]: a change as a
+//     suggestion, either words inside one paragraph or a block of new
+//     paragraphs. internal/propose. With --edit, which only the command line
+//     can say, each words entry is written directly and painted yellow
+//     instead, through the edit level in internal/guard and the writer in
+//     internal/edit: TestEditModeIsOnlyTheFlagOnTheLine and
+//     TestProposeEditWritesTheWordsDirectlyAndPaintsThem. A block may hold a task list, and this room puts the
 //     domain in effect on every entry of the file, so a bare "@anna" owner is
 //     finished where there is a domain and the run is refused by name where
 //     there is none, before the session is opened:
@@ -97,6 +101,9 @@
 //     TestTheTerminalRefusesABareOwnerWithNoDomain.
 //   - withdraw <url> <suggestion id> --md: gdoc taking back its own proposal.
 //     internal/withdraw.
+//   - seen <url>: the edit yellow taken off every direct edit, with no word
+//     changed and no quote taken from the caller. internal/edit.
+//     TestSeenTakesTheYellowOffAndChangesNoWord.
 //   - annotate <url> --quote | --from [--body-file]: a comment on the words a
 //     caller quotes, and nothing else. internal/annotate.
 //   - build --md --out [--house] [--force]: the house-style docx, no network
@@ -225,8 +232,8 @@
 // TestAReportingCommandWritesAStartAndAnEnd, TestAnAuthStatusRunWritesNoEvent,
 // TestAHelpRunWritesNoEvent, TestAnUpdateAndALoginWriteNoDoc and
 // TestLogoutWritesAStartAndAnEndWithNoDoc. readsBack is
-// on for the five writers that confirm their own write, reply, propose,
-// withdraw, annotate and publish, and it is the only thing that lets a
+// on for the six writers that confirm their own write, reply, propose,
+// withdraw, seen, annotate and publish, and it is the only thing that lets a
 // verified reach the record, because update and restyle print verified: false
 // to mean no write happened and that must never be kept as a failed read-back:
 // TestOnlyTheReadBackWritersCarryVerified.

@@ -1,4 +1,4 @@
-┌─ gdoc v2.9.0 ────────────────────────────────────────────────── 19 commands ─┐
+┌─ gdoc v2.9.0 ────────────────────────────────────────────────── 20 commands ─┐
 │ Usage  gdoc <command> [words] [flags]                                        │
 │ ▸ gdoc v2.10.0 is published and this is v2.9.0. gdoc update installs it.     │
 ├─ Read ────────────────┬──────────────────────────────────────────────────────┤
@@ -18,6 +18,8 @@
 │                       │ comment that says why.                               │
 │ withdraw              │ Take back one pending suggestion, and only one gdoc  │
 │                       │ proposed itself.                                     │
+│ seen                  │ Take the yellow off every direct edit gdoc made,     │
+│                       │ once you have read them. No word changes.            │
 │ annotate              │ Leave a comment on the exact words you quote, under  │
 │                       │ your mark, changing nothing.                         │
 ├─ Make a doc ──────────┼──────────────────────────────────────────────────────┤

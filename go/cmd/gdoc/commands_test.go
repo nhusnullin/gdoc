@@ -124,6 +124,7 @@ func TestEveryFlagIsReadTheWayItsKindSays(t *testing.T) {
 				jsonFlag:   "a.has(jsonFlag)",
 				briefFlag:  "a.has(briefFlag)",
 				loaderFlag: "a.has(loaderFlag)",
+				editFlag:   "a.has(editFlag)",
 			}
 			presence := strings.Contains(source, `a.has("`+f.name+`")`) ||
 				(named[f.name] != "" && strings.Contains(source, named[f.name]))

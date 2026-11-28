@@ -21,7 +21,7 @@ Two rules about the documents themselves:
 | Path | Holds |
 |---|---|
 | `go/` | the binary. One Go module, three dependencies, `gdoc` on PATH |
-| `go/cmd/gdoc/` | the entry point, the seventeen commands plus `help` and `completion`, and the one table that describes them. Arguments in, one JSON object out, exit. `mcp*.go` is the one command that is a session instead, and `desktop.go` the Claude Desktop extension |
+| `go/cmd/gdoc/` | the entry point, the eighteen commands plus `help` and `completion`, and the one table that describes them. Arguments in, one JSON object out, exit. `mcp*.go` is the one command that is a session instead, and `desktop.go` the Claude Desktop extension |
 | `go/internal/mcp/` | the Model Context Protocol over stdio, by hand: the framing, the four methods, the tools, the deadline. It knows no command |
 | `go/internal/chat/` | what a chat adds to a command: the guide code, the labels and facts on a read, the ledger of this process, the hold rules, the card, the write memory |
 | `go/internal/emit/` | the output envelope every command prints through |
@@ -42,6 +42,7 @@ Two rules about the documents themselves:
 | `go/internal/reply/` | one robot reply into a thread, and the thread read back |
 | `go/internal/propose/`, `go/internal/withdraw/` | a change as a suggestion, its comment, and the three read-backs; and gdoc taking back one of its own pending proposals |
 | `go/internal/annotate/` | a comment on the words a caller quotes, anchored, and nothing else |
+| `go/internal/edit/` | words written directly and painted yellow, under `propose --edit`, and the yellow cleared by `seen` |
 | `go/internal/publish/` | the upload with conversion, and the three read-backs on what came out |
 | `go/internal/export/`, `go/internal/markers/` | a Google Doc as Markdown in the hub: one file per tab, the house prelude taken out, the pictures beside it, and nothing replaced; and the eight openers gdoc writes into a file, so no route into a document carries one back |
 | `go/internal/restyle/` | the survey, and the house look applied where the document stands |
@@ -100,18 +101,19 @@ into `docs/v2/DECISIONS.md`, not a refactor.
   `TestAllowCreateInDoesNotAdmitTheFolder`, `TestCreateTeachesThePolicy` and
   `TestTheAssetGrantAdmitsNoDocument`.
 - **Every change inside a handed-in document is a suggestion**, refused in the
-  process unless the body says `writeMode: SUGGEST`:
+  process unless the body says `writeMode: SUGGEST`, or a grant below opened it:
   `TestAHandedInDocumentIsNeverDirectlyEditedWithoutTheGrant`.
-- **The one door in that wall is `Policy.GrantInPlace`**, which raises one id for
-  one run to four styling request kinds, none of which can change a character.
-  It never narrows: an id already at the full level, which only a create the
-  guard itself carried gives, is left there and the call is noted:
-  `TestNothingAtLevelInPlaceCanChangeACharacter` and
-  `TestGrantInPlaceLeavesACreatedDocumentAtFull`.
+- **Two doors in that wall, each one id for one run.** `Policy.GrantInPlace`
+  opens four styling request kinds, none of which can change a character, and
+  never narrows an id at the full level. `Policy.GrantEdit`, for `propose
+  --edit` and `seen` and never `gdoc mcp`, opens two exact grammars over spans
+  the command read at the required revision, words replaced and painted yellow
+  or that yellow cleared: `TestNothingAtLevelInPlaceCanChangeACharacter`,
+  `TestAnEditDeletesOnlyAGrantedSpan` and `TestGrantEditHasTwoCallers`.
 - **A grant names one object and dies with the process.** `AllowCreateIn`,
   `AllowReject`, `AllowCopy`, `AllowMarker`, `AllowUpdateFrom`, `AllowAsset`,
-  `AllowAccountRead`, called by `gdoc mcp`'s `login` and `auth status`, and
-  `GrantInPlace` are per-run, and nothing writes one down:
+  `AllowAccountRead`, called by `gdoc mcp`'s `login` and `auth status`,
+  `AllowEditSpans`, `GrantEdit` and `GrantInPlace` die with the run, unwritten:
   `TestAGrantedRejectSuggestionCarriesAndNothingElseInTheFamilyDoes`,
   `TestTheAccountGrantDiesWithThePolicy` and
   `TestTheAssetGrantDiesWithThePolicy`.
@@ -279,16 +281,14 @@ variable. CI runs gofmt, vet, the raced suite and `make dist` on every push.
 
 ## Dev cycle
 
-Work lives in Backlog.md, as in Etude (Nail, 2026-11-28): run `backlog
-instructions overview` at the start of a session. One task, one branch, one PR,
-and the Compound Engineering loop per task. The umputun plugins are off in
-`.claude/settings.json`. `docs/team/lead.md` holds the rest.
+Work lives in Backlog.md (Nail, 2026-11-28): run `backlog instructions overview`
+first. One task, one branch, one PR. `docs/team/lead.md` holds the rest.
 
 ## Never
 
-- Never edit a reviewed Google Doc, except the one document a restyle was
-  granted, for the one run it was granted in. Widening that door, by another
-  request kind or by a second call site, is Nail's decision and not a refactor.
+- Never edit a reviewed Google Doc, except the one document a restyle or an
+  edit run was granted, for that one run. Widening either door, by a request
+  kind, a grammar or a call site, is Nail's decision and not a refactor.
 - Never make a test pass by loosening an assertion about what the credential can
   reach or what a guard refuses. A refused call usually means the command did
   not say which document it was for.
