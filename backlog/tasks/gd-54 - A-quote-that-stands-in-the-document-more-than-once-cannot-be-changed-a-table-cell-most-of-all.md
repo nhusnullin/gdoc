@@ -3,10 +3,10 @@ id: GD-54
 title: >-
   A quote that stands in the document more than once cannot be changed, a table
   cell most of all
-status: In Progress
+status: To check
 assignee: []
 created_date: '2026-11-28T12:09:00Z'
-updated_date: '2026-11-28T12:24:00Z'
+updated_date: '2026-11-28T12:34:00Z'
 labels: []
 dependencies:
   - GD-4

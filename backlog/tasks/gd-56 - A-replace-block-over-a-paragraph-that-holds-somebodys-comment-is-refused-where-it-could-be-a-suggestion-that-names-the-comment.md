@@ -3,10 +3,10 @@ id: GD-56
 title: >-
   A replace block over a paragraph that holds somebody's comment is refused,
   where it could be a suggestion that names the comment
-status: In Progress
+status: To check
 assignee: []
 created_date: '2026-11-28T12:14:00Z'
-updated_date: '2026-11-28T12:30:00Z'
+updated_date: '2026-11-28T12:34:00Z'
 labels: []
 dependencies: []
 ordinal: 56000
