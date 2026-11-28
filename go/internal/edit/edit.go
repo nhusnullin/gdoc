@@ -212,9 +212,17 @@ func ground(d *docs.Document, r docs.Range) (string, error) {
 		}
 	}
 	// Docs gives inserted text the style of its neighbour, so the neighbour
-	// has to be styled like the words that go.
-	neighbour := before
-	if neighbour == nil {
+	// has to be styled like the words that go. The neighbour is the character
+	// beside the quote: where the quote starts part way into a run, that
+	// character is in the run and already has its look, and an earlier run
+	// has nothing to say. The run behind is asked only where nothing stands
+	// in front, and only where the quote reaches the end of its own run.
+	var neighbour *docs.Run
+	switch {
+	case inside[0].StartIndex < r.Start:
+	case before != nil:
+		neighbour = before
+	case inside[len(inside)-1].EndIndex <= r.End:
 		neighbour = behind
 	}
 	if neighbour != nil && neighbour.Kind == docs.KindText && (neighbour.Look != look || neighbour.Link != nil) {
@@ -235,11 +243,9 @@ func readBack(d *docs.Document, r docs.Range, replacement, look string) (Checks,
 			if run.EndIndex <= r.Start || run.StartIndex >= end || run.Kind != docs.KindText {
 				continue
 			}
-			if run.StartIndex < r.Start || run.EndIndex > end {
-				// A run that reaches past the insertion was not cut where the
-				// paint ends, so the paint is not exactly on the new words.
-				painted = false
-			}
+			// A run may reach past the insertion: Docs joins the new words to
+			// a neighbour of the same style, a passage an earlier edit painted
+			// among them. So only the part inside the insertion is asked about.
 			got.WriteString(clip(run, r.Start, end))
 			pending = pending || len(run.InsertionIDs) > 0 || len(run.DeletionIDs) > 0
 			painted = painted && strings.EqualFold(run.Background, Yellow)

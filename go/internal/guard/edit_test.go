@@ -152,6 +152,12 @@ func TestAnEditInsertsWordsInsideOneParagraph(t *testing.T) {
 	refusedEdit(t, editing(t), editBatch(editRevision, 5, 14, "two\nlines", 5, 14, editYellowJSON), "an insert carrying a paragraph mark")
 	refusedEdit(t, editing(t), editBatch(editRevision, 5, 14, "a\vb", 5, 8, editYellowJSON), "an insert carrying a line break")
 
+	// Docs strips a private-use character on insert, so two units sent are one
+	// unit stored and the paint would cover a character nobody inserted.
+	refusedEdit(t, editing(t), editBatch(editRevision, 5, 14, "\ue000x", 5, 7, editYellowJSON), "an insert carrying a character Docs strips")
+	half := []byte(strings.Replace(string(editBatch(editRevision, 5, 14, "Zx", 5, 7, editYellowJSON)), `"text":"Zx"`, `"text":"\ud83dx"`, 1))
+	refusedEdit(t, editing(t), half, "an insert carrying half a surrogate pair")
+
 	elsewhere := []byte(strings.Replace(string(goodEdit()), `{"index":5}`, `{"index":6}`, 1))
 	refusedEdit(t, editing(t), elsewhere, "an insert away from the start of the delete")
 }

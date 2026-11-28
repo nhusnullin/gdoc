@@ -203,6 +203,36 @@ func TestAnEditSpanCarryingABackgroundOrStyleEdgeIsRefused(t *testing.T) {
 	}
 }
 
+// A quote part way into a plain run is plain ground, whatever the run before
+// that one looks like: the character in front of the quote is in its own run.
+func TestTheNeighbourIsTheCharacterBesideTheQuote(t *testing.T) {
+	before := document("REV1", []piece{{"Title: ", `{"bold":true}`}, {"The old words stay here.\n", ""}})
+	after := document("REV2", []piece{{"Title: ", `{"bold":true}`}, {"The ", ""}, {"new words", yellowJS}, {" stay here.\n", ""}})
+	f := &fakeSession{reads: [][]byte{before, after}}
+	res, err := Apply(context.Background(), f, testDocID, change, nil, mark, func(string, []Span) {})
+	if err != nil || !res.Verified {
+		t.Fatalf("a quote inside a plain run behind a bold one may be edited, got %+v, %v", res, err)
+	}
+	// The quote at the very start of its run, behind a bold run, is at an edge.
+	atEdge := document("REV1", []piece{{"Title: ", `{"bold":true}`}, {"old words stay here.\n", ""}})
+	g := &fakeSession{reads: [][]byte{atEdge}}
+	if _, err := Apply(context.Background(), g, testDocID, change, nil, mark, func(string, []Span) {}); err == nil {
+		t.Fatal("a quote that starts where bold text ends is at a style edge and must be refused")
+	}
+}
+
+// Docs joins runs of one style, so new words written beside a passage an
+// earlier edit painted come back inside one yellow run that starts before them.
+func TestAnEditBesideAnEarlierYellowPassageStillVerifies(t *testing.T) {
+	before := document("REV1", []piece{{"The ", ""}, {"new ", yellowJS}, {"old words stay here.\n", ""}})
+	after := document("REV2", []piece{{"The ", ""}, {"new new words", yellowJS}, {" stay here.\n", ""}})
+	f := &fakeSession{reads: [][]byte{before, after}}
+	res, err := Apply(context.Background(), f, testDocID, change, nil, mark, func(string, []Span) {})
+	if err != nil || !res.Verified {
+		t.Fatalf("an edit beside an earlier yellow passage must verify, got %+v, %v", res, err)
+	}
+}
+
 func TestAnEditAnswerNamingNoRevisionStopsTheRun(t *testing.T) {
 	f := &fakeSession{reads: [][]byte{document("", []piece{{"The old words stay here.\n", ""}})}}
 	if _, err := Apply(context.Background(), f, testDocID, change, nil, mark, func(string, []Span) {}); err == nil {

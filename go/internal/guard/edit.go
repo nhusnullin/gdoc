@@ -200,6 +200,14 @@ func judgeEdit(reqs []map[string]json.RawMessage, granted *editGrant) error {
 		if r < 0x20 || r == 0x7F || r == 0x2028 || r == 0x2029 {
 			return refuse("an edit inserts words inside one paragraph, and this text carries U+%04X", r)
 		}
+		// Docs strips a private-use character out of an inserted text, and
+		// a text that cannot be read as Unicode decodes to U+FFFD here while
+		// the server reads its own bytes. Either way the units counted below
+		// would not be the units that land, and the paint would reach a
+		// character this batch did not insert.
+		if (r >= 0xE000 && r <= 0xF8FF) || r == 0xFFFD || r == 0xFFFE || r == 0xFFFF {
+			return refuse("an edit's text carries U+%04X, which Docs may not store as sent, so the paint could not be held to the insertion", r)
+		}
 	}
 	units := len(utf16.Encode([]rune(text)))
 	if units > editCeiling {
