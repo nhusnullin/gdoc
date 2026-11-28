@@ -172,7 +172,7 @@ The placement refusals are the other half, and each says what would work:
 | a quote that is not there exactly once | the same rule `quoted` has: quote more of the sentence |
 | `replace_to` before `replace_from` | the run would read backwards |
 | an anchor inside a table cell | proposing inside a table is not settled |
-| a replace whose paragraphs hold a pending suggestion or a comment's anchor | the deletion would take a colleague's work with it, so every suggestion id and comment id is named |
+| a replace whose paragraphs hold a pending suggestion | it would be a suggestion about a suggestion, so every suggestion id is named. A comment there does not refuse: the result names it as `over_comments` |
 | a replace reaching the body's last paragraph | Docs cannot delete the final newline |
 | an `after` or a replace running into a table, the contents list or a section break | there is no paragraph start to insert at, and a deletion would take the table with it |
 | a replace over a paragraph holding a picture, a footnote mark, an equation, a page break or a chip, or one a picture or a drawing floats beside | the deletion would take it, and no read-back can see it: leave that paragraph out of the run |

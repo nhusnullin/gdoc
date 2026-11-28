@@ -128,6 +128,7 @@ replaced it)`, or `measured`. Nothing else.
 | 2026-11-28 | Edit mode: on the person's word, `propose --edit` writes words directly and paints them yellow, and `seen` takes the yellow off | holds | DECISIONS.md |
 | 2026-11-28 | A quote that stands more than once is placed by the words near it: a words entry may carry `near` | holds | DECISIONS.md |
 | 2026-11-28 | An edit keeps the look of the words it replaces: the insert goes at the span's end, in front of the delete | holds | DECISIONS.md |
+| 2026-11-28 | A replace block over a colleague's comment is proposed, and names the comment | holds | DECISIONS.md |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -2516,3 +2517,29 @@ Pins: `TestAnEditInsertsAtTheGrantedSpansEndBeforeItDeletes`,
 
 Serves principle 3, amended 2026-11-28: the reach and the bound of the edit
 door are what they were.
+
+## 2026-11-28. A replace block over a colleague's comment is proposed, and names the comment.
+
+Nail's decision, in chat on the date above. A session had told him to delete
+a heading and five list items by hand, because gdoc refused a replace whose
+paragraphs held somebody's comment. Shown the two outcomes, he answered: "3:
+да, предлагай удаление как suggestion и называй комментарий".
+
+**The rule.** A replace block whose paragraphs hold a comment's anchor is
+proposed as a suggestion like any other, and its result carries
+`over_comments`, the ids of every comment anchored in the paragraphs it would
+delete. The skill tells the person whose threads those are before they
+accept. A replace whose paragraphs hold a pending suggestion is still refused
+and still names every id: that would be a suggestion about a suggestion.
+
+**Why it is safe.** A suggestion takes nothing out. The words and the thread
+stand until a person accepts, and that person has been told. The binary still
+judges nothing: it names the comments and leaves whether they matter to the
+reader.
+
+**Not measured.** How the docx witness reads a suggested deletion over an
+anchored comment. The three read-backs run as they do for any replace, and
+report what they find.
+
+A domain choice under principle 3: nothing is deleted without a person's
+accept.

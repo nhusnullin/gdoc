@@ -356,3 +356,21 @@ func TestAnEmptyKindIsStillTheWordsKind(t *testing.T) {
 		t.Errorf("result = %+v, and a words proposal names no placement of its own", res)
 	}
 }
+
+// The result names the comments the replaced paragraphs hold, whatever the
+// read-back then says: the fact is taken from the read the write was built
+// from, and it is what the session tells the person before they accept.
+func TestABlockResultNamesTheCommentsItsReplaceCovers(t *testing.T) {
+	f := blockApplyScript(t, "block-commented.json", "block-replace-inline.json", "block-body.json",
+		"batch-saved.json", blockExport(t, "🤖 "+testWhy, "3.6 Limits"))
+	p := Proposal{Kind: KindBlock, ReplaceFrom: "register lists", ReplaceTo: "operations lead",
+		Content: testContent, Why: testWhy}
+
+	res, err := ApplyBlock(context.Background(), f, testDocID, p, nil, "🤖")
+	if err != nil {
+		t.Fatalf("a replace over a colleague's comment was refused: %v", err)
+	}
+	if strings.Join(res.OverComments, ",") != "C-ESCALATION,C-SUGGESTED" {
+		t.Errorf("over_comments = %q, want both comment ids", res.OverComments)
+	}
+}

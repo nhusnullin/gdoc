@@ -593,8 +593,10 @@ anything but words, named: a picture, a drawing, an equation, a footnote mark, a
 break or a chip in its text, or a picture, a drawing or an object floating
 beside it, because the deletion takes any of them and no read-back reads
 anything but text. A replace whose paragraphs hold a pending
-suggestion or a comment's anchor, with every suggestion id and comment id named,
-so the deletion never takes a colleague's work with it. An `after` whose next
+suggestion, with every suggestion id named. A comment's anchor there does not
+refuse: the block is proposed and the result names each such comment as
+`over_comments`, so the person hears whose thread it is before they accept
+(DECISIONS.md, 2026-11-28). An `after` whose next
 element is a table, a contents list or a section break, because there is no
 paragraph start to insert at. And an `after` on the document's last paragraph
 when the block does not end in a plain paragraph, or when that last paragraph is

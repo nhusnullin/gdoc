@@ -995,7 +995,8 @@ func TestALiveReviewAsksForItsOwnSession(t *testing.T) {
 }
 
 // A block replaces whole paragraphs, and the binary refuses a replace whose
-// paragraphs hold somebody else's pending suggestion or a comment's anchor. The
+// paragraphs hold somebody else's pending suggestion, and names the comments
+// anchored there as over_comments. The
 // skill has to ask the same two questions before it writes the file, because a
 // refusal at the terminal tells the operator what is in the way one paragraph
 // at a time, and the person whose work it is never hears the question at all.
@@ -1012,6 +1013,7 @@ func TestTheReviewSkillChecksARangeBeforeItProposesABlockOverIt(t *testing.T) {
 		`"content"`,
 		"$GDOC suggestions <url>",
 		"$GDOC comments <url>",
+		"over_comments",
 	} {
 		if !strings.Contains(src, want) {
 			t.Errorf("skills/gdoc-review/propose.md does not say %q. A session that cannot see the block entry, or what is in the range it would delete, proposes over somebody's work", want)
