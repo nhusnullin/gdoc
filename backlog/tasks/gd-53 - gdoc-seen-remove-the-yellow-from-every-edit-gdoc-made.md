@@ -1,10 +1,10 @@
 ---
 id: GD-53
 title: 'gdoc seen: remove the yellow from every edit gdoc made'
-status: In Progress
+status: To check
 assignee: []
 created_date: '2026-11-28T10:56:00Z'
-updated_date: '2026-11-28T11:13:00Z'
+updated_date: '2026-11-28T11:37:00Z'
 labels:
   - edit-mode
 dependencies:
@@ -20,9 +20,15 @@ Nail, 2026-11-28: a second command. 'Everything marked yellow in edit mode, remo
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 The command clears every run painted the edit yellow and reports how many
-- [ ] #2 A run of another colour, the house yellow mark included, is untouched
-- [ ] #3 No character changes
-- [ ] #4 The review skill runs it only when the person asks
+- [x] #1 The command clears every run painted the edit yellow and reports how many
+- [x] #2 A run of another colour, the house yellow mark included, is untouched
+- [x] #3 No character changes
+- [x] #4 The review skill runs it only when the person asks
 - [ ] #5 Nail saw the yellow go in a real document
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Not yet seen in a document: Nail runs one edit in edit mode and one gdoc seen on a real document. Merged in PR 114, not released.
+<!-- SECTION:NOTES:END -->
