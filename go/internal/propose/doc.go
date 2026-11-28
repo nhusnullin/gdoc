@@ -79,6 +79,36 @@
 // TestFindSpanCountsInUTF16CodeUnits and TestBatchCountsTheReplacementInUTF16CodeUnits
 // are the pins.
 //
+// # A quote that stands more than once is placed by the words near it
+//
+// A table cell is its whole paragraph, and so is a short heading, so "quote
+// more of the sentence" has nothing to offer a caller whose cell reads the
+// same as another. A words entry may carry near: words that stand in the
+// document exactly once, by the same walk. FindSpanNear counts the quote in
+// the paragraph that holds them, and, where that paragraph does not hold it
+// and sits in a table, in the paragraphs of its table row. Exactly once
+// there, or the entry is refused, and the refusal names the near words. No
+// entry carries an occurrence number: the place is still text, read fresh.
+// A block's anchors take no near. DECISIONS.md, 2026-11-28.
+// TestNearPlacesAQuoteInTheRowTheWordsName,
+// TestNearAsksItsOwnParagraphBeforeItsRow,
+// TestNearRefusesAQuoteThatStandsTwiceInThePlace,
+// TestNearRefusesWordsThatStandTwice, TestNearRefusesWordsThatAreNotThere,
+// TestNearRefusesAQuoteThatIsNotBesideTheWords,
+// TestAQuoteTwiceInNearsParagraphIsRefusedNotWidenedToTheRow,
+// TestWithoutNearAQuoteThatStandsTwiceIsStillRefused and
+// TestCheckRefusesNearOnABlock are the pins.
+//
+// The second read-back asks the same place. With a quote that stands
+// elsewhere too, asking the whole tab would pass on a direct edit, because
+// the other copies are still there. A preview that does not hold near once
+// has no place to ask, and the warning says it could not tell rather than
+// naming a direct edit: TestCarriesNearAsksThePlaceAndNotTheTab. The place
+// is chosen once, by FindPlaced, and Verify is handed it. A read-back that
+// chose again would see a paragraph a direct edit had emptied of the quote,
+// widen to the row and pass on the cell beside it:
+// TestTheReadBackAsksThePlaceTheQuoteWasFoundIn.
+//
 // # A match has to be contiguous, and that is not a detail
 //
 // The index walk reads text runs and skips the rest, but the document numbers

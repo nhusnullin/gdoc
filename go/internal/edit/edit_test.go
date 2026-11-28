@@ -311,3 +311,25 @@ func TestAYellowRunInsideASuggestionIsLeftAlone(t *testing.T) {
 		t.Fatalf("got %+v, %v and %d writes; want one pending passage and no write", res, err, len(f.posts()))
 	}
 }
+
+// A quote that stands twice is placed by the words near it, and the span the
+// guard is granted is that one's: TestNearPlacesAQuoteInTheRowTheWordsName in
+// internal/propose holds the search itself.
+func TestAnEditOfARepeatedQuoteGrantsTheSpanNearNames(t *testing.T) {
+	before := document("REV1",
+		[]piece{{text: "Provider\n"}},
+		[]piece{{text: "Provider of record\n"}})
+	f := &fakeSession{reads: [][]byte{before, before}}
+	var grants []granted
+	p := propose.Proposal{Quoted: "Provider", Near: "of record", Replacement: "Supplier", Why: "the name changed"}
+	if _, err := Apply(context.Background(), f, testDocID, p, nil, mark, recorder(&grants)); err != nil {
+		t.Fatal(err)
+	}
+	if len(grants) != 1 || len(grants[0].spans) != 1 || grants[0].spans[0] != (Span{10, 18}) {
+		t.Fatalf("the grant was %+v, want one span [10,18), the second Provider", grants)
+	}
+	p.Near = ""
+	if _, err := Apply(context.Background(), &fakeSession{reads: [][]byte{before}}, testDocID, p, nil, mark, recorder(&grants)); err == nil {
+		t.Fatal("without near a quote that stands twice was edited")
+	}
+}

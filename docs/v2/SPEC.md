@@ -524,6 +524,13 @@ read or the preview read cannot confirm. On a handed-in id this is the only
 write level the guard allows, which is the point, and an `assigneeEmailAddress`
 may be set when the skill knows who should answer.
 
+**A quote that stands more than once.** A words entry may carry `near`,
+words that stand in the document exactly once. The quote is then counted in
+the paragraph that holds them, or, where that paragraph does not hold it and
+sits in a table, in its table row, and must stand exactly once there. This is
+how a table cell whose words repeat is changed, in both modes. The preview
+read-back asks the same place (DECISIONS.md, 2026-11-28).
+
 **Edit mode.** With `--edit` nothing is proposed. Each words entry replaces
 its quote in the document itself, the new words are painted the edit yellow
 `#FFF59D`, and no comment is left. The flag is on the command line or nowhere,

@@ -25,7 +25,7 @@ func TestAnUnknownFieldIsRefusedWithTheFieldsTheEntryTakes(t *testing.T) {
 	msg, _ := got["error"].(string)
 	for _, want := range []string{
 		`proposals[0] has a field gdoc does not take: "reason"`,
-		"A words entry takes quoted, replacement, why and assignee.",
+		"A words entry takes quoted, replacement, near, why and assignee.",
 		"A block entry takes kind, after or replace_from and replace_to, content, why and assignee.",
 	} {
 		if !strings.Contains(msg, want) {

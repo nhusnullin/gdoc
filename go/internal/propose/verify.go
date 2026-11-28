@@ -28,7 +28,13 @@ func PreviewURL(id string) string {
 // It never fails. Each route answers for itself, a route that could not be read
 // is a warning naming it, and the caller reports the checks as they came. A
 // verification that raised would hide a change that is already in the document.
-func Verify(ctx context.Context, s Session, docID string, r docs.Range, p Proposal, commentBody string) (Checks, []string, []string) {
+//
+// row is what FindPlaced said when it placed the quote: whether the place
+// p.Near names is its table row rather than its own paragraph. The preview
+// route asks that same place, and it is handed over rather than worked out
+// again, because a direct edit takes the quote out of the paragraph and a
+// second look would then widen to the row and find another cell's copy.
+func Verify(ctx context.Context, s Session, docID string, r docs.Range, p Proposal, row bool, commentBody string) (Checks, []string, []string) {
 	var checks Checks
 	var warns []string
 
@@ -46,13 +52,24 @@ func Verify(ctx context.Context, s Session, docID string, r docs.Range, p Propos
 	}
 
 	preview, err := fetchPreview(ctx, s, docID)
+	var quoteHeld, placed, replacementHeld bool
+	if err == nil {
+		quoteHeld, placed = CarriesNear(preview, r.Tab, p.Quoted, p.Near, row)
+		replacementHeld, _ = CarriesNear(preview, r.Tab, p.Replacement, p.Near, row)
+	}
 	switch {
 	case err != nil:
 		warns = append(warns, fmt.Sprintf("the document could not be read back in the preview view, so the change could not be told from a direct edit: %v", err))
-	case !Carries(preview, r.Tab, p.Quoted):
+	case !placed:
+		// No place is no answer, and it is worded as one. The preview shows
+		// text inside a pending deletion, so a second copy of the near words
+		// there makes two, on a write that was an honest suggestion.
+		warns = append(warns, fmt.Sprintf(
+			"the preview view does not hold the near words %q exactly once, so the change could not be told from a direct edit there; look at it in the document", p.Near))
+	case !quoteHeld:
 		warns = append(warns, fmt.Sprintf(
 			"the preview view no longer carries the quoted text %q, which is what a direct edit looks like rather than a suggestion", p.Quoted))
-	case strings.Contains(p.Replacement, p.Quoted) && Carries(preview, r.Tab, p.Replacement):
+	case strings.Contains(p.Replacement, p.Quoted) && replacementHeld:
 		// The quoted words being here is usually the answer, and this is the
 		// one shape where it is not. A replacement carrying the quote inside it
 		// carries it into the preview after a direct edit too, because the
