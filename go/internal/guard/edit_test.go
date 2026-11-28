@@ -29,7 +29,7 @@ func editing(t *testing.T) *Policy {
 	p := NewPolicy()
 	p.AllowFile("DOC1", LevelSuggest)
 	p.GrantEdit("DOC1")
-	p.AllowEditSpans(editRevision, []Span{{Start: 5, End: 14}})
+	p.AllowEditSpans(EditWords, editRevision, []Span{{Start: 5, End: 14}})
 	return p
 }
 
@@ -80,7 +80,7 @@ func TestAGrantedEditBatchIsCarried(t *testing.T) {
 func TestADirectEditWithoutTheEditGrantIsRefused(t *testing.T) {
 	p := NewPolicy()
 	p.AllowFile("DOC1", LevelSuggest)
-	p.AllowEditSpans(editRevision, []Span{{Start: 5, End: 14}})
+	p.AllowEditSpans(EditWords, editRevision, []Span{{Start: 5, End: 14}})
 	refusedEdit(t, p, goodEdit(), "an edit batch on a document nobody raised to the edit level")
 }
 
@@ -124,7 +124,7 @@ func TestAnEditSpanOverTheCeilingIsRefused(t *testing.T) {
 	p := NewPolicy()
 	p.AllowFile("DOC1", LevelSuggest)
 	p.GrantEdit("DOC1")
-	p.AllowEditSpans(editRevision, []Span{{Start: 5, End: 306}})
+	p.AllowEditSpans(EditWords, editRevision, []Span{{Start: 5, End: 306}})
 	text := strings.Repeat("a", 10)
 	refusedEdit(t, p, editBatch(editRevision, 5, 306, text, 5, 15, editYellowJSON), "a delete of 301 units")
 
@@ -157,6 +157,7 @@ func TestAnEditInsertsWordsInsideOneParagraph(t *testing.T) {
 	refusedEdit(t, editing(t), editBatch(editRevision, 5, 14, "\ue000x", 5, 7, editYellowJSON), "an insert carrying a character Docs strips")
 	half := []byte(strings.Replace(string(editBatch(editRevision, 5, 14, "Zx", 5, 7, editYellowJSON)), `"text":"Zx"`, `"text":"\ud83dx"`, 1))
 	refusedEdit(t, editing(t), half, "an insert carrying half a surrogate pair")
+	refusedEdit(t, editing(t), editBatch(editRevision, 5, 14, "\ufeffx", 5, 7, editYellowJSON), "an insert carrying a byte order mark")
 
 	elsewhere := []byte(strings.Replace(string(goodEdit()), `{"index":5}`, `{"index":6}`, 1))
 	refusedEdit(t, editing(t), elsewhere, "an insert away from the start of the delete")
@@ -192,27 +193,65 @@ func TestNoSuggestionKindOrNamedRangeCarriesAtLevelEdit(t *testing.T) {
 	refusedEdit(t, p, style, "a paragraph style on a document at the edit level")
 }
 
-func TestAClearChangesNoCharacterAndTouchesOnlyGrantedSpans(t *testing.T) {
+// clearing returns the policy of one `gdoc seen` run: DOC1 at the edit level,
+// with two spans granted for a clear at REV1.
+func clearing(t *testing.T) *Policy {
+	t.Helper()
 	p := NewPolicy()
 	p.AllowFile("DOC1", LevelSuggest)
 	p.GrantEdit("DOC1")
-	p.AllowEditSpans(editRevision, []Span{{Start: 5, End: 14}, {Start: 40, End: 44}})
+	p.AllowEditSpans(EditClear, editRevision, []Span{{Start: 5, End: 14}, {Start: 40, End: 44}})
+	return p
+}
 
-	carried(t, p, clearBatch(editRevision, Span{5, 14}, Span{40, 44}))
-	carried(t, p, clearBatch(editRevision, Span{40, 44}))
-	refusedEdit(t, p, clearBatch(editRevision, Span{5, 14}, Span{20, 30}), "a clear over a span nobody granted")
-	refusedEdit(t, p, clearBatch("REV2", Span{5, 14}), "a clear at another revision")
+func TestAClearChangesNoCharacterAndTouchesOnlyGrantedSpans(t *testing.T) {
+	carried(t, clearing(t), clearBatch(editRevision, Span{5, 14}, Span{40, 44}))
+	carried(t, clearing(t), clearBatch(editRevision, Span{40, 44}))
+	refusedEdit(t, clearing(t), clearBatch(editRevision, Span{5, 14}, Span{20, 30}), "a clear over a span nobody granted")
+	refusedEdit(t, clearing(t), clearBatch("REV2", Span{5, 14}), "a clear at another revision")
 
 	unset := []byte(strings.Replace(string(clearBatch(editRevision, Span{5, 14})), `"textStyle":{"backgroundColor":{}}`, `"textStyle":{}`, 1))
-	refusedEdit(t, p, unset, "a clear that leaves the field unset rather than setting it empty")
+	refusedEdit(t, clearing(t), unset, "a clear that leaves the field unset rather than setting it empty")
 	wide := []byte(strings.Replace(string(clearBatch(editRevision, Span{5, 14})), `"fields":"backgroundColor"`, `"fields":"backgroundColor,bold"`, 1))
-	refusedEdit(t, p, wide, "a clear whose mask names a second field")
+	refusedEdit(t, clearing(t), wide, "a clear whose mask names a second field")
 
 	mixed := []byte(`{"requests":[` +
 		`{"updateTextStyle":{"range":{"startIndex":5,"endIndex":14},"textStyle":{"backgroundColor":{}},"fields":"backgroundColor"}},` +
 		`{"deleteContentRange":{"range":{"startIndex":5,"endIndex":14}}}` +
 		`],"writeControl":{"requiredRevisionId":"REV1"}}`)
-	refusedEdit(t, p, mixed, "a clear with a delete behind it")
+	refusedEdit(t, clearing(t), mixed, "a clear with a delete behind it")
+}
+
+// TestASpanGrantIsForOneGrammar: `gdoc seen` says no word changes, and the
+// guard holds it. Spans granted for a clear carry no edit, and the other way.
+func TestASpanGrantIsForOneGrammar(t *testing.T) {
+	refusedEdit(t, clearing(t), goodEdit(), "an edit over spans granted for a clear")
+	refusedEdit(t, editing(t), clearBatch(editRevision, Span{5, 14}), "a clear over a span granted for an edit")
+
+	p := NewPolicy()
+	p.AllowFile("DOC1", LevelSuggest)
+	p.GrantEdit("DOC1")
+	p.AllowEditSpans(EditWords, editRevision, []Span{{Start: 5, End: 14}, {Start: 40, End: 44}})
+	refusedEdit(t, p, goodEdit(), "an edit grant naming two spans")
+	p.AllowEditSpans(EditKind(0), editRevision, []Span{{Start: 5, End: 14}})
+	refusedEdit(t, p, goodEdit(), "a grant naming no grammar")
+}
+
+// TestASpanGrantIsSpentByTheBatchItCarries: one grant, one batch. The same
+// body judged again is refused, so a replay is never carried.
+func TestASpanGrantIsSpentByTheBatchItCarries(t *testing.T) {
+	p := editing(t)
+	carried(t, p, goodEdit())
+	refusedEdit(t, p, goodEdit(), "the same edit a second time")
+
+	q := clearing(t)
+	carried(t, q, clearBatch(editRevision, Span{5, 14}))
+	refusedEdit(t, q, clearBatch(editRevision, Span{40, 44}), "a second clear on a grant the first one spent")
+
+	// A refused batch spends nothing: the run's own batch still goes.
+	r := editing(t)
+	refusedEdit(t, r, editBatch(editRevision, 5, 15, "new words", 5, 14, editYellowJSON), "a batch over another span")
+	carried(t, r, goodEdit())
 }
 
 func TestAllowFileCannotOpenTheEditDoor(t *testing.T) {
@@ -272,17 +311,17 @@ func TestTheEditGrantDiesWithThePolicy(t *testing.T) {
 
 func TestASecondSpanGrantReplacesTheFirst(t *testing.T) {
 	p := editing(t)
-	p.AllowEditSpans("REV2", []Span{{Start: 20, End: 24}})
+	p.AllowEditSpans(EditWords, "REV2", []Span{{Start: 20, End: 24}})
 	refusedEdit(t, p, goodEdit(), "an edit over the span the second grant replaced")
 	carried(t, p, editBatch("REV2", 20, 24, "four", 20, 24, editYellowJSON))
 }
 
 func TestAnUnreadableSpanGrantTakesTheStandingOneBack(t *testing.T) {
 	for name, grant := range map[string]func(p *Policy){
-		"no revision":     func(p *Policy) { p.AllowEditSpans("", []Span{{Start: 5, End: 14}}) },
-		"no span":         func(p *Policy) { p.AllowEditSpans(editRevision, nil) },
-		"an empty span":   func(p *Policy) { p.AllowEditSpans(editRevision, []Span{{Start: 5, End: 5}}) },
-		"a span before 1": func(p *Policy) { p.AllowEditSpans(editRevision, []Span{{Start: 0, End: 4}}) },
+		"no revision":     func(p *Policy) { p.AllowEditSpans(EditWords, "", []Span{{Start: 5, End: 14}}) },
+		"no span":         func(p *Policy) { p.AllowEditSpans(EditWords, editRevision, nil) },
+		"an empty span":   func(p *Policy) { p.AllowEditSpans(EditWords, editRevision, []Span{{Start: 5, End: 5}}) },
+		"a span before 1": func(p *Policy) { p.AllowEditSpans(EditWords, editRevision, []Span{{Start: 0, End: 4}}) },
 	} {
 		t.Run(name, func(t *testing.T) {
 			p := editing(t)

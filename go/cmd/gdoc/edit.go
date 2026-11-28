@@ -59,13 +59,13 @@ func openEdit(docID string) (*reach, *guard.Policy, error) {
 
 // spansTo hands a read's spans to the guard, which is the only thing that
 // lets the next batch name them.
-func spansTo(p *guard.Policy) edit.Grant {
+func spansTo(p *guard.Policy, kind guard.EditKind) edit.Grant {
 	return func(revision string, spans []edit.Span) {
 		out := make([]guard.Span, 0, len(spans))
 		for _, s := range spans {
 			out = append(out, guard.Span{Start: s.Start, End: s.End})
 		}
-		p.AllowEditSpans(revision, out)
+		p.AllowEditSpans(kind, revision, out)
 	}
 }
 
@@ -108,7 +108,7 @@ func cmdProposeEdit(ctx context.Context, a *args, docID string, proposals []prop
 		if i == 0 {
 			held = d
 		}
-		res, err := edit.Apply(context.WithoutCancel(ctx), r.session, r.id, one, held, a.set.Mark, spansTo(policy))
+		res, err := edit.Apply(context.WithoutCancel(ctx), r.session, r.id, one, held, a.set.Mark, spansTo(policy, guard.EditWords))
 		if err != nil {
 			data.Edits[i].Outcome = res.Outcome
 			if res.Outcome == edit.OutcomeUnknown {
@@ -151,7 +151,7 @@ func cmdSeen(ctx context.Context, a *args) emit.Result {
 	if err != nil {
 		return failed(err)
 	}
-	res, err := edit.Clear(context.WithoutCancel(ctx), r.session, r.id, spansTo(policy))
+	res, err := edit.Clear(context.WithoutCancel(ctx), r.session, r.id, spansTo(policy, guard.EditClear))
 	data := seenData{DocumentID: r.id, Colour: edit.Yellow, Cleared: res.Cleared, Left: res.Left, Pending: res.Pending, Verified: res.Verified}
 	if err != nil {
 		if res.Outcome == edit.OutcomeUnknown {

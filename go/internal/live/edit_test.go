@@ -56,16 +56,18 @@ func TestLiveEditModeWritesPaintsAndClears(t *testing.T) {
 		if err != nil {
 			t.Fatalf("the second session could not be opened: %v", err)
 		}
-		grant := func(revision string, spans []edit.Span) {
-			out := make([]guard.Span, 0, len(spans))
-			for _, sp := range spans {
-				out = append(out, guard.Span{Start: sp.Start, End: sp.End})
+		grantFor := func(kind guard.EditKind) edit.Grant {
+			return func(revision string, spans []edit.Span) {
+				out := make([]guard.Span, 0, len(spans))
+				for _, sp := range spans {
+					out = append(out, guard.Span{Start: sp.Start, End: sp.End})
+				}
+				handed.AllowEditSpans(kind, revision, out)
 			}
-			handed.AllowEditSpans(revision, out)
 		}
 
 		change := propose.Proposal{Quoted: "reviewed annually", Replacement: "reviewed every six months", Why: "The register says twice a year."}
-		res, err := edit.Apply(ctx, e, id, change, nil, "⁘", grant)
+		res, err := edit.Apply(ctx, e, id, change, nil, "⁘", grantFor(guard.EditWords))
 		if err != nil {
 			t.Fatalf("the edit was refused: %v", err)
 		}
@@ -83,7 +85,7 @@ func TestLiveEditModeWritesPaintsAndClears(t *testing.T) {
 			t.Error("a SUGGEST batch on a document at the edit level went out")
 		}
 
-		cleared, err := edit.Clear(ctx, e, id, grant)
+		cleared, err := edit.Clear(ctx, e, id, grantFor(guard.EditClear))
 		if err != nil {
 			t.Fatalf("the clear was refused: %v", err)
 		}

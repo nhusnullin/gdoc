@@ -2373,6 +2373,16 @@ request kind. All of it is built as asked.
   words, in that session. It says so once, replies in the thread with the old
   words after each edit made from a comment, and never runs `seen` unasked.
 
+**What the code review added, the same day.** Two reviewers read the branch,
+Codex and a Claude session that had not written it. A span grant now names its
+grammar, so spans `seen` granted carry no edit, and it is spent by the batch it
+carries, so a replay is refused. The guard also refuses text Docs would not
+store as sent, a private-use character among them, because the paint is
+counted in the units sent. Left as it is: `seen` answers `ok: true` with
+`verified: false` when its read-back does not hold, where `propose --edit`
+answers `ok: false`; and the span grant names no document id, which is
+harmless while one policy raises one id.
+
 **What an edit refuses.** A block entry, and a plain deletion, because there
 would be nothing to paint. A quote that already carries a background, because
 `seen` must never be able to erase a mark somebody made. A quote that is a

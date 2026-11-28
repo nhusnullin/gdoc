@@ -521,6 +521,23 @@
 // TestASecondSpanGrantReplacesTheFirst and
 // TestAnUnreadableSpanGrantTakesTheStandingOneBack are the pins.
 //
+// A grant names its grammar and is for one batch. Both rules came out of the
+// review of 2026-11-28, which proved the first version carried an edit over
+// spans a clear had granted, and carried the same batch twice. `gdoc seen`
+// says no word changes, and that has to be the guard's promise rather than
+// the caller's, so spans granted for a clear carry no edit, and a grant for
+// words names exactly one span. And the batch a grant carries spends it: a
+// write that never left leaves the revision where it was, so Docs would take a
+// replay, and the guard is what refuses it. The price is the session's one
+// retry after a 401: the second send finds the grant spent and is refused,
+// nothing is written, and the run says so. TestASpanGrantIsForOneGrammar and
+// TestASpanGrantIsSpentByTheBatchItCarries are the pins.
+//
+// The inserted text carries nothing Docs would not store as sent: no
+// private-use character, which Docs strips, no half of a surrogate pair and no
+// byte order mark. The paint is counted in the units sent, so a unit that
+// does not land would put the paint on a character the batch did not insert.
+//
 // requiredRevisionId is the only key writeControl may carry. targetRevisionId
 // is refused by name: it merges the write into a document that moved, where
 // this level must refuse.

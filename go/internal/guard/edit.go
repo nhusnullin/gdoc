@@ -33,9 +33,21 @@ const editCeiling = 300
 // Docs API counts.
 type Span struct{ Start, End int }
 
-// editGrant is what an edit run may touch: the spans its command read, at the
-// revision it read them in.
+// EditKind is which of the two grammars a span grant is for. A grant for a
+// clear carries no edit: `gdoc seen` promises that no word changes, and the
+// guard holds that promise rather than the caller.
+type EditKind int
+
+const (
+	EditWords EditKind = 1 // delete the span, insert words, paint them
+	EditClear EditKind = 2 // set the spans' background to no colour
+)
+
+// editGrant is what the next batch at the edit level may touch: the spans its
+// command read, at the revision it read them in, for one grammar. It is spent
+// by the batch it carries.
 type editGrant struct {
+	kind     EditKind
 	revision string
 	spans    map[Span]bool
 }
@@ -77,12 +89,29 @@ func (p *Policy) GrantEdit(id string) {
 // cannot see a colour or a paragraph mark, so what it holds instead is that
 // nothing outside the command's own read is touched.
 //
+// The grant names its grammar, and it is for one batch. A grant for a clear
+// carries no edit over the same spans, and the batch a grant carries spends
+// it, so the same body judged a second time is refused: a replay after a write
+// that never left would otherwise be carried, and Docs would take it too,
+// because the revision had not moved. TestASpanGrantIsForOneGrammar and
+// TestASpanGrantIsSpentByTheBatchItCarries are the pins.
+//
 // A second call replaces the first. A grant the guard cannot read, with no
-// revision, no span, or a span that does not end after it starts, opens
-// nothing and takes the standing grant back, which is AllowMarker's rule.
-// TestASecondSpanGrantReplacesTheFirst and
+// kind, no revision, no span, or a span that does not end after it starts,
+// opens nothing and takes the standing grant back, which is AllowMarker's
+// rule. TestASecondSpanGrantReplacesTheFirst and
 // TestAnUnreadableSpanGrantTakesTheStandingOneBack are the pins.
-func (p *Policy) AllowEditSpans(revision string, spans []Span) {
+func (p *Policy) AllowEditSpans(kind EditKind, revision string, spans []Span) {
+	if kind != EditWords && kind != EditClear {
+		p.note("an edit grant names the grammar it is for, an edit or a clear, and this one named neither; nothing may be edited")
+		p.revokeEdit()
+		return
+	}
+	if kind == EditWords && len(spans) != 1 {
+		p.note("an edit grant for words names exactly one span, and this one named %d; nothing may be edited", len(spans))
+		p.revokeEdit()
+		return
+	}
 	if revision == "" {
 		p.note("an edit grant carries the revision the spans were read in, and this one named none; nothing may be edited")
 		p.revokeEdit()
@@ -104,7 +133,7 @@ func (p *Policy) AllowEditSpans(revision string, spans []Span) {
 	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	p.edit = &editGrant{revision: revision, spans: set}
+	p.edit = &editGrant{kind: kind, revision: revision, spans: set}
 }
 
 func (p *Policy) revokeEdit() {
@@ -152,10 +181,29 @@ func (p *Policy) judgeEditBatch(top map[string]json.RawMessage) error {
 			return refuse("a request in this batchUpdate names %d kinds, and a request names one", len(req))
 		}
 	}
-	if _, isClear := reqs[0]["updateTextStyle"]; isClear {
-		return judgeClear(reqs, granted)
+	_, isClear := reqs[0]["updateTextStyle"]
+	var err error
+	switch {
+	case isClear && granted.kind != EditClear:
+		err = refuse("this batch is a clear, and the spans this run granted are for an edit")
+	case isClear:
+		err = judgeClear(reqs, granted)
+	case granted.kind != EditWords:
+		err = refuse("this batch changes words, and the spans this run granted are for a clear, which changes none")
+	default:
+		err = judgeEdit(reqs, granted)
 	}
-	return judgeEdit(reqs, granted)
+	if err != nil {
+		return err
+	}
+	// The grant is spent by the batch it carries. It is taken back only if it
+	// is still the one that was judged, so a grant made meanwhile stands.
+	p.mu.Lock()
+	if p.edit == granted {
+		p.edit = nil
+	}
+	p.mu.Unlock()
+	return nil
 }
 
 // judgeEdit holds the edit grammar: delete one granted span, insert words at
@@ -205,7 +253,7 @@ func judgeEdit(reqs []map[string]json.RawMessage, granted *editGrant) error {
 		// the server reads its own bytes. Either way the units counted below
 		// would not be the units that land, and the paint would reach a
 		// character this batch did not insert.
-		if (r >= 0xE000 && r <= 0xF8FF) || r == 0xFFFD || r == 0xFFFE || r == 0xFFFF {
+		if (r >= 0xE000 && r <= 0xF8FF) || r == 0xFFFD || r == 0xFFFE || r == 0xFFFF || r == 0xFEFF || r == 0x85 {
 			return refuse("an edit's text carries U+%04X, which Docs may not store as sent, so the paint could not be held to the insertion", r)
 		}
 	}
