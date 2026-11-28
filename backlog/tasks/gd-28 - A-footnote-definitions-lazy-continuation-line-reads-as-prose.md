@@ -1,9 +1,10 @@
 ---
 id: GD-28
 title: A footnote definition's lazy continuation line reads as prose
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-11-28T10:50:00Z'
+updated_date: '2026-11-28T13:59:00Z'
 labels:
   - worth-later
 dependencies: []

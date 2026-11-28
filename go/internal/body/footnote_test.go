@@ -761,3 +761,37 @@ func TestAMarkInAListInsideADefinitionDoesNotAnswerForThatNote(t *testing.T) {
 		t.Errorf("the refusal is %q, want it to name the note nothing marks", err)
 	}
 }
+
+// TestAMarkOnADefinitionsLazyLineDoesNotAnswerForThatNote: goldmark continues
+// a definition's paragraph on a line at the margin that follows it with no
+// blank line between, so a mark there is inside the note. Read as prose, it
+// answered for a note whose words reached no page.
+func TestAMarkOnADefinitionsLazyLineDoesNotAnswerForThatNote(t *testing.T) {
+	got := refused(t, "Some text[^a].\n\n[^a]: the note\n  continued [^b] here\n\n[^b]: other note\n")
+
+	for _, want := range []string{"line 6", "[^b]"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("the refusal does not say %q: %s", want, got)
+		}
+	}
+
+	atTheMargin := refused(t, "Some text[^a].\n\n[^a]: the note\ncontinued [^b] here\nand on\n    and [^b] indented\n\n[^b]: other note\n")
+	if !strings.Contains(atTheMargin, "line 8") {
+		t.Errorf("a lazy line at the margin, and the lines after it, are the note's own: %s", atTheMargin)
+	}
+}
+
+// TestAProseLineAfterADefinitionAndABlankLineIsStillProse: the blank line ends
+// the definition's paragraph, so the line at the margin after it is the
+// document's own words and its mark answers for the note.
+func TestAProseLineAfterADefinitionAndABlankLineIsStillProse(t *testing.T) {
+	for _, note := range []string{
+		"Some text[^a].\n\n[^a]: the note\n\nProse again [^b] here.\n\n[^b]: other note\n",
+		"Some text[^a].\n\n[^a]: the note\n# A heading\n\nProse [^b].\n\n[^b]: other note\n",
+		"Some text[^a].\n\n[^a]: the note\n- an item [^b]\n\n[^b]: other note\n",
+	} {
+		if _, err := Render(config(t), []byte(note), "testdata/docs", true); err != nil {
+			t.Errorf("the note must build, and it was refused: %v\n%s", err, note)
+		}
+	}
+}
