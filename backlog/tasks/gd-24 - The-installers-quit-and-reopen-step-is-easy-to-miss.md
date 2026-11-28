@@ -1,9 +1,10 @@
 ---
 id: GD-24
 title: The installer's quit-and-reopen step is easy to miss
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-11-28T10:49:00Z'
+updated_date: '2026-11-28T14:00:00Z'
 labels:
   - worth-later
 dependencies: []
@@ -37,3 +38,9 @@ colleague installs the extension yet. It becomes `yes` when Nail announces chat.
 
 Added 2026-10-03 as docs/backlog/installer-quit-and-reopen-line-hard-to-miss.md, worth: later.
 <!-- SECTION:DESCRIPTION:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+gdoc update --desktop already ends on the quit-and-reopen sentence as its last line, and that sentence is in SPEC.md, so it is left as it is. The installer now says the step last, alone.
+<!-- SECTION:NOTES:END -->
