@@ -256,3 +256,15 @@ func TestAPictureThatCannotBeEmbeddedCarriesItsLine(t *testing.T) {
 		t.Errorf("an inline picture is named as one rather than quoted whole: %v", err)
 	}
 }
+
+// TestADataURIIsReadWhateverCaseItsSchemeIsIn: a scheme is case-insensitive,
+// and isDataURI already reads it so. A picture pasted as "DATA:IMAGE/PNG;BASE64"
+// was taken for a data URI and then refused as no picture.
+func TestADataURIIsReadWhateverCaseItsSchemeIsIn(t *testing.T) {
+	for _, target := range []string{"DATA:image/png;base64,aGk=", "Data:IMAGE/PNG;BASE64,aGk="} {
+		decoded, err := decodeDataURI(target)
+		if err != nil || string(decoded) != "hi" {
+			t.Errorf("decodeDataURI(%q) = %q, %v, want hi", target, decoded, err)
+		}
+	}
+}

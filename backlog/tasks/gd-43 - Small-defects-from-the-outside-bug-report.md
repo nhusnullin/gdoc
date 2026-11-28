@@ -4,6 +4,7 @@ title: Small defects from the outside bug report
 status: To Do
 assignee: []
 created_date: '2026-11-28T10:51:00Z'
+updated_date: '2026-11-28T14:03:00Z'
 labels:
   - worth-later
 dependencies: []
@@ -50,3 +51,9 @@ touches the same file anyway.
 
 Added 2026-10-23 as docs/backlog/small-defects-from-the-outside-bug-report.md, worth: later.
 <!-- SECTION:DESCRIPTION:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+2026-11-28: the uppercase DATA: picture is fixed on branch gd-43-small-defects. The other six bullets stand.
+<!-- SECTION:NOTES:END -->
