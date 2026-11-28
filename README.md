@@ -158,8 +158,7 @@ and an example; without `--json`, a help in a terminal draws a screen instead.
 | `help`, `completion` | print every command, or the seven authoring marks with `help marks`; write the shell completion script |
 
 Every request goes through a guard inside the binary, which carries a request
-only for a document gdoc was handed or created. A skill of yours cannot reach
-further than the ids it names.
+only for a document gdoc was handed or created, so a skill reaches only the ids it names.
 
 ## Nothing updates on its own
 
