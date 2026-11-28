@@ -31,6 +31,25 @@ $GDOC propose <url> \
 refuses more than one, and the fix is to quote more of the sentence. Never work
 out a character index by hand: the command finds the words in a fresh read.
 
+Where there is no more of the sentence to quote, add `near`. A table cell, a
+short heading and a bold term are the usual cases: the same words stand in
+another cell or another line. `near` is words that stand in the document
+exactly once, beside the quote: in the same paragraph, or in another cell of
+the same table row. Only `quoted` changes.
+
+```
+{
+  "quoted": "USDT Exchange Service Provider",
+  "near": "Holds the crypto relationship with the user",
+  "replacement": "Exchange Service Provider",
+  "why": "The role is now called Exchange Service Provider."
+}
+```
+
+Never tell the person to change a cell by hand because its words repeat. Use
+`near`. It works the same under `--edit`. A block's anchors and `annotate` do
+not take it.
+
 The quote must also not run across a footnote mark, a picture, an equation or a
 page break. `read` prints those as `[^1]`, `[image]` and so on, and a quote built
 by dropping the marker out of a sentence is exactly the shape that crosses one.

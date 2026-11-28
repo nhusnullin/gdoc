@@ -76,7 +76,9 @@ assignee?}`:
 
 `quoted` is text, never a position. An index worked out from an earlier read is
 the hazard the whole API has, so `propose` reads the document fresh, finds the
-words, and refuses when they occur more than once: quote more of the sentence.
+words, and refuses when they occur more than once: quote more of the sentence,
+or add `near`, words that stand once in the same paragraph or the same table
+row, which is how a table cell that repeats is changed.
 Text already inside a pending suggestion is not matched, so a proposal on top of
 a proposal is refused too. A quote running across a footnote mark, a picture, an
 equation or a page break is refused as well, naming what it crossed: the span

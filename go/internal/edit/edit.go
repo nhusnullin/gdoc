@@ -94,7 +94,7 @@ func Apply(ctx context.Context, s Session, docID string, p propose.Proposal, hel
 	if d.RevisionID == "" {
 		return out, errors.New("the read named no revision, and an edit is sent only against the revision its span was read in")
 	}
-	r, err := propose.FindSpan(d, p.Quoted)
+	r, err := propose.FindSpanNear(d, p.Quoted, p.Near)
 	if err != nil {
 		return out, err
 	}

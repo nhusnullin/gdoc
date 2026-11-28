@@ -47,6 +47,9 @@ type Proposal struct {
 	Kind        string `json:"kind,omitempty"`
 	Quoted      string `json:"quoted,omitempty"`
 	Replacement string `json:"replacement,omitempty"`
+	// Near is words that stand in the document exactly once and name the
+	// place a quote is counted in, for a quote that stands more than once.
+	Near        string `json:"near,omitempty"`
 	After       string `json:"after,omitempty"`
 	ReplaceFrom string `json:"replace_from,omitempty"`
 	ReplaceTo   string `json:"replace_to,omitempty"`
@@ -67,7 +70,7 @@ type Proposal struct {
 // carries a field Proposal does not have: what each kind takes, in the words a
 // caller writes. TestTheFieldListsNameEveryTag in cmd/gdoc holds it to the tags
 // above.
-const Fields = "A words entry takes quoted, replacement, why and assignee. " +
+const Fields = "A words entry takes quoted, replacement, near, why and assignee. " +
 	"A block entry takes kind, after or replace_from and replace_to, content, why and assignee."
 
 // Check is the shape rule for one proposal, as shape rather than as meaning. It
@@ -122,6 +125,9 @@ func (p Proposal) checkWords(mark string) error {
 	}
 	if p.Quoted == "" {
 		return errors.New("the proposal quotes no text, so there is nothing to replace")
+	}
+	if p.Near != "" && strings.TrimSpace(p.Near) == "" {
+		return errors.New("the proposal's near is blank; near is words that stand in the document once beside the quote, and an entry that needs none leaves the field out")
 	}
 	if p.Replacement == "" {
 		return fmt.Errorf("the proposal replaces %q with nothing; a proposal replaces words with words, and a plain deletion is not a shape this write has. To take words out, quote a neighbouring word with it, and keep that word in the replacement: \"is not ready\" becomes \"is ready\"", p.Quoted)
@@ -359,7 +365,7 @@ func applyWords(ctx context.Context, s Session, docID string, p Proposal, d *doc
 	if err != nil {
 		return out, err
 	}
-	r, err := FindSpan(d, p.Quoted)
+	r, err := FindSpanNear(d, p.Quoted, p.Near)
 	if err != nil {
 		return out, err
 	}

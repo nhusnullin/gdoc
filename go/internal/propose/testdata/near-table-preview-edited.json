@@ -1,0 +1,243 @@
+{
+ "documentId": "1NeArTaBlE0000000000000000000000000000000",
+ "title": "A table whose cells repeat",
+ "revisionId": "ALm37BXnear2",
+ "tabs": [
+  {
+   "tabProperties": {
+    "tabId": "t.0",
+    "title": "",
+    "index": 0
+   },
+   "documentTab": {
+    "body": {
+     "content": [
+      {
+       "startIndex": 0,
+       "endIndex": 1,
+       "sectionBreak": {
+        "sectionStyle": {}
+       }
+      },
+      {
+       "startIndex": 1,
+       "endIndex": 54,
+       "paragraph": {
+        "paragraphStyle": {
+         "namedStyleType": "NORMAL_TEXT"
+        },
+        "elements": [
+         {
+          "startIndex": 1,
+          "endIndex": 54,
+          "textRun": {
+           "content": "Provider. The role of the Provider is set out below.\n",
+           "textStyle": {}
+          }
+         }
+        ]
+       }
+      },
+      {
+       "startIndex": 54,
+       "endIndex": 185,
+       "table": {
+        "rows": 3,
+        "columns": 2,
+        "tableRows": [
+         {
+          "startIndex": 55,
+          "endIndex": 97,
+          "tableCells": [
+           {
+            "startIndex": 56,
+            "endIndex": 66,
+            "content": [
+             {
+              "startIndex": 57,
+              "endIndex": 66,
+              "paragraph": {
+               "paragraphStyle": {
+                "namedStyleType": "NORMAL_TEXT"
+               },
+               "elements": [
+                {
+                 "startIndex": 57,
+                 "endIndex": 66,
+                 "textRun": {
+                  "content": "Exchange\n",
+                  "textStyle": {}
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           },
+           {
+            "startIndex": 66,
+            "endIndex": 97,
+            "content": [
+             {
+              "startIndex": 67,
+              "endIndex": 97,
+              "paragraph": {
+               "paragraphStyle": {
+                "namedStyleType": "NORMAL_TEXT"
+               },
+               "elements": [
+                {
+                 "startIndex": 67,
+                 "endIndex": 97,
+                 "textRun": {
+                  "content": "Holds the crypto relationship\n",
+                  "textStyle": {}
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "startIndex": 97,
+          "endIndex": 137,
+          "tableCells": [
+           {
+            "startIndex": 98,
+            "endIndex": 108,
+            "content": [
+             {
+              "startIndex": 99,
+              "endIndex": 108,
+              "paragraph": {
+               "paragraphStyle": {
+                "namedStyleType": "NORMAL_TEXT"
+               },
+               "elements": [
+                {
+                 "startIndex": 99,
+                 "endIndex": 108,
+                 "textRun": {
+                  "content": "Provider\n",
+                  "textStyle": {}
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           },
+           {
+            "startIndex": 108,
+            "endIndex": 137,
+            "content": [
+             {
+              "startIndex": 109,
+              "endIndex": 137,
+              "paragraph": {
+               "paragraphStyle": {
+                "namedStyleType": "NORMAL_TEXT"
+               },
+               "elements": [
+                {
+                 "startIndex": 109,
+                 "endIndex": 137,
+                 "textRun": {
+                  "content": "ASV, the Provider of record\n",
+                  "textStyle": {}
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "startIndex": 137,
+          "endIndex": 184,
+          "tableCells": [
+           {
+            "startIndex": 138,
+            "endIndex": 148,
+            "content": [
+             {
+              "startIndex": 139,
+              "endIndex": 148,
+              "paragraph": {
+               "paragraphStyle": {
+                "namedStyleType": "NORMAL_TEXT"
+               },
+               "elements": [
+                {
+                 "startIndex": 139,
+                 "endIndex": 148,
+                 "textRun": {
+                  "content": "Provider\n",
+                  "textStyle": {}
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           },
+           {
+            "startIndex": 148,
+            "endIndex": 184,
+            "content": [
+             {
+              "startIndex": 149,
+              "endIndex": 184,
+              "paragraph": {
+               "paragraphStyle": {
+                "namedStyleType": "NORMAL_TEXT"
+               },
+               "elements": [
+                {
+                 "startIndex": 149,
+                 "endIndex": 184,
+                 "textRun": {
+                  "content": "The Provider pays the Provider fee\n",
+                  "textStyle": {}
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      },
+      {
+       "startIndex": 185,
+       "endIndex": 218,
+       "paragraph": {
+        "paragraphStyle": {
+         "namedStyleType": "NORMAL_TEXT"
+        },
+        "elements": [
+         {
+          "startIndex": 185,
+          "endIndex": 218,
+          "textRun": {
+           "content": "The table is reviewed each year.\n",
+           "textStyle": {}
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  }
+ ]
+}

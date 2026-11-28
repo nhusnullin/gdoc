@@ -40,6 +40,9 @@ func (p Proposal) checkBlock(mark string) error {
 		return fmt.Errorf(
 			"the block carries quoted or replacement, which belong to the words kind; a block names where it goes with after, or with replace_from and replace_to, and what it says with content")
 	}
+	if p.Near != "" {
+		return errors.New("the block carries near, which belongs to the words kind; a block's anchors are quoted so they stand in the document once")
+	}
 	if strings.TrimSpace(p.Content) == "" {
 		return errors.New("the block carries no content, and a block proposes paragraphs")
 	}

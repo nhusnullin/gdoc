@@ -126,6 +126,7 @@ replaced it)`, or `measured`. Nothing else.
 | 2026-11-22 | A skill offers to install gdoc when the machine has none, and signs in after | holds | DECISIONS.md |
 | 2026-11-28 | Work runs the way Etude's does: Backlog.md, one task in one branch in one PR, the Compound Engineering loop, and no ralphex, revmux or umputun plugins | holds | DECISIONS.md |
 | 2026-11-28 | Edit mode: on the person's word, `propose --edit` writes words directly and paints them yellow, and `seen` takes the yellow off | holds | DECISIONS.md |
+| 2026-11-28 | A quote that stands more than once is placed by the words near it: a words entry may carry `near` | holds | DECISIONS.md |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -2431,3 +2432,48 @@ The pins: `TestALevelEditBatchMeetsAGrammarWhateverWriteModeSays`,
 Serves principle 3, amended: the reach is still one document named on the
 command line, and the write is still bounded by the guard rather than by the
 caller.
+
+## 2026-11-28. A quote that stands more than once is placed by the words near it: a words entry may carry `near`.
+
+Nail's report, in chat on the date above (Russian, as dictated): a session
+told him to change three table cells by hand, and he asked "А почему мы не
+поддерживаем, что ли, редактирование в таблице? Если это API позволяет делать,
+ну давай делай задачку". gdoc had refused nothing. The cells read "USDT
+Exchange Service Provider" and "Crypto terms", each stands in the document
+more than once, and the session did not send them, because a quote that is
+not there exactly once is refused. In running text the answer is to quote
+more of the sentence. A table cell is its whole paragraph, so there is no
+more to quote, and the same holds for a short heading and for a bold term
+that opens a paragraph.
+
+**The rule.** A words entry may carry `near`: words that stand in the
+document exactly once, as written text. They name a place. The quote is then
+looked for in the paragraph that holds those words, and, where that
+paragraph does not hold the quote and sits in a table, in the paragraphs of
+its table row. The quote must stand exactly once there, or the entry is
+refused. Only the quote changes. Without `near` nothing changes: exactly
+once in the document.
+
+**What it does not do.** There is no occurrence number and no index in an
+entry. A place is still named by text read fresh, so the invariant "a change
+names text, never a stored index" holds as written; what moves is the ground
+"exactly once" is counted over, from the document to a place the caller
+named by words that are themselves there exactly once.
+
+**The read-back.** The second route asks whether the preview still carries
+the quote. With a quote that stands elsewhere too, asking the whole tab
+would pass on a direct edit, so with `near` it asks the same place: the
+preview must hold `near` exactly once and the quote in that paragraph or
+row.
+
+**The sentence the trust guardian signed.** "`near` moves the ground that
+'exactly once' is counted over, never the rule: it is text found by FindSpan's
+own rules at the read's revision, the quote must stand exactly once in its
+paragraph or row, crossings counted, and the preview read-back asks that same
+place for the quote and for a replacement that contains it."
+
+**Out, for now.** A block's anchors, `annotate`, and the chat tools take no
+`near`. Each is its own task when somebody meets it.
+
+Serves principle 3: the write lands on the words the caller chose and
+nowhere a guess would put it.
