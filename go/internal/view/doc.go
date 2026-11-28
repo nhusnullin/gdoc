@@ -70,7 +70,7 @@
 // TestAnUnnamedElementPrintsItsMemberAndWarns are the pins. [object] is the
 // embedded object the decoder could not classify, and calling it an image would
 // be a guess. Reading any of them is
-// docs/backlog/read-pictures-and-drawings.md.
+// backlog task GD-1.
 //
 // A run carrying both an insertion id and a deletion id prints twice, as the
 // deletion and then the insertion, because that is what Docs shows. The
@@ -220,7 +220,7 @@
 // carrying the insertion's own id, because the decoder reads the two suggestion
 // id lists off every member. TestAChipInsideASuggestionCarriesItsMarker is the
 // pin. It does not reach the pending listing, which walks text runs alone:
-// docs/backlog/suggestions-on-elements-are-not-listed.md.
+// backlog task GD-6.
 //
 // Two things about the label are not escapeAt over the string as written.
 //
@@ -328,7 +328,7 @@
 // TestProseWithNoCommentSyntaxIsNotWarnedAboutOne are the pins. A pair of ==
 // in the document's own words is not asked, because whether a pair opens a
 // highlight is goldmark's flanking rule rather than a shape:
-// docs/backlog/export-never-names-a-highlight-in-the-documents-own-words.md.
+// backlog task GD-29.
 //
 // The attribute the grey mark's old span closed with, {.pencil}, is the third
 // shape, and it is the one the next build refuses the file for rather than

@@ -9,7 +9,7 @@ package live
 //
 //   - The paragraph case is the acceptance bar for the milestone, so every
 //     read-back holding is asserted.
-//   - The table case is a measurement. docs/backlog/propose-inside-tables.md
+//   - The table case is a measurement. backlog task GD-4
 //     records that a proposal into a table cell did not land on 2026-09-08 and
 //     that nobody knows which step lied. An insertComment alone tells the
 //     first suspect from the other two, because no deleteContentRange goes
@@ -105,7 +105,7 @@ func TestLiveAnnotateParagraphAndTable(t *testing.T) {
 	}
 
 	// The table cell, and the measurement. Read the log, then write the answer
-	// into docs/backlog/propose-inside-tables.md.
+	// into backlog task GD-4.
 	cell, err := annotate.Apply(ctx, s, docID, annotate.Annotation{
 		Quoted: annotateCellQuoted,
 		Why:    annotateCellWhy,
@@ -113,7 +113,7 @@ func TestLiveAnnotateParagraphAndTable(t *testing.T) {
 	logAnnotation(t, "table cell", cell, err)
 	t.Logf("table cell measured: sent %t, drive_listing %t, docx_anchored %t, verified %t",
 		err == nil, cell.Checks.DriveListing, cell.Checks.DocxAnchored, cell.Verified)
-	t.Log("write that line into docs/backlog/propose-inside-tables.md")
+	t.Log("write that line into backlog task GD-4")
 }
 
 // annotateSubject makes the document the two cases comment in: one sentence,

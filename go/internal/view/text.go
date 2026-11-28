@@ -55,7 +55,7 @@ var escapePairs = []string{openInsertion, openDeletion, shutInsertion, shutDelet
 // placeholders is what a run with no text of its own prints as. label is what
 // goes inside the brackets, noun is what the warning calls it, and why is what
 // the warning says gdoc did not read. Reading the picture itself is
-// docs/backlog/read-pictures-and-drawings.md; printing a placeholder and
+// backlog task GD-1; printing a placeholder and
 // warning is the honest thing to do until then.
 //
 // A chip's mark carries the chip's label as well, because the document shows

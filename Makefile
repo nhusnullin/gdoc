@@ -102,23 +102,6 @@ tag:
 	git push origin HEAD
 	git push origin "refs/tags/$(VERSION)"
 
-# The delivery platform: the two recipes a milestone used to be run by hand.
-# `make milestone` owns a run from the worktree to the end of the review and
-# writes ~/gdoc-<mNN>-board/status in three lines, which is all the team lead
-# reads while it runs. The lead starts it detached and goes away:
-#
-#   nohup make milestone PLAN=docs/plans/<file>.md REVIEW=go > ~/milestone-launch.log 2>&1 &
-#
-# The log is where a refusal lands: a detached run that discarded it would be
-# a run the lead never hears about. A refusal that knows the board folder also
-# writes `phase: refused` into the status file.
-#
-# REVIEW is go or ui and may come from the plan's own `Review:` line. DRY=1
-# prints every command and runs none, which is what the tests assert. IDLE
-# overrides the worker's idle timeout, 20 minutes by default.
-milestone:
-	@.ralphex/board/milestone.sh --plan "$(PLAN)"$(if $(REVIEW), --review $(REVIEW))$(if $(IDLE), --idle $(IDLE))$(if $(CODEX), --codex)$(if $(DRY), --dry)
-
 # `make release BRANCH=<branch>` takes a finished branch to a green pull request
 # and stops there. The merge, the tag and the read-back of the published zip
 # need GO=vX.Y.0, which the lead passes only after Nail's message:
@@ -128,14 +111,12 @@ milestone:
 #
 # DRY=1 prints every command and runs none, which is what the tests assert.
 release:
-	@.ralphex/board/release.sh --branch "$(BRANCH)"$(if $(GO), --go $(GO))$(if $(DRY), --dry)
+	@scripts/release.sh --branch "$(BRANCH)"$(if $(GO), --go $(GO))$(if $(DRY), --dry)
 
-# The platform's own suite. No model runs in it: every case is a dry run or a
-# stub, so it costs a second and no tokens.
+# The release recipe's own suite. No model runs in it: every case is a dry run
+# or a stub, so it costs a second and no tokens.
 platform-test:
-	.ralphex/board/tests/test_milestone.sh
-	.ralphex/board/tests/test_release.sh
-	.ralphex/board/tests/test_meter.sh
+	scripts/tests/test_release.sh
 
 # The team's own check. The seats under .claude/agents/ are files, so what can
 # be wrong with one is a typo in its frontmatter, a model or a tool list that
@@ -143,6 +124,6 @@ platform-test:
 # three are cheap to check and expensive to find at the moment the seat is
 # called. No model runs here either.
 team-check:
-	.ralphex/board/tests/test_team.sh
+	scripts/tests/test_team.sh
 
-.PHONY: test vet build dist app app-test app-lint tag milestone release platform-test team-check
+.PHONY: test vet build dist app app-test app-lint tag release platform-test team-check

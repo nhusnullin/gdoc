@@ -187,9 +187,9 @@
 //
 // A footnote is written as read writes it, "[^1]" with the notes under a rule
 // at the end, and two warnings ride with it: a suggestion inside a footnote
-// arrives as plain text (docs/backlog/suggestions-inside-footnotes.md), and a
+// arrives as plain text (backlog task GD-2), and a
 // comment anchored inside one carries no marker
-// (docs/backlog/comment-anchors-in-headers-and-footnotes.md). A note in the
+// (backlog task GD-5). A note in the
 // prose publishes as it stands: internal/body carries a footnote into the docx
 // and Drive imports it, so the note this file becomes puts its notes back
 // under the page. What it does not put back is the author's own label: a note
@@ -207,7 +207,7 @@
 // A mark inside a footnote is the one mark that does not come home. The read
 // keeps a footnote's text alone, so there is no colour left to read by the
 // time this runs: the words are written plain, no envelope counts them, and
-// the warning names it against docs/backlog/marks-inside-footnotes.md wherever
+// the warning names it against backlog task GD-30 wherever
 // the colours the read collected for one of the tab's notes say the author
 // marked words in it. That question is markedNotes, and it is the question
 // otherColours already answers for the body: a background is somebody marking

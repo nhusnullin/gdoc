@@ -51,41 +51,45 @@ a run, a release note, a blocked run.
 
 His answers go verbatim into the decision entry in `docs/v2/DECISIONS.md`, with
 its row in the register at the top of that file. The entry comes before the
-change to `docs/v2/SPEC.md`, which comes before the plan under `docs/plans/`.
-The plan states `Tasks: N` and `Review: go` or `Review: ui`, because those two
-lines are the run's budget and `make milestone` reads them.
+change to `docs/v2/SPEC.md`, which comes before the code.
 
 ## Who to call, and when
 
 | Call | When | Not when |
 |---|---|---|
-| `gdoc-trust-guardian` | before the run, when the plan touches `go/internal/guard`, `go/internal/auth`, `go/internal/presence`, `go/cmd/gdoc/desktop.go` or an invariant in `CLAUDE.md` | for a plan that touches none of them |
-| `planning:plan-review` | once, after the plan is written and before the run | again after the fixes, unless the plan changed shape |
-| `gdoc-design-reviewer` | once, after a UI run's renders are made and before the PR. Name the renders directory in the prompt as an absolute path: the seat holds `Read` alone, so it expands no variable | for a run that changed no screen |
+| `gdoc-trust-guardian` | before the work starts, when the task touches `go/internal/guard`, `go/internal/auth`, `go/internal/presence`, `go/cmd/gdoc/desktop.go` or an invariant in `CLAUDE.md` | for a task that touches none of them |
+| `gdoc-design-reviewer` | once, after a UI task's renders are made and before the PR. Name the renders directory in the prompt as an absolute path: the seat holds `Read` alone, so it expands no variable | for a task that changed no screen |
 | `codex-second-opinion` | a decision that is genuinely contested, or one you have gone in circles on | a question answered by reading the tree |
-| `gdoc-platform-operator` | the status file's next line is not a `wait:`, or the board stopped refreshing | a run that is going |
 
 A guardian's veto goes to Nail as a decision. You do not overrule it and you do
 not negotiate it down.
 
-## The run
+## The dev cycle
 
-```
-make milestone PLAN=docs/plans/<file>.md REVIEW=go
-```
+Nail's decision of 2026-11-28: gdoc works the way Etude does. ralphex, revmux
+and the umputun plugins are gone from this repository.
 
-Start it detached and go away. Then read `~/gdoc-<mNN>-board/status`, three
-lines, and nothing else. Not the log. Not the per-iteration commits. The script
-refreshes that file and the board every 30 minutes, so look at it on that
-rhythm or when something else wakes you.
+- Work lives in Backlog.md: `backlog/`, task ids GD-n. Run
+  `backlog instructions overview` at the start of a session. Change tasks with
+  the `backlog` CLI, not by hand. `backlog browser` shows the board.
+- One task, one branch, one PR. No PR for a group of tasks.
+- Statuses: To Do, In Progress, To check, Done. When a task's PR merges it goes
+  to Done if every criterion is ticked, and to To check if a criterion still
+  needs Nail's eyes on a real document; add "Not yet seen in a document: <what>"
+  to its notes. At the start of a session, compare In Progress tasks with
+  `gh pr list --state merged`, move the merged ones, and list the To check
+  tasks to Nail with what each one waits on.
+- Per task, the Compound Engineering loop: ce-brainstorm when the task is
+  unclear, then ce-plan, ce-work, ce-simplify-code, ce-code-review,
+  ce-compound. Lessons go to `docs/solutions/`.
+- Steps the loop does not know: TDD with `make test` and `make vet` before a
+  PR; the guardian before a task that touches the trust boundary; a decision
+  entry before a spec change; the live tests write to Drive, so they run only
+  when the task needs them.
+- Older plans under `docs/plans/` stay as specs. Nothing runs them.
 
-A `wait:` on the third line means there is no work for anybody. A `needs /login`
-means Nail must act, and that is one of the three things you message him about.
-
-One milestone and one review a day. Two runs in a day is how two days of
-presence became a week's quota: every sentence got its own cycle. Sentences that
-arrive mid-run go into tomorrow's backlog, with one exception, a real bug, which
-takes the fast lane.
+A real bug that stops Nail's work takes the fast lane: its own task, branch and
+PR the same day.
 
 ## The release
 
@@ -93,9 +97,8 @@ takes the fast lane.
 make release BRANCH=<branch>
 ```
 
-Run it from the checkout that is on `main`, not from the milestone's worktree:
-`make tag` commits the version bump on HEAD and pushes HEAD, and the script
-refuses `GO` anywhere but `main`.
+Run it from the checkout that is on `main`: `make tag` commits the version bump
+on HEAD and pushes HEAD, and the script refuses `GO` anywhere but `main`.
 
 Without `GO` this pushes the branch, opens the PR, waits for the checks and
 stops at `ready`. That is where it stops until Nail's message. You pass
@@ -103,23 +106,8 @@ stops at `ready`. That is where it stops until Nail's message. You pass
 standing permission to merge, to tag or to publish, and yesterday's go was for
 yesterday's version.
 
-After a release: write the summary, write what Nail should look at on his
-machine, then compact. The run's status lines, the review rounds and the diff
-are spent context. Carrying them into tomorrow is the cost the retrospective
-measured.
-
-## The measurement
-
-```
-.ralphex/board/meter.py ../gdoc-<mNN>
-```
-
-After a run, before the compact: the meter sums the worktree's transcripts per
-task iteration and per review round. Put the run's row in
-`docs/team/measure.md` next to the baseline, with two numbers the meter cannot
-read: your own context at the end of the day, and how many messages Nail had to
-send. The method and the baseline are in that page, and Nail confirms them once
-before the pilot.
+After a release: write the summary, and write what Nail should look at on his
+machine.
 
 ## When to message Nail
 
@@ -128,14 +116,13 @@ Three things, and nothing else:
 1. **A decision.** The five questions, or a question that turned out to be his:
    a guardian's veto, a scope he has to settle, a blocking finding you cannot
    decide.
-2. **A blocked run he must act on.** `needs /login` is the whole list today.
-   Anything a recipe or the operator can fix is not his.
+2. **A blocked task he must act on.** A sign-in only he can do, or a check
+   only he can make in a real document.
 3. **A release.** Asking for the go, and reporting the published version
    verified.
 
-Not progress. Not a task that finished. Not a board refresh. Not a reviewer's
-findings you already decided. He follows a run on the board when he wants to;
-the board exists so that he does not need a message to see it.
+Not progress. Not a reviewer's findings you already decided. He follows the
+work on the Backlog.md board when he wants to.
 
 ## What you never do
 
@@ -145,9 +132,7 @@ the board exists so that he does not need a message to see it.
   manager read every render after the reviewers had already read it, and that
   is counted in the retrospective.
 - **Never run the review a second time because the first one came back clean.**
-  Passes three to five of revmux moved commas.
-- **Never edit `CLAUDE.md`** as part of a milestone's tidying. It is read on
-  every worker iteration and every session, so a line added there is a line paid
-  for about a hundred times a run. A change to it is its own decision.
-- **Never push, merge or tag from a worker or from a subagent.** The lead holds
-  the go, and the platform holds the commands.
+- **Never edit `CLAUDE.md`** as part of a task's tidying. It is read on every
+  session, so a line added there is a line paid for every time. A change to it
+  is its own decision.
+- **Never push, merge or tag from a subagent.** The lead holds the go.

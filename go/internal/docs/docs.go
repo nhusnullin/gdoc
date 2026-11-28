@@ -67,7 +67,7 @@ type Document struct {
 	// are the facts that say what the words came home without, and export
 	// warns where they say somebody marked words, which is any background at
 	// all or a text colour the house claims.
-	// docs/backlog/marks-inside-footnotes.md holds why the runs themselves are
+	// backlog task GD-30 holds why the runs themselves are
 	// not carried yet.
 	FootnoteColours map[string]NoteColours `json:"footnote_colors,omitempty"`
 }
@@ -290,7 +290,7 @@ type Detail struct {
 // startIndex and endIndex and no segment id, and the shape was measured on
 // comments anchored in the body, which would carry none whatever Docs sends for
 // one anchored in a header or a footnote. So the refusal below cannot fire on
-// that path today, and docs/backlog holds the unmeasured question.
+// that path today, and the backlog holds the unmeasured question.
 type Range struct {
 	Tab     string `json:"tab"`
 	Start   int    `json:"start"`

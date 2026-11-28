@@ -302,7 +302,7 @@
 // A pencil inside a footnote is carried, which is what every mark does there,
 // and it does not come home: the read keeps a footnote's text alone, so
 // internal/export writes the words plain and names the loss, which is
-// docs/backlog/marks-inside-footnotes.md and its own
+// backlog task GD-30 and its own
 // TestAPencilMarkInsideAFootnoteIsNamedAsALoss. A comment on lines of its own
 // inside a footnote is the one shape left out there, because a note under the
 // page is a paragraph this package sets and the house style has no grey

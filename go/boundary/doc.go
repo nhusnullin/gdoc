@@ -275,9 +275,9 @@
 // first file to break the rule it states.
 //
 // The scan reads the .gitignore files itself rather than asking git, since
-// nothing under go/ runs a program, and what git ignores is not the tree: the
-// review logs under .revmux/tasks/ quote the lines they read, so a scan that
-// read them would fail on a finding about the rule. Four shapes are read, and
+// nothing under go/ runs a program, and what git ignores is not the tree: a
+// log a tool keeps under an ignored folder quotes the lines it read, so a scan
+// that read it would fail on a finding about the rule. Four shapes are read, and
 // a pattern outside them, a negation, a ** or a bracket filepath.Match
 // refuses, fails by name:
 // TestTheDomainScanRefusesAPatternItCannotRead. A pattern quietly

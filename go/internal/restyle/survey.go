@@ -290,7 +290,7 @@ func countBlocks(bs []docs.Block, t *tally) {
 // count is one run. A footnote's text is flattened by the decoder, so a chip
 // inside one is in no tab's blocks and is not counted here: that is the same
 // hole suggestions inside footnotes already fall into, and it is written down
-// in docs/backlog rather than guessed at.
+// in the backlog rather than guessed at.
 func count(r docs.Run, t *tally) {
 	if r.Kind != docs.KindText {
 		// Every kind of run carries its own suggestion id lists, and

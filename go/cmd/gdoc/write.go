@@ -123,7 +123,7 @@
 // carries one warning saying the flag is ignored and is going, and the policy
 // opens no create door at all. TestTheFolderFlagIsAcceptedAndIgnored,
 // TestProposeStillRefusesAMalformedFolder and TestProposeRunsNoProbe are the
-// pins, and docs/backlog/remove-the-ignored-folder-flag-from-propose.md holds
+// pins, and backlog task GD-26 holds
 // the removal.
 //
 // annotate takes no folder either, and never did: the batch it sends holds one

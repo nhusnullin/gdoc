@@ -333,11 +333,11 @@ func footnoteWarnings(t docs.Tab, marked map[string]bool) []string {
 		return nil
 	}
 	out := []string{
-		"a suggestion inside a footnote is written as plain text, because the read does not carry the ids there: docs/backlog/suggestions-inside-footnotes.md",
-		"a comment anchored inside a footnote, a header or a footer carries no marker in this file: docs/backlog/comment-anchors-in-headers-and-footnotes.md",
+		"a suggestion inside a footnote is written as plain text, because the read does not carry the ids there: backlog task GD-2",
+		"a comment anchored inside a footnote, a header or a footer carries no marker in this file: backlog task GD-5",
 	}
 	if lost {
-		out = append(out, "a footnote in this tab carries a colour on its own words, and the read keeps a footnote's text alone: that mark comes home as plain words and is counted on no envelope: docs/backlog/marks-inside-footnotes.md")
+		out = append(out, "a footnote in this tab carries a colour on its own words, and the read keeps a footnote's text alone: that mark comes home as plain words and is counted on no envelope: backlog task GD-30")
 	}
 	return out
 }

@@ -124,6 +124,7 @@ replaced it)`, or `measured`. Nothing else.
 | 2026-11-05 | A task in a note is a checklist item in the document, with a name chip and a date chip | holds | DECISIONS.md |
 | 2026-11-07 | Body text is 12pt whatever gdoc is doing: a block's new paragraphs take the house look restyle writes, and a block is at most five kilobytes | holds | DECISIONS.md |
 | 2026-11-22 | A skill offers to install gdoc when the machine has none, and signs in after | holds | DECISIONS.md |
+| 2026-11-28 | Work runs the way Etude's does: Backlog.md, one task in one branch in one PR, the Compound Engineering loop, and no ralphex, revmux or umputun plugins | holds | DECISIONS.md |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -2268,3 +2269,40 @@ The pins: `TestEverySkillOffersTheInstallWhenGdocIsMissing` and
 
 A domain choice with no principle above it: how a colleague gets the binary,
 and Nail made it.
+
+## 2026-11-28. Work runs the way Etude's does: Backlog.md, one task in one branch in one PR, and no ralphex, revmux or umputun plugins.
+
+Nail's decision, taken in chat on the date above, in his words (Russian):
+"Давай-ка, если мы еще не переехали, переедем как вот в этюде или в
+хеликоптере. Возьмем вот этот backlog подход и вот этот подход к разработке.
+Вот эти все инпутуновские штуки давай уберем отсюда из GDoc. Переедем
+полностью на подход, как мы это делаем в этюде. Мне там нравится." The
+"инпутуновские" things are the umputun tools: ralphex, revmux and the cc-thingz
+plugins.
+
+**What changed.**
+
+- The work is in Backlog.md under `backlog/`, task ids GD-n, changed with the
+  `backlog` CLI. The 51 files of `docs/backlog/` became GD-1 to GD-51, each
+  with its old `worth` as a label and its old path in its description. A
+  comment in the tree that named one of those files now names its task.
+- One task, one branch, one PR. Statuses are To Do, In Progress, To check and
+  Done, as in Etude.
+- Per task, the Compound Engineering loop. Lessons go to `docs/solutions/`.
+- `make milestone`, the `.ralphex/` folder, the `.revmux/` folder, the meter,
+  `docs/team/measure.md` and the platform operator seat are gone. The umputun
+  plugins are off in `.claude/settings.json`.
+- `make release` stays, and its script moved to `scripts/release.sh` with its
+  test. It was never ralphex's: it pushes, opens the PR, waits for the checks
+  and stops until Nail's go.
+
+**What is unchanged.** The trust guardian and the design reviewer, the decision
+entry before the spec, TDD, the go for a release, and every invariant in
+`CLAUDE.md`. The plans under `docs/plans/` stay as specs.
+
+**Not carried over.** The run logs ralphex kept under `.ralphex/progress/` were
+never in git. They were moved to `~/gdoc-ralphex-archive/` on Nail's machine and
+nothing reads them.
+
+A domain choice with no principle above it: how the work is run, and Nail made
+it.

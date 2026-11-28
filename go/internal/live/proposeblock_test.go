@@ -136,7 +136,7 @@ func TestLiveProposeBlock(t *testing.T) {
 	// counted with the wider walk too, not only the one at the end. The replace
 	// block is not: its new list leaves a ListPropertiesChanges id of its own,
 	// with or without the look, measured both ways on 2026-11-07, and
-	// docs/backlog/a-replace-blocks-list-leaves-a-second-suggestion-id.md holds
+	// backlog task GD-49 holds
 	// it. It is counted against the ids around it instead, so the look it adds
 	// is still asked whether it brought one more.
 	idsBefore := blockSuggestionIDs(t, ctx, s, docID, "before the after block")
@@ -175,7 +175,7 @@ func TestLiveProposeBlock(t *testing.T) {
 	// Two ids, measured on 2026-11-07 once the setup really ended on the
 	// document's final mark: the batch gdoc sent before the look left two, and
 	// with the look it left five, so a block here takes none.
-	// docs/backlog/a-block-at-the-end-of-a-document-is-not-one-suggestion.md
+	// backlog task GD-47
 	// holds the case, and a third id fails this.
 	blockAddedIDs(t, "the block after the last paragraph", idsReplace,
 		blockSuggestionIDs(t, ctx, s, docID, "after the block after the last paragraph"), atEnd, 2)

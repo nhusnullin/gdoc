@@ -203,7 +203,7 @@ func (w *walker) paragraph(p *docs.Paragraph) {
 		// Only a text run is a suggestion here. A footnote reference carries
 		// its number as text, and reporting "1" as a suggested insertion would
 		// be a lie; a suggested picture is
-		// docs/backlog/read-pictures-and-drawings.md.
+		// backlog task GD-1.
 		if r.Kind != docs.KindText {
 			continue
 		}

@@ -157,7 +157,7 @@ var houseStyleKey = map[string]string{
 // not name one of their ranges even if the level carried a request for it.
 // ManualSteps does not name that gap either, so a document whose body is
 // restyled and whose running head is not comes back saying nothing about it.
-// docs/backlog/restyle-skips-footnotes-headers-and-footers.md is the way out.
+// backlog task GD-8 is the way out.
 func TabRequests(t docs.Tab, cfg *house.Config) Plan {
 	return TabRequestsExcept(t, cfg)
 }

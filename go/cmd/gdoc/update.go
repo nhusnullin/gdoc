@@ -252,7 +252,7 @@ const updateCommand = "update"
 //
 // A hundred moves the ceiling rather than removing it: about three months of
 // nightlies. Walking pages is the thing that removes it, and it is a decision
-// rather than a tidy-up, so it is in docs/backlog/ with its reason.
+// rather than a tidy-up, so it is in the backlog with its reason.
 const releasesURL = "https://api.github.com/repos/" + updateRepo + "/releases?per_page=100"
 
 // zipBinaryName is what the release workflow calls the binary at the top of
@@ -454,7 +454,7 @@ func oneRun(f update.Flags) error {
 // checkout's own build instead of being refused. That is the file `make build`
 // writes, so the next build takes it back; it is a worse answer than the
 // refusal rather than a lost binary. Windows is unmeasured until the checklist
-// in docs/backlog/windows-rollout-checklist.md runs.
+// in backlog task GD-13 runs.
 func binaryPath() (string, error) {
 	path, err := executable()
 	if err != nil {

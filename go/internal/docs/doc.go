@@ -111,7 +111,7 @@
 // text runs alone, so a suggestion carried only by a chip, a break, a rule or an
 // auto text is printed by read and listed by nothing; restyle's survey counts
 // those ids itself so it cannot answer "nothing to protect" over one. The
-// listing half is docs/backlog/suggestions-on-elements-are-not-listed.md.
+// listing half is backlog task GD-6.
 //
 // # The seven elements are a fixture built from the reference
 //
@@ -306,7 +306,7 @@
 // was measured on comments anchored in the body, which carry no segment id
 // whatever Docs sends for one anchored elsewhere, and whether Docs anchors one
 // there at all is unmeasured, in
-// docs/backlog/comment-anchors-in-headers-and-footnotes.md.
+// backlog task GD-5.
 // TestANamedRangeCarriesItsTabItsRangesAndItsSegments is the pin.
 //
 // # NamedRangesURL is the narrowed read
@@ -334,7 +334,7 @@
 // inside one is in neither read's markers nor the pending listing, and nothing
 // warns. A chip inside a footnote is in no tab's blocks and is counted nowhere
 // for the same reason. That hole is written down rather than guessed at, in
-// docs/backlog/suggestions-inside-footnotes.md.
+// backlog task GD-2.
 //
 // A mark inside a footnote is the same flattening, and that one does not go
 // unsaid: the colour is gone from the text, so FootnoteColours holds, for each
@@ -347,7 +347,7 @@
 // TestAMarkInsideAFootnoteIsNamedAsALoss,
 // TestAPencilMarkInsideAFootnoteIsNamedAsALoss and
 // TestAFootnoteWhoseOnlyColourIsALinksIsNotWarnedAboutAMark over the warning,
-// and docs/backlog/marks-inside-footnotes.md holds why the runs are not
+// and backlog task GD-30 holds why the runs are not
 // carried.
 //
 // A body over the read's ceiling is an error naming the ceiling, never a short

@@ -156,7 +156,7 @@ var apiCannot = []ManualStep{
 // a footer needs a decoder internal/docs does not have. Which of the three to
 // report, and on what condition, is Nail's, in the shape the 2026-09-09 decision
 // settled this list in.
-// docs/backlog/restyle-skips-footnotes-headers-and-footers.md holds it.
+// backlog task GD-8 holds it.
 func ManualSteps(p Plan) []ManualStep {
 	out := append([]ManualStep{}, apiCannot...)
 	if p.Bulleted > 0 {

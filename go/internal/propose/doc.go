@@ -247,7 +247,7 @@
 // content that is empty or nothing but space. Three of them are decisions rather
 // than gaps: a nested list, because nesting a suggested list goes in through
 // leading tabs and that is unmeasured in SUGGEST mode, a table, because
-// docs/backlog/propose-inside-tables.md is not settled, and a numbered list
+// backlog task GD-4 is not settled, and a numbered list
 // beginning anywhere but 1, because createParagraphBullets carries no start
 // number and the preset counts from 1: an author's "3." would arrive as "1."
 // and no read-back could see it, since all three read words and a list number is
@@ -393,7 +393,7 @@
 // anchor is a table or the contents list Docs generates, because there is no
 // paragraph start to go in at, and when the paragraph behind it does not begin
 // where the anchor ends. A quote inside a table cell is refused on both block
-// routes while docs/backlog/propose-inside-tables.md is unsettled. The words
+// routes while backlog task GD-4 is unsettled. The words
 // kind is placed in a cell, because a cell's paragraph is a paragraph:
 // TestFindSpanPlacesAQuoteInsideATableCell.
 //
@@ -556,7 +556,7 @@
 // batch there already left two suggestion ids where the promise is one, and the
 // look made it five. Nail chose to ship the look everywhere else and keep the
 // end as it was, so a block there is still 11pt and still two ids, which
-// docs/backlog/a-block-at-the-end-of-a-document-is-not-one-suggestion.md holds:
+// backlog task GD-47 holds:
 // TestABlockAtTheEndTakesNoLook.
 //
 // deleteParagraphBullets covers every new paragraph that is not a list item, and
