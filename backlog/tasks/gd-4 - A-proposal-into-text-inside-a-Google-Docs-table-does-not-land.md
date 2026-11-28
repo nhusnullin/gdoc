@@ -4,6 +4,7 @@ title: A proposal into text inside a Google Docs table does not land
 status: To Do
 assignee: []
 created_date: '2026-11-28T10:48:00Z'
+updated_date: '2026-11-28T12:09:00Z'
 labels:
   - worth-later
 dependencies: []
@@ -40,3 +41,9 @@ newline; and the docx witness on a nested table.
 
 Added 2026-09-08 as docs/backlog/propose-inside-tables.md, worth: later.
 <!-- SECTION:DESCRIPTION:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+2026-11-28: the session that sent Nail to the tables by hand was never refused by gdoc. Its cells repeat in the document and it did not send them. See the repeated-quote task. A plain cell still lands, as measured 2026-09-18.
+<!-- SECTION:NOTES:END -->
