@@ -365,7 +365,7 @@ func applyWords(ctx context.Context, s Session, docID string, p Proposal, d *doc
 	if err != nil {
 		return out, err
 	}
-	r, err := FindSpanNear(d, p.Quoted, p.Near)
+	r, row, err := FindPlaced(d, p.Quoted, p.Near)
 	if err != nil {
 		return out, err
 	}
@@ -374,7 +374,7 @@ func applyWords(ctx context.Context, s Session, docID string, p Proposal, d *doc
 		return out, err
 	}
 
-	checks, ids, warns := Verify(ctx, s, docID, r, p, comment)
+	checks, ids, warns := Verify(ctx, s, docID, r, p, row, comment)
 	out.Checks = checks
 	out.SuggestionIDs = ids
 	out.Warnings = append(out.Warnings, warns...)

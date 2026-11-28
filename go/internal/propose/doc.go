@@ -103,7 +103,11 @@
 // elsewhere too, asking the whole tab would pass on a direct edit, because
 // the other copies are still there. A preview that does not hold near once
 // has no place to ask, and the warning says it could not tell rather than
-// naming a direct edit: TestCarriesNearAsksThePlaceAndNotTheTab.
+// naming a direct edit: TestCarriesNearAsksThePlaceAndNotTheTab. The place
+// is chosen once, by FindPlaced, and Verify is handed it. A read-back that
+// chose again would see a paragraph a direct edit had emptied of the quote,
+// widen to the row and pass on the cell beside it:
+// TestTheReadBackAsksThePlaceTheQuoteWasFoundIn.
 //
 // # A match has to be contiguous, and that is not a detail
 //

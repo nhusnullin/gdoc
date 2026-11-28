@@ -183,7 +183,7 @@ func TestVerifyHoldsOnAllThreeRoutes(t *testing.T) {
 	f := script(t, "before.json", "after.json", "preview.json", "batch-saved.json", withComment)
 	f.inline = f.inline[1:] // Verify makes the read-back read, not the first one.
 
-	checks, ids, warns := Verify(context.Background(), f, testDocID, span(26, 43), testProposal, "🤖 "+testProposal.Why)
+	checks, ids, warns := Verify(context.Background(), f, testDocID, span(26, 43), testProposal, false, "🤖 "+testProposal.Why)
 
 	if checks != (Checks{SuggestionsInline: true, PreviewWithoutSuggestions: true, DocxAnchored: true}) {
 		t.Errorf("checks = %+v, warnings = %v", checks, warns)
@@ -203,7 +203,7 @@ func TestVerifyReadsThePreviewThroughItsOwnView(t *testing.T) {
 	f := script(t, "before.json", "after.json", "preview.json", "batch-saved.json", withComment)
 	f.inline = f.inline[1:]
 
-	Verify(context.Background(), f, testDocID, span(26, 43), testProposal, "🤖 why")
+	Verify(context.Background(), f, testDocID, span(26, 43), testProposal, false, "🤖 why")
 
 	var sawInline, sawPreview, sawExport bool
 	for _, c := range f.calls {
@@ -233,7 +233,7 @@ func TestVerifyReadsThePreviewByWordsRatherThanAtTheIndex(t *testing.T) {
 	f := script(t, "before.json", "after.json", "preview.json", "batch-saved.json", withComment)
 	f.inline = f.inline[1:]
 
-	checks, _, warns := Verify(context.Background(), f, testDocID, span(33, 50), testProposal, "🤖 "+testProposal.Why)
+	checks, _, warns := Verify(context.Background(), f, testDocID, span(33, 50), testProposal, false, "🤖 "+testProposal.Why)
 
 	if !checks.PreviewWithoutSuggestions {
 		t.Errorf("PreviewWithoutSuggestions = false where the preview carries %q: %v", testProposal.Quoted, warns)
@@ -248,7 +248,7 @@ func TestVerifyStillCatchesADirectEditInThePreview(t *testing.T) {
 	f := script(t, "before.json", "after.json", "preview-edited.json", "batch-saved.json", withComment)
 	f.inline = f.inline[1:]
 
-	checks, _, warns := Verify(context.Background(), f, testDocID, span(26, 43), testProposal, "🤖 "+testProposal.Why)
+	checks, _, warns := Verify(context.Background(), f, testDocID, span(26, 43), testProposal, false, "🤖 "+testProposal.Why)
 
 	if checks.PreviewWithoutSuggestions {
 		t.Error("PreviewWithoutSuggestions = true on a preview carrying the replacement, which is a direct edit")
@@ -277,7 +277,7 @@ func TestVerifyCatchesADirectEditWhoseReplacementCarriesTheQuote(t *testing.T) {
 	f := script(t, "before.json", "after.json", "preview-edited-containing.json", "batch-saved.json", withComment)
 	f.inline = f.inline[1:]
 
-	checks, _, warns := Verify(context.Background(), f, testDocID, span(26, 43), addWords, "🤖 "+addWords.Why)
+	checks, _, warns := Verify(context.Background(), f, testDocID, span(26, 43), addWords, false, "🤖 "+addWords.Why)
 
 	if checks.PreviewWithoutSuggestions {
 		t.Error("PreviewWithoutSuggestions = true on a preview carrying the replacement, which is a direct edit the quote alone cannot see")
@@ -295,7 +295,7 @@ func TestVerifyDoesNotCryWolfOnAnHonestAddWordsProposal(t *testing.T) {
 	f := script(t, "before.json", "after.json", "preview-plain.json", "batch-saved.json", withComment)
 	f.inline = f.inline[1:]
 
-	checks, _, warns := Verify(context.Background(), f, testDocID, span(26, 43), addWords, "🤖 "+addWords.Why)
+	checks, _, warns := Verify(context.Background(), f, testDocID, span(26, 43), addWords, false, "🤖 "+addWords.Why)
 
 	if !checks.PreviewWithoutSuggestions {
 		t.Errorf("PreviewWithoutSuggestions = false where the preview carries the quoted words and not the replacement: %v", warns)
@@ -358,7 +358,7 @@ func TestVerifyWarnsWhenTheExportCouldNotBeRead(t *testing.T) {
 	f.inline = f.inline[1:]
 	f.failAt[2] = errors.New("the export timed out")
 
-	checks, _, warns := Verify(context.Background(), f, testDocID, span(26, 43), testProposal, "🤖 "+testProposal.Why)
+	checks, _, warns := Verify(context.Background(), f, testDocID, span(26, 43), testProposal, false, "🤖 "+testProposal.Why)
 
 	if checks.DocxAnchored {
 		t.Error("DocxAnchored = true on an export that never arrived")

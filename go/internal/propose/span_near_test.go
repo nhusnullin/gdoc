@@ -92,17 +92,17 @@ func TestWithoutNearAQuoteThatStandsTwiceIsStillRefused(t *testing.T) {
 // meant, and a question about the whole tab would pass on them.
 func TestCarriesNearAsksThePlaceAndNotTheTab(t *testing.T) {
 	const near = "Holds the crypto relationship"
-	if held, placed := CarriesNear(document(t, "near-table.json"), "t.0", "Provider", near); !held || !placed {
+	if held, placed := CarriesNear(document(t, "near-table.json"), "t.0", "Provider", near, true); !held || !placed {
 		t.Errorf("held, placed = %v, %v, and the quote is beside the words", held, placed)
 	}
 	edited := document(t, "near-table-preview-edited.json")
 	if !Carries(edited, "t.0", "Provider") {
 		t.Fatal("the fixture should still hold the quote elsewhere")
 	}
-	if held, placed := CarriesNear(edited, "t.0", "Provider", near); held || !placed {
+	if held, placed := CarriesNear(edited, "t.0", "Provider", near, true); held || !placed {
 		t.Errorf("held, placed = %v, %v: a direct edit took the quote from the place, and the place is still there", held, placed)
 	}
-	if _, placed := CarriesNear(edited, "t.0", "Provider", "Provider"); placed {
+	if _, placed := CarriesNear(edited, "t.0", "Provider", "Provider", true); placed {
 		t.Error("near words that stand more than once named a place")
 	}
 }
@@ -129,5 +129,33 @@ func TestCheckRefusesNearOnABlock(t *testing.T) {
 	blank := Proposal{Quoted: "a", Replacement: "b", Why: "w", Near: "  "}
 	if err := blank.Check("⁘"); err == nil || !strings.Contains(err.Error(), "near") {
 		t.Errorf("error = %v, and a blank near is refused by name", err)
+	}
+}
+
+// The place is chosen once, when the quote is placed, and the read-back is
+// told which it was. Found in review, 2026-11-28: a read-back that chose
+// again saw a paragraph the direct edit had emptied of the quote, widened to
+// the row, and passed on the copy in the cell beside it.
+func TestTheReadBackAsksThePlaceTheQuoteWasFoundIn(t *testing.T) {
+	d := document(t, "near-table.json")
+	// "of record" stands in a cell that holds the quote, so the place is that
+	// paragraph, and the first cell of its row holds another copy.
+	r, row, err := FindPlaced(d, "Provider", "of record")
+	if err != nil || row || r.Start != 118 {
+		t.Fatalf("range, row, err = %+v, %v, %v, want the paragraph's own copy at 118", r, row, err)
+	}
+	if _, row, _ := FindPlaced(d, "Provider", "Holds the crypto relationship"); !row {
+		t.Fatal("a quote found in the cell beside the near words was not placed by its row")
+	}
+	// The preview after a direct edit of that paragraph: asked of the
+	// paragraph it says no, where the row would say yes.
+	if held, placed := CarriesNear(d, "t.0", "Supplier", "of record", false); held || !placed {
+		t.Errorf("held, placed = %v, %v for words the paragraph does not hold", held, placed)
+	}
+	if held, _ := CarriesNear(d, "t.0", "Holds the crypto", "of record", false); held {
+		t.Error("the paragraph was asked, and another row's words answered")
+	}
+	if held, _ := CarriesNear(d, "t.0", "Provider", "ASV, the", true); !held {
+		t.Error("the row holds the quote, and CarriesNear asked of the row says it does not")
 	}
 }
