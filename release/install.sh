@@ -531,3 +531,10 @@ fi
 printf '\n  next     gdoc auth login, if this says signed out:\n\n'
 "$installed" auth status || true
 printf '\n'
+
+# The step that is easy to miss goes last, alone, where the eye stops: an
+# extension installed into a Claude Desktop that is running reaches no chat
+# until it is quit and opened again. release/test-desktop.sh holds it there.
+if [ "$desktop" -eq 1 ]; then
+    printf '  NEXT     quit Claude Desktop (Cmd+Q) and open it again. Until then no chat can see gdoc.\n\n'
+fi

@@ -224,6 +224,15 @@ fi
 
 # The line a person is told to add is the same one as before the loader: the
 # file is written again, never its name changed.
+# The step a person misses is the last thing the run says: an extension
+# installed into a Claude Desktop that is running reaches no chat until it is
+# quit and opened again.
+last_line="$(grep -v '^[[:space:]]*$' "$work/release-1.log" | tail -n 1)"
+case "$last_line" in
+    *NEXT*"quit Claude Desktop"*"open it again"*) ;;
+    *) fail "the last line of a --desktop run is not the quit-and-reopen step: $last_line" ;;
+esac
+
 if ! grep -qF "source $completion" "$work/release-1.log"; then
     fail "the run does not print the source line for $completion: $(cat "$work/release-1.log")"
 else
