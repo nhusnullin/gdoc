@@ -54,7 +54,7 @@ public struct SignInPhase: Equatable, Sendable {
 /// there proves nothing about Claude Desktop, which this app may not ask:
 /// nothing published says where Desktop keeps what it loaded. So there is no
 /// "connected", and the row is left out rather than guessed at.
-/// docs/backlog/the-panel-cannot-see-the-desktop-extension.md.
+/// backlog task GD-37.
 public enum ExtensionState: Sendable, Equatable {
   /// No extension Claude Desktop can have taken: no `gdoc.mcpb` beside the
   /// binary, or a run of this app wrote one and could not hand it over.
@@ -98,7 +98,7 @@ public struct NetworkFact: Sendable, Equatable {
 /// The skills are not among them. Nothing gdoc prints names a skills
 /// version, and the folders are symlinks into somebody's `~/.claude`, which
 /// this app does not read:
-/// docs/backlog/the-panel-cannot-see-the-skills-version.md.
+/// backlog task GD-38.
 public struct Versions: Sendable, Equatable {
   /// The app's own, off its plist.
   public let app: String

@@ -215,7 +215,7 @@
 //     reads both back through Drive's listing and the docx export. The
 //     paragraph case is the milestone's acceptance bar and asserts both routes.
 //     The table case is a measurement and asserts nothing: it is the question
-//     docs/backlog/propose-inside-tables.md was left open on, and an
+//     backlog task GD-4 was left open on, and an
 //     insertComment with no deleteContentRange beside it is what tells the
 //     suspects apart. Measured 2026-09-18: both comments verified, in the cell
 //     as in the paragraph.

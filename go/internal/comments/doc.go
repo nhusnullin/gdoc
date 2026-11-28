@@ -51,7 +51,7 @@
 // on 2026-10-03, Drive gave none on any comment, the signed-in person's own
 // included, so in practice the key is absent: TestAnUnknownAuthorDomainIsLeftOut.
 // Saying which commenters are from outside the firm waits on another read:
-// docs/backlog/say-which-commenters-are-from-outside-the-firm.md.
+// backlog task GD-27.
 //
 // The address itself is read and dropped. Nothing in this tree reads the domain
 // either: identity is never a gate, and no hold, no filter and no marker asks

@@ -195,7 +195,7 @@ func TestNoLookWritesTheBatchItAlwaysWrote(t *testing.T) {
 // suggestion ids and the look made it five: every style request near that mark
 // came back as an id of its own. So a block at the end is written exactly as it
 // was before the look, and
-// docs/backlog/a-block-at-the-end-of-a-document-is-not-one-suggestion.md holds
+// backlog task GD-47 holds
 // the case.
 func TestABlockAtTheEndTakesNoLook(t *testing.T) {
 	content := plainBlock(t)

@@ -168,7 +168,7 @@ func PlaceReplace(d *docs.Document, from, to string) (Placement, error) {
 //
 // A span this cannot find is a span inside a table, because a table cell is the
 // only place besides a body paragraph that the index walk reads text from. A
-// block inside a table is out of scope while docs/backlog/propose-inside-tables.md
+// block inside a table is out of scope while backlog task GD-4
 // is unsettled, so it is refused by name rather than placed against the table's
 // own indexes.
 func paragraphHolding(tab docs.Tab, span docs.Range, quoted string) (int, error) {

@@ -64,8 +64,8 @@ Two rules about the documents themselves:
 | `release/` | what a colleague gets: the one-line installer, the example note, the Claude Desktop extension template under `mcpb/`, and the platform list a release walks. The README in the zip is this repository's `README.md` |
 | `docs/guide/` | the colleague's pages the README links to: how gdoc stays inside the document, and each command walked through |
 | `docs/v2/` | what v2 is, what is next, why, and what Google does |
-| `docs/backlog/` | deferred work, one file per item |
-| `docs/plans/` | the milestone plans. `completed/` holds the ones that ran |
+| `backlog/` | the work, in Backlog.md: one task per file, ids GD-n, changed with the `backlog` CLI |
+| `docs/plans/` | the milestone plans that ran before 2026-11-28. Specs now, nothing runs them |
 | `bin/` | what `make build` and `make dist` write. Not in git, so both targets create it |
 
 Secrets live in `~/.config/gdoc-agent/`, never in this repo.
@@ -250,8 +250,8 @@ into `docs/v2/DECISIONS.md`, not a refactor.
 | what v2 is, and what is next | `docs/v2/SPEC.md`, `docs/v2/PLAN.md` |
 | why something is the way it is | `docs/v2/DECISIONS.md` |
 | what Google does, or refuses to do | `docs/v2/MEASURED.md`, `docs/v2/BLOCKED-BY-API.md` |
-| work that was deferred on purpose | `docs/backlog/` |
-| running a milestone | `.ralphex/board/README.md` |
+| work that is waiting, or deferred on purpose | `backlog/`, through `backlog task list --plain` |
+| how a task runs, from Nail's sentence to the release | `docs/team/lead.md` |
 
 ## Building and testing
 
@@ -277,12 +277,12 @@ is a document that did not exist a second ago. `GDOC_LIVE_TEST=1` with
 writers in documents it makes itself, and `go/internal/live/doc.go` names every
 variable. CI runs gofmt, vet, the raced suite and `make dist` on every push.
 
-## Running a milestone
+## Dev cycle
 
-A milestone is a plan under `docs/plans/`, run by ralphex and reviewed by
-revmux, from a normal terminal and never from a Claude Code session. Read
-`.ralphex/board/README.md` first: the launch lines, what `main` carries before a
-run, the board, and how to resume a run that died.
+Work lives in Backlog.md, as in Etude (Nail, 2026-11-28): run `backlog
+instructions overview` at the start of a session. One task, one branch, one PR,
+and the Compound Engineering loop per task. The umputun plugins are off in
+`.claude/settings.json`. `docs/team/lead.md` holds the rest.
 
 ## Never
 

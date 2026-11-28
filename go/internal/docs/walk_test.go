@@ -258,7 +258,7 @@ func TestObjectRunsCarryTheirKindsAndTheFootnoteText(t *testing.T) {
 // there was one, and export warns where they say somebody marked words, which
 // is any background at all or a text colour the house claims, rather than
 // letting the words come home plainer than they went.
-// docs/backlog/marks-inside-footnotes.md holds the hole itself.
+// backlog task GD-30 holds the hole itself.
 //
 // #FFD500 is the yellow mark and #1155CC is the link blue Docs writes on a
 // link's own run, each stated as a literal: the read hands over the hex and

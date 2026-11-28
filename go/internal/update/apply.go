@@ -64,7 +64,7 @@ func Verify(archive, sums []byte, asset string) error {
 //
 // Windows: the same three renames, and os.Rename replaces the file it lands
 // on there as it does here. It is unmeasured until the checklist in
-// docs/backlog/windows-rollout-checklist.md runs, which is the first time
+// backlog task GD-13 runs, which is the first time
 // gdoc replaces itself on Windows.
 //
 // TestTheReplaceSequenceLeavesTheNewBinaryAndKeepsTheOld,

@@ -247,7 +247,7 @@ func TestAPencilGoesWhereAMarkGoes(t *testing.T) {
 	// alone, so internal/export writes the words plain and names the loss
 	// there rather than here: its own
 	// TestAPencilMarkInsideAFootnoteIsNamedAsALoss is that pin, and
-	// docs/backlog/marks-inside-footnotes.md is the item.
+	// backlog task GD-30 is the item.
 	out := walk(t, "Words.[^a]\n\n[^a]: a note with <!-- an aside --> in it.\n")
 	if len(out.Footnotes) != 1 {
 		t.Fatalf("the file built %d notes, want the one the mark makes", len(out.Footnotes))

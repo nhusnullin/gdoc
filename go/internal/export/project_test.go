@@ -394,8 +394,8 @@ func TestAFootnoteIsWrittenAndWarned(t *testing.T) {
 		t.Errorf("the footnote is not in the file:\n%s", body)
 	}
 	for _, want := range []string{
-		"docs/backlog/suggestions-inside-footnotes.md",
-		"docs/backlog/comment-anchors-in-headers-and-footnotes.md",
+		"backlog task GD-2",
+		"backlog task GD-5",
 	} {
 		found := false
 		for _, w := range warnings {
@@ -439,7 +439,7 @@ func TestAMarkInsideAFootnoteIsNamedAsALoss(t *testing.T) {
 	}
 	found := false
 	for _, w := range warnings {
-		if strings.Contains(w, "docs/backlog/marks-inside-footnotes.md") {
+		if strings.Contains(w, "backlog task GD-30") {
 			found = true
 		}
 	}
@@ -474,7 +474,7 @@ func TestAPencilMarkInsideAFootnoteIsNamedAsALoss(t *testing.T) {
 	}
 	found := false
 	for _, w := range warnings {
-		if strings.Contains(w, "docs/backlog/marks-inside-footnotes.md") {
+		if strings.Contains(w, "backlog task GD-30") {
 			found = true
 		}
 	}
@@ -835,7 +835,7 @@ func TestAFootnoteWhoseOnlyColourIsALinksIsNotWarnedAboutAMark(t *testing.T) {
 	_, _, _, warnings := Project(d, nil, palette(t))
 
 	for _, w := range warnings {
-		if strings.Contains(w, "docs/backlog/marks-inside-footnotes.md") {
+		if strings.Contains(w, "backlog task GD-30") {
 			t.Errorf("the link's own blue was named as a mark that came home plain: %q", w)
 		}
 	}
