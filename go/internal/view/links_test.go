@@ -536,3 +536,34 @@ func TestEveryFloatingPlaceholderIsAMarker(t *testing.T) {
 		}
 	}
 }
+
+// TestTheSuggestionMarkerInTheDocumentsOwnTextIsEscaped: "[s:" is the one
+// marker of three characters, and every route into a document refuses a file
+// that holds it bare. A document whose author wrote it comes home as a file
+// those routes accept, whichever run the three characters fall in.
+func TestTheSuggestionMarkerInTheDocumentsOwnTextIsEscaped(t *testing.T) {
+	linked := docs.Run{Kind: docs.KindText, Text: "s: the plan", StartIndex: 1, EndIndex: 12,
+		Link: &docs.Link{URL: "https://example.com/q3"}}
+	for name, c := range map[string]struct {
+		runs []docs.Run
+		want string
+	}{
+		"in one run":              {[]docs.Run{run("see [s:12] here", 1)}, "see [s:12] here"},
+		"split after the bracket": {[]docs.Run{run("see [", 1), run("s:12]", 6)}, "see [s:12]"},
+		"split before the colon":  {[]docs.Run{run("see [s", 1), run(":12]", 7)}, "see [s:12]"},
+		"behind a second bracket": {[]docs.Run{run("a [[s:12]", 1)}, "a [[s:12]"},
+		"behind a backslash":      {[]docs.Run{run(`a \[s:12]`, 1)}, `a \[s:12]`},
+		"as a link's first words": {[]docs.Run{linked}, "s: the plan"},
+	} {
+		got := project(c.runs...)
+		if marker, found := markers.Find(got); found {
+			t.Errorf("%s: %q still holds the marker %q", name, got, marker)
+		}
+		if back := unescape(got); back != c.want {
+			t.Errorf("%s: unescape(%q) = %q, want %q", name, got, back, c.want)
+		}
+	}
+	if got := project(run("a colon: and [square] and [so: on]", 1)); strings.Contains(got, `\`) {
+		t.Errorf("nothing here is a marker, and it was escaped: %q", got)
+	}
+}

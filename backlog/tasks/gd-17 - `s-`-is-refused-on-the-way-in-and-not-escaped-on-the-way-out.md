@@ -1,9 +1,10 @@
 ---
 id: GD-17
 title: '`[s:` is refused on the way in and not escaped on the way out'
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-11-28T10:49:00Z'
+updated_date: '2026-11-28T14:03:00Z'
 labels:
   - worth-later
 dependencies: []
@@ -52,3 +53,9 @@ Pins to write with the fix: a document whose text holds `[s:` exports to a file
 
 Added 2026-09-19 as docs/backlog/the-suggestion-marker-is-refused-but-not-escaped.md, worth: later.
 <!-- SECTION:DESCRIPTION:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Took neither of the two shapes the task names: the colon takes the backslash where it completes the marker, so the window stays one rune and both halves are covered, a link's own bracket included.
+<!-- SECTION:NOTES:END -->

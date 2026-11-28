@@ -48,6 +48,12 @@ const (
 	shutComment   = "]]"
 )
 
+// suggestionHead is what stands in front of the colon in "[s:", the marker a
+// suggestion's id is written in. It is three characters where every other is
+// two, so the colon takes the backslash: the one character that completes it.
+// TestTheSuggestionMarkerInTheDocumentsOwnTextIsEscaped is the pin.
+const suggestionHead = "[s"
+
 // escapePairs is what escaping looks for. It is the markup above, and the list
 // has to stay in step with it.
 var escapePairs = []string{openInsertion, openDeletion, shutInsertion, shutDeletion, openComment, shutComment}
@@ -494,6 +500,12 @@ func (e *emitter) write(s string) {
 // it escaped, which is escapeAt's answer.
 func (e *emitter) writeDoc(r rune, enc string) {
 	e.release(r)
+	if r == ':' && strings.HasSuffix(e.out.String(), suggestionHead) {
+		// The colon would shut "[s:" behind two characters already written,
+		// whoever wrote them: the document's own, in this run or the one
+		// before it, or the bracket gdoc opens a link's words with.
+		enc = escape(enc)
+	}
 	if e.inLink && (r == '[' || r == ']') {
 		// Inside a link's words one bracket is markup of its own: the words end
 		// at the first "]" a reader meets, so a "]" the document holds would cut
@@ -2523,6 +2535,13 @@ func escapeAt(rs []rune, i int) string {
 		// to prevent. An even run of backslashes is the author's text, an odd
 		// one ends in the escape.
 		return "\\\\"
+	}
+	if rs[i] == ':' && i >= 2 && string(rs[i-2:i]) == suggestionHead {
+		// "[s:" is the one marker of three characters, so it is caught where
+		// it completes rather than where it starts: a window one rune ahead
+		// cannot see it from the bracket, and a backslash on every "[" in
+		// front of an "s" would mark words nothing is wrong with.
+		return "\\:"
 	}
 	if i+1 < len(rs) && isEscapePair(rs[i], rs[i+1]) {
 		// The backslash goes in and the caller moves on by one rune, not two.
