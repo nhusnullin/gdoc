@@ -49,6 +49,7 @@ earlier sections are frozen in [MEASURED-archive.md](MEASURED-archive.md).
 | 2026-11-06 | A person chip naming another address mails and shares with nobody | MEASURED.md |
 | 2026-11-07 | A block's suggestion ids with the house look, and at the end of a document | MEASURED.md |
 | 2026-11-28 | A painted direct edit, a stale revision, and two ways to clear a highlight | MEASURED.md |
+| 2026-11-28 | An insert at the end of the words it replaces takes their look | MEASURED.md |
 
 A measurement is never edited to match a later reading; a different answer is a
 new section in this file rather than a change in the archive, and the old one
@@ -1135,3 +1136,28 @@ Not asked: what style inserted words take at a bold edge or behind a link.
 gdoc refuses an edit there instead. Ask it when somebody wants those edits.
 Not asked either: what a direct edit does to a comment anchored on the words
 it replaces.
+
+## An insert at the end of the words it replaces takes their look
+
+2026-11-28, `TestLiveEditLookProbe`, for backlog task GD-55. How taken: the
+real token, one document created in the Drive test folder and trashed after,
+holding "Crypto terms. The contract stays." with "Crypto terms." bold, and
+"Alpha beta gamma." with "beta" bold. Each write was one plain `batchUpdate`,
+not SUGGEST, of three requests in this order: `insertText` at the end of a
+span, `deleteContentRange` over the span, `updateTextStyle` painting
+`#FFF59D` over the span's start for the length of the new words. After each
+one the document was read and every run printed with its look and background.
+
+| The span | What stood beside it | The new words read back |
+|---|---|---|
+| " gamma", plain | "beta", bold, directly in front | plain and yellow; "beta" still bold |
+| "Alpha ", plain, opening its paragraph | "beta", bold, directly behind | plain and yellow; "beta" still bold |
+| "Crypto terms", bold, opening its paragraph | ".", bold, then plain text | bold and yellow; the "." bold and not yellow |
+
+So text inserted at index `end` takes the style of the character at `end-1`,
+which is the last of the old words while they still stand. The delete that
+follows takes only the old words. The order edit mode first used, delete and
+then insert at the span's start, was not measured again here: it is the case
+the 2026-11-28 edit entry above carried, on a span with plain text both sides.
+
+Not measured: a span directly in front of or behind a link.

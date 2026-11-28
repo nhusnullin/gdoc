@@ -127,6 +127,7 @@ replaced it)`, or `measured`. Nothing else.
 | 2026-11-28 | Work runs the way Etude's does: Backlog.md, one task in one branch in one PR, the Compound Engineering loop, and no ralphex, revmux or umputun plugins | holds | DECISIONS.md |
 | 2026-11-28 | Edit mode: on the person's word, `propose --edit` writes words directly and paints them yellow, and `seen` takes the yellow off | holds | DECISIONS.md |
 | 2026-11-28 | A quote that stands more than once is placed by the words near it: a words entry may carry `near` | holds | DECISIONS.md |
+| 2026-11-28 | An edit keeps the look of the words it replaces: the insert goes at the span's end, in front of the delete | holds | DECISIONS.md |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -2477,3 +2478,41 @@ place for the quote and for a replacement that contains it."
 
 Serves principle 3: the write lands on the words the caller chose and
 nowhere a guess would put it.
+
+## 2026-11-28. An edit keeps the look of the words it replaces: the insert goes at the span's end, in front of the delete.
+
+Nail's decision, in chat on the date above, after a session sent glossary
+headings as suggestions because edit mode refused a bold term beside plain
+text. Asked "Разрешить прямой правке сохранять вид слов (жирный остаётся
+жирным)?", he answered: "2: да, пусть правка сохраняет вид слов".
+
+**What changes.** The edit batch was delete, insert at the span's start,
+paint. Docs gives inserted text the style of the character in front of it, so
+the new words took the neighbour's look and every quote at a style edge was
+refused. The batch is now insert at the span's end, delete the span, paint.
+The character in front of the insert is the last quoted character, so the new
+words take the old words' look. Measured the same day, MEASURED.md, "An insert
+at the end of the words it replaces takes their look".
+
+**What does not.** The same three request kinds, one granted span, the
+revision it was read in, the edit yellow under the mask `backgroundColor`, and
+no style field anywhere. A quote that is a link, already carries a highlight,
+or changes style part way is still refused. The delete-first order is refused
+by the guard: one shape, not two.
+
+**The sentence the trust guardian signed.** "The edit inserts at the granted
+span's end and then deletes the span, so the new words take the last quoted
+character's look; the guard binds the insert index to that span's end and the
+paint to its start, and nothing but the order and that one index changed."
+
+Pins: `TestAnEditInsertsAtTheGrantedSpansEndBeforeItDeletes`,
+`TestTheDeleteFirstOrderIsRefused`,
+`TestAnEditInsertingAtTheSpanStartIsRefused`,
+`TestAnEditPaintingAtTheInsertIndexIsRefused`,
+`TestAnEditDeletingItsOwnInsertionIsRefused`,
+`TestAnEditAtAStyleEdgeKeepsTheLookOfTheOldWords` and
+`TestAnEditSpanCarryingABackgroundALinkOrTwoStylesIsRefused`, which replaces
+`TestAnEditSpanCarryingABackgroundOrStyleEdgeIsRefused` of the entry above.
+
+Serves principle 3, amended 2026-11-28: the reach and the bound of the edit
+door are what they were.

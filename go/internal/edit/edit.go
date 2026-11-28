@@ -119,19 +119,25 @@ func Apply(ctx context.Context, s Session, docID string, p propose.Proposal, hel
 	return out, nil
 }
 
-// Batch is the whole write: delete the quote, insert the words where it
-// started, paint exactly those words. One batch, so the indexes agree, sent
-// against the revision the span was read in.
+// Batch is the whole write: insert the words at the end of the quote, delete
+// the quote, paint exactly those words, which then stand where the quote
+// started. One batch, so the indexes agree, sent against the revision the
+// span was read in.
+//
+// The insert goes first and at the quote's end because Docs gives inserted
+// text the style of the character in front of it. There that character is
+// the last of the old words, so a bold term stays bold and plain words beside
+// a bold one stay plain. Deleting first hands the new words to a neighbour.
 func Batch(r docs.Range, replacement, revision string) []byte {
 	colour, _ := docsreq.Color(Yellow)
 	body := map[string]any{
 		"requests": []any{
+			map[string]any{"insertText": map[string]any{
+				"location": map[string]any{"index": r.End},
+				"text":     replacement,
+			}},
 			map[string]any{"deleteContentRange": map[string]any{
 				"range": map[string]any{"startIndex": r.Start, "endIndex": r.End},
-			}},
-			map[string]any{"insertText": map[string]any{
-				"location": map[string]any{"index": r.Start},
-				"text":     replacement,
 			}},
 			map[string]any{"updateTextStyle": map[string]any{
 				"range":     map[string]any{"startIndex": r.Start, "endIndex": r.Start + docsreq.Len(replacement)},
@@ -179,21 +185,15 @@ func post(ctx context.Context, s Session, docID string, body []byte, outcome *st
 	return fmt.Errorf("the change could not be written: %w", err)
 }
 
-// ground says whether the quoted words stand on plain ground, and returns the
-// look they carry.
+// ground says whether the quoted words are words an edit may replace, and
+// returns the look they carry: one look throughout, no link and no highlight.
+//
+// What stands beside them is not asked. The new words take the look of the
+// last quoted character, so a neighbour of another style changes nothing.
 func ground(d *docs.Document, r docs.Range) (string, error) {
-	runs := paragraphAt(d.Tabs[0].Body, r.Start)
 	var inside []docs.Run
-	var before, behind *docs.Run
-	for i, run := range runs {
-		switch {
-		case run.EndIndex <= r.Start:
-			before = &runs[i]
-		case run.StartIndex >= r.End:
-			if behind == nil {
-				behind = &runs[i]
-			}
-		default:
+	for _, run := range paragraphAt(d.Tabs[0].Body, r.Start) {
+		if run.EndIndex > r.Start && run.StartIndex < r.End {
 			inside = append(inside, run)
 		}
 	}
@@ -208,25 +208,8 @@ func ground(d *docs.Document, r docs.Range) (string, error) {
 		case run.Link != nil:
 			return "", errors.New("the quoted words are a link, or part of one; new words written there would take the link with them. Propose this one as a suggestion")
 		case run.Look != look:
-			return "", errors.New("the quoted words change style part way, bold or italic or a colour; new words would take one of the two. Quote the words of one style, or propose this one as a suggestion")
+			return "", errors.New("the quoted words change style part way, bold or italic or a colour, and nobody can say which of the new words is which. Quote the words of one style, with near to say which occurrence where they stand more than once, or propose this one as a suggestion")
 		}
-	}
-	// Docs gives inserted text the style of its neighbour, so the neighbour
-	// has to be styled like the words that go. The neighbour is the character
-	// beside the quote: where the quote starts part way into a run, that
-	// character is in the run and already has its look, and an earlier run
-	// has nothing to say. The run behind is asked only where nothing stands
-	// in front, and only where the quote reaches the end of its own run.
-	var neighbour *docs.Run
-	switch {
-	case inside[0].StartIndex < r.Start:
-	case before != nil:
-		neighbour = before
-	case inside[len(inside)-1].EndIndex <= r.End:
-		neighbour = behind
-	}
-	if neighbour != nil && neighbour.Kind == docs.KindText && (neighbour.Look != look || neighbour.Link != nil) {
-		return "", errors.New("the quoted words stand at a style edge: the text beside them is a link, or bold, italic or coloured where they are not. New words would take that style. Quote one more word, or propose this one as a suggestion")
 	}
 	return look, nil
 }
@@ -249,7 +232,7 @@ func readBack(d *docs.Document, r docs.Range, replacement, look string) (Checks,
 			got.WriteString(clip(run, r.Start, end))
 			pending = pending || len(run.InsertionIDs) > 0 || len(run.DeletionIDs) > 0
 			painted = painted && strings.EqualFold(run.Background, Yellow)
-			sameLook = sameLook && run.Look == look
+			sameLook = sameLook && run.Look == look && run.Link == nil
 		}
 	}
 	var warns []string

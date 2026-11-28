@@ -489,16 +489,30 @@
 // batch on a granted id is refused too, so one run is one mode.
 // TestALevelEditBatchMeetsAGrammarWhateverWriteModeSays is the pin.
 //
-// An edit is exactly three requests in one order: a deleteContentRange over
-// one span, an insertText at that span's start, and an updateTextStyle whose
-// range is exactly the inserted words, counted in UTF-16 units, whose mask is
-// exactly backgroundColor and whose style is exactly the edit yellow. So a
-// batch always paints what it inserted and nothing else, and a deletion with
-// nothing put in its place has no shape here. The text carries no control
-// character, so it stays inside one paragraph. Nothing names a segment or a
-// tab. TestNothingAtLevelEditPaintsOutsideItsOwnInsertion,
+// An edit is exactly three requests in one order: an insertText whose index
+// is exactly the end of the span the next request deletes, a
+// deleteContentRange over exactly one granted span, and an updateTextStyle
+// whose range starts at that span's start and is exactly the inserted words,
+// counted in UTF-16 units, whose mask is exactly backgroundColor and whose
+// style is exactly the edit yellow. So a batch always paints what it inserted
+// and nothing else, and a deletion with nothing put in its place has no shape
+// here. The text carries no control character, so it stays inside one
+// paragraph. Nothing names a segment or a tab.
+// TestNothingAtLevelEditPaintsOutsideItsOwnInsertion,
 // TestAnEditInsertsWordsInsideOneParagraph and
 // TestAnEditBatchIsExactlyItsThreeRequests are the pins.
+//
+// The insert stands in front of the delete, at the span's end, since Nail's
+// yes of 2026-11-28 to an edit keeping the look of the words it replaces.
+// Docs gives inserted text the style of the character in front of it, which
+// there is the last quoted character (MEASURED.md, 2026-11-28). The order
+// edit mode first shipped with, delete then insert at the span's start, is
+// refused: one shape, not two. Nothing else moved: the same three kinds, the
+// same granted span and revision, the same yellow, no style field.
+// TestAnEditInsertsAtTheGrantedSpansEndBeforeItDeletes,
+// TestTheDeleteFirstOrderIsRefused, TestAnEditInsertingAtTheSpanStartIsRefused,
+// TestAnEditPaintingAtTheInsertIndexIsRefused and
+// TestAnEditDeletingItsOwnInsertionIsRefused are the pins.
 //
 // A clear is updateTextStyle requests and nothing else, each with the mask
 // backgroundColor and the background set to an empty colour, which Docs reads

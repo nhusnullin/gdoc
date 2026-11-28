@@ -421,14 +421,14 @@ func commands() []command {
 			group: groupWrite,
 			words: []string{"<url>"},
 			flags: []flag{
-				{"--from", kindFile, needRequired, "the file holding the changes to propose: an entry is either words inside one paragraph (quoted, replacement) or a block of new paragraphs (kind: block, content, and after or replace_from and replace_to), and every entry carries why, the reason a thread will show"},
+				{"--from", kindFile, needRequired, "the file holding the changes to propose: an entry is either words inside one paragraph (quoted, replacement, and near, words standing once beside a quote that stands more than once) or a block of new paragraphs (kind: block, content, and after or replace_from and replace_to), and every entry carries why, the reason a thread will show"},
 				{"--md", kindFile, needOptional, "the note to record the proposals in, so they can be taken back later"},
 				{"--folder", kindFolderID, needOptional, "ignored: propose no longer creates a working copy, and the flag will be removed in a later release"},
 				{editFlag, kindNone, needOptional, "edit mode: write the words directly instead of proposing them, and paint the new words yellow; words entries only, and only when the person asked for edit mode in words"},
 			},
 			summary: "Propose changes as native suggestions, each with the comment that says why.",
 			notes: []string{
-				"With --edit nothing is proposed: each words entry replaces its quote in the document itself, the new words are highlighted yellow, and no comment is left. gdoc seen takes the yellow off. A block entry, a quote that is a link or already highlighted, and a quote at a style edge are refused there and stay suggestions.",
+				"With --edit nothing is proposed: each words entry replaces its quote in the document itself, the new words are highlighted yellow, and no comment is left. gdoc seen takes the yellow off. The new words keep the look of the words they replace, bold among them. A block entry, a quote that is a link or already highlighted, and a quote that changes style part way are refused there and stay suggestions.",
 				"A block's content may hold one task list, one level deep: - [ ] words becomes a box in the document, and at the end of that line one owner and one due date become chips, @anna@example.com or a bare @anna with --domain or the domain setting in effect, and 2026-11-20. A - [x] line is refused here, because a block carries no strike, and from chat an owner is written out as the whole address.",
 			},
 			example:   "gdoc propose https://docs.google.com/document/d/1AbC.../edit --from changes.json --md note.md",

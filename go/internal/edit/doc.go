@@ -15,14 +15,23 @@
 // there would be nothing to paint and so nothing to find afterwards.
 // TestAnEditIsWordsForWords is the pin.
 //
-// # The ground an edit stands on is plain
+// # The words an edit replaces have one look, and the new words keep it
 //
-// The quoted words must carry no background, no link and one look, and the
-// character in front of them must have that look too. Docs gives inserted text
-// the style of its neighbour, so words written at a bold edge or behind a link
-// would take a style nobody chose. And a quote that already carries a colour
-// may be the author's own mark, which the clear must never be able to erase.
-// TestAnEditSpanCarryingABackgroundOrStyleEdgeIsRefused is the pin.
+// The quoted words must carry no background, no link and one look. A quote
+// that changes style part way is refused, because nobody can say which of the
+// new words is bold. A quote that already carries a colour may be the
+// author's own mark, which the clear must never be able to erase.
+// TestAnEditSpanCarryingABackgroundALinkOrTwoStylesIsRefused is the pin.
+//
+// What stands beside the quote is not asked, since Nail's yes of 2026-11-28
+// to an edit keeping the look of the words it replaces. Docs gives inserted
+// text the style of the character in front of it (MEASURED.md, 2026-11-28),
+// so Batch inserts at the quote's end, while the old words still stand, and
+// then deletes them. A bold term that opens a paragraph stays bold, and plain
+// words beside a bold or linked neighbour stay plain. The read-back's look
+// check is what says it held, and new words that came back as a link fail it.
+// TestBatchInsertsAtTheEndDeletesAndPaintsExactlyTheInsertion and
+// TestAnEditAtAStyleEdgeKeepsTheLookOfTheOldWords are the pins.
 //
 // # The guard holds the span, and the revision
 //

@@ -119,11 +119,11 @@ func TestAnEditIsWordsForWords(t *testing.T) {
 	}
 }
 
-func TestBatchDeletesInsertsAndPaintsExactlyTheInsertion(t *testing.T) {
+func TestBatchInsertsAtTheEndDeletesAndPaintsExactlyTheInsertion(t *testing.T) {
 	raw := Batch(docs.Range{Tab: "t.0", Start: 5, End: 14}, "ok 🙂", "REV1")
 	want := `{"requests":[` +
+		`{"insertText":{"location":{"index":14},"text":"ok 🙂"}},` +
 		`{"deleteContentRange":{"range":{"endIndex":14,"startIndex":5}}},` +
-		`{"insertText":{"location":{"index":5},"text":"ok 🙂"}},` +
 		`{"updateTextStyle":{"fields":"backgroundColor","range":{"endIndex":10,"startIndex":5},"textStyle":{"backgroundColor":{"color":{"rgbColor":{"blue":0.615686274509804,"green":0.9607843137254902,"red":1}}}}}}` +
 		`],"writeControl":{"requiredRevisionId":"REV1"}}`
 	if string(raw) != want {
@@ -174,12 +174,11 @@ func TestAnEditIsReadBackPaintedAndNotPending(t *testing.T) {
 	}
 }
 
-func TestAnEditSpanCarryingABackgroundOrStyleEdgeIsRefused(t *testing.T) {
+func TestAnEditSpanCarryingABackgroundALinkOrTwoStylesIsRefused(t *testing.T) {
 	for name, before := range map[string][]byte{
-		"the quote is marked":       document("REV1", []piece{{"The ", ""}, {"old words", houseJS}, {" stay here.\n", ""}}),
-		"the quote is a link":       document("REV1", []piece{{"The ", ""}, {"old words", `{"link":{"url":"https://example.org"}}`}, {" stay here.\n", ""}}),
-		"the quote changes style":   document("REV1", []piece{{"The ", ""}, {"old ", `{"bold":true}`}, {"words", ""}, {" stay here.\n", ""}}),
-		"the text in front is bold": document("REV1", []piece{{"The ", `{"bold":true}`}, {"old words stay here.\n", ""}}),
+		"the quote is marked":     document("REV1", []piece{{"The ", ""}, {"old words", houseJS}, {" stay here.\n", ""}}),
+		"the quote is a link":     document("REV1", []piece{{"The ", ""}, {"old words", `{"link":{"url":"https://example.org"}}`}, {" stay here.\n", ""}}),
+		"the quote changes style": document("REV1", []piece{{"The ", ""}, {"old ", `{"bold":true}`}, {"words", ""}, {" stay here.\n", ""}}),
 		"the text in front is a link": document("REV1", []piece{{"The ", `{"link":{"url":"https://example.org"}}`},
 			{"old words", `{"link":{"url":"https://example.org"}}`}, {" stay here.\n", ""}}),
 	} {
@@ -203,21 +202,45 @@ func TestAnEditSpanCarryingABackgroundOrStyleEdgeIsRefused(t *testing.T) {
 	}
 }
 
-// A quote part way into a plain run is plain ground, whatever the run before
-// that one looks like: the character in front of the quote is in its own run.
-func TestTheNeighbourIsTheCharacterBesideTheQuote(t *testing.T) {
-	before := document("REV1", []piece{{"Title: ", `{"bold":true}`}, {"The old words stay here.\n", ""}})
-	after := document("REV2", []piece{{"Title: ", `{"bold":true}`}, {"The ", ""}, {"new words", yellowJS}, {" stay here.\n", ""}})
-	f := &fakeSession{reads: [][]byte{before, after}}
-	res, err := Apply(context.Background(), f, testDocID, change, nil, mark, func(string, []Span) {})
-	if err != nil || !res.Verified {
-		t.Fatalf("a quote inside a plain run behind a bold one may be edited, got %+v, %v", res, err)
+// A quote at a style edge is plain ground. The words go in at the end of the
+// quote, in front of the delete, so they take the look of the old words and
+// not of whatever stands beside them: a bold term that opens a paragraph
+// stays bold, and plain words behind a bold title stay plain.
+func TestAnEditAtAStyleEdgeKeepsTheLookOfTheOldWords(t *testing.T) {
+	const bold = `{"bold":true}`
+	boldYellow := `{"bold":true,` + yellowJS[1:]
+	for name, c := range map[string]struct{ before, after []byte }{
+		"plain words behind a bold title": {
+			document("REV1", []piece{{"Title: ", bold}, {"old words stay here.\n", ""}}),
+			document("REV2", []piece{{"Title: ", bold}, {"new words", yellowJS}, {" stay here.\n", ""}}),
+		},
+		"a bold term opening a paragraph": {
+			document("REV1", []piece{{"The ", ""}, {"old words", bold}, {" stay here.\n", ""}}),
+			document("REV2", []piece{{"The ", ""}, {"new words", boldYellow}, {" stay here.\n", ""}}),
+		},
+		"plain words in front of a link": {
+			document("REV1", []piece{{"The old words", ""}, {" stay here.\n", `{"link":{"url":"https://example.org"}}`}}),
+			document("REV2", []piece{{"The ", ""}, {"new words", yellowJS}, {" stay here.\n", `{"link":{"url":"https://example.org"}}`}}),
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			f := &fakeSession{reads: [][]byte{c.before, c.after}}
+			res, err := Apply(context.Background(), f, testDocID, change, nil, mark, func(string, []Span) {})
+			if err != nil {
+				t.Fatalf("a quote of one style at a style edge may be edited, got %v", err)
+			}
+			if !res.Verified || !res.Checks.Look {
+				t.Errorf("the read-back must say the look held, got %+v", res)
+			}
+		})
 	}
-	// The quote at the very start of its run, behind a bold run, is at an edge.
-	atEdge := document("REV1", []piece{{"Title: ", `{"bold":true}`}, {"old words stay here.\n", ""}})
-	g := &fakeSession{reads: [][]byte{atEdge}}
-	if _, err := Apply(context.Background(), g, testDocID, change, nil, mark, func(string, []Span) {}); err == nil {
-		t.Fatal("a quote that starts where bold text ends is at a style edge and must be refused")
+	// New words that came back as a link took their neighbour's, and the
+	// read-back says so.
+	linked := document("REV2", []piece{{"The ", ""}, {"new words", `{"link":{"url":"https://example.org"},` + yellowJS[1:]}, {" stay here.\n", ""}})
+	f := &fakeSession{reads: [][]byte{plainBefore, linked}}
+	res, err := Apply(context.Background(), f, testDocID, change, nil, mark, func(string, []Span) {})
+	if err != nil || res.Verified || res.Checks.Look {
+		t.Errorf("new words that came back as a link are not verified, got %+v, %v", res, err)
 	}
 }
 
