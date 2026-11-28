@@ -421,7 +421,9 @@
 // not decide whether a colleague's comment matters. The skill tells the
 // person whose thread it is before they accept.
 // TestAReplaceOverAColleaguesCommentIsPlacedAndNamesTheComment and
-// TestABlockResultNamesTheCommentsItsReplaceCovers are the pins.
+// TestABlockResultNamesTheCommentsItsReplaceCovers are the pins, and
+// TestTheEnvelopeNamesTheCommentsAReplaceCovers in cmd/gdoc holds the field
+// to the printed entry, which is the same one chat is answered with.
 //
 // The run is refused too when it covers anything but paragraphs, or when two
 // paragraphs in it do not touch, because something this read does not index, a
