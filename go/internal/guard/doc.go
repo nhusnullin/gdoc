@@ -556,7 +556,7 @@
 // is refused by name: it merges the write into a document that moved, where
 // this level must refuse.
 //
-// The 300 unit ceiling on a delete and on an insert is a ceiling under the
+// The 1000 unit ceiling on a delete and on an insert is a ceiling under the
 // span grant and not the bound. TestAnEditSpanOverTheCeilingIsRefused is the
 // pin.
 //

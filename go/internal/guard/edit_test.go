@@ -121,15 +121,21 @@ func TestAnEditDeletesOnlyAGrantedSpan(t *testing.T) {
 }
 
 func TestAnEditSpanOverTheCeilingIsRefused(t *testing.T) {
-	p := NewPolicy()
-	p.AllowFile("DOC1", LevelSuggest)
-	p.GrantEdit("DOC1")
-	p.AllowEditSpans(EditWords, editRevision, []Span{{Start: 5, End: 306}})
+	spanning := func(end int) *Policy {
+		p := NewPolicy()
+		p.AllowFile("DOC1", LevelSuggest)
+		p.GrantEdit("DOC1")
+		p.AllowEditSpans(EditWords, editRevision, []Span{{Start: 5, End: end}})
+		return p
+	}
 	text := strings.Repeat("a", 10)
-	refusedEdit(t, p, editBatch(editRevision, 5, 306, text, 5, 15, editYellowJSON), "a delete of 301 units")
+	carried(t, spanning(1005), editBatch(editRevision, 5, 1005, text, 5, 15, editYellowJSON))
+	refusedEdit(t, spanning(1006), editBatch(editRevision, 5, 1006, text, 5, 15, editYellowJSON), "a delete of 1001 units")
 
-	long := strings.Repeat("a", 301)
-	refusedEdit(t, editing(t), editBatch(editRevision, 5, 14, long, 5, 306, editYellowJSON), "an insert of 301 units")
+	atCeiling := strings.Repeat("a", 1000)
+	carried(t, editing(t), editBatch(editRevision, 5, 14, atCeiling, 5, 1005, editYellowJSON))
+	long := strings.Repeat("a", 1001)
+	refusedEdit(t, editing(t), editBatch(editRevision, 5, 14, long, 5, 1006, editYellowJSON), "an insert of 1001 units")
 }
 
 func TestNothingAtLevelEditPaintsOutsideItsOwnInsertion(t *testing.T) {

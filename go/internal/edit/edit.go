@@ -19,7 +19,7 @@ const Yellow = "#FFF59D"
 
 // MaxUnits is the most one edit replaces and the most it writes, in UTF-16
 // code units. The guard holds the same ceiling.
-const MaxUnits = 300
+const MaxUnits = 1000
 
 // Session is what this package needs of a session: the read and the one write.
 type Session interface {
