@@ -110,8 +110,16 @@ func proseLines(source []byte, f func(sourceLine)) {
 	// it, or the line before it was blank, or that line closed a block of its
 	// own.
 	mayOpen := true
+	// openNote says the line before this one was a line of prose inside a
+	// definition, so the definition's paragraph is still open and a line of
+	// prose here continues it at any indent. That is goldmark's lazy
+	// continuation, and a blank line ends it.
+	// TestAMarkOnADefinitionsLazyLineDoesNotAnswerForThatNote is the pin.
+	openNote := false
 	for i, raw := range strings.Split(string(source), "\n") {
 		indent := indentWidth(raw)
+		wasOpenNote := openNote
+		openNote = false
 		if opener != "" {
 			// Inside a fenced block nothing is markdown and no state moves.
 			// The block shuts on its own character, in a run at least as long
@@ -161,6 +169,11 @@ func proseLines(source []byte, f func(sourceLine)) {
 		// indented lines, which is goldmark's own rule for continuing one, and
 		// end at the first line of prose at the margin. A line indented inside
 		// the block in hand is one of its own lines and ends nothing.
+		// A line that opens a block of its own interrupts the paragraph, so
+		// only a line of plain prose continues the note. A quote and a line
+		// of HTML are left as they were read before, as the document's own.
+		lazy := wasOpenNote && openDefinition && !blank && !closes && !line.definition &&
+			!listOpener.MatchString(line.text) && !opensItsOwnBlock(line.text)
 		switch {
 		case line.definition:
 			openDefinition, base = true, definitionIndent
@@ -178,14 +191,24 @@ func proseLines(source []byte, f func(sourceLine)) {
 				openDefinition = false
 			}
 			base = itemIndent(line.text, indent)
+		case lazy:
+			// The definition's paragraph runs on, so nothing ends here.
 		case !blank && atMargin(raw):
 			openDefinition, base = false, 0
 		}
-		line.inside = line.definition || (openDefinition && indent >= definitionIndent)
+		line.inside = line.definition || lazy || (openDefinition && indent >= definitionIndent)
 		mayOpen = blank || closes
 		openParagraph = !blank && !closes
+		openNote = line.inside && openParagraph
 		f(line)
 	}
+}
+
+// opensItsOwnBlock says a line starts a block quote or a block of HTML, either
+// of which may interrupt a paragraph.
+func opensItsOwnBlock(text string) bool {
+	trimmed := strings.TrimLeft(text, " \t")
+	return strings.HasPrefix(trimmed, ">") || strings.HasPrefix(trimmed, "<")
 }
 
 // opensFence says a line matching fence opens a block rather than being prose.
