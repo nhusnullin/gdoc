@@ -3,10 +3,10 @@ id: GD-57
 title: >-
   One direct edit replaces and writes up to 1000 characters, where it stopped at
   300
-status: In Progress
+status: To check
 assignee: []
 created_date: '2026-11-28T13:10:00Z'
-updated_date: '2026-11-28T13:14:00Z'
+updated_date: '2026-11-28T13:56:00Z'
 labels: []
 dependencies: []
 ordinal: 57000
@@ -25,3 +25,9 @@ Nail, 2026-11-28, in chat: 'подними потолок до 1000'. The edit d
 - [x] #3 The decision entry and its register row are in docs/v2/DECISIONS.md
 - [ ] #4 Nail has seen an edit longer than 300 characters land yellow in a real document
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Released as v2.39.0 on 2026-11-28. Not yet seen in a document: an edit longer than 300 characters landing yellow.
+<!-- SECTION:NOTES:END -->
