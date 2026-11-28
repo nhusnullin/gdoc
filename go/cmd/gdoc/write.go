@@ -397,6 +397,11 @@ func cmdPropose(ctx context.Context, a *args) emit.Result {
 	if err != nil {
 		return failed(err)
 	}
+	if a.has(editFlag) {
+		// The other mode, and the only way into it: the flag on this line.
+		// Everything below this branch is the suggestion path, unchanged.
+		return cmdProposeEdit(ctx, a, docID, proposals)
+	}
 	// --folder bought the probe its throwaway document, and there is no probe.
 	// The flag is still read as a folder id, so a caller who pointed it at a
 	// document hears about it rather than having the mistake quietly dropped,

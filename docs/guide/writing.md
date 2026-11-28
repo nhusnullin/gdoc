@@ -1,4 +1,4 @@
-# Writing into a document: probe, reply, propose, withdraw, annotate
+# Writing into a document: probe, reply, propose, withdraw, seen, annotate
 
 This page holds the five commands that write into a document you handed in.
 Every change they make there is a suggestion, and the page says why. It is for
@@ -290,6 +290,45 @@ comment is in the document, and a caller told the run failed would write it
 again. The limits are `propose`'s. A document with more than one tab stops the
 run before anything is sent, and only body text can be quoted: not a header, a
 footer or a footnote.
+
+## Edit mode: words changed directly, in yellow
+
+A suggestion is the default, and it stays the default. When you ask for edit
+mode in words, the review skill sends the same proposals file with `--edit`:
+
+```bash
+gdoc propose <url> --from changes.json --edit
+```
+
+Nothing is proposed then. Each words entry replaces its quote in the document
+itself, and the new words are highlighted a pale yellow, `#FFF59D`. No comment
+is left. You read the yellow passages, and when you are done:
+
+```bash
+gdoc seen <url>
+```
+
+`seen` takes that yellow off everywhere and changes no word. It reports
+`cleared`, the passages it cleared, and `left`, which should be 0. A highlight
+you made yourself stays: the house yellow is another colour, and `seen` matches
+its own colour exactly.
+
+What edit mode will not do, and sends back as a refusal:
+
+- a block of new paragraphs, or a plain deletion: there would be nothing to
+  paint, so there would be nothing for you to find
+- a quote that is already highlighted, so `seen` can never erase your mark
+- a quote that is a link, or that stands where bold, italic or a colour starts
+  or ends, because new words there would take a style nobody chose
+
+Each of those goes out as an ordinary suggestion in a run without the flag.
+
+An edit is sent against the version of the document gdoc just read. If
+somebody typed in between, Docs refuses it and nothing changes; the skill reads
+again and sends that one once more. After each edit gdoc reads the document
+back, and `checks` says what held: `words`, `painted` and `look`. An edit
+cannot be withdrawn, because there is no suggestion; the receipt in the thread
+keeps the old words. Claude Desktop chat never edits: it proposes.
 
 The review skill runs over these commands. It reads the threads, decides which
 ones still need an answer, and writes the reply and proposal files the binary

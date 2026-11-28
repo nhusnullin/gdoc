@@ -26,6 +26,8 @@
 // what a handed-in id gets: read, comment, suggest, and never a direct edit.
 // LevelFull is what a create returned. LevelInPlace is one handed-in id
 // raised for one run, so a restyle can style that document where it stands.
+// LevelEdit is one handed-in id raised for one run, so words the person asked
+// to have changed directly can be, and the paint on them cleared.
 //
 // Every comparison is ==, never >=. That is why LevelInPlace does not inherit
 // the Drive file PATCH that LevelFull carries: a restyle cannot trash or
@@ -172,6 +174,9 @@
 // the rule holds for a run that was never granted an update.
 // TestAnUpdateRequestCarriesNoBearer and
 // TestTheUpdateReadsGoOutWithNoCredential are the pins.
+//
+// GrantEdit and AllowEditSpans are of that shape too, and "A fourth write
+// level" below holds them.
 //
 // GrantInPlace is the eighth of that shape and the only door to LevelInPlace.
 // It upgrades an id already in files and admits nothing new, so it is not a
@@ -454,6 +459,81 @@
 // back. That sentence is about this level and not about the whole run: the
 // prelude phase in front of it does make the writeMode claim, and
 // internal/prelude says why it is unprobed too.
+//
+// # A fourth write level, and the two grammars it carries
+//
+// LevelEdit is the one place a handed-in document's words change without a
+// suggestion, and GrantEdit is the only door to it. Nail's decision of
+// 2026-11-28, DECISIONS.md: a request that says edit mode in words changes the
+// text directly and paints the new words yellow, and a second command takes
+// the yellow off. Its two callers are `propose --edit` and `seen`, through one
+// function, and TestGrantEditHasTwoCallers in go/boundary holds the count.
+// Widening it, by a grammar, a request kind or a call site, is Nail's decision
+// and not a refactor.
+//
+// GrantEdit raises an id that is in the set at the suggest level. It leaves an
+// id at the full level where it is, as GrantInPlace does, and an id at the
+// in-place level too, and GrantInPlace leaves an id at the edit level: no run
+// holds a restyle's reach and an edit's. AllowFile cannot hand the level out.
+// TestGrantEditNeverAdmitsAnUnknownID, TestGrantEditLeavesACreatedDocumentAtFull,
+// TestGrantEditRefusesAnInPlaceID and TestAllowFileCannotOpenTheEditDoor are
+// the pins. The level carries no Drive PATCH, for the reason LevelInPlace
+// carries none: TestTheEditLevelDoesNotReachTheDriveFile.
+//
+// A batch at this level is one of two exact grammars, and it is judged before
+// any other rule about a request kind. The order is the point: judgeRequests
+// lets a granted rejectSuggestion through before it asks about the level, so a
+// grammar checked after that would carry another door's grant on a document an
+// edit run holds. TestNoSuggestionKindOrNamedRangeCarriesAtLevelEdit is the
+// pin. writeMode is not asked, because the key itself is refused: a SUGGEST
+// batch on a granted id is refused too, so one run is one mode.
+// TestALevelEditBatchMeetsAGrammarWhateverWriteModeSays is the pin.
+//
+// An edit is exactly three requests in one order: a deleteContentRange over
+// one span, an insertText at that span's start, and an updateTextStyle whose
+// range is exactly the inserted words, counted in UTF-16 units, whose mask is
+// exactly backgroundColor and whose style is exactly the edit yellow. So a
+// batch always paints what it inserted and nothing else, and a deletion with
+// nothing put in its place has no shape here. The text carries no control
+// character, so it stays inside one paragraph. Nothing names a segment or a
+// tab. TestNothingAtLevelEditPaintsOutsideItsOwnInsertion,
+// TestAnEditInsertsWordsInsideOneParagraph and
+// TestAnEditBatchIsExactlyItsThreeRequests are the pins.
+//
+// A clear is updateTextStyle requests and nothing else, each with the mask
+// backgroundColor and the background set to an empty colour, which Docs reads
+// as none (MEASURED.md, 2026-11-28). It names no character.
+// TestAClearChangesNoCharacterAndTouchesOnlyGrantedSpans is the pin.
+//
+// The grammar is not the bound, and the trust guardian vetoed the design that
+// said it was. The guard reads a body and cannot see a colour or a paragraph
+// mark: a well-formed clear could take every highlight in the document, the
+// author's own marks among them, and a well-formed delete could cross a
+// paragraph. So AllowEditSpans holds what the body cannot say. The command
+// reads the document, finds its spans in that read, and grants exactly those
+// with that read's revision. A delete or a clear over any other span is
+// refused, and so is a batch at any other revision. Docs then refuses the
+// batch if the document moved past that revision, which is measured, and
+// nothing here or in the caller retries it. A second grant replaces the
+// first, and a grant the guard cannot read takes the standing one back, which
+// is AllowMarker's rule. TestAnEditDeletesOnlyAGrantedSpan,
+// TestAnEditBatchWithoutTheGrantedRevisionIsRefused,
+// TestASecondSpanGrantReplacesTheFirst and
+// TestAnUnreadableSpanGrantTakesTheStandingOneBack are the pins.
+//
+// requiredRevisionId is the only key writeControl may carry. targetRevisionId
+// is refused by name: it merges the write into a document that moved, where
+// this level must refuse.
+//
+// The 300 unit ceiling on a delete and on an insert is a ceiling under the
+// span grant and not the bound. TestAnEditSpanOverTheCeilingIsRefused is the
+// pin.
+//
+// The edit yellow is #FFF59D, outside the house palette on purpose. The clear
+// finds its runs by that exact colour, so a colour the house also uses would
+// let it erase a mark the author made. TestTheEditYellowIsNoHouseColour states
+// the hex as a literal. The grant is per run and nothing writes it down:
+// TestTheEditGrantDiesWithThePolicy.
 //
 // # The multipart create is three signals that have to agree
 //

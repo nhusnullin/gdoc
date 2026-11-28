@@ -30,6 +30,7 @@ const (
 	LevelSuggest Level = 1 // handed in: read, comment, suggest. Never direct-edit.
 	LevelFull    Level = 2 // created by gdoc. The only door to it is Learn.
 	LevelInPlace Level = 3 // handed in and granted for one run: direct edit, styling kinds only. The only door to it is GrantInPlace.
+	LevelEdit    Level = 4 // handed in and granted for one run: words replaced and painted, or the paint cleared, over granted spans. The only door to it is GrantEdit.
 )
 
 // String names a level for a refusal message. A reader who has to translate a
@@ -42,6 +43,8 @@ func (l Level) String() string {
 		return "full"
 	case LevelInPlace:
 		return "in place"
+	case LevelEdit:
+		return "edit"
 	}
 	return fmt.Sprintf("unknown(%d)", int(l))
 }
@@ -62,6 +65,7 @@ type Policy struct {
 	updateFrom string          // owner/name whose releases an update may read; empty means no GitHub at all
 	rejects    map[string]bool // suggestion ids a rejectSuggestion may name; empty means none
 	marker     *marker         // the one named range a createNamedRange may make; nil means none
+	edit       *editGrant      // the spans and the revision a batch at the edit level may name; nil means none
 	account    bool            // the one Drive read that names no file may go out; false means it may not
 	asset      string          // the one file whose bytes may be read; empty means none
 	warnings   []string        // things the guard could not do quietly, for the command to report
@@ -190,6 +194,10 @@ func (p *Policy) AllowFile(id string, lvl Level) {
 		p.note("a file may not be handed in at the in-place level; nothing was added to the reachable set for %q. Direct edit is opened by GrantInPlace on an id already in the set, and that is the one line that opens it", id)
 		return
 	}
+	if lvl == LevelEdit {
+		p.note("a file may not be handed in at the edit level; nothing was added to the reachable set for %q. An edit is opened by GrantEdit on an id already in the set, and that is the one line that opens it", id)
+		return
+	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.files[id] = lvl
@@ -225,6 +233,10 @@ func (p *Policy) GrantInPlace(id string) {
 	// written before p.mu.Lock() and never under it.
 	if lvl, known := p.level(id); known && lvl == LevelFull {
 		p.note("GrantInPlace on %q changed nothing: the id is at the full level, which a create the guard carried gave it, and the in-place level would narrow it", id)
+		return
+	}
+	if lvl, known := p.level(id); known && lvl == LevelEdit {
+		p.note("GrantInPlace on %q changed nothing: the id is at the edit level, and one run holds a restyle's reach or an edit's, never both", id)
 		return
 	}
 	p.mu.Lock()
@@ -613,7 +625,7 @@ func (p *Policy) judgeDocs(method string, u *url.URL, body []byte) error {
 		if err := p.judgeRequests(body, lvl); err != nil {
 			return err
 		}
-		if lvl == LevelFull || lvl == LevelInPlace || isSuggestMode(body) {
+		if lvl == LevelFull || lvl == LevelInPlace || lvl == LevelEdit || isSuggestMode(body) {
 			return checkQuery(u, noParams)
 		}
 		return refuse("direct edit of %q, which was handed in at the suggest level; only SUGGEST is allowed there, and a direct edit needs the in-place grant this run did not open", id)
@@ -1234,6 +1246,12 @@ func (p *Policy) judgeRequests(body []byte, lvl Level) error {
 	var top map[string]json.RawMessage
 	if err := json.Unmarshal(body, &top); err != nil {
 		return refuse("the body of this batchUpdate cannot be read, so the requests in it cannot be judged: %v", err)
+	}
+	if lvl == LevelEdit {
+		// The edit level is two exact grammars and nothing else, and it is
+		// judged before any other rule about a request kind: a grant another
+		// door opened carries nothing on a document an edit run holds.
+		return p.judgeEditBatch(top)
 	}
 	// The list is found by folding case, because encoding/json matches field
 	// names that way and Docs may too, so `Requests` is the same list under a

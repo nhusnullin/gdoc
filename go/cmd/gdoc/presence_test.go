@@ -307,16 +307,16 @@ func TestAReportingCommandWritesAStartAndAnEnd(t *testing.T) {
 	}
 }
 
-// The verified is lifted for the five commands whose caller says they read
+// The verified is lifted for the six commands whose caller says they read
 // their own write back, and for nothing else. update and restyle print
 // verified: false to mean no write happened, and that must never become a
 // failed read-back in a record meant to last.
 func TestOnlyTheReadBackWritersCarryVerified(t *testing.T) {
 	// The table first: the two bits, as literals, against the names.
-	readBack := map[string]bool{"reply": true, "propose": true, "withdraw": true, "annotate": true, "publish": true}
+	readBack := map[string]bool{"reply": true, "propose": true, "withdraw": true, "seen": true, "annotate": true, "publish": true}
 	reports := map[string]bool{
 		"read": true, "comments": true, "suggestions": true, "export": true, "restyle": true,
-		"reply": true, "propose": true, "withdraw": true, "annotate": true, "publish": true,
+		"reply": true, "propose": true, "withdraw": true, "seen": true, "annotate": true, "publish": true,
 		"update": true, "auth login": true, "auth logout": true,
 	}
 	for _, c := range commands() {

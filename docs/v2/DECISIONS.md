@@ -31,7 +31,7 @@ replaced it)`, or `measured`. Nothing else.
 | 2026-08-29 | There is no `release` command, and gdoc does not export PDFs | holds | DECISIONS-archive.md |
 | 2026-08-29 | Anchors are not banked | rejected | DECISIONS-archive.md |
 | 2026-08-29 | The Developer Preview arrived, and a third of this file retires | holds | DECISIONS-archive.md |
-| 2026-08-29 | gdoc proposes. It never accepts and never rejects | holds | DECISIONS-archive.md |
+| 2026-08-29 | gdoc proposes. It never accepts and never rejects. Amended 2026-11-28 (it may also edit directly under `propose --edit`; it still never accepts or rejects) | holds | DECISIONS-archive.md |
 | 2026-08-29 | MCP does not replace the REST client | holds | DECISIONS-archive.md |
 | 2026-08-29 | Tabs are out of scope, and gdoc defends against them | superseded 2026-09-19 (the reader half only: `export` writes one file per tab; every writer still refuses a document with more than one) | DECISIONS-archive.md |
 | 2026-08-29 | Amendments from reading the documentation | holds | DECISIONS-archive.md |
@@ -47,7 +47,7 @@ replaced it)`, or `measured`. Nothing else.
 | 2026-08-29 | Everything gdoc writes opens with 🤖 | superseded 2026-10-04 (the mark is a setting, ⁘ by default and possibly empty, and 🤖 stays a known mark; why a marker is needed holds) | DECISIONS-archive.md |
 | 2026-08-29 | gdoc reads back what it proposed, before saying it worked | holds | DECISIONS-archive.md |
 | 2026-08-29 | The preview may vanish, and the risk is accepted. Loudly | superseded 2026-10-02 (suggestions are generally available; a silent edit is still loud, through the read-back and the stop) | DECISIONS-archive.md |
-| 2026-08-29 | The guard owns the transport, and every id carries a write level. Widened 2026-09-09 (M7 splits) by a third level, `LevelInPlace`, and 2026-10-17 by a third door, one asset that is not a document | holds | DECISIONS-archive.md |
+| 2026-08-29 | The guard owns the transport, and every id carries a write level. Widened 2026-09-09 (M7 splits) by a third level, `LevelInPlace`, and 2026-10-17 by a third door, one asset that is not a document, and 2026-11-28 by a fourth level, `LevelEdit` | holds | DECISIONS-archive.md |
 | 2026-08-29 | Publish runs once. Everything after travels as suggestions | superseded 2026-09-19 (a note may be published more than once, and each publish is a new document) | DECISIONS-archive.md |
 | 2026-08-29 | Live review is a session, not a service | holds | DECISIONS-archive.md |
 | 2026-09-07 | A replace proposal cannot be fully withdrawn by a delete | holds | DECISIONS-archive.md |
@@ -125,6 +125,7 @@ replaced it)`, or `measured`. Nothing else.
 | 2026-11-07 | Body text is 12pt whatever gdoc is doing: a block's new paragraphs take the house look restyle writes, and a block is at most five kilobytes | holds | DECISIONS.md |
 | 2026-11-22 | A skill offers to install gdoc when the machine has none, and signs in after | holds | DECISIONS.md |
 | 2026-11-28 | Work runs the way Etude's does: Backlog.md, one task in one branch in one PR, the Compound Engineering loop, and no ralphex, revmux or umputun plugins | holds | DECISIONS.md |
+| 2026-11-28 | Edit mode: on the person's word, `propose --edit` writes words directly and paints them yellow, and `seen` takes the yellow off | holds | DECISIONS.md |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -2306,3 +2307,117 @@ nothing reads them.
 
 A domain choice with no principle above it: how the work is run, and Nail made
 it.
+
+## 2026-11-28. Edit mode: on the person's word, `propose --edit` writes words directly and paints them yellow, and `seen` takes the yellow off.
+
+Nail's decision, taken in chat on the date above, in his words (Russian, as
+dictated): "В GDoc мне надо добавить возможность, чтобы правки вносились в двух
+режимах. Либо suggested mode, как это сделано сейчас, либо прям исправление
+напрямую. Для этого потребуется изменение guard, видимо, и каких-то там рулов.
+Но давайте поменяем. По умолчанию работает suggested mode. Но если напрямую
+сказать, например, live review или изменить документ напрямую, прям явно
+сказано, что не в suggested mode, а в режиме редактирования, то меняется
+напрямую текст без suggested. Но текст выделяется желтым. И вторая команда: я
+должен иметь возможность сказать, все, что пометил желтым в режиме
+редактирования, убери выделение. Типа, я окей с ним, я их прочитал, я их
+увидел. Там будет много правок, и я не хочу делать на каждом accept
+suggestions."
+
+It answers two drafts that waited for him: the yellow door of 2026-11-03 and
+the green in-place mode of 2026-11-07
+(`docs/v2/research/2026-11-07-in-place/lead-design.md`). It amends principle 3:
+a handed-in document may now have its words changed without a suggestion, in
+one bounded way.
+
+**The sentence the trust guardian signed.** "A handed-in document may be edited
+directly only at LevelEdit, opened by GrantEdit for the one id named on that
+command line, for one run. Each batch inserts words and paints exactly what it
+inserted the edit yellow, or clears that yellow, over spans the command granted
+from its own read at the required revision. Nothing at that level deletes
+outside a granted span, touches another segment or tab, retries a moved
+revision, or is reached from `gdoc mcp`."
+
+**What the guardian vetoed, and what lifted it.** The first design let the
+guard judge the two batches by their shape alone. The guard cannot see a colour
+or a paragraph mark, so a clear could have taken every highlight in a document,
+and a delete could have crossed a paragraph. The veto was lifted by
+`AllowEditSpans`: the command grants the exact spans it found in its own read,
+with that read's revision, and the guard refuses any other span and any other
+revision. The guardian also asked for the two refusals under "What an edit
+refuses" and for the edit level to be judged before any other rule about a
+request kind. All of it is built as asked.
+
+**What changed.**
+
+- A fourth write level, `LevelEdit`, with one door, `Policy.GrantEdit`. It
+  raises an id that was handed in, for one run. It leaves an id at the full
+  level or at the in-place level where it is, and `AllowFile` cannot hand the
+  level out.
+- At that level a batch is one of two exact grammars, whatever `writeMode`
+  would say. An edit is three requests: delete a granted span, insert words at
+  its start, paint exactly those words. A clear is `updateTextStyle` requests
+  that set the background of granted spans to no colour. Both carry
+  `requiredRevisionId` and nothing else in `writeControl`. A suggestion batch
+  is refused there too: one run is one mode.
+- `gdoc propose <url> --from <file> --edit` writes each words entry directly.
+  The flag is on the command line or nowhere: no setting, note or file turns
+  it on, and `gdoc mcp` never offers it. It takes no `--md`, because there is
+  no suggestion to record.
+- `gdoc seen <url>` is the eighteenth command. It clears every body run whose
+  background is exactly the edit yellow and reports how many. It takes no
+  quote and no range.
+- The edit yellow is `#FFF59D`, outside the house palette. The house yellow
+  `#FFD500` is a mark the author makes, so `seen` never matches it, and
+  `export` brings an edit home as plain words.
+- The review skill uses `--edit` only when the person asked for edit mode in
+  words, in that session. It says so once, replies in the thread with the old
+  words after each edit made from a comment, and never runs `seen` unasked.
+
+**What an edit refuses.** A block entry, and a plain deletion, because there
+would be nothing to paint. A quote that already carries a background, because
+`seen` must never be able to erase a mark somebody made. A quote that is a
+link, changes style part way, or stands at a style edge, because Docs gives
+inserted text its neighbour's style. Each stays a suggestion.
+
+**Read back.** After an edit the document is read again: the new words stand
+where the quote stood, painted, with no suggestion id and the look of the old
+words. After a clear: no yellow run is left and the text is the same,
+character for character. The docx export is not read: the guardian's skeptic
+dropped it, since a direct edit claims nothing about being a suggestion and the
+Docs read is already a route the write did not go out on.
+
+**The provenance gate was dropped on purpose.** The 2026-11-07 draft let an
+edit only into a document a note records publishing. Nail wants to fix
+documents he is handed. The guardian did not veto it: the id comes only from
+the positional argument of that command line.
+
+**What is unchanged.** Suggestions are the default. gdoc never accepts,
+rejects or deletes anyone else's suggestion. A multi-tab document is refused.
+Chat in Claude Desktop proposes and never edits. Identity is never a gate, so
+a live review in edit mode acts on a colleague's marked comment as on Nail's.
+
+**Measured**, 2026-11-28, MEASURED.md, "A painted direct edit, a stale
+revision, and two ways to clear a highlight".
+
+**Not built.** A plain deletion in edit mode, a block in edit mode, more than
+one edit in one batch, and the mirror into the hub note.
+
+The pins: `TestALevelEditBatchMeetsAGrammarWhateverWriteModeSays`,
+`TestNothingAtLevelEditPaintsOutsideItsOwnInsertion`,
+`TestAnEditDeletesOnlyAGrantedSpan`,
+`TestAClearChangesNoCharacterAndTouchesOnlyGrantedSpans`,
+`TestAnEditBatchWithoutTheGrantedRevisionIsRefused`,
+`TestNoSuggestionKindOrNamedRangeCarriesAtLevelEdit`,
+`TestAllowFileCannotOpenTheEditDoor`, `TestGrantEditNeverAdmitsAnUnknownID`,
+`TestGrantEditLeavesACreatedDocumentAtFull`, `TestGrantEditRefusesAnInPlaceID`,
+`TestTheEditGrantDiesWithThePolicy`, `TestTheEditYellowIsNoHouseColour`,
+`TestGrantEditHasTwoCallers`, `TestEditAndSeenAreNeverOfferedInChat`,
+`TestEditModeIsOnlyTheFlagOnTheLine`,
+`TestAnEditSpanCarryingABackgroundOrStyleEdgeIsRefused`,
+`TestAnEditAnswerNamingNoRevisionStopsTheRun`,
+`TestSeenClearsOnlyRunsOfExactlyTheEditYellow` and, against real Docs,
+`TestLiveEditModeWritesPaintsAndClears`.
+
+Serves principle 3, amended: the reach is still one document named on the
+command line, and the write is still bounded by the guard rather than by the
+caller.

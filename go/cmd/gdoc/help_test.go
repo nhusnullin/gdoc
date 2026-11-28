@@ -14,7 +14,7 @@ import (
 // here rather than arriving in the help unannounced.
 var everyCommandName = []string{
 	"auth status", "auth login", "auth logout", "read", "comments", "suggestions", "export", "restyle",
-	"probe", "reply", "propose", "withdraw", "annotate", "build", "publish",
+	"probe", "reply", "propose", "withdraw", "seen", "annotate", "build", "publish",
 	"update", "mcp", "help", "completion",
 }
 
@@ -330,7 +330,7 @@ func TestTheUsageLineMarksWhatIsOptionalAndWhatIsAnAlternative(t *testing.T) {
 		{[]string{"help", "restyle"}, "Usage: gdoc restyle <url> --dry-run | --from <file> [--fields <file>]"},
 		{[]string{"help", "probe"}, "Usage: gdoc probe --folder <folder id>"},
 		{[]string{"help", "reply"}, "Usage: gdoc reply <url> <comment id> --body <text> | --body-file <file>"},
-		{[]string{"help", "propose"}, "Usage: gdoc propose <url> --from <file> [--md <file>] [--folder <folder id>]"},
+		{[]string{"help", "propose"}, "Usage: gdoc propose <url> --from <file> [--md <file>] [--folder <folder id>] [--edit]"},
 		{[]string{"help", "withdraw"}, "Usage: gdoc withdraw <url> <suggestion id> --md <file>"},
 		{[]string{"help", "annotate"}, "Usage: gdoc annotate <url> --quote <text> | --from <file> [--body-file <file>]"},
 		{[]string{"help", "build"}, "Usage: gdoc build --md <file> --out <file> [--house <file>] [--force]"},

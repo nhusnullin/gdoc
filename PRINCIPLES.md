@@ -110,6 +110,16 @@ shut.
   revision could already carry somebody else's edit. Amended 2026-09-18,
   DECISIONS.md.
 
+*Amended 2026-11-28. Nail's decision.* A second grant stands beside the styling
+one, and it is the first that changes a word. When the person asks for edit
+mode in words, `gdoc propose --edit` replaces quoted words in the document
+itself and paints the new words yellow, and `gdoc seen` takes that yellow off.
+The reach is still one document named on the command line, for one run. The
+guard holds each write to an exact grammar over spans the command read, at the
+revision it read them in, so not knowing where the document stands resolves to
+a refusal. Suggestions stay the default, and nothing a document, a note or a
+setting says turns the mode on. DECISIONS.md, 2026-11-28.
+
 *Amended 2026-09-10, for M7c. Nail's idea.* The clause above stands as it is,
 and this milestone deliberately did not widen it. `gdoc restyle --fields` adds
 the house cover, the front-matter tables and the legend to that same run, and

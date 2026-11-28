@@ -220,8 +220,14 @@ type Run struct {
 	FootnoteID   string   `json:"footnote_id,omitempty"`
 	Background   string   `json:"background,omitempty"`
 	Colour       string   `json:"color,omitempty"`
-	Link         *Link    `json:"link,omitempty"`
-	Detail       *Detail  `json:"detail,omitempty"`
+	// Look is every field of the run's text style except the background, as
+	// one comparable string, empty where the style states nothing else. It is
+	// not printed: nothing reads a property out of it, and two runs are asked
+	// only whether theirs are equal. TestARunKeepsItsLookWithoutTheBackground
+	// is the pin.
+	Look   string  `json:"-"`
+	Link   *Link   `json:"link,omitempty"`
+	Detail *Detail `json:"detail,omitempty"`
 }
 
 // Link is where a run of text points. One of the four fields says what kind of

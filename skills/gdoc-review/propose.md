@@ -273,6 +273,21 @@ proposal: the route whose check is false, or, when all three are true, the
 warning saying Docs took the batch and its answer could not be read. Never
 report a proposal as landed because the command exited 0.
 
+## The same file in edit mode
+
+`$GDOC propose <url> --from changes.json --edit` reads this file and writes
+each words entry directly, painted yellow, with no comment. `SKILL.md`, "Edit
+mode", says when. `why` is still required: it is what your receipt says.
+
+The envelope has `mode: "edit"` and one entry under `edits` per entry in the
+file, with `sent`, `verified` and three checks: `words` (the new words stand
+where the quote stood, and nothing is pending), `painted` (they carry the
+yellow) and `look` (they kept the style of the words they replaced). The run
+stops at the first entry it cannot send or cannot confirm.
+
+An edit cannot be withdrawn, because there is no suggestion. To undo one, send
+a new edit that quotes the new words and puts the old ones back.
+
 ## Withdrawing a proposal
 
 When a proposal was wrong, and it is still pending:

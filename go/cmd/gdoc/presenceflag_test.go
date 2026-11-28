@@ -36,8 +36,8 @@ import (
 // command, a flag or a note a milestone adds names itself in this object, and
 // pipe_test.go holds the same exception over the goldens beside it.
 const (
-	helpObjectBytes  = 11303
-	helpObjectSHA256 = "31485358cdfcc5664fc2583e27baac7feb16077f1ad03dcc5ae4b0bcef6ddc09"
+	helpObjectBytes  = 12068
+	helpObjectSHA256 = "7cb73a594a5d8a3ad0976850a00f03463f3b541e9a12bd4ccd1d098e1995a02f"
 )
 
 // frozenLogoPath stands in for where this machine caches the house logo. The

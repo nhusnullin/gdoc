@@ -149,6 +149,7 @@ and an example; without `--json`, a help in a terminal draws a screen instead.
 | `reply <url> <comment id>` | write one reply into a thread, under your mark |
 | `propose <url>` | propose changes as native suggestions, each with the comment that says why |
 | `withdraw <url> <suggestion id>` | take back one pending suggestion gdoc proposed itself |
+| `seen <url>` | take the yellow off every direct edit gdoc made, once you have read them |
 | `annotate <url>` | leave a comment on the exact words you quote, changing nothing |
 | `export <url>` | write the document into the hub as Markdown, one file per tab, with its pictures |
 | `build` | build a note as a house-style docx on this machine, reaching only for the house logo |
@@ -192,7 +193,7 @@ what you expected instead.
 | [How it works](https://github.com/nhusnullin/gdoc/blob/main/docs/guide/how-it-works.md) | the credential, the guard, suggestions only, the JSON envelope |
 | [From a checkout](https://github.com/nhusnullin/gdoc/blob/main/docs/guide/from-a-checkout.md) | `install.sh`, `make build`, `make dist`, completion, `GDOC_CONFIG_DIR` |
 | [Reading](https://github.com/nhusnullin/gdoc/blob/main/docs/guide/reading.md) | `read`, `comments`, `suggestions`, the cursor, `--wait` |
-| [Writing](https://github.com/nhusnullin/gdoc/blob/main/docs/guide/writing.md) | `probe`, `reply`, `propose`, `withdraw`, `annotate` |
+| [Writing](https://github.com/nhusnullin/gdoc/blob/main/docs/guide/writing.md) | `probe`, `reply`, `propose`, `withdraw`, `seen`, `annotate` |
 | [Restyle](https://github.com/nhusnullin/gdoc/blob/main/docs/guide/restyle.md) | the survey, restyle in place, the house template as a suggestion |
 | [Publishing](https://github.com/nhusnullin/gdoc/blob/main/docs/guide/publishing.md) | `build`, `publish`, the `gdoc:` block |
 | [Exporting](https://github.com/nhusnullin/gdoc/blob/main/docs/guide/exporting.md) | `export`, the numbering rule, `assets/`, the marks |

@@ -1,5 +1,5 @@
 gdoc needs a command.
-┌─ gdoc v2.9.0 ────────────────────────────────────────────────── 19 commands ─┐
+┌─ gdoc v2.9.0 ────────────────────────────────────────────────── 20 commands ─┐
 │ Usage  gdoc <command> [words] [flags]                                        │
 ├─ Read ────────────────┬──────────────────────────────────────────────────────┤
 │ read                  │ Print the document as text, with the ids a comment   │
@@ -18,6 +18,8 @@ gdoc needs a command.
 │                       │ comment that says why.                               │
 │ withdraw              │ Take back one pending suggestion, and only one gdoc  │
 │                       │ proposed itself.                                     │
+│ seen                  │ Take the yellow off every direct edit gdoc made,     │
+│                       │ once you have read them. No word changes.            │
 │ annotate              │ Leave a comment on the exact words you quote, under  │
 │                       │ your mark, changing nothing.                         │
 ├─ Make a doc ──────────┼──────────────────────────────────────────────────────┤

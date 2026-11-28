@@ -14,6 +14,7 @@ Usage: gdoc <command> [words] [flags]
   reply        Write one reply into a comment thread, under your mark.
   propose      Propose changes as native suggestions, each with the comment that says why.
   withdraw     Take back one pending suggestion, and only one gdoc proposed itself.
+  seen         Take the yellow off every direct edit gdoc made, once you have read them. No word changes.
   annotate     Leave a comment on the exact words you quote, under your mark, changing nothing.
   build        Build the note as a house-style docx on this machine, reaching only for the house logo.
   publish      Build the note as a house-style document and upload it into one folder.
