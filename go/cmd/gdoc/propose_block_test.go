@@ -3,8 +3,11 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"encoding/json"
 	"strings"
 	"testing"
+
+	"gdoc/internal/propose"
 )
 
 // This file is the block kind at the command's own door: the proposals file
@@ -427,5 +430,22 @@ func TestHelpProposeDescribesTheBlockEntry(t *testing.T) {
 		if !strings.Contains(said, word) {
 			t.Errorf("the --from summary must name %q: %q", word, said)
 		}
+	}
+}
+
+// The comments a replace covers reach the printed entry. The skill tells the
+// person whose threads they are from this field, and the first version of
+// GD-56 set it on the result and dropped it here, so nobody was told.
+func TestTheEnvelopeNamesTheCommentsAReplaceCovers(t *testing.T) {
+	raw, err := json.Marshal(sent(propose.Result{ReplaceFrom: "a", ReplaceTo: "b", OverComments: []string{"C-1", "C-2"}}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), `"over_comments":["C-1","C-2"]`) {
+		t.Errorf("the entry is %s, and it should carry over_comments", raw)
+	}
+	plain, _ := json.Marshal(sent(propose.Result{Quoted: "a", Replacement: "b"}))
+	if strings.Contains(string(plain), "over_comments") {
+		t.Errorf("the entry is %s, and an entry over no comment carries no such field", plain)
 	}
 }

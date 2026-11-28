@@ -263,12 +263,17 @@ func (c Checks) all() bool {
 // names After, or ReplaceFrom and ReplaceTo. Everything below them is the same
 // question for both, because the write and the three read-backs are.
 type Result struct {
-	Quoted             string   `json:"quoted,omitempty"`
-	Replacement        string   `json:"replacement,omitempty"`
-	After              string   `json:"after,omitempty"`
-	ReplaceFrom        string   `json:"replace_from,omitempty"`
-	ReplaceTo          string   `json:"replace_to,omitempty"`
-	SuggestionIDs      []string `json:"suggestion_ids,omitempty"`
+	Quoted        string   `json:"quoted,omitempty"`
+	Replacement   string   `json:"replacement,omitempty"`
+	After         string   `json:"after,omitempty"`
+	ReplaceFrom   string   `json:"replace_from,omitempty"`
+	ReplaceTo     string   `json:"replace_to,omitempty"`
+	SuggestionIDs []string `json:"suggestion_ids,omitempty"`
+	// OverComments is the ids of the comments anchored in the paragraphs a
+	// replace block proposes to take out. Accepting the suggestion deletes
+	// the words those threads stand on. It is a fact, and whether it matters
+	// is the reader's to say.
+	OverComments       []string `json:"over_comments,omitempty"`
 	CommentID          string   `json:"comment_id,omitempty"`
 	CommentUpdateState string   `json:"comment_update_state,omitempty"`
 	Verified           bool     `json:"verified"`

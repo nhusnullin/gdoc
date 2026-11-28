@@ -361,14 +361,18 @@ func trimBody(raw string) string {
 // rather than an index, so a skill reading the report back can tell which entry
 // of its own file an answer is about.
 type proposalReport struct {
-	Quoted             string         `json:"quoted,omitempty"`
-	Replacement        string         `json:"replacement,omitempty"`
-	After              string         `json:"after,omitempty"`
-	ReplaceFrom        string         `json:"replace_from,omitempty"`
-	ReplaceTo          string         `json:"replace_to,omitempty"`
-	Sent               bool           `json:"sent"`
-	Outcome            string         `json:"outcome,omitempty"`
-	SuggestionIDs      []string       `json:"suggestion_ids,omitempty"`
+	Quoted        string   `json:"quoted,omitempty"`
+	Replacement   string   `json:"replacement,omitempty"`
+	After         string   `json:"after,omitempty"`
+	ReplaceFrom   string   `json:"replace_from,omitempty"`
+	ReplaceTo     string   `json:"replace_to,omitempty"`
+	Sent          bool     `json:"sent"`
+	Outcome       string   `json:"outcome,omitempty"`
+	SuggestionIDs []string `json:"suggestion_ids,omitempty"`
+	// OverComments is the comments anchored in the paragraphs a replace
+	// block proposes to delete. The skill reads it to tell the person whose
+	// threads those are before they accept.
+	OverComments       []string       `json:"over_comments,omitempty"`
 	CommentID          string         `json:"comment_id,omitempty"`
 	CommentUpdateState string         `json:"comment_update_state,omitempty"`
 	Verified           bool           `json:"verified"`
@@ -575,6 +579,7 @@ func sent(r propose.Result) proposalReport {
 		ReplaceTo:          r.ReplaceTo,
 		Sent:               true,
 		SuggestionIDs:      r.SuggestionIDs,
+		OverComments:       r.OverComments,
 		CommentID:          r.CommentID,
 		CommentUpdateState: r.CommentUpdateState,
 		Verified:           r.Verified,

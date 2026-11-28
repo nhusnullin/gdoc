@@ -245,11 +245,11 @@ func TestPlaceRefusesWhatItCannotPlaceAndNamesIt(t *testing.T) {
 			says: []string{"a floating picture", "leave that paragraph out"},
 		},
 		{
-			name: "a replace over somebody's pending suggestion and comments",
+			name: "a replace over somebody's pending suggestion",
 			place: func(t *testing.T) (Placement, error) {
 				return PlaceReplace(document(t, "block-busy.json"), "register lists", "operations lead")
 			},
-			says: []string{"sug.INSERTED", "sug.DELETED", "C-SUGGESTED", "C-ESCALATION"},
+			says: []string{"sug.INSERTED", "sug.DELETED", "pending suggestions"},
 		},
 	}
 
@@ -300,5 +300,27 @@ func TestAPlacementIsComputedFromTheReadAndNotStored(t *testing.T) {
 	}
 	if second.Insert != first.Insert+5 {
 		t.Errorf("Insert = %d on the moved document and %d on the first; the placement follows the read", second.Insert, first.Insert)
+	}
+}
+
+// A comment in the run does not refuse a replace. A suggestion takes nothing
+// out until a person accepts it, so the block is proposed and the placement
+// names every comment anchored in the paragraphs it would delete: Nail's
+// decision of 2026-11-28. A pending suggestion there still refuses, which the
+// table above holds.
+func TestAReplaceOverAColleaguesCommentIsPlacedAndNamesTheComment(t *testing.T) {
+	got, err := PlaceReplace(document(t, "block-commented.json"), "register lists", "operations lead")
+	if err != nil {
+		t.Fatalf("a replace over a comment was refused: %v", err)
+	}
+	if strings.Join(got.Comments, ",") != "C-ESCALATION,C-SUGGESTED" {
+		t.Errorf("Comments = %q, want both comment ids in order", got.Comments)
+	}
+	clear, err := PlaceReplace(document(t, "block-commented.json"), "register lists", "every supplier")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(clear.Comments) != 0 {
+		t.Errorf("Comments = %q for a run no comment is anchored in", clear.Comments)
 	}
 }

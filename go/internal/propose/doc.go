@@ -406,14 +406,24 @@
 // measurement. TestAfterTheLastParagraphGoesBeforeTheFinalNewline and four
 // cases of TestPlaceRefusesWhatItCannotPlaceAndNamesIt are the pins.
 //
-// # A replace never deletes somebody else's work, and never deletes what it cannot see
+// # A replace never stands on a pending suggestion, names the comments it covers, and never deletes what it cannot see
 //
-// When the paragraphs a replace covers hold a pending suggestion or a comment's
-// anchor, the placement is refused and every suggestion id and comment id is
-// named. That is a fact rather than a judgement: this package does not decide
-// whether a colleague's pending edit matters, it reports that it is there and
-// stops. The skills read the same two facts before they ask, and tell the person
-// what is in the way.
+// When the paragraphs a replace covers hold a pending suggestion, the
+// placement is refused and every suggestion id is named: a suggested delete
+// over a suggestion is a suggestion about a suggestion, which no reader can
+// act on. TestPlaceRefusesWhatItCannotPlaceAndNamesIt holds it.
+//
+// A comment's anchor there does not refuse, since Nail's decision of
+// 2026-11-28 (DECISIONS.md). A suggestion takes nothing out until a person
+// accepts it, so the block is proposed, and the placement and the result
+// name every comment anchored in the paragraphs it would delete, as
+// over_comments. That is a fact rather than a judgement: this package does
+// not decide whether a colleague's comment matters. The skill tells the
+// person whose thread it is before they accept.
+// TestAReplaceOverAColleaguesCommentIsPlacedAndNamesTheComment and
+// TestABlockResultNamesTheCommentsItsReplaceCovers are the pins, and
+// TestTheEnvelopeNamesTheCommentsAReplaceCovers in cmd/gdoc holds the field
+// to the printed entry, which is the same one chat is answered with.
 //
 // The run is refused too when it covers anything but paragraphs, or when two
 // paragraphs in it do not touch, because something this read does not index, a

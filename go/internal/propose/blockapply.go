@@ -121,6 +121,7 @@ func applyBlock(ctx context.Context, s Session, docID string, p Proposal, held *
 	if err != nil {
 		return out, err
 	}
+	out.OverComments = place.Comments
 	comment := plaintext.Prefixed(mark, p.Why)
 	if err := send(ctx, s, docID, BlockBatch(place, content, look, p.Why, p.Assignee, mark), &out); err != nil {
 		return out, err

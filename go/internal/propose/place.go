@@ -43,6 +43,10 @@ type Placement struct {
 	// asks about, so it holds the written text and leaves out a pending
 	// insertion, which the preview does not show.
 	Paragraphs []string
+	// Comments is the ids of the comments anchored in the paragraphs a
+	// replace takes out, in order. It is a fact for whoever accepts the
+	// suggestion: accepting deletes the words those threads stand on.
+	Comments []string
 }
 
 // Replaces says whether this placement takes paragraphs out as well as putting
@@ -149,14 +153,16 @@ func PlaceReplace(d *docs.Document, from, to string) (Placement, error) {
 
 	start := tab.Body[first].Paragraph.StartIndex
 	end := tab.Body[last].Paragraph.EndIndex
-	if err := nobodyElsesWork(d, tab, first, last, start, end); err != nil {
+	comments, err := nobodyElsesWork(d, tab, first, last, start, end)
+	if err != nil {
 		return Placement{}, err
 	}
 
 	place := Placement{
-		Tab:    tab.ID,
-		Insert: start,
-		Delete: docs.Range{Tab: tab.ID, Start: start, End: end},
+		Tab:      tab.ID,
+		Insert:   start,
+		Delete:   docs.Range{Tab: tab.ID, Start: start, End: end},
+		Comments: comments,
 	}
 	for at := first; at <= last; at++ {
 		place.Paragraphs = append(place.Paragraphs, written(tab.Body[at].Paragraph))
@@ -219,14 +225,19 @@ func endCanCarryTheBlock(anchor *docs.Paragraph, content []Para) error {
 	return nil
 }
 
-// nobodyElsesWork refuses a replace whose paragraphs hold a pending suggestion
-// or a comment's anchor, and names every id it found.
+// nobodyElsesWork refuses a replace whose paragraphs hold a pending
+// suggestion, naming every id, and returns the ids of the comments anchored
+// there.
 //
-// The deletion would take somebody's pending edit or the words a colleague
-// asked about with it, and the binary does not decide whether that matters: it
-// reports what is there and stops. The skills read the same two facts before
-// they ask, and tell the person what is in the way.
-func nobodyElsesWork(d *docs.Document, tab docs.Tab, first, last, start, end int) error {
+// The two are not the same kind of thing in the way. A suggested delete over
+// a pending suggestion is a suggestion about a suggestion, which no reader
+// can act on, so it is refused. A comment is words a colleague asked about,
+// and a suggestion takes nothing out until a person accepts it, so the
+// replace is proposed and the comments are reported: Nail's decision of
+// 2026-11-28, DECISIONS.md. The binary still does not decide whether a
+// comment matters. It names it, and the skill tells the person before they
+// accept.
+func nobodyElsesWork(d *docs.Document, tab docs.Tab, first, last, start, end int) ([]string, error) {
 	seen := map[string]bool{}
 	for at := first; at <= last; at++ {
 		for _, r := range tab.Body[at].Paragraph.Runs {
@@ -238,7 +249,11 @@ func nobodyElsesWork(d *docs.Document, tab docs.Tab, first, last, start, end int
 			}
 		}
 	}
-	suggestions := sorted(seen)
+	if suggestions := sorted(seen); len(suggestions) > 0 {
+		return nil, fmt.Errorf(
+			"the paragraphs this replace would delete hold work that is not gdoc's: %s; settle those first, or quote a run of paragraphs that does not hold them",
+			plural("a pending suggestion", "pending suggestions", suggestions))
+	}
 
 	var comments []string
 	for id, r := range d.CommentRanges {
@@ -247,20 +262,7 @@ func nobodyElsesWork(d *docs.Document, tab docs.Tab, first, last, start, end int
 		}
 	}
 	sort.Strings(comments)
-
-	if len(suggestions) == 0 && len(comments) == 0 {
-		return nil
-	}
-	var holds []string
-	if len(suggestions) > 0 {
-		holds = append(holds, plural("a pending suggestion", "pending suggestions", suggestions))
-	}
-	if len(comments) > 0 {
-		holds = append(holds, plural("a comment", "comments", comments))
-	}
-	return fmt.Errorf(
-		"the paragraphs this replace would delete hold work that is not gdoc's: %s; settle those first, or quote a run of paragraphs that does not hold them",
-		strings.Join(holds, ", and "))
+	return comments, nil
 }
 
 // plural names the ids after the word for how many of them there are.

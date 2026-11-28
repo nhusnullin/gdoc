@@ -228,8 +228,12 @@ $GDOC comments <url>
 
 Say what falls inside the paragraphs you would replace, by id and by first
 words, and propose only once the person has answered. gdoc refuses a replace
-over a pending suggestion or a comment's anchor anyway, and names every
-suggestion id and comment id it found, but a refusal at the terminal is a
+over a pending suggestion anyway, and names every suggestion id it found. A
+comment in the run does not refuse: the replace lands as a suggestion and the
+result lists those threads as `over_comments`. Tell the person, for each id,
+whose comment it is and its first words, and that accepting the suggestion
+deletes the words that thread stands on. Never send the person to delete the
+paragraphs by hand because a comment is there. gdoc names what it found, but a refusal at the terminal is a
 message to the operator and the person whose work it is never hears it.
 
 ### Where a block cannot go

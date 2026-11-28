@@ -302,8 +302,10 @@ place of a run of paragraphs. Same file, same comment, same read-backs. A block
 that replaces paragraphs is the one proposal that takes somebody's words out, so
 read `$GDOC suggestions <url>` and `$GDOC comments <url>` first, say what falls
 inside the run you would replace, and propose only once the person has answered.
-gdoc refuses a replace over a pending suggestion or a comment's anchor anyway,
-and names every id, but that refusal reaches you and never reaches them.
+gdoc refuses a replace over a pending suggestion anyway, and names every id,
+but that refusal reaches you and never reaches them. A comment in the run does
+not refuse: the result lists it under `over_comments`, and you tell the person
+whose thread it is, and that accepting deletes the words it stands on.
 
 Before the first proposal of the session, read `propose.md`, beside this file.
 It holds the proposals file, the shapes of quote the command refuses and why,

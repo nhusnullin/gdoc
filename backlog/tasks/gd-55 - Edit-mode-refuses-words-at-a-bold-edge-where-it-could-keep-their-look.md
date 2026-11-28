@@ -1,10 +1,10 @@
 ---
 id: GD-55
 title: Edit mode refuses words at a bold edge, where it could keep their look
-status: In Progress
+status: To check
 assignee: []
 created_date: '2026-11-28T12:09:00Z'
-updated_date: '2026-11-28T12:27:00Z'
+updated_date: '2026-11-28T12:34:00Z'
 labels: []
 dependencies: []
 references:
