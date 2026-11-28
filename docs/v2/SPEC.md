@@ -535,8 +535,11 @@ read-back asks the same place (DECISIONS.md, 2026-11-28).
 its quote in the document itself, the new words are painted the edit yellow
 `#FFF59D`, and no comment is left. The flag is on the command line or nowhere,
 it takes no `--md`, and `gdoc mcp` never offers it. An entry that is a block, a
-quote that already carries a background or a link, and a quote at a style edge
-are refused, and stay suggestions in a run without the flag. Each edit is sent
+quote that already carries a background or a link, and a quote that changes
+style part way are refused, and stay suggestions in a run without the flag. A
+quote at a style edge is edited: the words are inserted at the quote's end and
+the quote is then deleted, so they take the look of the words they replace
+(DECISIONS.md, 2026-11-28, "An edit keeps the look"). Each edit is sent
 against the revision it was read in and is never retried; it is read back as
 written, painted, not pending, and in the look of the words it replaced. The
 envelope carries `mode: "edit"` and one entry under `edits` per entry in the

@@ -32,12 +32,13 @@ import (
 // the example `comments --follow` moves, re-taken in M32a for the one line
 // `completion --loader` adds, re-taken in M32f for logo_path, re-taken in
 // M32h for logo_url and re-taken in M33 for the task notation, which is three
-// notes on publish and propose. That is the only reason to re-take them: a
+// notes on publish and propose, and re-taken for GD-54 and GD-55, which name
+// near and reword the edit note. That is the only reason to re-take them: a
 // command, a flag or a note a milestone adds names itself in this object, and
 // pipe_test.go holds the same exception over the goldens beside it.
 const (
-	helpObjectBytes  = 12068
-	helpObjectSHA256 = "7cb73a594a5d8a3ad0976850a00f03463f3b541e9a12bd4ccd1d098e1995a02f"
+	helpObjectBytes  = 12225
+	helpObjectSHA256 = "9de147ac5dd019619b463ad4bf392e5a5a29109ef032ddb7bb1c53d502251989"
 )
 
 // frozenLogoPath stands in for where this machine caches the house logo. The

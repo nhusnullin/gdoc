@@ -38,11 +38,11 @@ func editing(t *testing.T) *Policy {
 func editBatch(revision string, start, end int, text string, paintStart, paintEnd int, colour string) []byte {
 	return []byte(fmt.Sprintf(
 		`{"requests":[`+
-			`{"deleteContentRange":{"range":{"startIndex":%d,"endIndex":%d}}},`+
 			`{"insertText":{"location":{"index":%d},"text":%q}},`+
+			`{"deleteContentRange":{"range":{"startIndex":%d,"endIndex":%d}}},`+
 			`{"updateTextStyle":{"range":{"startIndex":%d,"endIndex":%d},"textStyle":{"backgroundColor":%s},"fields":"backgroundColor"}}`+
 			`],"writeControl":{"requiredRevisionId":%q}}`,
-		start, end, start, text, paintStart, paintEnd, colour, revision))
+		end, text, start, end, paintStart, paintEnd, colour, revision))
 }
 
 func goodEdit() []byte {
@@ -116,7 +116,7 @@ func TestAnEditDeletesOnlyAGrantedSpan(t *testing.T) {
 
 	withSegment := []byte(strings.Replace(string(goodEdit()), `{"startIndex":5,"endIndex":14}}}`, `{"startIndex":5,"endIndex":14,"segmentId":"kix.h1"}}}`, 1))
 	refusedEdit(t, editing(t), withSegment, "a delete naming a segment")
-	withTab := []byte(strings.Replace(string(goodEdit()), `{"index":5}`, `{"index":5,"tabId":"t.1"}`, 1))
+	withTab := []byte(strings.Replace(string(goodEdit()), `{"index":14}`, `{"index":14,"tabId":"t.1"}`, 1))
 	refusedEdit(t, editing(t), withTab, "an insert naming a tab")
 }
 
@@ -159,8 +159,8 @@ func TestAnEditInsertsWordsInsideOneParagraph(t *testing.T) {
 	refusedEdit(t, editing(t), half, "an insert carrying half a surrogate pair")
 	refusedEdit(t, editing(t), editBatch(editRevision, 5, 14, "\ufeffx", 5, 7, editYellowJSON), "an insert carrying a byte order mark")
 
-	elsewhere := []byte(strings.Replace(string(goodEdit()), `{"index":5}`, `{"index":6}`, 1))
-	refusedEdit(t, editing(t), elsewhere, "an insert away from the start of the delete")
+	elsewhere := []byte(strings.Replace(string(goodEdit()), `{"index":14}`, `{"index":13}`, 1))
+	refusedEdit(t, editing(t), elsewhere, "an insert away from the end of the delete")
 }
 
 func TestAnEditBatchIsExactlyItsThreeRequests(t *testing.T) {
@@ -174,8 +174,8 @@ func TestAnEditBatchIsExactlyItsThreeRequests(t *testing.T) {
 	refusedEdit(t, editing(t), fourth, "an edit batch with a fourth request")
 
 	reordered := []byte(`{"requests":[` +
-		`{"insertText":{"location":{"index":5},"text":"new words"}},` +
 		`{"deleteContentRange":{"range":{"startIndex":5,"endIndex":14}}},` +
+		`{"insertText":{"location":{"index":14},"text":"new words"}},` +
 		`{"updateTextStyle":{"range":{"startIndex":5,"endIndex":14},"textStyle":{"backgroundColor":` + editYellowJSON + `},"fields":"backgroundColor"}}` +
 		`],"writeControl":{"requiredRevisionId":"REV1"}}`)
 	refusedEdit(t, editing(t), reordered, "an edit batch in another order")
@@ -359,4 +359,45 @@ func TestTheEditYellowIsNoHouseColour(t *testing.T) {
 			t.Fatalf("the edit yellow is the house colour %s; gdoc seen would then clear a mark the author made", house)
 		}
 	}
+}
+
+// The order is the look. Docs gives inserted text the style of the character
+// in front of the insert, so the words go in at the end of the span they
+// replace, while the old words still stand there, and take the look of the
+// last of them (MEASURED.md, 2026-11-28, "An insert at the end of the words it
+// replaces"). The five tests below hold the one index and the one order.
+func TestAnEditInsertsAtTheGrantedSpansEndBeforeItDeletes(t *testing.T) {
+	carried(t, editing(t), goodEdit())
+	want := `{"requests":[{"insertText":{"location":{"index":14},"text":"new words"}},{"deleteContentRange":{"range":{"startIndex":5,"endIndex":14}}},`
+	if !strings.HasPrefix(string(goodEdit()), want) {
+		t.Fatalf("the carried batch is not the one this test names: %s", goodEdit())
+	}
+}
+
+func oldOrder(insertAt int) []byte {
+	return []byte(fmt.Sprintf(`{"requests":[`+
+		`{"deleteContentRange":{"range":{"startIndex":5,"endIndex":14}}},`+
+		`{"insertText":{"location":{"index":%d},"text":"new words"}},`+
+		`{"updateTextStyle":{"range":{"startIndex":5,"endIndex":14},"textStyle":{"backgroundColor":`+editYellowJSON+`},"fields":"backgroundColor"}}`+
+		`],"writeControl":{"requiredRevisionId":"REV1"}}`, insertAt))
+}
+
+func TestTheDeleteFirstOrderIsRefused(t *testing.T) {
+	refusedEdit(t, editing(t), oldOrder(5), "the delete-first batch edit mode sent before 2026-11-28")
+	refusedEdit(t, editing(t), oldOrder(14), "a delete-first batch inserting at the span's end")
+}
+
+func TestAnEditInsertingAtTheSpanStartIsRefused(t *testing.T) {
+	atStart := []byte(strings.Replace(string(goodEdit()), `{"index":14}`, `{"index":5}`, 1))
+	refusedEdit(t, editing(t), atStart, "an insert at the start of the span, where it takes the neighbour's look")
+}
+
+// After the delete the units [end, end+n) are the text behind the edit.
+func TestAnEditPaintingAtTheInsertIndexIsRefused(t *testing.T) {
+	refusedEdit(t, editing(t), editBatch(editRevision, 5, 14, "new words", 14, 23, editYellowJSON), "a paint that starts at the insert index")
+}
+
+func TestAnEditDeletingItsOwnInsertionIsRefused(t *testing.T) {
+	both := []byte(strings.Replace(string(goodEdit()), `"deleteContentRange":{"range":{"startIndex":5,"endIndex":14}}`, `"deleteContentRange":{"range":{"startIndex":5,"endIndex":23}}`, 1))
+	refusedEdit(t, editing(t), both, "a delete reaching over the words the batch just inserted")
 }

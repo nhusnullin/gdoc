@@ -343,8 +343,11 @@ a proposal.
 - After an edit made from a comment, reply in that thread with a receipt that
   holds the old words and the reason. It is the only place the old words stay.
 - Only words for words inside one paragraph can be edited. gdoc refuses a
-  block, a quote that is a link or is already highlighted, and a quote at a
-  style edge. Send those as ordinary suggestions, in a second run without
+  block, a quote that is a link or is already highlighted, and a quote that
+  changes style part way, half bold and half plain. A bold term beside plain
+  text is fine on its own: the new words stay bold. Quote the words of one
+  style, and add `near` where they stand more than once, before falling back.
+  Send what is still refused as ordinary suggestions, in a second run without
   `--edit`, and say which went which way. A plain deletion is a suggestion too.
 - A change you would hold back to ask about in a suggestion run, you hold back
   here as well. Edit mode changes how a change lands, not whether you ask.

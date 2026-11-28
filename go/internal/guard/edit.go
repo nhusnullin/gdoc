@@ -206,16 +206,21 @@ func (p *Policy) judgeEditBatch(top map[string]json.RawMessage) error {
 	return nil
 }
 
-// judgeEdit holds the edit grammar: delete one granted span, insert words at
-// its start, paint exactly those words the edit yellow. Three requests, in
-// that order, and nothing beside them.
+// judgeEdit holds the edit grammar: insert words at the end of one granted
+// span, delete that span, paint exactly those words the edit yellow where the
+// span started. Three requests, in that order, and nothing beside them.
+//
+// The insert comes first and at the span's end because Docs gives inserted
+// text the style of the character in front of it: there, that is the last of
+// the words being replaced. The delete is read first all the same, since it
+// is the request that names the span the grant is asked about.
 func judgeEdit(reqs []map[string]json.RawMessage, granted *editGrant) error {
 	if len(reqs) != 3 {
-		return refuse("an edit is exactly three requests, deleteContentRange, insertText and updateTextStyle, and this batch carries %d", len(reqs))
+		return refuse("an edit is exactly three requests, insertText, deleteContentRange and updateTextStyle, and this batch carries %d", len(reqs))
 	}
-	del, ok := exactObject(asObject(reqs[0]["deleteContentRange"]), "range")
+	del, ok := exactObject(asObject(reqs[1]["deleteContentRange"]), "range")
 	if !ok {
-		return refuse("the first request of an edit is a deleteContentRange carrying range and nothing else")
+		return refuse("the second request of an edit is a deleteContentRange carrying range and nothing else")
 	}
 	span, ok := exactSpan(del["range"])
 	if !ok {
@@ -228,18 +233,18 @@ func judgeEdit(reqs []map[string]json.RawMessage, granted *editGrant) error {
 		return refuse("the edit deletes %d units, and one edit replaces at most %d", span.End-span.Start, editCeiling)
 	}
 
-	ins, ok := exactObject(asObject(reqs[1]["insertText"]), "location", "text")
+	ins, ok := exactObject(asObject(reqs[0]["insertText"]), "location", "text")
 	if !ok {
-		return refuse("the second request of an edit is an insertText carrying location and text and nothing else")
+		return refuse("the first request of an edit is an insertText carrying location and text and nothing else")
 	}
 	loc, ok := exactObject(asObject(ins["location"]), "index")
 	if !ok {
 		return refuse("the location of an edit's insertText carries exactly index; a segment or a tab is not named there")
 	}
-	at, ok := exactIndex(loc["index"])
-	if !ok || at != span.Start {
-		return refuse("an edit inserts its words where the deleted span started, at %d, and this one inserts elsewhere", span.Start)
+	if at, ok := exactIndex(loc["index"]); !ok || at != span.End {
+		return refuse("an edit inserts its words at the end of the span it deletes, at %d, and this one inserts elsewhere", span.End)
 	}
+	at := span.Start
 	var text string
 	if json.Unmarshal(ins["text"], &text) != nil || text == "" {
 		return refuse("an edit inserts words, and this one inserts none")
@@ -268,7 +273,7 @@ func judgeEdit(reqs []map[string]json.RawMessage, granted *editGrant) error {
 	}
 	painted, ok := exactSpan(style["range"])
 	if !ok || painted.Start != at || painted.End != at+units {
-		return refuse("an edit paints exactly the words it inserted, [%d,%d), and this one paints another range", at, at+units)
+		return refuse("an edit paints exactly the words it inserted, which stand at [%d,%d) once the span is deleted, and this one paints another range", at, at+units)
 	}
 	if !isBackgroundMask(style["fields"]) {
 		return refuse("an edit's updateTextStyle names backgroundColor in fields and nothing else")
