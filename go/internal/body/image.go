@@ -199,11 +199,12 @@ func isRemote(target string) bool {
 // note.
 func decodeDataURI(target string) ([]byte, error) {
 	header, payload, found := strings.Cut(target, ",")
-	if !found || payload == "" || !strings.Contains(header, "base64") {
+	lower := strings.ToLower(header)
+	if !found || payload == "" || !strings.Contains(lower, "base64") {
 		return nil, fmt.Errorf("an inline picture could not be read: only base64 "+
 			"data: URIs are understood, and this one says %q", shorten(header))
 	}
-	if !strings.HasPrefix(strings.ToLower(strings.TrimPrefix(header, "data:")), "image/") {
+	if !strings.HasPrefix(strings.TrimPrefix(lower, "data:"), "image/") {
 		return nil, fmt.Errorf("the inline data is not a picture, it says %q", shorten(header))
 	}
 	decoded, err := base64.StdEncoding.DecodeString(payload)
