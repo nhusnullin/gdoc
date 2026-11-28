@@ -129,6 +129,7 @@ replaced it)`, or `measured`. Nothing else.
 | 2026-11-28 | A quote that stands more than once is placed by the words near it: a words entry may carry `near` | holds | DECISIONS.md |
 | 2026-11-28 | An edit keeps the look of the words it replaces: the insert goes at the span's end, in front of the delete | holds | DECISIONS.md |
 | 2026-11-28 | A replace block over a colleague's comment is proposed, and names the comment | holds | DECISIONS.md |
+| 2026-11-28 | One edit replaces and writes at most 1000 units, where the ceiling was 300 | holds | DECISIONS.md |
 
 **An entry is never edited after this, except its status line.** A decision that
 changes is a new entry, dated today, with a new row here, and the old entry's
@@ -2543,3 +2544,43 @@ report what they find.
 
 A domain choice under principle 3: nothing is deleted without a person's
 accept.
+
+## 2026-11-28. One edit replaces and writes at most 1000 units, where the ceiling was 300.
+
+Nail's decision, in chat on the date above. He asked where the limit of 300
+characters on one direct edit came from, and was told: it is gdoc's own number
+and not Google's, it was taken from the chat hold of 2026-10-03 on a `propose`
+that removes more than 300 characters, and nobody measured it or argued for it
+in the edit mode entry above. He answered: "подними потолок до 1000".
+
+**The rule.** One edit deletes at most 1000 UTF-16 code units and inserts at
+most 1000. The command refuses a longer quote or a longer replacement before
+it reads the document, and the guard refuses the same on the wire.
+
+**What does not move.** The two grammars, the yellow, the two callers of
+`GrantEdit` and its absence from `gdoc mcp` are what the edit mode entry made
+them. The chat hold on a `propose` that removes more than 300 characters is
+another rule about another door, and stays at 300.
+
+**What bounds an edit.** The trust guardian's sentence: "The ceiling is checked
+after the granted-span check and adds to it. A delete is bounded by a span the
+command found in one paragraph of its own read, at the required revision. An
+insert is bounded by the 1000 unit ceiling and the one-paragraph text rule.
+Neither can reach a second paragraph, a pending suggestion or content the read
+does not index, at any size."
+
+**Why a ceiling stays at all.** A direct edit has no reject button, and the
+grant names no size for the insert. The ceiling is the whole bound on how many
+words one call can land, and it keeps a mistaken call to part of one paragraph
+and not a whole long one.
+
+**Not measured.** That Docs carries a batch of this size as it carries a small
+one. Nothing in its documentation sets a limit near it, and the first edit
+over 300 units Nail sees land in a real document is the measurement.
+
+The tests: `TestAnEditSpanOverTheCeilingIsRefused` in the guard, and
+`TestAnEditIsWordsForWords` in `internal/edit`, each stating 1000
+and 1001 as literals.
+
+Serves principle 3, amended 2026-11-28: the door is the same door, and its
+ceiling is higher.

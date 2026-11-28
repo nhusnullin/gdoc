@@ -27,7 +27,7 @@ const (
 // editCeiling is the most one edit may delete and the most it may insert, in
 // UTF-16 code units. It is a ceiling under the span grant and not the bound:
 // the bound is the span the command granted out of its own read.
-const editCeiling = 300
+const editCeiling = 1000
 
 // Span is one half-open range of body indexes, [Start, End), in the units the
 // Docs API counts.

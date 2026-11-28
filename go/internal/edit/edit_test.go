@@ -110,9 +110,21 @@ func TestAnEditIsWordsForWords(t *testing.T) {
 	if err := Check(propose.Proposal{Quoted: "old words", Why: "Gone."}, mark); err == nil {
 		t.Error("an edit that replaces words with nothing must be refused: there would be nothing to paint")
 	}
-	long := propose.Proposal{Quoted: "old words", Replacement: strings.Repeat("a", 301), Why: "Longer."}
+	long := propose.Proposal{Quoted: "old words", Replacement: strings.Repeat("a", 1001), Why: "Longer."}
 	if err := Check(long, mark); err == nil {
-		t.Error("a replacement of 301 units must be refused")
+		t.Error("a replacement of 1001 units must be refused")
+	}
+	atCeiling := propose.Proposal{Quoted: "old words", Replacement: strings.Repeat("a", 1000), Why: "Longer."}
+	if err := Check(atCeiling, mark); err != nil {
+		t.Errorf("a replacement of 1000 units must pass, got %v", err)
+	}
+	quoteAtCeiling := propose.Proposal{Quoted: strings.Repeat("a", 1000), Replacement: "new words", Why: "Shorter."}
+	if err := Check(quoteAtCeiling, mark); err != nil {
+		t.Errorf("a quote of 1000 units must pass, got %v", err)
+	}
+	longQuote := propose.Proposal{Quoted: strings.Repeat("a", 1001), Replacement: "new words", Why: "Shorter."}
+	if err := Check(longQuote, mark); err == nil {
+		t.Error("a quote of 1001 units must be refused")
 	}
 	if err := Check(change, mark); err != nil {
 		t.Errorf("a words entry must pass, got %v", err)
